@@ -1,0 +1,81 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: polis
+      POSTGRES_USER: polis
+      POSTGRES_PASSWORD: polis_dev
+    ports: ["5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U polis"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: valkey/valkey:7-alpine
+    restart: unless-stopped
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: polis_dev_key
+    volumes: [meili_data:/meili_data]
+
+  nats:
+    image: nats:2.10-alpine
+    command: -js
+    restart: unless-stopped
+
+  gateway:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: polis-gateway } }
+    restart: unless-stopped
+    ports: ["8080:8080"]
+    environment: &env
+      DATABASE_URL: postgres://polis:polis_dev@postgres:5432/polis
+      REDIS_URL: redis://redis:6379
+      NATS_URL: nats://nats:4222
+      MEILI_URL: http://meilisearch:7700
+      MEILI_MASTER_KEY: polis_dev_key
+      JWT_SECRET: polis-dev-jwt-secret-do-not-use-in-prod
+      RUST_LOG: info
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PORT: 8080
+      USER_SERVICE_URL: http://user:3001
+      SPACE_SERVICE_URL: http://space:3002
+      CONTENT_SERVICE_URL: http://content:3003
+    depends_on: [user, space, content]
+
+  user:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: polis-user } }
+    restart: unless-stopped
+    environment: { DATABASE_URL: postgres://polis:polis_dev@postgres:5432/polis, REDIS_URL: redis://redis:6379, NATS_URL: nats://nats:4222, JWT_SECRET: polis-dev-jwt-secret-do-not-use-in-prod, RUST_LOG: info, USER_HOST: 0.0.0.0, USER_PORT: 3001 }
+    depends_on: [postgres]
+
+  space:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: polis-space } }
+    restart: unless-stopped
+    environment: { DATABASE_URL: postgres://polis:polis_dev@postgres:5432/polis, NATS_URL: nats://nats:4222, JWT_SECRET: polis-dev-jwt-secret-do-not-use-in-prod, RUST_LOG: info, SPACE_HOST: 0.0.0.0, SPACE_PORT: 3002 }
+    depends_on: [postgres]
+
+  content:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: polis-content } }
+    restart: unless-stopped
+    environment: { DATABASE_URL: postgres://polis:polis_dev@postgres:5432/polis, NATS_URL: nats://nats:4222, JWT_SECRET: polis-dev-jwt-secret-do-not-use-in-prod, RUST_LOG: info, CONTENT_HOST: 0.0.0.0, CONTENT_PORT: 3003 }
+    depends_on: [postgres]
+
+  admin:
+    build: { context: ., dockerfile: Dockerfile, args: { SERVICE: polis-admin } }
+    restart: unless-stopped
+    ports: ["3050:3050"]
+    environment: { DATABASE_URL: postgres://polis:polis_dev@postgres:5432/polis, JWT_SECRET: polis-dev-jwt-secret-do-not-use-in-prod, RUST_LOG: info, ADMIN_HOST: 0.0.0.0, ADMIN_PORT: 3050, ADMIN_CODE: polis-admin-2026 }
+    depends_on: [postgres]
+
+volumes:
+  pgdata:  meili_data:

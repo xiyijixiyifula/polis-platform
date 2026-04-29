@@ -1,0 +1,22 @@
+[package]
+name = "polis-admin"
+version = "0.1.0"
+edition = "2021"
+description = "Admin service - platform management dashboard"
+
+[dependencies]
+polis-core = { path = "../polis-core" }
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+dotenvy = { workspace = true }
+jsonwebtoken = { workspace = true }
+anyhow = { workspace = true }

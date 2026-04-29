@@ -1,0 +1,30 @@
+# Rust
+target/
+Cargo.lock
+
+# Environment
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+.next/
+web/out/
+
+# Logs
+*.log
+
+# Docker
+docker-data/
+
+# Build artifacts
+*.wasm

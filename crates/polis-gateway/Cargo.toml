@@ -1,0 +1,23 @@
+[package]
+name = "polis-gateway"
+version = "0.1.0"
+edition = "2021"
+description = "API Gateway - auth proxy, rate limiting, routing"
+
+[dependencies]
+polis-core = { path = "../polis-core" }
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+config = { workspace = true }
+dotenvy = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+reqwest = { workspace = true }

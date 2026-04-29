@@ -1,0 +1,25 @@
+[package]
+name = "polis-space"
+version = "0.1.0"
+edition = "2021"
+description = "Space service - community CRUD, member management, module config"
+
+[dependencies]
+polis-core = { path = "../polis-core" }
+tokio = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+sqlx = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+config = { workspace = true }
+dotenvy = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+async-nats = { workspace = true }
+jsonwebtoken = { workspace = true }

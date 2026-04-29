@@ -1,0 +1,265 @@
+use polis_core::error::AppError;
+use polis_core::events::{subjects, Event};
+use polis_core::models::{
+    LoginRequest, LoginResponse, RegisterRequest, UpdateUserRequest, UserPublic,
+};
+use async_nats::Client as NatsClient;
+use sqlx::PgPool;
+use uuid::Uuid;
+
+use crate::auth;
+use crate::config::UserServiceConfig;
+use crate::repo::UserRepo;
+
+/// 用户业务逻辑处理器
+pub struct UserHandler {
+    pub repo: UserRepo,
+    pub config: UserServiceConfig,
+    pub nats: Option<NatsClient>,
+}
+
+impl UserHandler {
+    pub fn new(
+        pool: PgPool,
+        config: UserServiceConfig,
+        nats: Option<NatsClient>,
+    ) -> Self {
+        Self {
+            repo: UserRepo::new(pool),
+            config,
+            nats,
+        }
+    }
+
+    /// 用户注册
+    pub async fn register(&self, req: RegisterRequest) -> Result<LoginResponse, AppError> {
+        // 验证输入
+        if req.username.len() < 3 || req.username.len() > 39 {
+            return Err(AppError::Validation(
+                "Username must be between 3 and 39 characters".to_string(),
+            ));
+        }
+        if !req.username.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+            return Err(AppError::Validation(
+                "Username can only contain letters, numbers, hyphens, and underscores".to_string(),
+            ));
+        }
+        if req.password.len() < 8 {
+            return Err(AppError::Validation(
+                "Password must be at least 8 characters".to_string(),
+            ));
+        }
+
+        // 检查邮箱是否已注册
+        if let Some(_) = self.repo.find_by_email(&req.email).await? {
+            return Err(AppError::Conflict("Email already registered".to_string()));
+        }
+
+        // 检查用户名是否已存在
+        if let Some(_) = self.repo.find_by_username(&req.username).await? {
+            return Err(AppError::Conflict("Username already taken".to_string()));
+        }
+
+        // 哈希密码
+        let password_hash = auth::hash_password(&req.password)
+            .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
+
+        // 创建用户
+        let user = self
+            .repo
+            .create(&req.username, &req.display_name, &req.email, &password_hash)
+            .await?;
+
+        // 生成 Token
+        let access_token = auth::generate_access_token(
+            user.id,
+            &user.username,
+            &self.config.jwt_secret,
+            self.config.jwt_access_expiry,
+        )
+        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+
+        let refresh_token = auth::generate_refresh_token(
+            user.id,
+            &user.username,
+            &self.config.jwt_secret,
+            self.config.jwt_refresh_expiry,
+        )
+        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+
+        // 发布注册事件
+        self.publish_event(subjects::USER_REGISTERED, serde_json::json!({
+            "user_id": user.id.to_string(),
+            "username": user.username,
+            "email": user.email,
+        })).await;
+
+        Ok(LoginResponse {
+            access_token,
+            refresh_token,
+            user: user.into(),
+        })
+    }
+
+    /// 用户登录
+    pub async fn login(&self, req: LoginRequest) -> Result<LoginResponse, AppError> {
+        let user = self
+            .repo
+            .find_by_email(&req.email)
+            .await?
+            .ok_or(AppError::Unauthorized)?;
+
+        let valid = auth::verify_password(&req.password, &user.password_hash)
+            .map_err(|e| AppError::Internal(format!("Password verify error: {}", e)))?;
+
+        if !valid {
+            return Err(AppError::Unauthorized);
+        }
+
+        let access_token = auth::generate_access_token(
+            user.id,
+            &user.username,
+            &self.config.jwt_secret,
+            self.config.jwt_access_expiry,
+        )
+        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+
+        let refresh_token = auth::generate_refresh_token(
+            user.id,
+            &user.username,
+            &self.config.jwt_secret,
+            self.config.jwt_refresh_expiry,
+        )
+        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+
+        Ok(LoginResponse {
+            access_token,
+            refresh_token,
+            user: user.into(),
+        })
+    }
+
+    /// 获取用户公开信息
+    pub async fn get_user_profile(&self, username: &str) -> Result<UserPublic, AppError> {
+        let user = self
+            .repo
+            .find_by_username(username)
+            .await?
+            .ok_or(AppError::NotFound("User not found".to_string()))?;
+        Ok(user.into())
+    }
+
+    /// 获取用户的社区列表
+    pub async fn get_user_spaces(&self, username: &str) -> Result<Vec<serde_json::Value>, AppError> {
+        // This would normally query the space service via HTTP or directly
+        // For now, return empty list as space service handles this
+        Ok(Vec::new())
+    }
+
+    /// 获取当前用户资料（通过 JWT）
+    pub async fn get_my_profile(&self, user_id: Uuid) -> Result<UserPublic, AppError> {
+        let user = self.repo.find_by_id(user_id).await?
+            .ok_or(AppError::NotFound("User not found".to_string()))?;
+        Ok(user.into())
+    }
+
+    /// 更新用户资料
+    pub async fn update_profile(
+        &self,
+        user_id: Uuid,
+        req: UpdateUserRequest,
+    ) -> Result<UserPublic, AppError> {
+        let user = self
+            .repo
+            .update_profile(
+                user_id,
+                req.display_name.as_deref(),
+                req.avatar_url.as_deref(),
+                req.bio.as_deref(),
+            )
+            .await?;
+        Ok(user.into())
+    }
+
+    /// 发布 NATS 事件
+    async fn publish_event(&self, subject: &str, payload: serde_json::Value) {
+        if let Some(ref nats) = self.nats {
+            let event = Event {
+                id: Uuid::new_v4().to_string(),
+                subject: subject.to_string(),
+                source: "user-service".to_string(),
+                timestamp: chrono::Utc::now().timestamp(),
+                payload,
+            };
+            if let Ok(data) = serde_json::to_vec(&event) {
+                let _ = nats.publish(subject.to_string(), data.into()).await;
+            }
+        }
+    }
+}
+
+impl UserHandler {
+    /// 修改密码
+    pub async fn change_password(&self, user_id: Uuid, old_password: &str, new_password: &str) -> Result<(), AppError> {
+        let user = self.repo.find_by_id(user_id).await?
+            .ok_or(AppError::NotFound("User not found".to_string()))?;
+        let valid = crate::auth::verify_password(old_password, &user.password_hash)
+            .map_err(|_| AppError::Internal("Password verify error".to_string()))?;
+        if !valid { return Err(AppError::Forbidden("Wrong password".to_string())); }
+        if new_password.len() < 8 { return Err(AppError::Validation("Password must be at least 8 characters".to_string())); }
+        let new_hash = crate::auth::hash_password(new_password)
+            .map_err(|e| AppError::Internal(format!("Hash error: {}", e)))?;
+        sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
+            .bind(&new_hash).bind(user_id)
+            .execute(&self.repo.pool).await?;
+        Ok(())
+    }
+
+    /// 生成密码重置令牌
+    pub async fn generate_reset_token(&self, email: &str) -> Result<String, AppError> {
+        let user = self.repo.find_by_email(email).await?
+            .ok_or(AppError::NotFound("Email not found".to_string()))?;
+        let token = crate::auth::generate_access_token(user.id, &user.username, &self.config.jwt_secret, 3600)
+            .map_err(|e| AppError::Internal(format!("Token error: {}", e)))?;
+        Ok(token)
+    }
+
+    /// 关注/取消关注
+    pub async fn toggle_follow(&self, follower_id: Uuid, followee_type: &str, followee_id: Uuid) -> Result<bool, AppError> {
+        let existing = sqlx::query_scalar::<_, Option<Uuid>>(
+            "SELECT id FROM follows WHERE follower_id = $1 AND followee_type = $2 AND followee_id = $3"
+        ).bind(follower_id).bind(followee_type).bind(followee_id)
+        .fetch_optional(&self.repo.pool).await?;
+        if let Some(_) = existing {
+            sqlx::query("DELETE FROM follows WHERE follower_id = $1 AND followee_type = $2 AND followee_id = $3")
+                .bind(follower_id).bind(followee_type).bind(followee_id)
+                .execute(&self.repo.pool).await?;
+            Ok(false)
+        } else {
+            sqlx::query("INSERT INTO follows (follower_id, followee_type, followee_id) VALUES ($1, $2, $3)")
+                .bind(follower_id).bind(followee_type).bind(followee_id)
+                .execute(&self.repo.pool).await?;
+            Ok(true)
+        }
+    }
+
+    /// 获取关注者
+    pub async fn get_followers(&self, username: &str) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows = sqlx::query_as::<_, (serde_json::Value,)>(
+            r#"SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name)
+               FROM follows f JOIN users u ON f.follower_id = u.id
+               WHERE f.followee_type = 'user' AND f.followee_id = (SELECT id FROM users WHERE username = $1)"#
+        ).bind(username).fetch_all(&self.repo.pool).await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    /// 获取正在关注
+    pub async fn get_following(&self, username: &str) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows = sqlx::query_as::<_, (serde_json::Value,)>(
+            r#"SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name)
+               FROM follows f JOIN users u ON f.followee_id = u.id
+               WHERE f.followee_type = 'user' AND f.followee_id = (SELECT id FROM users WHERE username = $1)"#
+        ).bind(username).fetch_all(&self.repo.pool).await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+}
