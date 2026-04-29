@@ -52,6 +52,9 @@ export function Header() {
             <Link href="/changelog" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
               更新
             </Link>
+            <Link href="/research" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
+              AI 研究
+            </Link>
           </nav>
         </div>
 

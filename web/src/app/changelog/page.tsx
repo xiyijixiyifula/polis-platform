@@ -58,6 +58,18 @@ export default function ChangelogPage() {
       ],
     },
     {
+      ver: '0.2.3', date: '2026-04-29', title: 'AI 自动研究系统',
+      items: [
+        '🔍 auto-research.sh: 每小时自动搜索 GitHub Trending + 社区更新',
+        '📊 自动洞察报告: 提取功能推荐 + 系统健康 + 开发进度',
+        '🌐 /research 页面: 可视化展示 AI 研究报告',
+        '📱 导航栏新增 AI 研究入口',
+        '⏰ Cron 定时: 每小时整点研究 + 每15分钟健康检查',
+        '🔄 polis-web 服务: 正式纳入 systemd 管理 + 健康检查',
+        '📋 自动更新日志 (auto-changelog.sh)',
+      ],
+    },
+    {
       ver: '0.3.0', date: '2026-05', title: '社交与互动',
       items: [
         '🔔 通知系统 (WebSocket + NATS)',
@@ -113,7 +125,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900">v{v.ver}</span>
               <span className="text-sm text-gray-400">{v.date}</span>
-              {v.ver === '0.2.2' && (
+              {v.ver === '0.2.3' && (
                 <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">当前版本</span>
               )}
             </div>

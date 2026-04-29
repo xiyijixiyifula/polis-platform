@@ -28,3 +28,6 @@ docker-data/
 
 # Build artifacts
 *.wasm
+research-reports/
+research-log.txt
+auto-*.log
