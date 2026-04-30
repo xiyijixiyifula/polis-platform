@@ -83,7 +83,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(({
             toolbar: [
               'bold', 'italic', 'strikethrough', '|',
               'header', '|',
-              'list', { insert: ['image', 'link', 'code', 'table'] }, '|',
+              'list', 'image', { insert: ['link', 'code', 'table'] }, '|',
               'undo', 'redo', '|',
               'switchModel',
             ],

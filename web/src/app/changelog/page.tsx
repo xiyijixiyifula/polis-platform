@@ -4,6 +4,67 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.18', date: '2026-05-01', title: 'CherryEditor 图片上传 + Markdown 图片渲染修复',
+      items: [
+        '图片上传: CherryEditor 集成 fileUpload 回调，支持 base64 上传',
+        '文件服务: 新增 GET /api/files/{id} 端点，图片文件可访问',
+        '图片工具栏: image 按钮独立为工具栏按钮，直接触发文件选择器',
+        '修复: renderMarkdown 图片 regex 在链接 regex 之前执行',
+        '修复: 图片语法 ![]() 不再被链接 regex 错误匹配',
+      ],
+    },
+    {
+      ver: '0.2.17', date: '2026-05-01', title: '个人中心文章 Tab + 文章详情相关推荐',
+      items: [
+        '个人中心文章标签页: Profile 页新增文章 Tab，显示用户所有文章',
+        '文章列表聚合: 遍历用户所有空间，过滤 author_id 匹配',
+        '相关推荐: 文章详情底部展示同空间最多3篇其他文章',
+        'CherryEditor 增强: useImperativeHandle 暴露编辑 API',
+      ],
+    },
+    {
+      ver: '0.2.16', date: '2026-05-01', title: 'CherryEditor id 类型修复 - 正文内容保存',
+      items: [
+        '修复: Cherry v0.11.1 id 参数需为 string (CSS 选择器) 类型',
+        '修复: 编辑器正文内容保存后刷新仍显示的 Bug',
+        '修复: useEffect 依赖项优化，避免不必要的重新初始化',
+      ],
+    },
+    {
+      ver: '0.2.15', date: '2026-04-30', title: 'CherryEditor 完全重写 - 正文输入核心修复',
+      items: [
+        'CherryEditor 重写: dynamic() + forwardRef SSR 安全模式',
+        'useImperativeHandle: 暴露 getMarkdown/getHtml/setMarkdown/switchModel',
+        'callback.afterChange: 使用 Cherry 回调替代自定义监听',
+        'CodeMirror 配置: autofocus/lineWrapping/viewportMargin 优化',
+        '向后兼容: CherryEditor/CherryEditorWithRef 双导出',
+      ],
+    },
+    {
+      ver: '0.2.14', date: '2026-04-30', title: '第二轮 Bug 修复 - 编辑器/搜索/暗黑/通知',
+      items: [
+        '修复: 编辑器内容输入无响应问题',
+        '修复: 搜索框按 Enter 键无响应，新增键盘事件处理',
+        '修复: 暗黑模式下部分页面文字颜色不当',
+        '修复: 通知角标未读数不显示',
+        '修复: 移动端导航栏展开/折叠交互优化',
+        'Cherry CSS 样式修复: 编辑器暗黑模式样式覆盖',
+        '命名空间 deriveSlug: 修复社区创建时 namespace 生成逻辑',
+      ],
+    },
+    {
+      ver: '0.2.13', date: '2026-04-30', title: '前端 6 项 Bug 修复 - 编辑器/命名空间/搜索/导航/路由',
+      items: [
+        '修复: 编辑器首次加载空白问题 (SSR 客户端水合不一致)',
+        '修复: 命名空间 namespace 多段路由解析错误',
+        '修复: 搜索按钮点击无响应 (事件绑定丢失)',
+        '修复: 移动端导航栏缺少子页面入口',
+        '修复: 子页面路由 subpages 404 问题',
+        '修复: resolveSpaceNs 函数空值处理',
+        '暗黑模式增强: 通知页面、搜索页面暗黑主题适配',
+      ],
+    },
+    {
       ver: '0.2.12', date: '2026-04-30', title: '文件分享系统 — 社区文件上传与安全分享',
       items: [
         '📁 文件上传: POST /api/spaces/{ns}/files 支持 base64 编码文件上传',
@@ -209,7 +270,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.11' && (
+              {v.ver === '0.2.18' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
