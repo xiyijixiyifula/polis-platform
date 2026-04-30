@@ -58,10 +58,22 @@ export function MilkdownEditor({
     return () => obs.disconnect();
   }, []);
 
-  // 初始化 Milkdown 编辑器
+  // 初始化 Milkdown 编辑器 (仅一次)
+  const initRef = useRef(false);
   useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
     let mounted = true;
     let crepeInstance: any = null;
+
+    // 超时回退：10 秒后如果编辑器仍未初始化，显示 fallback
+    const timeoutId = setTimeout(() => {
+      if (mounted && loading) {
+        setError('编辑器加载超时，已切换到纯文本模式');
+        setLoading(false);
+      }
+    }, 10000);
 
     const initEditor = async () => {
       if (!containerRef.current) return;
@@ -106,11 +118,12 @@ export function MilkdownEditor({
     return () => {
       mounted = false;
       clearTimeout(timer);
+      clearTimeout(timeoutId);
       if (crepeInstance) {
         try { crepeInstance.destroy(); } catch {}
       }
     };
-  }, [isDark]);
+  }, []); // 仅初始化一次，暗黑模式通过 CSS 切换
 
   // 外部 value 变化时同步到编辑器
   useEffect(() => {
@@ -171,7 +184,7 @@ export function MilkdownEditor({
   }, [handleFileUpload]);
 
   // 错误降级：显示基本 textarea
-  if (error && loading) {
+  if (error) {
     return (
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900">
         <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2">
@@ -260,27 +273,29 @@ export function MilkdownEditor({
         </button>
       </div>
 
-      {/* 编辑器 / 预览 */}
-      {loading ? (
+      {/* 编辑器容器 — 始终渲染以确保 ref 可用 */}
+      <div style={{ display: loading ? 'none' : (preview ? 'none' : 'block'), minHeight }}>
+        <div ref={containerRef} className="milkdown-editor-wrapper" />
+      </div>
+
+      {/* 加载中 */}
+      {loading && (
         <div className="flex items-center justify-center py-12" style={{ minHeight }}>
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-6 w-6 text-primary-500 animate-spin" />
             <span className="text-sm text-gray-400 dark:text-gray-500">加载编辑器...</span>
           </div>
         </div>
-      ) : preview ? (
+      )}
+
+      {/* 预览模式 */}
+      {!loading && preview && (
         <div
           className="p-4 overflow-auto prose prose-sm dark:prose-invert max-w-none"
           style={{ minHeight }}
           dangerouslySetInnerHTML={{
             __html: value ? renderMarkdown(value) : '<p class="text-gray-400 dark:text-gray-500 italic">暂无内容</p>',
           }}
-        />
-      ) : (
-        <div
-          ref={containerRef}
-          className="milkdown-editor-wrapper"
-          style={{ minHeight }}
         />
       )}
     </div>
