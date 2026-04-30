@@ -14,6 +14,11 @@ export default function ChangelogPage() {
         '🔧 Gateway: 新增 /api/follow 路由代理到 user 服务',
         '📡 API: users.toggleFollow / follow.followers / follow.following',
         '🐛 修复: profile/[username] TypeScript strict null 检查',
+        '🔧 部署脚本 v2.0: 修复 10 项测试中的 6 个 Bug (错误路径/payload)',
+        '🔧 自动回滚: 构建失败时从备份恢复旧二进制',
+        '🔧 .env 保护: 构建前自动校验 DATABASE_URL 并备份',
+        '🔧 增量构建: 只重新编译有变更的服务',
+        '📋 DEPLOY.md: 完整部署方案文档 + 已知限制 + 改进路线图',
       ],
     },
     {
