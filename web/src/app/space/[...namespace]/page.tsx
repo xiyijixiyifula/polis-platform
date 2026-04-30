@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone } from 'lucide-react';
+import { PollCard } from '@/components/PollCard';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post } from '@/lib/api';
 
@@ -22,6 +23,7 @@ export default function SpacePage() {
   const [space, setSpace] = useState<Space | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [polls, setPolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [postLoading, setPostLoading] = useState(true);
 
@@ -43,10 +45,12 @@ export default function SpacePage() {
     Promise.all([
       fetch(`/api/spaces/${namespace}/posts?page_size=20`).then(r => r.json()),
       fetch(`/api/spaces/${namespace}/announcements`).then(r => r.json()),
+      fetch(`/api/spaces/${namespace}/polls`).then(r => r.json()),
     ])
-      .then(([postsData, annData]) => {
+      .then(([postsData, annData, pollsData]) => {
         if (postsData.code === 0) setPosts(postsData.data || []);
         if (annData.code === 0) setAnnouncements(annData.data || []);
+        if (pollsData.code === 0) setPolls(pollsData.data || []);
       })
       .catch(() => {})
       .finally(() => setPostLoading(false));
@@ -221,11 +225,35 @@ export default function SpacePage() {
           )}
 
           {activeTab === 'polls' && (
-            <div className="card py-12 text-center text-gray-400">
-              <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>投票功能即将上线</p>
-              <p className="text-sm mt-1">社区管理员可以在此发起投票和问卷</p>
-            </div>
+            <>
+              <Link href={`/polls/new?space=${namespace}`}
+                className="card flex items-center gap-3 hover:border-primary-300 transition-colors group mb-4">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
+                  <Vote className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">发起投票</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">创建单选/多选投票问卷</p>
+                </div>
+                <div className="btn-primary text-xs px-4 py-1.5 gap-1">
+                  <Plus className="h-3.5 w-3.5" /> 创建
+                </div>
+              </Link>
+
+              {polls.length > 0 ? (
+                <div className="space-y-3">
+                  {polls.map((poll) => (
+                    <PollCard key={poll.id} poll={poll} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                  <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>暂无投票</p>
+                  <p className="text-sm mt-1">发起第一个投票吧！</p>
+                </div>
+              )}
+            </>
           )}
         </main>
 

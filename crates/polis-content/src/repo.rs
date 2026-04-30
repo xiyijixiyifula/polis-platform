@@ -438,6 +438,24 @@ impl ContentRepo {
         Ok(())
     }
 
+    pub async fn list_polls_by_space(&self, space_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let polls = sqlx::query_as::<_, (serde_json::Value,)>(
+            r#"SELECT json_build_object(
+                'id', p.id, 'title', p.title, 'description', p.description,
+                'poll_type', p.poll_type, 'author_id', p.author_id,
+                'expires_at', p.expires_at, 'created_at', p.created_at,
+                'options', COALESCE((
+                    SELECT json_agg(json_build_object('id', po.id, 'label', po.label, 'vote_count', po.vote_count) ORDER BY po.sort_order)
+                    FROM poll_options po WHERE po.poll_id = p.id
+                ), '[]'::json),
+                'total_votes', COALESCE((
+                    SELECT SUM(po2.vote_count) FROM poll_options po2 WHERE po2.poll_id = p.id
+                ), 0)
+            ) FROM polls p WHERE p.space_id = $1 ORDER BY p.created_at DESC"#
+        ).bind(space_id).fetch_all(&self.pool).await?;
+        Ok(polls.into_iter().map(|r| r.0).collect())
+    }
+
     pub async fn get_poll_results(&self, poll_id: Uuid) -> Result<serde_json::Value, AppError> {
         let rows = sqlx::query_as::<_, (serde_json::Value,)>(
             "SELECT json_build_object('id', id, 'label', label, 'vote_count', vote_count)

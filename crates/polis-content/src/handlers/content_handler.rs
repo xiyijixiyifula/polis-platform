@@ -290,6 +290,10 @@ impl ContentHandler {
         self.repo.vote_poll(poll_id, option_id, user_id).await
     }
 
+    pub async fn list_polls_by_space(&self, space_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        self.repo.list_polls_by_space(space_id).await
+    }
+
     pub async fn get_poll_results(&self, poll_id: Uuid) -> Result<serde_json::Value, AppError> {
         self.repo.get_poll_results(poll_id).await
     }

@@ -80,6 +80,14 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
         return Ok((ns.to_string(), None, Some("announcements".to_string())));
     }
 
+    if remaining.contains("/polls") {
+        let ns = remaining.strip_suffix("/polls").unwrap_or(remaining);
+        if ns.is_empty() {
+            return Err(AppError::NotFound("Missing namespace".to_string()));
+        }
+        return Ok((ns.to_string(), None, Some("polls".to_string())));
+    }
+
     Err(AppError::NotFound("Invalid content path".to_string()))
 }
 
@@ -148,6 +156,10 @@ async fn handle_public_content(
         (None, Some("announcements")) => {
             let announcements = h.list_announcements(space_id).await?;
             Ok(json_ok(ApiResponse::success(announcements)))
+        }
+        (None, Some("polls")) => {
+            let polls = h.list_polls_by_space(space_id).await?;
+            Ok(json_ok(ApiResponse::success(polls)))
         }
         _ => Err(AppError::NotFound("Route not found".to_string())),
     }
