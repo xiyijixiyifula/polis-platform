@@ -1,3 +1,4 @@
+import 'cherry-markdown/dist/cherry-markdown.css';
 import type { Metadata } from 'next';
 import './globals.css';
 
