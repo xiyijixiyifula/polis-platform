@@ -4,7 +4,7 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.2.7', date: '2026-04-30', title: '赞同/反对投票系统',
+      ver: '0.2.7', date: '2026-04-30', title: '赞同/反对投票系统 + 网关查询参数修复',
       items: [
         '🗳️ 赞同/反对投票: 帖子列表 + 帖子详情页集成 VoteButton 组件',
         '🗳️ 投票分数展示: 实时显示赞同数/反对数/净得分，赞同橙色、反对蓝色',
@@ -14,6 +14,8 @@ export default function ChangelogPage() {
         '🎨 VoteButton 组件: 上/下箭头 + 分数 + 加载态骨架屏 + 暗黑模式适配',
         '🎨 PostCard 增强: 帖子卡片左侧新增投票列，Reddit 风格交互',
         '📡 api.ts: 新增 vote.getScore() / vote.cast() 客户端函数',
+        '🐛 网关修复: 所有代理函数改用 path_and_query()，修复分页/搜索/投票参数丢失',
+        '✅ 端到端测试: 注册→赞同→切换反对→取消投票→公开查询，全流程通过',
       ],
     },
     {
