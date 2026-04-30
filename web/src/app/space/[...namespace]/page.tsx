@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post } from '@/lib/api';
 
@@ -31,15 +31,16 @@ export default function SpacePage() {
     setShowSettings(false);
   }, [namespace]);
 
-  // Active tab - default to posts, but fall back to first available module
+  // Active tab - default to overview (GitHub style)
   const availableTabs = [
+    { id: 'overview', label: '概览', icon: Layout, enabled: true },
     { id: 'posts', label: '文章', icon: MessageCircle, enabled: modules.posts },
     { id: 'polls', label: '投票', icon: BarChart3, enabled: modules.polls },
     { id: 'announcements', label: '公告', icon: Megaphone, enabled: modules.announcements },
     { id: 'members', label: '成员', icon: UserCheck, enabled: modules.members },
   ].filter(t => t.enabled);
 
-  const [activeTab, setActiveTab] = useState('posts');
+  const [activeTab, setActiveTab] = useState('overview');
   useEffect(() => {
     if (!availableTabs.find(t => t.id === activeTab)) {
       setActiveTab(availableTabs[0]?.id || 'posts');
@@ -50,6 +51,8 @@ export default function SpacePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [polls, setPolls] = useState<any[]>([]);
+  const [featured, setFeatured] = useState<Post[]>([]);
+  const [subSpaces, setSubSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
   const [postLoading, setPostLoading] = useState(true);
   const [ownerName, setOwnerName] = useState<string | null>(null);
@@ -92,6 +95,7 @@ export default function SpacePage() {
 
     const fetchers: Promise<any>[] = [
       fetch(`/api/spaces/${namespace}/posts?page_size=20`).then(r => r.json()),
+      fetch(`/api/spaces/${namespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
     ];
 
     // Only fetch polls if the module is enabled
@@ -99,16 +103,17 @@ export default function SpacePage() {
       fetchers.push(fetch(`/api/spaces/${namespace}/polls`).then(r => r.json()));
     }
 
-    // Always fetch announcements for banners (they show regardless of tab)
+    // Always fetch announcements for banners
     fetchers.push(fetch(`/api/spaces/${namespace}/announcements`).then(r => r.json()));
 
     Promise.all(fetchers)
       .then((results) => {
-        const postsData = results[0];
-        const pollsIdx = modules.polls ? 1 : -1;
-        const annIdx = modules.polls ? 2 : 1;
+        const [postsData, featuredData] = results;
+        const pollsIdx = modules.polls ? 2 : -1;
+        const annIdx = modules.polls ? 3 : 2;
 
         if (postsData.code === 0) setPosts(postsData.data || []);
+        if (featuredData.code === 0) setFeatured(featuredData.data || []);
         if (pollsIdx > 0 && results[pollsIdx]?.code === 0) setPolls(results[pollsIdx].data || []);
         if (results[annIdx]?.code === 0) setAnnouncements(results[annIdx].data || []);
       })
@@ -296,6 +301,121 @@ export default function SpacePage() {
 
       <div className="flex gap-6">
         <main className="flex-1 max-w-3xl">
+          {/* === Overview Tab (GitHub-style README) === */}
+          {activeTab === 'overview' && (
+            <div className="space-y-5">
+              {/* Community Description (like GitHub README) */}
+              {space.description && (
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layout className="h-4 w-4 text-gray-400" />
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">关于</h3>
+                  </div>
+                  <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                    {space.description}
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-3 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {formatCount(space.member_count)} 成员</span>
+                    <span>·</span>
+                    <span>{formatCount(space.post_count)} 帖子</span>
+                    <span>·</span>
+                    <span>{polls.length} 投票</span>
+                    <span>·</span>
+                    <span>{announcements.length} 公告</span>
+                    <span>·</span>
+                    <span className="capitalize">{{public:'公开', private:'私有', unlisted:'不公开'}[space.visibility]}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick actions */}
+              <div className="flex gap-3">
+                <Link href={`/post/new?space=${namespace}`}
+                  className="flex-1 card flex items-center gap-2 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group py-3">
+                  <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
+                    <PenLine className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">发布文章</span>
+                  <ExternalLink className="h-3 w-3 text-gray-400 ml-auto" />
+                </Link>
+                {modules.polls && (
+                  <Link href={`/polls/new?space=${namespace}`}
+                    className="flex-1 card flex items-center gap-2 hover:border-amber-300 dark:hover:border-amber-600 transition-colors group py-3">
+                    <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
+                      <Vote className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">发起投票</span>
+                    <ExternalLink className="h-3 w-3 text-gray-400 ml-auto" />
+                  </Link>
+                )}
+              </div>
+
+              {/* Featured/Pinned Posts (like GitHub pinned repos) */}
+              {featured.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Pin className="h-4 w-4 text-amber-500" />
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">精选内容</h3>
+                  </div>
+                  <div className="space-y-2">
+                    {featured.slice(0, 4).map((post) => (
+                      <Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(namespace)}`}
+                        className="card block hover:border-primary-300 dark:hover:border-primary-600 transition-colors group py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Pin className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          <h4 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 truncate">
+                            {post.title}
+                          </h4>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-1 ml-6">
+                          {post.body?.replace(/<[^>]+>/g, '').slice(0, 150)}
+                        </p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent posts preview */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="h-4 w-4 text-gray-400" />
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">最新文章</h3>
+                  </div>
+                  <button onClick={() => setActiveTab('posts')}
+                    className="text-xs text-primary-600 dark:text-primary-400 hover:underline">
+                    查看全部 →
+                  </button>
+                </div>
+                {postLoading ? (
+                  <div className="card py-6 text-center text-gray-400 animate-pulse">加载中...</div>
+                ) : posts.length > 0 ? (
+                  <div className="space-y-2">
+                    {posts.slice(0, 5).map((post) => (
+                      <PostCard key={post.id} post={{
+                        id: post.id, title: post.title, body: post.body,
+                        author: post.author, space_id: post.space_id,
+                        space_ns: namespace, space_name: space.title,
+                        like_count: post.like_count, comment_count: post.comment_count,
+                        view_count: post.view_count, created_at: post.created_at,
+                        tags: post.tags, is_pinned: post.is_pinned,
+                      }} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="card py-8 text-center text-gray-400 dark:text-gray-500">
+                    <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">还没有文章</p>
+                    <Link href={`/post/new?space=${namespace}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
+                      发布第一篇文章
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* === Posts Tab === */}
           {activeTab === 'posts' && (
             <>
