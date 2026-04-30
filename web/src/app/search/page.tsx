@@ -58,6 +58,7 @@ function SearchContent() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+        <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-primary-600 hover:bg-primary-700 px-4 py-2 text-sm font-medium text-white transition-colors">搜索</button>
         </div>
       </form>
 

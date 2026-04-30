@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import 'cherry-markdown/dist/cherry-markdown.css';
 
 interface CherryEditorProps {
   value: string;

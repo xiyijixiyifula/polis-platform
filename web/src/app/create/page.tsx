@@ -6,14 +6,20 @@ import { Github, Plus } from 'lucide-react';
 import { spaces } from '@/lib/api';
 
 function deriveSlug(title: string): string {
-  return title
+  const latin = title
     .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fff\s-]/g, '')
-    .replace(/[\u4e00-\u9fff]+/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    || 'community';
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  if (latin.length >= 2) return latin;
+
+  let hash = 0;
+  for (let i = 0; i < title.length; i++) {
+    hash = ((hash << 5) - hash + title.charCodeAt(i)) | 0;
+  }
+  return "community-" + Math.abs(hash).toString(36).slice(0, 6);
 }
 
 export default function CreateSpacePage() {

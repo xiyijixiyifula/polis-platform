@@ -87,6 +87,19 @@ const spaceNsCache: Record<string, string> = {};
 export async function resolveSpaceNs(spaceId: string): Promise<string> {
   if (spaceNsCache[spaceId]) return spaceNsCache[spaceId];
   try {
+    const res = await fetch(`${API_BASE}/spaces/trending`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.code === 0 && Array.isArray(data.data)) {
+        const space = data.data.find((s: any) => s.id === spaceId);
+        if (space?.namespace) {
+          spaceNsCache[spaceId] = space.namespace;
+          return space.namespace;
+        }
+      }
+    }
+  } catch {}
+  try {
     const res = await fetch(`${API_BASE}/spaces/${spaceId}`);
     if (res.ok) {
       const data = await res.json();

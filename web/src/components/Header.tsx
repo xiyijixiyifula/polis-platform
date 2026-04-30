@@ -152,6 +152,15 @@ export function Header() {
             <Link href="/trending" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
               热榜
             </Link>
+            <Link href="/about" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+              关于
+            </Link>
+            <Link href="/changelog" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+              更新日志
+            </Link>
+            <Link href="/research" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+              AI 研究
+            </Link>
             {isLoggedIn && (
               <Link href="/create" className="rounded-lg px-3 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30">
                 创建社区

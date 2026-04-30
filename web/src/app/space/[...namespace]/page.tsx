@@ -19,7 +19,17 @@ interface Announcement {
 export default function SpacePage() {
   const params = useParams();
   const rawNs = params.namespace;
-  const namespace = Array.isArray(rawNs) ? (rawNs as string[]).join('/') : (rawNs as string);
+  let namespace = Array.isArray(rawNs) ? (rawNs as string[]).join('/') : (rawNs as string);
+
+  // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
+  const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
+    'members', 'settings', 'video', 'code_repo', 'qa', 'files']);
+  const nsParts = namespace.split('/');
+  let urlTab: string | null = null;
+  if (nsParts.length > 1 && knownSubRoutes.has(nsParts[nsParts.length - 1])) {
+    urlTab = nsParts.pop()!;
+    namespace = nsParts.join('/');
+  }
 
   // Module settings (persisted in localStorage)
   const [modules, setModules] = useState<SpaceModules>(() => loadModules(namespace));
@@ -46,7 +56,7 @@ export default function SpacePage() {
     { id: 'members', label: '成员', icon: UserCheck, enabled: modules.members },
   ].filter(t => t.enabled);
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(urlTab || 'overview');
   useEffect(() => {
     if (!availableTabs.find(t => t.id === activeTab)) {
       setActiveTab(availableTabs[0]?.id || 'posts');
@@ -64,11 +74,11 @@ export default function SpacePage() {
   const [ownerName, setOwnerName] = useState<string | null>(null);
 
   // Parse namespace for GitHub-style display: "username/community-name"
-  const nsParts = namespace.split('/');
+  const ghParts = namespace.split('/');
   const hasOwnerPrefix = nsParts.length >= 2;
   const displayNs = namespace;
-  const communityName = hasOwnerPrefix ? nsParts[nsParts.length - 1] : nsParts[0];
-  const ownerSegment = hasOwnerPrefix ? nsParts[0] : null;
+  const communityName = hasOwnerPrefix ? ghParts[ghParts.length - 1] : ghParts[0];
+  const ownerSegment = hasOwnerPrefix ? ghParts[0] : null;
 
   useEffect(() => {
     if (!namespace) return;
