@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Calendar, UserPlus, Users, UserCheck } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { users, follow, type User, type FollowUser } from '@/lib/api';
+import { SpaceCard } from '@/components/SpaceCard';
 
 function FollowList({ users: list, loading, emptyText }: {
   users: FollowUser[];
@@ -249,21 +250,22 @@ export default function UserProfilePage() {
 
       {userSpaces.length > 0 && (
         <div className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">参与的社区</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            社区 ({userSpaces.length})
+          </h2>
+          <div className="space-y-3">
             {userSpaces.map((sp: any) => (
-              <Link
-                key={sp.id || sp.namespace}
-                href={`/space/${sp.namespace || sp.slug || sp.id}`}
-                className="card hover:shadow-md transition-shadow group"
-              >
-                <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">
-                  {sp.title || sp.name || sp.namespace}
-                </h3>
-                {sp.description && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{sp.description}</p>
-                )}
-              </Link>
+              <SpaceCard key={sp.id || sp.namespace} space={{
+                id: sp.id,
+                namespace: sp.namespace,
+                title: sp.title,
+                description: sp.description || '',
+                icon_url: sp.icon_url || null,
+                member_count: sp.member_count || 0,
+                post_count: sp.post_count || 0,
+                is_root: sp.is_root || false,
+                owner_id: sp.owner_id || null,
+              }} />
             ))}
           </div>
         </div>
