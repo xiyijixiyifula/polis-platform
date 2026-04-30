@@ -4,7 +4,7 @@ use axum::{
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostRequest, Post, PostPublic, UpdatePostRequest, PaginationParams};
+use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, Post, PostPublic, UpdatePostRequest, PaginationParams};
 use polis_core::resolver::resolve::resolve_space_id;
 use crate::handlers::content_handler::ContentHandler;
 use crate::middleware::auth::auth_middleware;
@@ -108,7 +108,10 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/posts/{id}", get(get_post_by_id_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route))
         // 获取投票分数（赞同/反对）
-        .route("/api/vote", get(get_vote_score_route));
+        .route("/api/vote", get(get_vote_score_route))
+        // 系列（专栏）公开接口
+        .route("/api/series/{id}", get(get_series_route))
+        .route("/api/series/space/{*ns}", get(list_series_route));
 
     // 需要认证的路由
     let auth = Router::new()
@@ -125,6 +128,11 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/notifications", get(list_notifications_route))
         .route("/api/notifications/unread-count", get(unread_count_route))
         .route("/api/notifications/read-all", post(mark_all_read_route))
+        // 系列（专栏）管理接口
+        .route("/api/series/space/{*ns}", post(create_series_route))
+        .route("/api/series/{id}", put(update_series_route).delete(delete_series_route))
+        .route("/api/series/{id}/posts", post(add_post_to_series_route))
+        .route("/api/series/{id}/posts/{post_id}", delete(remove_post_from_series_route))
         .route("/api/files/{id}", get(get_file_route))
         .route("/api/files/share", post(create_file_share_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
@@ -469,6 +477,95 @@ fn urlencoding_decode(s: &str) -> Option<String> {
 async fn list_bookmarks(State(h): State<Arc<ContentHandler>>, axum::Extension(uid): axum::Extension<Uuid>,
     Query(p): Query<PaginationParams>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
     Ok(Json(ApiResponse::success(h.repo.list_bookmarks(uid, p.page.unwrap_or(1), p.page_size.unwrap_or(20)).await?)))
+}
+
+
+// ===== Series Route Handlers =====
+
+#[derive(Deserialize)]
+pub struct CreateSeriesRouteRequest {
+    pub title: String,
+    pub description: Option<String>,
+    pub cover_url: Option<String>,
+    pub visibility: Option<String>,
+}
+
+async fn create_series_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(ns): Path<String>,
+    Json(req): Json<CreateSeriesRouteRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let ns_clean = ns.trim_start_matches('/');
+    let space_id = resolve_space_id(&h.pool, ns_clean).await?;
+    let series_req = CreateSeriesRequest {
+        title: req.title,
+        description: req.description,
+        cover_url: req.cover_url,
+        visibility: req.visibility,
+    };
+    let id = h.create_series(space_id, uid, series_req).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"id": id}))))
+}
+
+async fn update_series_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(series_id): Path<Uuid>,
+    Json(req): Json<UpdateSeriesRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    h.update_series(series_id, uid, req).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+async fn delete_series_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(series_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    h.delete_series(series_id, uid).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+async fn list_series_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(ns): Path<String>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let ns_clean = ns.trim_start_matches('/');
+    let space_id = resolve_space_id(&h.pool, ns_clean).await?;
+    let series_list: Vec<SeriesPublic> = h.list_series_by_space(space_id).await?;
+    Ok(json_ok(ApiResponse::success(series_list)))
+}
+
+async fn get_series_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(series_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let (series, posts) = h.get_series_public(series_id).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({
+        "series": series,
+        "posts": posts,
+    }))))
+}
+
+async fn add_post_to_series_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(series_id): Path<Uuid>,
+    Json(req): Json<AddPostToSeriesRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let sort_order = req.sort_order.unwrap_or(0);
+    h.add_post_to_series(series_id, req.post_id, sort_order, uid).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+async fn remove_post_from_series_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path((series_id, post_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    h.remove_post_from_series(series_id, post_id, uid).await?;
+    Ok(json_ok(ApiResponse::success(())))
 }
 
 // ===== File Sharing Route Handlers =====

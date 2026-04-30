@@ -59,6 +59,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/root/{*path}", any(proxy_to_space))
         // 代理路由 - 内容服务 (帖子, 投票, 投票/问卷, 草稿, 通知, 书签列表, 公告)
         .route("/api/posts/{*path}", any(proxy_to_content))
+        .route("/api/series/{*path}", any(proxy_to_content))
         .route("/api/vote", any(proxy_to_content))
         .route("/api/polls", any(proxy_to_content))
         .route("/api/polls/{*path}", any(proxy_to_content))

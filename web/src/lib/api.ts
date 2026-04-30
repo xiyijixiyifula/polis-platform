@@ -22,6 +22,21 @@ export interface User {
   created_at: string;
 }
 
+export interface Series {
+  id: string;
+  space_id: string;
+  author: User;
+  title: string;
+  description: string;
+  cover_url: string | null;
+  visibility: string;
+  is_published: boolean;
+  post_count: number;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Space {
   id: string;
   namespace: string;
@@ -246,6 +261,46 @@ export const search = {
     if (pageSize) params.set('page_size', String(pageSize));
     return request<Post[]>('/posts/search?' + params.toString());
   },
+};
+
+
+export const series = {
+  /** 创建系列（专栏） */
+  create: (namespace: string, data: { title: string; description?: string; cover_url?: string; visibility?: string }) =>
+    request<{id: string}>(`/series/space/${namespace}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** 获取空间的系列列表 */
+  list: (namespace: string) =>
+    request<Series[]>(`/series/space/${namespace}`),
+
+  /** 获取系列详情（含帖子列表） */
+  get: (id: string) =>
+    request<{series: Series; posts: Post[]}>(`/series/${id}`),
+
+  /** 更新系列 */
+  update: (id: string, data: { title?: string; description?: string; cover_url?: string; visibility?: string; is_published?: boolean; sort_order?: number }) =>
+    request<void>(`/series/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  /** 删除系列 */
+  delete: (id: string) =>
+    request<void>(`/series/${id}`, { method: 'DELETE' }),
+
+  /** 添加帖子到系列 */
+  addPost: (seriesId: string, postId: string, sortOrder?: number) =>
+    request<void>(`/series/${seriesId}/posts`, {
+      method: 'POST',
+      body: JSON.stringify({ post_id: postId, sort_order: sortOrder || 0 }),
+    }),
+
+  /** 从系列移除帖子 */
+  removePost: (seriesId: string, postId: string) =>
+    request<void>(`/series/${seriesId}/posts/${postId}`, { method: 'DELETE' }),
 };
 
 export const posts = {

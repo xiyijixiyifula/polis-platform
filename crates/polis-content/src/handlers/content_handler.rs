@@ -1,8 +1,8 @@
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
 use polis_core::models::{
-    Comment, ContentType, CreateCommentRequest, CreatePostRequest,
-    ModuleType, Pagination, Post, PostPublic, UpdatePostRequest, UserPublic, PaginationParams,
+    Comment, ContentType, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest,
+    ModuleType, Pagination, Post, PostPublic, Series, SeriesPublic, UpdatePostRequest, UserPublic, PaginationParams,
 };
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
@@ -186,7 +186,91 @@ impl ContentHandler {
         Ok(post_publics)
     }
 
+    // ===== 专栏/内容系列 =====
+
+    pub async fn create_series(&self, space_id: Uuid, author_id: Uuid, req: CreateSeriesRequest) -> Result<Uuid, AppError> {
+        let desc = req.description.unwrap_or_default();
+        let visibility = req.visibility.unwrap_or_else(|| "public".to_string());
+        self.repo.create_series(space_id, author_id, &req.title, &desc, req.cover_url.as_deref(), &visibility).await
+    }
+
+    pub async fn update_series(&self, series_id: Uuid, user_id: Uuid, req: UpdateSeriesRequest) -> Result<(), AppError> {
+        self.repo.update_series(series_id, user_id, req.title.as_deref(), req.description.as_deref(), req.cover_url.as_deref(), req.visibility.as_deref(), req.is_published, req.sort_order).await
+    }
+
+    pub async fn delete_series(&self, series_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        self.repo.delete_series(series_id, user_id).await
+    }
+
+    pub async fn list_series_by_space(&self, space_id: Uuid) -> Result<Vec<SeriesPublic>, AppError> {
+        let series_list = self.repo.list_series_by_space(space_id).await?;
+        let author_ids: Vec<Uuid> = series_list.iter().map(|s| s.author_id).collect();
+        let authors = self.repo.find_users_batch(&author_ids).await?;
+        let result = series_list.into_iter().map(|s| {
+            let author = authors.get(&s.author_id).cloned().unwrap_or(UserPublic {
+                id: s.author_id, username: String::new(), display_name: String::new(),
+                avatar_url: None, bio: String::new(), verified: false, created_at: s.created_at,
+            });
+            SeriesPublic {
+                id: s.id, space_id: s.space_id, author, title: s.title,
+                description: s.description, cover_url: s.cover_url, visibility: s.visibility,
+                is_published: s.is_published, post_count: s.post_count, sort_order: s.sort_order,
+                created_at: s.created_at, updated_at: s.updated_at,
+            }
+        }).collect();
+        Ok(result)
+    }
+
+    pub async fn get_series_public(&self, series_id: Uuid) -> Result<(Series, Vec<PostPublic>), AppError> {
+        let series = self.repo.get_series(series_id).await?;
+        let posts = self.repo.list_series_posts(series_id).await?;
+        let author_ids: Vec<Uuid> = {
+            let mut ids: Vec<Uuid> = posts.iter().map(|p| p.author_id).collect();
+            ids.push(series.author_id);
+            ids
+        };
+        let authors = self.repo.find_users_batch(&author_ids).await?;
+        let post_publics: Vec<PostPublic> = posts.into_iter().map(|p| {
+            let author = authors.get(&p.author_id).cloned().unwrap_or(UserPublic {
+                id: p.author_id, username: String::new(), display_name: String::new(),
+                avatar_url: None, bio: String::new(), verified: false, created_at: p.created_at,
+            });
+            let mt = serde_json::json!(p.module_type).to_string();
+            let ct = serde_json::json!(p.content_type).to_string();
+            PostPublic {
+                id: p.id, space_id: p.space_id,
+                module_type: serde_json::from_str(&mt).unwrap_or_default(),
+                author, title: p.title, body: p.body,
+                content_type: serde_json::from_str(&ct).unwrap_or_default(),
+                media_urls: serde_json::from_value(p.media_urls).unwrap_or_default(),
+                tags: serde_json::from_value(p.tags).unwrap_or_default(),
+                is_pinned: p.is_pinned, is_featured: p.is_featured,
+                view_count: p.view_count, like_count: p.like_count,
+                comment_count: p.comment_count, created_at: p.created_at,
+                updated_at: p.updated_at,
+            }
+        }).collect();
+        Ok((series, post_publics))
+    }
+
+    pub async fn add_post_to_series(&self, series_id: Uuid, post_id: Uuid, sort_order: i32, user_id: Uuid) -> Result<(), AppError> {
+        let series = self.repo.get_series(series_id).await?;
+        if series.author_id != user_id {
+            return Err(AppError::Forbidden("Not the series owner".to_string()));
+        }
+        self.repo.add_post_to_series(series_id, post_id, sort_order).await
+    }
+
+    pub async fn remove_post_from_series(&self, series_id: Uuid, post_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        let series = self.repo.get_series(series_id).await?;
+        if series.author_id != user_id {
+            return Err(AppError::Forbidden("Not the series owner".to_string()));
+        }
+        self.repo.remove_post_from_series(series_id, post_id).await
+    }
+
     /// 获取帖子公开信息（含作者详情）
+
 
     pub async fn get_post_public(&self, post_id: Uuid) -> Result<PostPublic, AppError> {
         let post = self

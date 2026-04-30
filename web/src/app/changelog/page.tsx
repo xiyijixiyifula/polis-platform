@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.22', date: '2026-05-01', title: '专栏/内容系列 Phase 1 — 数据库 + 后端 API',
+      items: [
+        '迁移: 新增 series 表和 series_posts 关联表',
+        '后端: polis-content 完整 CRUD API（创建/编辑/删除/列表/详情）',
+        '后端: 帖子关联管理（添加/移除帖子到系列）',
+        '网关: 代理 /api/series/* 到 content 服务',
+        '前端: api.ts 新增 series 客户端方法',
+      ],
+    },
+
+    {
       ver: '0.2.21', date: '2026-05-01', title: '帖子搜索功能 — PostgreSQL ILIKE 帖子全文搜索',
       items: [
         '后端: polis-content 新增 ILIKE 帖子搜索（标题+正文模糊匹配）',
@@ -292,7 +303,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.21' && (
+              {v.ver === '0.2.22' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
