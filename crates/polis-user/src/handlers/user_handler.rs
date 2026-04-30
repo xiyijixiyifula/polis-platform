@@ -39,9 +39,10 @@ impl UserHandler {
                 "Username must be between 3 and 39 characters".to_string(),
             ));
         }
-        if !req.username.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+        // 用户名不允许空白字符和路径危险字符
+        if req.username.chars().any(|c| c.is_whitespace() || c == '/' || c == '\\' || c == '@') {
             return Err(AppError::Validation(
-                "Username can only contain letters, numbers, hyphens, and underscores".to_string(),
+                "用户名不能包含空格、/、\\、@ 字符".to_string(),
             ));
         }
         if req.password.len() < 8 {
@@ -65,9 +66,10 @@ impl UserHandler {
             .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
 
         // 创建用户
+        let display_name = req.display_name.unwrap_or_else(|| req.username.clone());
         let user = self
             .repo
-            .create(&req.username, &req.display_name, &req.email, &password_hash)
+            .create(&req.username, &display_name, &req.email, &password_hash)
             .await?;
 
         // 生成 Token

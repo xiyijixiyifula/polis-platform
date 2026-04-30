@@ -52,7 +52,8 @@ impl From<User> for UserPublic {
 #[derive(Debug, Deserialize)]
 pub struct RegisterRequest {
     pub username: String,
-    pub display_name: String,
+    /// 可选，不填则默认使用用户名
+    pub display_name: Option<String>,
     pub email: String,
     pub password: String,
 }

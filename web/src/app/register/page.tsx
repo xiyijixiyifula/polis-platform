@@ -5,7 +5,6 @@ import { useState } from 'react';
 export default function RegisterPage() {
   const [form, setForm] = useState({
     username: '',
-    display_name: '',
     email: '',
     password: '',
   });
@@ -54,29 +53,18 @@ export default function RegisterPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">用户名</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">用户名</label>
             <input
               type="text"
               className="input-field mt-1"
-              placeholder="your-username"
+              placeholder="支持中英文、数字、特殊符号"
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               required
               minLength={3}
               maxLength={39}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">显示名称</label>
-            <input
-              type="text"
-              className="input-field mt-1"
-              placeholder="你的名字"
-              value={form.display_name}
-              onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-              required
-            />
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">这是你的唯一标识，注册后不可修改</p>
           </div>
 
           <div>
