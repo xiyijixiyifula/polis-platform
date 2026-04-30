@@ -1,5 +1,6 @@
 use std::sync::Arc;
-use axum::{extract::{Path, Query, Request, State}, middleware, routing::{delete, get, post, put}, Json, Router};
+use axum::{
+    response::{IntoResponse, Response},extract::{Path, Query, Request, State}, middleware, routing::{delete, get, post, put}, Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
@@ -80,6 +81,12 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
         return Ok((ns.to_string(), None, Some("announcements".to_string())));
     }
 
+    if remaining.contains("/files") {
+        let ns = remaining.strip_suffix("/files").unwrap_or(remaining);
+        if ns.is_empty() { return Err(AppError::NotFound("Missing namespace".to_string())); }
+        return Ok((ns.to_string(), None, Some("files".to_string())));
+    }
+
     if remaining.contains("/polls") {
         let ns = remaining.strip_suffix("/polls").unwrap_or(remaining);
         if ns.is_empty() {
@@ -117,9 +124,14 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/notifications", get(list_notifications_route))
         .route("/api/notifications/unread-count", get(unread_count_route))
         .route("/api/notifications/read-all", post(mark_all_read_route))
+        .route("/api/files/share", post(create_file_share_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
-    public.merge(auth).with_state(handler)
+    let share_routes = Router::new()
+        .route("/api/share/{code}", get(get_share_info_route))
+        .route("/api/share/{code}/download", get(download_share_route));
+
+    public.merge(auth).merge(share_routes).with_state(handler)
 }
 
 /// 公共 GET 请求处理器
@@ -151,6 +163,10 @@ async fn handle_public_content(
             // GET /api/spaces/{ns}/posts/{id}/comments
             let comments = h.get_comments(id).await?;
             Ok(json_ok(ApiResponse::success(comments)))
+        }
+        (None, Some("files")) => {
+            let files = h.list_files(space_id).await?;
+            Ok(json_ok(ApiResponse::success(files)))
         }
         (None, Some("featured")) => {
             let posts = h.get_featured_posts(space_id, 20).await?;
@@ -186,6 +202,17 @@ async fn handle_auth_content(
     match method {
         axum::http::Method::POST => {
             match (post_id, sub_action.as_deref()) {
+                (None, Some("files")) => {
+                    let r: UploadFileRequest = serde_json::from_slice(&body_bytes)
+                        .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
+                    use base64::Engine;
+                    let data = base64::engine::general_purpose::STANDARD.decode(&r.data_base64)
+                        .map_err(|e| AppError::Validation(format!("Invalid base64: {}", e)))?;
+                    let mime_type = r.mime_type.unwrap_or_else(|| "application/octet-stream".to_string());
+                    let space_id = resolve_space_id(&h.pool, &ns).await?;
+                    let result = h.upload_file(space_id, uid, &r.filename, &data, &mime_type).await?;
+                    Ok(json_ok(ApiResponse::success(result)))
+                }
                 (None, None) | (None, Some("posts")) => {
                     // POST /api/spaces/{ns}/posts - create
                     let r: CreatePostRequest = serde_json::from_slice(&body_bytes)
@@ -424,4 +451,45 @@ fn urlencoding_decode(s: &str) -> Option<String> {
 async fn list_bookmarks(State(h): State<Arc<ContentHandler>>, axum::Extension(uid): axum::Extension<Uuid>,
     Query(p): Query<PaginationParams>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
     Ok(Json(ApiResponse::success(h.repo.list_bookmarks(uid, p.page.unwrap_or(1), p.page_size.unwrap_or(20)).await?)))
+}
+
+// ===== File Sharing Route Handlers =====
+
+#[derive(Deserialize)]
+pub struct CreateShareRequest { pub file_id: Uuid, pub expires_hours: Option<i64>, pub password: Option<String> }
+
+#[derive(Deserialize)]
+pub struct DownloadShareQuery { pub password: Option<String> }
+
+#[derive(Deserialize)]
+pub struct UploadFileRequest { pub filename: String, pub data_base64: String, pub mime_type: Option<String> }
+
+async fn create_file_share_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Json(req): Json<CreateShareRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let result = h.create_file_share(req.file_id, uid, req.expires_hours, req.password).await?;
+    Ok(json_ok(ApiResponse::success(result)))
+}
+
+async fn get_share_info_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(code): Path<String>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let info = h.get_share_info(&code).await?;
+    Ok(json_ok(ApiResponse::success(info)))
+}
+
+async fn download_share_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(code): Path<String>,
+    Query(q): Query<DownloadShareQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let (data, filename, mime_type) = h.download_shared_file(&code, q.password.as_deref()).await?;
+    let disp = format!("attachment; filename={}", filename);
+    let mut resp = Response::new(axum::body::Body::from(data));
+    resp.headers_mut().insert("content-type", axum::http::HeaderValue::from_str(&mime_type).unwrap());
+    resp.headers_mut().insert("content-disposition", axum::http::HeaderValue::from_str(&disp).unwrap());
+    Ok(resp)
 }

@@ -4,7 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.2.11', date: '2026-04-30', title: 'Cherry Markdown 富文本编辑器 — 所见即所得写作体验',
+      ver: '0.2.12', date: '2026-04-30', title: '文件分享系统 — 社区文件上传与安全分享',
+      items: [
+        '📁 文件上传: POST /api/spaces/{ns}/files 支持 base64 编码文件上传',
+        '📁 文件列表: GET /api/spaces/{ns}/files 查看社区内所有文件',
+        '🔗 分享链接: POST /api/files/share 创建带密码保护的分享链接',
+        '🔗 分享信息: GET /api/share/{code} 查看分享详情（文件名、大小、过期时间）',
+        '🔗 文件下载: GET /api/share/{code}/download 支持密码验证的安全下载',
+        '📦 后端实现: ContentRepo + ContentHandler 新增 11 个文件相关方法',
+        '📦 数据库: file_shares + share_links 表支持过期时间、下载次数限制',
+        '🚪 网关路由: /api/files 和 /api/share 代理到内容服务',
+      ],
+    },
+    {
+          ver: '0.2.11', date: '2026-04-30', title: 'Cherry Markdown 富文本编辑器 — 所见即所得写作体验',
       items: [
         '✍️ Cherry Markdown 集成: 替换 Milkdown 编辑器，更轻量、更稳定的 Markdown 编辑体验',
         '✍️ CherryEditor 组件: 支持 Markdown 语法高亮、实时预览、工具栏快捷操作',

@@ -6,6 +6,7 @@ description = "Content service - posts, comments, likes"
 
 [dependencies]
 polis-core = { path = "../polis-core" }
+base64 = "0.22"
 tokio = { workspace = true }
 axum = { workspace = true }
 tower = { workspace = true }

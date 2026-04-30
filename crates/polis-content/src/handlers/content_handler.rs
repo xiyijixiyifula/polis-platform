@@ -374,4 +374,57 @@ impl ContentHandler {
             }
         }
     }
+
+
+    // ===== File Sharing =====
+
+    pub async fn upload_file(&self, space_id: Uuid, user_id: Uuid, filename: &str, data: &[u8], mime_type: &str) -> Result<serde_json::Value, AppError> {
+        let file_id = Uuid::new_v4();
+        let storage_dir = format!("/root/polis/uploads/{}", space_id);
+        tokio::fs::create_dir_all(&storage_dir).await.map_err(|e| AppError::External(format!("Failed to create upload dir: {}", e)))?;
+        let storage_path = format!("{}/{}", storage_dir, file_id);
+        tokio::fs::write(&storage_path, data).await.map_err(|e| AppError::External(format!("Failed to write file: {}", e)))?;
+        let file_size = data.len() as i64;
+        let id = self.repo.create_file_record(space_id, user_id, filename, file_size, mime_type, &storage_path).await?;
+        Ok(serde_json::json!({ "id": id.to_string(), "filename": filename, "file_size": file_size, "mime_type": mime_type }))
+    }
+
+    pub async fn list_files(&self, space_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        self.repo.list_files_by_space(space_id).await
+    }
+
+    pub async fn create_file_share(&self, file_id: Uuid, _user_id: Uuid, expires_hours: Option<i64>, password: Option<String>) -> Result<serde_json::Value, AppError> {
+        let (fid, _filename, _fs, _mt, _sp) = self.repo.get_file_by_id(file_id).await?;
+        let code: String = Uuid::new_v4().to_string().chars().take(8).collect();
+        let expires_at = expires_hours.map(|h| chrono::Utc::now() + chrono::Duration::hours(h));
+        let share = self.repo.create_share_link(fid, &code, password.as_deref(), expires_at, None).await?;
+        Ok(serde_json::json!({ "code": code, "file_id": fid.to_string(), "expires_at": expires_at.map(|t| t.to_rfc3339()), "password": password }))
+    }
+
+    pub async fn get_share_info(&self, code: &str) -> Result<serde_json::Value, AppError> {
+        let (_link_id, file_id, password, expires_at, max_downloads, download_count, is_active) = self.repo.get_share_link_by_code(code).await?;
+        if !is_active { return Err(AppError::Validation("Share link has been deactivated".to_string())); }
+        if let Some(exp) = expires_at { if chrono::Utc::now() > exp { return Err(AppError::Validation("Share link has expired".to_string())); } }
+        if let Some(max) = max_downloads { if download_count >= max { return Err(AppError::Validation("Download limit reached".to_string())); } }
+        let (_fid, filename, file_size, mime_type, _sp) = self.repo.get_file_by_id(file_id).await?;
+        Ok(serde_json::json!({
+            "file_id": file_id.to_string(), "filename": filename, "file_size": file_size, "mime_type": mime_type,
+            "has_password": password.is_some(), "expires_at": expires_at.map(|t| t.to_rfc3339()), "download_count": download_count
+        }))
+    }
+
+    pub async fn download_shared_file(&self, code: &str, password: Option<&str>) -> Result<(Vec<u8>, String, String), AppError> {
+        let (link_id, file_id, stored_password, expires_at, max_downloads, download_count, is_active) = self.repo.get_share_link_by_code(code).await?;
+        if !is_active { return Err(AppError::Validation("Share link has been deactivated".to_string())); }
+        if let Some(exp) = expires_at { if chrono::Utc::now() > exp { return Err(AppError::Validation("Share link has expired".to_string())); } }
+        if let Some(max) = max_downloads { if download_count >= max { return Err(AppError::Validation("Download limit reached".to_string())); } }
+        if let Some(ref pw) = stored_password {
+            if password != Some(pw.as_str()) { return Err(AppError::Forbidden("Invalid password".to_string())); }
+        }
+        let (_fid, filename, _fs, mime_type, storage_path) = self.repo.get_file_by_id(file_id).await?;
+        let data = tokio::fs::read(&storage_path).await.map_err(|e| AppError::External(format!("Failed to read file: {}", e)))?;
+        self.repo.increment_share_download(link_id, file_id).await?;
+        Ok((data, filename, mime_type))
+    }
+
 }

@@ -66,6 +66,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/notifications/unread-count", any(proxy_to_content))
         .route("/api/notifications/read-all", any(proxy_to_content))
         .route("/api/bookmarks", any(proxy_to_content))
+        // File sharing
+        .route("/api/files/{*path}", any(proxy_to_content))
+        .route("/api/share/{*path}", any(proxy_to_content))
         .route("/api/announcements/{*path}", any(proxy_to_content))
         // 代理路由 - 管理后台服务
         .route("/api/admin/{*path}", any(proxy_to_admin))
@@ -100,7 +103,7 @@ async fn proxy_space_router(
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or(path);
     // 判断是否是内容服务路径（包含 /posts, /featured, /bookmarks, /announcements）
     let remaining = path.strip_prefix("/api/spaces").unwrap_or(path);
-    let is_content = remaining.contains("/posts") || remaining.contains("/featured") || remaining.contains("/bookmarks") || remaining.contains("/announcements") || remaining.contains("/polls");
+    let is_content = remaining.contains("/posts") || remaining.contains("/featured") || remaining.contains("/bookmarks") || remaining.contains("/announcements") || remaining.contains("/polls") || remaining.contains("/files") || remaining.contains("/share");
 
     let base_url = if is_content {
         &state.config.content_service_url
