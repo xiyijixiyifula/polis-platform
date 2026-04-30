@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.8', date: '2026-04-30', title: '社区投票/问卷列表 — 空间投票标签页上线',
+      items: [
+        '📊 GET /api/spaces/{ns}/polls: 新增空间投票列表 API，公开访问',
+        '📊 ContentRepo::list_polls_by_space: 聚合查询投票+选项+票数',
+        '📊 Gateway 路由增强: /polls 路径正确代理到内容服务',
+        '🎨 空间页投票标签页: 集成 PollCard 组件，浏览和参与投票',
+        '🎨 快捷入口: "发起投票"卡片，一键跳转创建投票页面',
+        '🔗 /polls/new 支持 ?space= 参数预填社区信息',
+        '🗳️ 端到端流程: 创建投票→参与投票→查看结果→空间列表展示',
+      ],
+    },
+    {
       ver: '0.2.7', date: '2026-04-30', title: '赞同/反对投票系统 + 网关查询参数修复',
       items: [
         '🗳️ 赞同/反对投票: 帖子列表 + 帖子详情页集成 VoteButton 组件',
@@ -190,7 +202,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.7' && (
+              {v.ver === '0.2.8' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
