@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.20', date: '2026-05-01', title: '社区搜索功能 — PostgreSQL ILIKE 搜索 + 前端集成',
+      items: [
+        '后端: polis-space 新增 ILIKE 模糊搜索 (标题+描述+命名空间)',
+        '路由: 新增 GET /api/search?q={query} 搜索端点',
+        '网关: polis-gateway 代理 /api/search 到 space 服务',
+        '前端: search/page.tsx 替换客户端过滤为服务端搜索调用',
+        'API: api.ts 新增 search.spaces() 方法',
+      ],
+    },
+
+    {
       ver: '0.2.18', date: '2026-05-01', title: 'CherryEditor 图片上传 + Markdown 图片渲染修复',
       items: [
         '图片上传: CherryEditor 集成 fileUpload 回调，支持 base64 上传',
@@ -270,7 +281,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.18' && (
+              {v.ver === '0.2.20' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
