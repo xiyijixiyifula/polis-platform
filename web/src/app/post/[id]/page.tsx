@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
 import { posts, Comment, Post } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
@@ -48,6 +48,8 @@ function PostDetailContent() {
   const [commentText, setCommentText] = useState('');
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
     if (!postId) return;
@@ -106,6 +108,24 @@ function PostDetailContent() {
   }, [postId, spaceFromUrl]);
 
   const currentNs = spaceNs || spaceFromUrl || '_';
+
+  // Fetch related posts from the same space
+  useEffect(() => {
+    if (!post || !currentNs || currentNs === '_') return;
+    setRelatedLoading(true);
+    (async () => {
+      try {
+        const res = await posts.list(currentNs, { page_size: 10 });
+        if (res.data) {
+          const related = res.data.filter((p: any) => p.id !== post.id).slice(0, 3);
+          setRelatedPosts(related);
+        }
+      } catch {}
+      setRelatedLoading(false);
+    })();
+  }, [post, currentNs]);
+
+
 
   const handleLike = async () => {
     if (!post) return;
@@ -306,6 +326,37 @@ function PostDetailContent() {
           <p className="text-sm text-gray-400 text-center py-4">暂无评论，来发表第一条评论吧</p>
         )}
       </div>
+
+      {/* 关联推荐 */}
+      {relatedPosts.length > 0 && (
+        <div className="mt-6 card">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            同社区更多文章
+          </h2>
+          <div className="space-y-3">
+            {relatedPosts.map((rp: any) => (
+              <Link
+                key={rp.id}
+                href={`/post/${rp.id}?space=${encodeURIComponent(currentNs)}`}
+                className="block rounded-lg border border-gray-100 dark:border-gray-700 p-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+              >
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-1">
+                  {rp.title}
+                </h3>
+                {rp.body && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                    {rp.body.replace(/[#*\`\[\]>\-]/g, '').substring(0, 120)}
+                  </p>
+                )}
+                <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
+                  <span>👍 {rp.like_count || 0}</span>
+                  <span>💬 {rp.comment_count || 0}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

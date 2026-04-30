@@ -57,6 +57,8 @@ export default function ProfilePage() {
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [followingList, setFollowingList] = useState<FollowUser[]>([]);
   const [listLoading, setListLoading] = useState(false);
+  const [userArticles, setUserArticles] = useState<any[]>([]);
+  const [articlesLoading, setArticlesLoading] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('polis_user');
@@ -124,6 +126,39 @@ export default function ProfilePage() {
       } catch {}
 
       setLoading(false);
+    })();
+  }, [user]);
+
+  // Fetch user's own articles across all spaces
+  useEffect(() => {
+    if (!user) return;
+    setArticlesLoading(true);
+    (async () => {
+      const articles: any[] = [];
+      try {
+        const spacesRes = await fetch('/api/users/' + user.username + '/spaces', {
+          headers: { Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
+        });
+        const spacesData = await spacesRes.json();
+        if (spacesData.code === 0 && spacesData.data) {
+          for (const sp of spacesData.data.slice(0, 10)) {
+            try {
+              const ns = sp.namespace || sp.slug || sp.id;
+              const postRes = await posts.list(ns, { page_size: 20 });
+              if (postRes.data) {
+                for (const p of postRes.data) {
+                  const authorId = p.author_id || p.author?.id || '';
+                  if (authorId === user.id) {
+                    articles.push({ ...p, space_ns: ns, space_name: sp.title || ns });
+                  }
+                }
+              }
+            } catch {}
+          }
+        }
+      } catch {}
+      setUserArticles(articles);
+      setArticlesLoading(false);
     })();
   }, [user]);
 
@@ -198,16 +233,44 @@ export default function ProfilePage() {
 
       <div className="mt-6 mb-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex gap-0">
-          {['posts', 'spaces', 'followers', 'following'].map((tab) => (
-            <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'followers') loadFollowers(); if (tab === 'following') loadFollowing(); }}
+          {['articles', 'posts', 'spaces', 'followers', 'following'].map((tab) => (
+            <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'followers') loadFollowers(); if (tab === 'following') loadFollowing(); if (tab === 'articles') setActiveTab('articles'); }}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}>
-              {{posts:'帖子', spaces: `社区 (${userSpaces.length})`, followers: `粉丝 (${followerCount})`, following: `关注 (${followingCount})`}[tab]}
+              {{articles: `文章 (${userArticles.length})`, posts:'帖子', spaces: `社区 (${userSpaces.length})`, followers: `粉丝 (${followerCount})`, following: `关注 (${followingCount})`}[tab]}
             </button>
           ))}
         </div>
       </div>
+
+      
+      {activeTab === 'articles' && (
+        articlesLoading ? (
+          <div className="space-y-3">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="card animate-pulse">
+                <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : userArticles.length > 0 ? (
+          <div className="space-y-3">
+            {userArticles.map((p: any) => (
+              <PostCard key={p.id} post={p} />
+            ))}
+          </div>
+        ) : (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+            <div className="text-3xl mb-2">📄</div>
+            <p className="text-sm">还没有发布过文章</p>
+            <Link href="/explore" className="mt-2 inline-block text-sm text-primary-600 hover:underline">
+              去探索社区发文 →
+            </Link>
+          </div>
+        )
+      )}
 
       {activeTab === 'posts' && (
         loading ? (
