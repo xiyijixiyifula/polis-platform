@@ -30,7 +30,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-900/80">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
         {/* Logo */}
         <div className="flex items-center gap-6">
@@ -38,7 +38,7 @@ export function Header() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-sm font-bold text-white">
               P
             </div>
-            <span className="text-lg font-bold text-gray-900 hidden sm:inline">Polis</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-white hidden sm:inline">Polis</span>
           </Link>
 
           {/* Nav */}
@@ -65,7 +65,7 @@ export function Header() {
             <input
               type="text"
               placeholder="搜索社区、帖子、用户..."
-              className="w-full rounded-full border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm placeholder-gray-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-100"
+              className="w-full rounded-full border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 py-2 pl-10 pr-4 text-sm placeholder-gray-400 dark:placeholder-gray-500 dark:text-gray-200 focus:border-primary-400 focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-primary-100"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -100,13 +100,13 @@ export function Header() {
                   <User className="h-5 w-5" />
                 </button>
                 {showUserMenu && (
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-50"
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50"
                     onMouseLeave={() => setShowUserMenu(false)}>
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">个人主页</Link>
-                    <Link href="/drafts" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">草稿箱</Link>
-                    <Link href="/saved" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">我的收藏</Link>
-                    <Link href="/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">账号设置</Link>
-                    <hr className="my-1 border-gray-100" />
+                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">个人主页</Link>
+                    <Link href="/drafts" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">草稿箱</Link>
+                    <Link href="/saved" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">我的收藏</Link>
+                    <Link href="/settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">账号设置</Link>
+                    <hr className="my-1 border-gray-100 dark:border-gray-700" />
                     <button onClick={() => { localStorage.removeItem('polis_access_token'); localStorage.removeItem('polis_user'); window.location.href = '/'; }}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">退出登录</button>
                   </div>
@@ -115,7 +115,7 @@ export function Header() {
             </>
           ) : (
             <div className="flex items-center gap-2">
-              <Link href="/login" className="text-sm text-gray-600 hover:text-gray-900 px-3 py-2">登录</Link>
+              <Link href="/login" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white px-3 py-2">登录</Link>
               <Link href="/register" className="btn-primary text-xs px-4 py-1.5">注册</Link>
             </div>
           )}
@@ -127,14 +127,14 @@ export function Header() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="border-t border-gray-200 bg-white px-4 py-3 md:hidden">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3 md:hidden">
           <div className="mb-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="搜索..."
-                className="w-full rounded-full border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm"
+                className="w-full rounded-full border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 dark:text-gray-200 py-2 pl-10 pr-4 text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -146,14 +146,14 @@ export function Header() {
             </div>
           </div>
           <nav className="flex flex-col gap-1">
-            <Link href="/explore" className="rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
+            <Link href="/explore" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
               发现
             </Link>
-            <Link href="/trending" className="rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100">
+            <Link href="/trending" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
               热榜
             </Link>
             {isLoggedIn && (
-              <Link href="/create" className="rounded-lg px-3 py-2 text-sm text-primary-600 hover:bg-primary-50">
+              <Link href="/create" className="rounded-lg px-3 py-2 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30">
                 创建社区
               </Link>
             )}

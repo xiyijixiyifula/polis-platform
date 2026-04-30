@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.4', date: '2026-04-30', title: '暗黑模式增强 + Admin 修复',
+      items: [
+        '🌙 暗黑模式全面增强: Header、首页、更新日志等核心页面适配',
+        '🌙 CSS 变量 + Tailwind dark: 变体实现主题切换',
+        '🌙 导航栏、搜索框、下拉菜单、卡片组件暗黑适配',
+        '🐛 修复: Admin 服务路由语法 Axum 0.8 兼容 (:id → {id})',
+        '🐛 修复: 生产环境数据库密码配置错误',
+        '🔧 polis-admin 服务恢复正常运行',
+        '💾 主题偏好自动保存到 localStorage',
+      ],
+    },
+    {
       ver: '0.1.0', date: '2026-04-28', title: 'Polis MVP 发布',
       items: [
         '用户注册/登录系统', '社区创建与管理', '论坛帖子/评论/点赞',
@@ -117,23 +129,23 @@ export default function ChangelogPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">更新日志</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">更新日志</h1>
       <div className="space-y-8">
         {versions.map((v) => (
-          <div key={v.ver} className="relative pl-8 border-l-2 border-primary-200">
-            <div className="absolute -left-2.5 top-0 h-5 w-5 rounded-full bg-primary-600 border-2 border-white" />
+          <div key={v.ver} className="relative pl-8 border-l-2 border-primary-200 dark:border-primary-800">
+            <div className="absolute -left-2.5 top-0 h-5 w-5 rounded-full bg-primary-600 border-2 border-white dark:border-gray-900" />
             <div className="mb-1 flex items-center gap-3">
-              <span className="text-lg font-bold text-gray-900">v{v.ver}</span>
-              <span className="text-sm text-gray-400">{v.date}</span>
-              {v.ver === '0.2.3' && (
-                <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">当前版本</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
+              {v.ver === '0.2.4' && (
+                <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
-            <h3 className="font-medium text-gray-700 mb-2">{v.title}</h3>
+            <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{v.title}</h3>
             <ul className="space-y-1">
               {v.items.map((item) => (
-                <li key={item} className="flex items-start gap-2 text-sm text-gray-600">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />
+                <li key={item} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-green-500 dark:bg-green-400" />
                   {item}
                 </li>
               ))}
