@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import 'cherry-markdown/dist/cherry-markdown.css';
+import 'cherry-markdown/dist/cherry-markdown.css';
+import 'cherry-markdown/dist/cherry-markdown.css';
 
 interface CherryEditorProps {
   value: string;
@@ -102,13 +104,13 @@ export function CherryEditor({
   }
 
   return (
-    <div className="cherry-editor-wrapper rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900">
+    <div className="cherry-editor-wrapper relative rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900" style={{ minHeight: minHeight }}>
       {loading && (
-        <div className="flex items-center justify-center" style={{ height: minHeight }}>
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 dark:bg-gray-900/80 rounded-xl">
           <span className="text-sm text-gray-400">加载编辑器...</span>
         </div>
       )}
-      <div ref={containerRef} style={{ display: loading ? 'none' : 'block' }} />
+      <div ref={containerRef} style={{ minHeight: minHeight }} />
     </div>
   );
 }

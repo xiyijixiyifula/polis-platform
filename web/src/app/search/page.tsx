@@ -34,7 +34,7 @@ function SearchContent() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+      window.location.href = `/search?q=${encodeURIComponent(query.trim())}`;
     }
   };
 
@@ -53,10 +53,11 @@ function SearchContent() {
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            className="w-full rounded-xl border border-gray-200 bg-white py-3.5 pl-12 pr-4 text-base shadow-sm placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="w-full rounded-xl border border-gray-200 bg-white py-3.5 pl-12 pr-24 text-base shadow-sm placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
             placeholder="搜索社区..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") handleSearch(e); }}
           />
         <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg bg-primary-600 hover:bg-primary-700 px-4 py-2 text-sm font-medium text-white transition-colors">搜索</button>
         </div>

@@ -29,6 +29,17 @@ export function Header() {
     } catch {}
   };
 
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const interval = setInterval(fetchUnread, 30000);
+    const onFocus = () => fetchUnread();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [isLoggedIn]);
+
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-gray-900/80">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">

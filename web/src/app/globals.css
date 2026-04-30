@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+.dark .text-gray-600 { color: rgb(203 213 225); }
+.dark .text-gray-500 { color: rgb(148 163 184); }
+.dark .text-gray-400 { color: rgb(148 163 184); }
+.dark .card { background: rgb(30 41 59); border-color: rgb(71 85 105); }
+
 @layer base {
   :root {
     --bg-primary: 255 255 255;
@@ -11,11 +16,11 @@
     --border: 229 231 235;
   }
   .dark {
-    --bg-primary: 17 24 39;
-    --bg-secondary: 31 41 55;
-    --text-primary: 243 244 246;
-    --text-secondary: 156 163 175;
-    --border: 55 65 81;
+    --bg-primary: 15 23 42;
+    --bg-secondary: 30 41 59;
+    --text-primary: 241 245 249;
+    --text-secondary: 203 213 225;
+    --border: 71 85 105;
   }
 }
 
