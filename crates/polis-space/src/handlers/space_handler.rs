@@ -203,6 +203,11 @@ impl SpaceHandler {
     }
 
     /// 获取热门社区
+    pub async fn search_spaces(&self, query: &str, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
+        let spaces = self.repo.search(query, limit).await?;
+        Ok(spaces.into_iter().map(|s| s.into()).collect())
+    }
+
     pub async fn get_trending_spaces(&self, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
         let spaces = self.repo.find_trending(limit).await?;
         Ok(spaces.into_iter().map(|s| s.into()).collect())

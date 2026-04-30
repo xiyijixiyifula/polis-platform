@@ -9,6 +9,14 @@ use axum::{
 use uuid::Uuid;
 
 use polis_core::error::AppError;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+pub struct SearchParams {
+    pub q: String,
+    pub page_size: Option<u32>,
+}
+
 use polis_core::models::{
     ApiResponse, CreateSpaceRequest, SpacePublic, UpdateSpaceRequest, PaginationParams,
 };
@@ -38,6 +46,7 @@ fn extract_namespace(path: &str, prefix: &str) -> Option<String> {
 
 pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
     let public = Router::new()
+        .route("/api/search", get(search_spaces))
         .route("/api/spaces/trending", get(get_trending_spaces))
         .route("/api/spaces/{*path}", get(handle_public_path))
         .route("/api/root/{slug}", get(get_root_space))
@@ -141,6 +150,15 @@ async fn create_space(
 }
 
 /// GET /api/spaces/trending - 热门社区
+async fn search_spaces(
+    State(handler): State<Arc<SpaceHandler>>,
+    Query(params): Query<SearchParams>,
+) -> Result<Json<ApiResponse<Vec<SpacePublic>>>, AppError> {
+    let limit = params.page_size.unwrap_or(20);
+    let spaces = handler.search_spaces(&params.q, limit).await?;
+    Ok(Json(ApiResponse::success(spaces)))
+}
+
 async fn get_trending_spaces(
     State(handler): State<Arc<SpaceHandler>>,
     Query(params): Query<PaginationParams>,

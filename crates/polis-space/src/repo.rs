@@ -147,6 +147,19 @@ impl SpaceRepo {
         Ok(spaces)
     }
 
+    /// 搜索社区（按标题和描述模糊匹配）
+    pub async fn search(&self, query: &str, limit: u32) -> Result<Vec<Space>, AppError> {
+        let pattern = format!("%{}%", query);
+        let spaces = sqlx::query_as::<_, Space>(
+            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' AND (title ILIKE $1 OR description ILIKE $1 OR namespace ILIKE $1) ORDER BY member_count DESC LIMIT $2",
+        )
+        .bind(&pattern)
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(spaces)
+    }
+
     // ===== 成员管理 =====
 
     /// 添加成员

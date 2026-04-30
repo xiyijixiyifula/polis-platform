@@ -234,6 +234,14 @@ export interface Comment {
   created_at: string;
 }
 
+export const search = {
+  spaces: (q: string, pageSize?: number) => {
+    const params = new URLSearchParams({ q });
+    if (pageSize) params.set('page_size', String(pageSize));
+    return request<Space[]>('/search?' + params.toString());
+  },
+};
+
 export const posts = {
   create: (namespace: string, data: { title: string; body: string; module_type?: string; tags?: string[] }) =>
     request<Post>(`/spaces/${namespace}/posts`, {

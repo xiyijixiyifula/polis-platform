@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, Filter } from 'lucide-react';
 import { SpaceCard } from '@/components/SpaceCard';
-import { spaces } from '@/lib/api';
+import { search as searchApi } from '@/lib/api';
 
 function SearchContent() {
   const searchParams = useSearchParams();
@@ -12,7 +12,7 @@ function SearchContent() {
   const q = searchParams.get('q') || '';
   const [query, setQuery] = useState(q);
   const [activeTab, setActiveTab] = useState<'space' | 'post'>('space');
-  const [allSpaces, setAllSpaces] = useState<any[]>([]);
+  const [filteredSpaces, setFilteredSpaces] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -20,16 +20,19 @@ function SearchContent() {
   }, [q]);
 
   useEffect(() => {
-    const fetchSpaces = async () => {
+    if (!q) return;
+    const fetchResults = async () => {
+      setLoading(true);
       try {
-        const res = await spaces.trending();
-        if (res.data) {
-          setAllSpaces(res.data);
+        const res = await searchApi.spaces(q);
+        if (res.code === 0 && res.data) {
+          setFilteredSpaces(res.data);
         }
       } catch {}
+      setLoading(false);
     };
-    fetchSpaces();
-  }, []);
+    fetchResults();
+  }, [q]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +41,7 @@ function SearchContent() {
     }
   };
 
-  const filteredSpaces = q
-    ? allSpaces.filter((s: any) =>
-        (s.title && s.title.toLowerCase().includes(q.toLowerCase())) ||
-        (s.namespace && s.namespace.toLowerCase().includes(q.toLowerCase())) ||
-        (s.description && s.description.toLowerCase().includes(q.toLowerCase()))
-      )
-    : [];
+
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
