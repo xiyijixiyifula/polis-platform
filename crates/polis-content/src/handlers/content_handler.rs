@@ -144,6 +144,48 @@ impl ContentHandler {
         Ok(post)
     }
 
+    /// 获取帖子公开信息（含作者详情）
+    pub async fn get_post_public(&self, post_id: Uuid) -> Result<PostPublic, AppError> {
+        let post = self
+            .repo
+            .find_post_by_id(post_id)
+            .await?
+            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+
+        self.repo.increment_view_count(post_id).await.ok();
+
+        let author_ids = vec![post.author_id];
+        let authors = self.repo.find_users_batch(&author_ids).await?;
+        let author = authors.get(&post.author_id).cloned().unwrap_or(UserPublic {
+            id: post.author_id,
+            username: String::new(),
+            display_name: String::new(),
+            avatar_url: None,
+            bio: String::new(),
+            verified: false,
+            created_at: post.created_at,
+        });
+
+        Ok(PostPublic {
+            id: post.id,
+            space_id: post.space_id,
+            module_type: serde_json::from_str(&format!("\"{}\"", post.module_type)).unwrap_or_default(),
+            author,
+            title: post.title,
+            body: post.body,
+            content_type: serde_json::from_str(&format!("\"{}\"", post.content_type)).unwrap_or_default(),
+            media_urls: serde_json::from_value(post.media_urls).unwrap_or_default(),
+            tags: serde_json::from_value(post.tags).unwrap_or_default(),
+            is_pinned: post.is_pinned,
+            is_featured: post.is_featured,
+            view_count: post.view_count,
+            like_count: post.like_count,
+            comment_count: post.comment_count,
+            created_at: post.created_at,
+            updated_at: post.updated_at,
+        })
+    }
+
     /// 更新帖子
     pub async fn update_post(
         &self,

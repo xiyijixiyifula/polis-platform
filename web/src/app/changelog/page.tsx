@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.11', date: '2026-04-30', title: 'Cherry Markdown 富文本编辑器 — 所见即所得写作体验',
+      items: [
+        '✍️ Cherry Markdown 集成: 替换 Milkdown 编辑器，更轻量、更稳定的 Markdown 编辑体验',
+        '✍️ CherryEditor 组件: 支持 Markdown 语法高亮、实时预览、工具栏快捷操作',
+        '✍️ 工具栏: 粗体/斜体/标题/列表/引用/链接/图片/代码块 一键插入',
+        '✍️ 暗黑模式适配: 编辑器主题风格自动跟随系统主题切换',
+        '📦 cherry-markdown 依赖: 替换 @milkdown/* 系列包，减少 bundle 体积',
+        '🔧 PostCard 增强: 内容预览区域适配 Cherry Markdown 渲染风格',
+        '📉 Bundle 优化: post/new 页面 First Load JS 从 122kB 降至 103kB (-19kB)',
+      ],
+    },
+    {
       ver: '0.2.10', date: '2026-04-30', title: '社区概览页 — GitHub 风格 README 首页',
       items: [
         '🏠 社区概览 Tab: 默认首页替代直接跳转文章列表，类似 GitHub 仓库页',
@@ -71,7 +83,7 @@ export default function ChangelogPage() {
         '🐛 修复: /space/* 空间页面 404 (服务器 page.tsx 被误删)',
         '📖 USER-GUIDE.md: 245行完整用户使用指南 (注册到管理后台全流程)',
         '📖 README.md: 重写，移除16项不实功能描述，标注10个桩代码状态',
-        '🔒 HTTPS 已配置: Let\'s Encrypt + TLS 1.3 + HSTS + 安全响应头',
+        '🔒 HTTPS 已配置: Let’s Encrypt + TLS 1.3 + HSTS + 安全响应头',
         '📋 HTTPS-CONFIG.md: 完整证书/Nginx/故障排查/急救流程参考手册',
         '✅ 全量页面测试: 30+ 路由全部 200，注册+创建+发帖+评论+投票实测通过',
       ],
@@ -187,11 +199,11 @@ export default function ChangelogPage() {
       ver: '0.4.0', date: '2026-06', title: '内容生态扩展',
       items: [
         '🎬 视频上传与转码 (FFmpeg)',
-        '📝 Markdown 富文本编辑器',
         '📌 帖子置顶与精华',
         '🚩 内容举报与审核系统',
-        '🌙 暗黑模式',
         '🌐 国际化 (i18n)',
+        '🔍 全文搜索 (Meilisearch/PostgreSQL GIN)',
+        '📁 文件分享系统 (百度网盘风格)',
       ],
     },
     {
@@ -228,7 +240,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.10' && (
+              {v.ver === '0.2.11' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

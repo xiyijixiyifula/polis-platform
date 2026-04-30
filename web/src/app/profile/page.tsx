@@ -90,7 +90,11 @@ export default function ProfilePage() {
         const spacesData = await spacesRes.json();
         if (spacesData.code === 0 && spacesData.data) {
           const allSpaces: any[] = spacesData.data;
-          setUserSpaces(allSpaces);
+          // 只显示自己拥有的社区（namespace 以 username/ 开头）
+          const ownedSpaces = allSpaces.filter((s: any) =>
+            s.namespace?.startsWith(user.username + '/')
+          );
+          setUserSpaces(ownedSpaces);
 
           // Fetch recent posts from user's spaces for the posts tab
           const allPosts: any[] = [];

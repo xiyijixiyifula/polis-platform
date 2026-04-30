@@ -96,6 +96,9 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/spaces/{*path}", get(handle_public_content))
         // 公开的投票/问卷结果
         .route("/api/polls/{id}", get(get_poll_public))
+        // 通过 ID 获取帖子（无需知道 namespace）
+        .route("/api/posts/{id}", get(get_post_by_id_route))
+        .route("/api/posts/{id}/comments", get(get_post_comments_route))
         // 获取投票分数（赞同/反对）
         .route("/api/vote", get(get_vote_score_route));
 
@@ -141,7 +144,7 @@ async fn handle_public_content(
         }
         (Some(id), None) => {
             // GET /api/spaces/{ns}/posts/{id}
-            let post = h.get_post(id).await?;
+            let post = h.get_post_public(id).await?;
             Ok(json_ok(ApiResponse::success(post)))
         }
         (Some(id), Some("comments")) => {
@@ -358,6 +361,26 @@ async fn mark_all_read_route(
     sqlx::query("UPDATE notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE")
         .bind(uid).execute(&h.pool).await?;
     Ok(json_ok(ApiResponse::success(())))
+}
+
+// ===== 通过 ID 获取帖子（无需 namespace） =====
+
+/// 通过帖子 ID 直接获取帖子详情（公开接口）
+async fn get_post_by_id_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let post = h.get_post_public(id).await?;
+    Ok(json_ok(ApiResponse::success(post)))
+}
+
+/// 通过帖子 ID 获取评论列表（公开接口）
+async fn get_post_comments_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let comments = h.get_comments(id).await?;
+    Ok(json_ok(ApiResponse::success(comments)))
 }
 
 /// 解析查询参数（手动解析，避免额外依赖）

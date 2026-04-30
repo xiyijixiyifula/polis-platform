@@ -81,7 +81,11 @@ export default function UserProfilePage() {
         });
         const spData = await spRes.json();
         if (spData.code === 0 && spData.data) {
-          setUserSpaces(spData.data);
+          // 只显示用户拥有的社区（namespace 以 username/ 开头）
+          const ownedSpaces = spData.data.filter((s: any) =>
+            s.namespace?.startsWith(username + '/')
+          );
+          setUserSpaces(ownedSpaces);
         }
       } catch {}
 

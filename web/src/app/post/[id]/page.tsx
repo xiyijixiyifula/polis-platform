@@ -55,8 +55,33 @@ function PostDetailContent() {
 
     (async () => {
       try {
-        const ns = spaceFromUrl || '_';
-        const res = await posts.get(ns, postId);
+        let res: any;
+
+        if (spaceFromUrl) {
+          // 有 namespace → 直接用
+          res = await posts.get(spaceFromUrl, postId);
+        } else {
+          // 无 namespace → 通过 ID 查找
+          const result = await posts.getById(postId);
+          if (result) {
+            setPost(result.post);
+            setLikeCount(result.post.like_count || 0);
+            setSpaceNs(result.spaceNs);
+            // 加载评论
+            try {
+              const commentsData = await posts.getCommentsById(postId);
+              if (commentsData.data) {
+                setComments(commentsData.data);
+              }
+            } catch {}
+            setLoading(false);
+            return;
+          }
+          setError('帖子不存在或已被删除');
+          setLoading(false);
+          return;
+        }
+
         if (res.code === 0 && res.data) {
           setPost(res.data);
           setLikeCount(res.data.like_count || 0);
@@ -65,7 +90,7 @@ function PostDetailContent() {
           }
 
           try {
-            const commentsData = await posts.getComments(ns, postId);
+            const commentsData = await posts.getComments(spaceFromUrl, postId);
             if (commentsData.data) {
               setComments(commentsData.data);
             }

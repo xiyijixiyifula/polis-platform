@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post } from '@/lib/api';
 
@@ -35,8 +35,14 @@ export default function SpacePage() {
   const availableTabs = [
     { id: 'overview', label: '概览', icon: Layout, enabled: true },
     { id: 'posts', label: '文章', icon: MessageCircle, enabled: modules.posts },
+    { id: 'video', label: '视频', icon: Video, enabled: modules.video },
+    { id: 'code_repo', label: '代码', icon: Code, enabled: modules.code_repo },
+    { id: 'qa', label: '问答', icon: HelpCircle, enabled: modules.qa },
     { id: 'polls', label: '投票', icon: BarChart3, enabled: modules.polls },
     { id: 'announcements', label: '公告', icon: Megaphone, enabled: modules.announcements },
+    { id: 'chat', label: '聊天', icon: MessageSquare, enabled: modules.chat },
+    { id: 'store', label: '商城', icon: ShoppingBag, enabled: modules.store },
+    { id: 'course', label: '课程', icon: GraduationCap, enabled: modules.course },
     { id: 'members', label: '成员', icon: UserCheck, enabled: modules.members },
   ].filter(t => t.enabled);
 
@@ -253,48 +259,12 @@ export default function SpacePage() {
             设置
           </button>
           {showSettings && (
-            <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-2 z-40">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
-                  <Settings className="h-3.5 w-3.5" /> 模块设置
-                </span>
-              </div>
-              <div className="py-1">
-                {[
-                  { key: 'posts' as const, label: '文章', icon: MessageCircle, locked: true, desc: '默认模块，始终可见' },
-                  { key: 'polls' as const, label: '投票', icon: BarChart3, locked: false, desc: '社区投票和问卷' },
-                  { key: 'announcements' as const, label: '公告', icon: Megaphone, locked: false, desc: '社区公告列表' },
-                  { key: 'members' as const, label: '成员', icon: UserCheck, locked: false, desc: '社区成员列表' },
-                ].map((mod) => (
-                  <button
-                    key={mod.key}
-                    onClick={() => {
-                      if (mod.locked) return;
-                      const next = { ...modules, [mod.key]: !modules[mod.key] };
-                      setModules(next);
-                      saveModules(namespace, next);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                  >
-                    <mod.icon className="h-4 w-4 text-gray-400 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{mod.label}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{mod.desc}</p>
-                    </div>
-                    <div className={`w-9 h-5 rounded-full relative transition-colors ${
-                      modules[mod.key] ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
-                    } ${mod.locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}>
-                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                        modules[mod.key] ? 'translate-x-4' : 'translate-x-0.5'
-                      }`} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-              <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-xs text-gray-400 dark:text-gray-500">设置自动保存到本地浏览器</p>
-              </div>
-            </div>
+            <SpaceSettings
+              namespace={namespace}
+              modules={modules}
+              onChange={setModules}
+              onClose={() => setShowSettings(false)}
+            />
           )}
         </div>
       </div>
@@ -555,6 +525,54 @@ export default function SpacePage() {
               <UserCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>成员列表</p>
               <p className="text-sm mt-1">成员浏览功能开发中</p>
+            </div>
+          )}
+
+          {activeTab === 'video' && (
+            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+              <Video className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p>视频模块</p>
+              <p className="text-sm mt-1">即将推出，敬请期待</p>
+            </div>
+          )}
+
+          {activeTab === 'code_repo' && (
+            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+              <Code className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p>代码仓库</p>
+              <p className="text-sm mt-1">即将推出 Git 代码托管功能</p>
+            </div>
+          )}
+
+          {activeTab === 'qa' && (
+            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+              <HelpCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p>问答模块</p>
+              <p className="text-sm mt-1">即将推出提问与回答功能</p>
+            </div>
+          )}
+
+          {activeTab === 'chat' && (
+            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+              <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p>聊天模块</p>
+              <p className="text-sm mt-1">即将推出即时通讯功能</p>
+            </div>
+          )}
+
+          {activeTab === 'store' && (
+            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+              <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p>商城模块</p>
+              <p className="text-sm mt-1">即将推出商品交易功能</p>
+            </div>
+          )}
+
+          {activeTab === 'course' && (
+            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+              <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <p>课程模块</p>
+              <p className="text-sm mt-1">即将推出在线课程功能</p>
             </div>
           )}
         </main>

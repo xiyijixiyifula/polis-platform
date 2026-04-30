@@ -241,7 +241,7 @@ export const posts = {
 
   getById: async (id: string): Promise<{ post: Post; spaceNs: string } | null> => {
     try {
-      const data = await request<Post>(`/spaces/_/posts/${id}`);
+      const data = await request<Post>(`/posts/${id}`);
       if (data.code === 0 && data.data) {
         const post = data.data;
         const spaceNs = await resolveSpaceNs(post.space_id);
@@ -253,6 +253,9 @@ export const posts = {
 
   getComments: (namespace: string, postId: string) =>
     request<Comment[]>(`/spaces/${namespace}/posts/${postId}/comments`),
+
+  getCommentsById: (postId: string) =>
+    request<Comment[]>(`/posts/${postId}/comments`),
 
   createComment: (namespace: string, postId: string, body: string) =>
     request<Comment>(`/spaces/${namespace}/posts/${postId}/comments`, {

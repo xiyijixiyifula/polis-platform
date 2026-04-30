@@ -1,11 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function LoginPage() {
+  const [redirect, setRedirect] = useState('/');
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const r = params.get('redirect');
+    if (r) setRedirect(r);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +33,7 @@ export default function LoginPage() {
         if (data.data.user) {
           localStorage.setItem('polis_user', JSON.stringify(data.data.user));
         }
-        window.location.href = '/';
+        window.location.href = redirect;
       }
     } catch {
       setError('网络错误，请重试');

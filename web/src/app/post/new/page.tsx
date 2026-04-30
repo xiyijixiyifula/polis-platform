@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { MilkdownEditor } from '@/components/MilkdownEditor';
-import { ArrowLeft, Send } from 'lucide-react';
+import { CherryEditor } from '@/components/CherryEditor';
+import { ArrowLeft, Send, LogIn } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { posts } from '@/lib/api';
+import { posts, getToken } from '@/lib/api';
+import { loadModules } from '@/components/SpaceSettings';
 
 function NewPostForm() {
   const router = useRouter();
@@ -16,9 +17,39 @@ function NewPostForm() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tags, setTags] = useState('');
-  const [moduleType, setModuleType] = useState('forum');
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
+
+  // 读取该社区的模块配置
+  const enabledModules = useMemo(() => {
+    if (!space) return null;
+    return loadModules(space);
+  }, [space]);
+
+  // 可用模块列表（根据社区设置动态生成）
+  const availableModules = useMemo(() => {
+    const all = [
+      { id: 'article', label: '📝 文章', moduleKey: 'posts' as const },
+      { id: 'qa', label: '❓ 问答', moduleKey: 'qa' as const },
+    ];
+    if (!enabledModules) return all;
+    return all.filter(m => enabledModules[m.moduleKey]);
+  }, [enabledModules]);
+
+  // 模块类型 - 根据可用模块自动选择
+  const [moduleType, setModuleType] = useState('article');
+  useEffect(() => {
+    if (availableModules.length > 0 && !availableModules.find(m => m.id === moduleType)) {
+      setModuleType(availableModules[0].id);
+    }
+  }, [availableModules, moduleType]);
+
+  // 检查登录状态
+  useEffect(() => {
+    const token = getToken();
+    setIsLoggedIn(!!token);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +69,18 @@ function NewPostForm() {
         tags: tags.split(/[，,、\s]+/).filter(Boolean),
       });
       if (res.code === 0 && res.data?.id) {
-        router.push(`/post/${res.data.id}`);
+        router.push(`/post/${res.data.id}?space=${encodeURIComponent(space)}`);
       } else {
         setError(res.message || '发布失败');
       }
-    } catch (err) {
-      setError('网络错误，请重试');
+    } catch (err: any) {
+      // 显示具体错误信息
+      const msg = err?.message || '网络错误，请重试';
+      if (msg.includes('Authentication') || msg.includes('401') || msg.includes('Unauthorized')) {
+        setError('请先登录后再发布');
+      } else {
+        setError(msg);
+      }
     } finally {
       setPublishing(false);
     }
@@ -65,7 +102,22 @@ function NewPostForm() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
+          <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-sm text-red-600 dark:text-red-400">{error}</div>
+        )}
+
+        {!isLoggedIn && (
+          <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 flex items-center justify-between">
+            <span className="text-sm text-amber-700 dark:text-amber-400">
+              ⚠️ 请先登录后再发布内容
+            </span>
+            <Link
+              href={`/login?redirect=${encodeURIComponent(`/post/new?space=${encodeURIComponent(space)}`)}`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-medium text-white transition-colors"
+            >
+              <LogIn className="h-4 w-4" />
+              去登录
+            </Link>
+          </div>
         )}
 
         {!space && (
@@ -81,22 +133,22 @@ function NewPostForm() {
           </div>
         )}
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">模块:</span>
-          {[
-            { id: 'forum', label: '💬 讨论' },
-            { id: 'article', label: '📝 文章' },
-            { id: 'qa', label: '❓ 问答' },
-            { id: 'code_repo', label: '📦 代码' },
-          ].map((m) => (
-            <button key={m.id} type="button" onClick={() => setModuleType(m.id)}
-              className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                moduleType === m.id ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'
-              }`}>
-              {m.label}
-            </button>
-          ))}
-        </div>
+        {availableModules.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">模块:</span>
+            {availableModules.map((m) => (
+              <button key={m.id} type="button" onClick={() => setModuleType(m.id)}
+                className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                  moduleType === m.id ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {availableModules.length <= 1 && (
+          <p className="text-xs text-gray-400">📝 发布为文章</p>
+        )}
 
         <input
           type="text"
@@ -115,7 +167,7 @@ function NewPostForm() {
           onChange={(e) => setTags(e.target.value)}
         />
 
-        <MilkdownEditor value={body} onChange={setBody} />
+        <CherryEditor value={body} onChange={setBody} />
 
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-400">
