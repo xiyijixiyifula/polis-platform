@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
+import { SpaceCard } from '@/components/SpaceCard';
 import { Settings, Calendar, Users, UserCheck } from 'lucide-react';
 import { users, posts, follow, type User, type FollowUser } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -48,6 +49,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
   const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [userSpaces, setUserSpaces] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('posts');
   const [followerCount, setFollowerCount] = useState(0);
@@ -86,10 +88,13 @@ export default function ProfilePage() {
           headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` },
         });
         const spacesData = await spacesRes.json();
-        if (spacesData.code === 0 && spacesData.data?.length > 0) {
-          const userSpaces: any[] = spacesData.data;
+        if (spacesData.code === 0 && spacesData.data) {
+          const allSpaces: any[] = spacesData.data;
+          setUserSpaces(allSpaces);
+
+          // Fetch recent posts from user's spaces for the posts tab
           const allPosts: any[] = [];
-          for (const sp of userSpaces.slice(0, 3)) {
+          for (const sp of allSpaces.slice(0, 3)) {
             try {
               const ns = sp.namespace || sp.slug || sp.id;
               const postRes = await posts.list(ns, { page_size: 5 });
@@ -194,7 +199,7 @@ export default function ProfilePage() {
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}>
-              {{posts:'帖子', spaces:'社区', followers: `粉丝 (${followerCount})`, following: `关注 (${followingCount})`}[tab]}
+              {{posts:'帖子', spaces: `社区 (${userSpaces.length})`, followers: `粉丝 (${followerCount})`, following: `关注 (${followingCount})`}[tab]}
             </button>
           ))}
         </div>
@@ -228,12 +233,32 @@ export default function ProfilePage() {
       )}
 
       {activeTab === 'spaces' && (
-        <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
-          <div className="text-3xl mb-2">🏛️</div>
-          <p className="text-sm">还没有创建社区</p>
-          <Link href="/create" className="mt-2 inline-block text-sm text-primary-600 hover:underline">
-            创建你的第一个社区 →
-          </Link>
+        <div>
+          {userSpaces.length > 0 ? (
+            <div className="space-y-3">
+              {userSpaces.map((sp: any) => (
+                <SpaceCard key={sp.id || sp.namespace} space={{
+                  id: sp.id,
+                  namespace: sp.namespace,
+                  title: sp.title,
+                  description: sp.description || '',
+                  icon_url: sp.icon_url || null,
+                  member_count: sp.member_count || 0,
+                  post_count: sp.post_count || 0,
+                  is_root: sp.is_root || false,
+                  owner_id: sp.owner_id || null,
+                }} />
+              ))}
+            </div>
+          ) : (
+            <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+              <div className="text-3xl mb-2">🏛️</div>
+              <p className="text-sm">还没有创建社区</p>
+              <Link href="/create" className="mt-2 inline-block text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                创建你的第一个社区 →
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

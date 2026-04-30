@@ -108,4 +108,28 @@ impl UserRepo {
         .await?;
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
+
+    /// 查询用户拥有的社区（owner）
+    pub async fn find_spaces_by_owner(&self, owner_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows = sqlx::query_as::<_, (serde_json::Value,)>(
+            r#"SELECT json_build_object(
+                'id', s.id,
+                'namespace', s.namespace,
+                'slug', s.slug,
+                'title', s.title,
+                'description', s.description,
+                'icon_url', s.icon_url,
+                'visibility', s.visibility,
+                'status', s.status,
+                'member_count', s.member_count,
+                'post_count', s.post_count,
+                'is_root', s.is_root,
+                'created_at', s.created_at
+            ) FROM spaces s WHERE s.owner_id = $1 AND s.status = 'active' ORDER BY s.created_at DESC"#
+        )
+        .bind(owner_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
 }

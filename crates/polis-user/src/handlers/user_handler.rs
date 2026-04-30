@@ -151,11 +151,54 @@ impl UserHandler {
         Ok(user.into())
     }
 
-    /// 获取用户的社区列表
+    /// 获取用户的社区列表（拥有的 + 加入的）
     pub async fn get_user_spaces(&self, username: &str) -> Result<Vec<serde_json::Value>, AppError> {
-        // This would normally query the space service via HTTP or directly
-        // For now, return empty list as space service handles this
-        Ok(Vec::new())
+        let user = self
+            .repo
+            .find_by_username(username)
+            .await?
+            .ok_or(AppError::NotFound("User not found".to_string()))?;
+
+        // 查询用户拥有的社区（owner）
+        let owned = self.repo.find_spaces_by_owner(user.id).await?;
+
+        // 查询用户加入的社区（membership）
+        let member_space_ids = self.repo.find_user_spaces(user.id).await?;
+        let mut all_spaces = owned;
+
+        // 排除已拥有的社区，避免重复
+        for space_id in member_space_ids {
+            let already_owned = all_spaces.iter().any(|s| {
+                s.get("id").and_then(|v| v.as_str()).map(|id| id == space_id.to_string()).unwrap_or(false)
+            });
+            if !already_owned {
+                // 查询具体社区信息
+                let rows = sqlx::query_as::<_, (serde_json::Value,)>(
+                    r#"SELECT json_build_object(
+                        'id', s.id,
+                        'namespace', s.namespace,
+                        'slug', s.slug,
+                        'title', s.title,
+                        'description', s.description,
+                        'icon_url', s.icon_url,
+                        'visibility', s.visibility,
+                        'status', s.status,
+                        'member_count', s.member_count,
+                        'post_count', s.post_count,
+                        'is_root', s.is_root,
+                        'created_at', s.created_at
+                    ) FROM spaces s WHERE s.id = $1"#
+                )
+                .bind(space_id)
+                .fetch_all(&self.repo.pool)
+                .await?;
+                for row in rows {
+                    all_spaces.push(row.0);
+                }
+            }
+        }
+
+        Ok(all_spaces)
     }
 
     /// 获取当前用户资料（通过 JWT）
