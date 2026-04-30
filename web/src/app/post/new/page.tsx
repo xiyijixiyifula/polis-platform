@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { MarkdownEditor } from '@/components/MarkdownEditor';
+import { MilkdownEditor } from '@/components/MilkdownEditor';
 import { ArrowLeft, Send } from 'lucide-react';
 import Link from 'next/link';
 import { Suspense } from 'react';
@@ -115,7 +115,7 @@ function NewPostForm() {
           onChange={(e) => setTags(e.target.value)}
         />
 
-        <MarkdownEditor value={body} onChange={setBody} />
+        <MilkdownEditor value={body} onChange={setBody} />
 
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-400">
