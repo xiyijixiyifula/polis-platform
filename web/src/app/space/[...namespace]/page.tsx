@@ -16,7 +16,8 @@ interface Announcement {
 
 export default function SpacePage() {
   const params = useParams();
-  const namespace = params.namespace as string;
+  const rawNs = params.namespace;
+  const namespace = Array.isArray(rawNs) ? (rawNs as string[]).join('/') : (rawNs as string);
   const [activeTab, setActiveTab] = useState('posts');
   const [space, setSpace] = useState<Space | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
