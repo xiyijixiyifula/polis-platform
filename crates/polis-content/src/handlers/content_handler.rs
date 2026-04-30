@@ -389,6 +389,14 @@ impl ContentHandler {
         Ok(serde_json::json!({ "id": id.to_string(), "filename": filename, "file_size": file_size, "mime_type": mime_type }))
     }
 
+
+    pub async fn get_file(&self, file_id: Uuid) -> Result<(Vec<u8>, String, String), AppError> {
+        let (_fid, _filename, _file_size, mime_type, storage_path) = self.repo.get_file_by_id(file_id).await?;
+        let data = tokio::fs::read(&storage_path).await
+            .map_err(|e| AppError::External(format!("Failed to read file: {}", e)))?;
+        Ok((data, _filename, mime_type))
+    }
+
     pub async fn list_files(&self, space_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
         self.repo.list_files_by_space(space_id).await
     }

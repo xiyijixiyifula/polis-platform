@@ -124,6 +124,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/notifications", get(list_notifications_route))
         .route("/api/notifications/unread-count", get(unread_count_route))
         .route("/api/notifications/read-all", post(mark_all_read_route))
+        .route("/api/files/{id}", get(get_file_route))
         .route("/api/files/share", post(create_file_share_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
@@ -492,4 +493,17 @@ async fn download_share_route(
     resp.headers_mut().insert("content-type", axum::http::HeaderValue::from_str(&mime_type).unwrap());
     resp.headers_mut().insert("content-disposition", axum::http::HeaderValue::from_str(&disp).unwrap());
     Ok(resp)
+}
+
+async fn get_file_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Response, AppError> {
+    let (data, _filename, mime_type) = h.get_file(id).await?;
+    let content_type = mime_type.parse::<axum::http::HeaderValue>()
+        .unwrap_or_else(|_| axum::http::HeaderValue::from_static("application/octet-stream"));
+    Ok(Response::builder()
+        .header(axum::http::header::CONTENT_TYPE, content_type)
+        .body(axum::body::Body::from(data))
+        .unwrap())
 }

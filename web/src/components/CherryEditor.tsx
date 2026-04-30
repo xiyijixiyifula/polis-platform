@@ -14,6 +14,7 @@ export interface CherryEditorRef {
 }
 
 interface CherryEditorProps {
+  spaceNs?: string;
   value?: string;
   onChange?: (markdown: string, html: string) => void;
   height?: number | string;
@@ -28,6 +29,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(({
   height = 450,
   minHeight,
   defaultModel = 'edit&preview',
+  spaceNs,
 }, ref) => {
   const cherryRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -108,20 +110,38 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(({
 
           fileUpload: async (file: File, callback: (url: string) => void) => {
             try {
-              const formData = new FormData();
-              formData.append('file', file);
-              const res = await fetch('/api/upload', { method: 'POST', body: formData });
-              const data = await res.json();
-              if (data.url) {
-                callback(data.url);
-                return;
-              }
+              const reader = new FileReader();
+              reader.onload = async (e) => {
+                const base64 = (e.target?.result as string)?.split(',')[1];
+                if (!base64 || !spaceNs) {
+                  // Fallback: use data URL directly
+                  callback(e.target?.result as string);
+                  return;
+                }
+                try {
+                  const res = await fetch('/api/spaces/' + spaceNs + '/files', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      filename: file.name,
+                      data_base64: base64,
+                      mime_type: file.type || 'application/octet-stream',
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.code === 0 && data.data?.id) {
+                    callback('/api/files/' + data.data.id);
+                    return;
+                  }
+                } catch (uploadErr) {
+                  console.warn('Server upload failed, using base64:', uploadErr);
+                }
+                callback(e.target?.result as string);
+              };
+              reader.readAsDataURL(file);
             } catch (err) {
-              console.warn('Upload failed, using base64:', err);
+              console.warn('Upload failed:', err);
             }
-            const reader = new FileReader();
-            reader.onload = (e) => callback(e.target?.result as string);
-            reader.readAsDataURL(file);
           },
         });
 
@@ -200,6 +220,7 @@ function CherryEditorLegacyWrapper({
   minHeight,
   placeholder,
   defaultModel,
+  spaceNs,
 }: CherryEditorProps & { onChange?: ((value: string) => void) | ((markdown: string, html: string) => void) }) {
   const handleChange = (markdown: string, _html: string) => {
     if (onChange) {
@@ -215,6 +236,7 @@ function CherryEditorLegacyWrapper({
       minHeight={minHeight}
       placeholder={placeholder}
       defaultModel={defaultModel}
+      spaceNs={spaceNs}
     />
   );
 }

@@ -167,7 +167,7 @@ function NewPostForm() {
           onChange={(e) => setTags(e.target.value)}
         />
 
-        <CherryEditor value={body} onChange={setBody} />
+        <CherryEditor value={body} onChange={setBody} spaceNs={space} />
 
         <div className="flex items-center justify-between">
           <p className="text-xs text-gray-400">
