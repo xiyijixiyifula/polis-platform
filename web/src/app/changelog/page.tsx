@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.21', date: '2026-05-01', title: '帖子搜索功能 — PostgreSQL ILIKE 帖子全文搜索',
+      items: [
+        '后端: polis-content 新增 ILIKE 帖子搜索（标题+正文模糊匹配）',
+        '路由: 新增 GET /api/posts/search?q={query} 公开搜索端点',
+        '前端: search/page.tsx 新增帖子Tab + PostCard展示',
+        '前端: api.ts 新增 search.posts() 并行搜索方法',
+        '增强: 搜索页双Tab切换（社区/帖子）、并行请求优化',
+      ],
+    },
+
+    {
       ver: '0.2.20', date: '2026-05-01', title: '社区搜索功能 — PostgreSQL ILIKE 搜索 + 前端集成',
       items: [
         '后端: polis-space 新增 ILIKE 模糊搜索 (标题+描述+命名空间)',
@@ -281,7 +292,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.20' && (
+              {v.ver === '0.2.21' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
