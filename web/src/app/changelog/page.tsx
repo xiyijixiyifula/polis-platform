@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.23', date: '2026-05-01', title: '专栏/内容系列 Phase 2 — 前端系列展示页面',
+      items: [
+        '前端: 新增 SeriesCard 系列卡片组件',
+        '前端: 空间页新增「系列」Tab + 创建系列表单',
+        '前端: 新增 /series/[id] 系列详情页（文章合集展示）',
+        '前端: SpaceSettings 新增系列模块开关',
+        '修复: 系列详情 API 返回 SeriesPublic（含作者信息）',
+      ],
+    },
+
+    {
       ver: '0.2.22', date: '2026-05-01', title: '专栏/内容系列 Phase 1 — 数据库 + 后端 API',
       items: [
         '迁移: 新增 series 表和 series_posts 关联表',
@@ -303,7 +314,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.22' && (
+              {v.ver === '0.2.23' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

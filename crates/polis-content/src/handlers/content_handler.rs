@@ -221,7 +221,7 @@ impl ContentHandler {
         Ok(result)
     }
 
-    pub async fn get_series_public(&self, series_id: Uuid) -> Result<(Series, Vec<PostPublic>), AppError> {
+    pub async fn get_series_public(&self, series_id: Uuid) -> Result<(SeriesPublic, Vec<PostPublic>), AppError> {
         let series = self.repo.get_series(series_id).await?;
         let posts = self.repo.list_series_posts(series_id).await?;
         let author_ids: Vec<Uuid> = {
@@ -230,6 +230,17 @@ impl ContentHandler {
             ids
         };
         let authors = self.repo.find_users_batch(&author_ids).await?;
+        let series_author = authors.get(&series.author_id).cloned().unwrap_or(UserPublic {
+            id: series.author_id, username: String::new(), display_name: String::new(),
+            avatar_url: None, bio: String::new(), verified: false, created_at: series.created_at,
+        });
+        let series_public = SeriesPublic {
+            id: series.id, space_id: series.space_id, author: series_author,
+            title: series.title, description: series.description, cover_url: series.cover_url,
+            visibility: series.visibility, is_published: series.is_published,
+            post_count: series.post_count, sort_order: series.sort_order,
+            created_at: series.created_at, updated_at: series.updated_at,
+        };
         let post_publics: Vec<PostPublic> = posts.into_iter().map(|p| {
             let author = authors.get(&p.author_id).cloned().unwrap_or(UserPublic {
                 id: p.author_id, username: String::new(), display_name: String::new(),
@@ -250,7 +261,7 @@ impl ContentHandler {
                 updated_at: p.updated_at,
             }
         }).collect();
-        Ok((series, post_publics))
+        Ok((series_public, post_publics))
     }
 
     pub async fn add_post_to_series(&self, series_id: Uuid, post_id: Uuid, sort_order: i32, user_id: Uuid) -> Result<(), AppError> {

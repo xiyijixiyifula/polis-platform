@@ -4,11 +4,12 @@ import { useState } from 'react';
 import {
   Settings, X, MessageCircle, BarChart3, Megaphone,
   UserCheck, Video, Code, HelpCircle, MessageSquare,
-  ShoppingBag, GraduationCap,
+  ShoppingBag, GraduationCap, BookOpen,
 } from 'lucide-react';
 
 export interface SpaceModules {
   posts: boolean;          // 文章 - 默认开启不可关闭
+  series: boolean;         // 系列/专栏
   video: boolean;          // 视频
   code_repo: boolean;      // 代码仓库
   qa: boolean;             // 问答
@@ -22,6 +23,7 @@ export interface SpaceModules {
 
 const defaultModules: SpaceModules = {
   posts: true,
+  series: false,
   video: false,
   code_repo: false,
   qa: false,
@@ -68,6 +70,7 @@ interface ModuleDef {
 export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSettingsProps) {
   const availableModules: ModuleDef[] = [
     { key: 'posts', label: '文章', icon: MessageCircle, locked: true, comingSoon: false, desc: '社区文章和帖子，默认模块' },
+    { key: 'series', label: '系列', icon: BookOpen, locked: false, comingSoon: false, desc: '内容系列/专栏，组织帖子合集' },
     { key: 'video', label: '视频', icon: Video, locked: false, comingSoon: true, desc: '视频内容发布与播放' },
     { key: 'code_repo', label: '代码仓库', icon: Code, locked: false, comingSoon: true, desc: 'Git 代码仓库托管' },
     { key: 'qa', label: '问答', icon: HelpCircle, locked: false, comingSoon: false, desc: '提问与回答' },

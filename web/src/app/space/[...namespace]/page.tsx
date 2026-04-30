@@ -5,10 +5,11 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
+import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
-import type { Space, Post } from '@/lib/api';
+import type { Space, Post, Series } from '@/lib/api';
 
 interface Announcement {
   id: string; title: string; body: string;
@@ -23,7 +24,7 @@ export default function SpacePage() {
 
   // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
   const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
-    'members', 'settings', 'video', 'code_repo', 'qa', 'files']);
+    'members', 'settings', 'video', 'code_repo', 'qa', 'files', 'series']);
   const nsParts = namespace.split('/');
   let urlTab: string | null = null;
   if (nsParts.length > 1 && knownSubRoutes.has(nsParts[nsParts.length - 1])) {
@@ -45,6 +46,7 @@ export default function SpacePage() {
   const availableTabs = [
     { id: 'overview', label: '概览', icon: Layout, enabled: true },
     { id: 'posts', label: '文章', icon: MessageCircle, enabled: modules.posts },
+    { id: 'series', label: '系列', icon: BookOpen, enabled: modules.series },
     { id: 'video', label: '视频', icon: Video, enabled: modules.video },
     { id: 'code_repo', label: '代码', icon: Code, enabled: modules.code_repo },
     { id: 'qa', label: '问答', icon: HelpCircle, enabled: modules.qa },
@@ -59,7 +61,7 @@ export default function SpacePage() {
   const [activeTab, setActiveTab] = useState(urlTab || 'overview');
   useEffect(() => {
     if (!availableTabs.find(t => t.id === activeTab)) {
-      setActiveTab(availableTabs[0]?.id || 'posts');
+      setActiveTab(availableTabs[0]?.id || 'overview');
     }
   }, [modules]);
 
@@ -73,7 +75,15 @@ export default function SpacePage() {
   const [postLoading, setPostLoading] = useState(true);
   const [ownerName, setOwnerName] = useState<string | null>(null);
 
-  // Parse namespace for GitHub-style display: "username/community-name"
+  // Series state
+  const [seriesList, setSeriesList] = useState<Series[]>([]);
+  const [seriesLoading, setSeriesLoading] = useState(false);
+  const [showCreateSeries, setShowCreateSeries] = useState(false);
+  const [newSeriesTitle, setNewSeriesTitle] = useState('');
+  const [newSeriesDesc, setNewSeriesDesc] = useState('');
+  const [seriesCreating, setSeriesCreating] = useState(false);
+
+  // Parse namespace for GitHub-style display: username/community-name
   const ghParts = namespace.split('/');
   const hasOwnerPrefix = nsParts.length >= 2;
   const displayNs = namespace;
@@ -136,6 +146,53 @@ export default function SpacePage() {
       .catch(() => {})
       .finally(() => setPostLoading(false));
   }, [namespace, modules.polls]);
+
+  // Fetch series list when series tab is active or module is enabled
+  useEffect(() => {
+    if (!namespace || !modules.series) return;
+    if (activeTab === 'series') {
+      setSeriesLoading(true);
+      fetch(`/api/series/space/${namespace}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.code === 0) {
+            setSeriesList(data.data || []);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setSeriesLoading(false));
+    }
+  }, [namespace, activeTab, modules.series]);
+
+  const handleCreateSeries = async () => {
+    const token = localStorage.getItem('polis_access_token');
+    if (!token) { alert('请先登录'); return; }
+    if (!newSeriesTitle.trim()) { alert('请输入系列标题'); return; }
+    setSeriesCreating(true);
+    try {
+      const res = await fetch(`/api/series/space/${namespace}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ title: newSeriesTitle.trim(), description: newSeriesDesc.trim(), visibility: 'public' }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setNewSeriesTitle('');
+        setNewSeriesDesc('');
+        setShowCreateSeries(false);
+        // Refresh series list
+        const listRes = await fetch(`/api/series/space/${namespace}`);
+        const listData = await listRes.json();
+        if (listData.code === 0) setSeriesList(listData.data || []);
+      } else {
+        alert(data.message || '创建失败');
+      }
+    } catch (e) {
+      alert('网络错误');
+    } finally {
+      setSeriesCreating(false);
+    }
+  };
 
   if (loading) {
     return <div className="mx-auto max-w-7xl px-4 py-12 text-center text-gray-400 dark:text-gray-500 animate-pulse">加载社区信息...</div>;
@@ -455,6 +512,82 @@ export default function SpacePage() {
                   <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无帖子</p>
                   <p className="text-sm mt-1">成为第一个发帖的人吧！</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* === Series Tab === */}
+          {activeTab === 'series' && (
+            <>
+              {/* Create series button */}
+              <div className="mb-4">
+                {!showCreateSeries ? (
+                  <button
+                    onClick={() => setShowCreateSeries(true)}
+                    className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group w-full text-left"
+                  >
+                    <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
+                      <BookOpen className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">创建系列</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">将文章组织成系列/专栏合集</p>
+                    </div>
+                    <div className="btn-primary text-xs px-4 py-1.5 gap-1">
+                      <Plus className="h-3.5 w-3.5" /> 新建
+                    </div>
+                  </button>
+                ) : (
+                  <div className="card">
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">创建新系列</h3>
+                    <input
+                      type="text"
+                      placeholder="系列标题（如：游戏开发入门）"
+                      value={newSeriesTitle}
+                      onChange={e => setNewSeriesTitle(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-2"
+                    />
+                    <textarea
+                      placeholder="系列简介（可选）"
+                      value={newSeriesDesc}
+                      onChange={e => setNewSeriesDesc(e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-3"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleCreateSeries}
+                        disabled={seriesCreating}
+                        className="btn-primary text-xs px-4 py-1.5"
+                      >
+                        {seriesCreating ? '创建中...' : '创建系列'}
+                      </button>
+                      <button
+                        onClick={() => { setShowCreateSeries(false); setNewSeriesTitle(''); setNewSeriesDesc(''); }}
+                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 px-3 py-1.5"
+                      >
+                        取消
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Series list */}
+              {seriesLoading ? (
+                <div className="card py-8 text-center text-gray-400 animate-pulse">加载系列...</div>
+              ) : seriesList.length > 0 ? (
+                <div className="space-y-3">
+                  {seriesList.map((s) => (
+                    <SeriesCard key={s.id} series={s} namespace={namespace} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                  <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>暂无系列</p>
+                  <p className="text-sm mt-1">创建系列来组织你的文章合集</p>
                 </div>
               )}
             </>
