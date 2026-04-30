@@ -4,6 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.9', date: '2026-04-30', title: '社区模块配置 + GitHub 风格命名空间索引',
+      items: [
+        '⚙️ 模块配置系统: 社区页可自行开关模块（文章/投票/公告/成员），默认仅显示文章',
+        '⚙️ 设置面板: Toggle 开关 + 自动保存到 localStorage，每社区独立配置',
+        '⚙️ 设置与模块同行: 设置按钮集成在标签栏右侧，平滑切换',
+        '🏠 GitHub 风格命名空间: 社区头部显示 @owner/community 格式',
+        '🏠 SpaceCard 增强: 显示 @创建者 信息，可点击跳转用户主页',
+        '🏠 根社区集群说明: 同名社区聚合索引的提示面板',
+        '📦 SpaceSettings 组件: 可复用的模块开关面板组件',
+        '🎨 暗黑模式全面适配: 所有新组件均支持 dark: 变体',
+      ],
+    },
+    {
       ver: '0.2.8', date: '2026-04-30', title: '社区投票/问卷列表 — 空间投票标签页上线',
       items: [
         '📊 GET /api/spaces/{ns}/polls: 新增空间投票列表 API，公开访问',
@@ -202,7 +215,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.8' && (
+              {v.ver === '0.2.9' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
