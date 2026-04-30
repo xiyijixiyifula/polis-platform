@@ -133,9 +133,10 @@ async fn handle_auth_path(
 async fn create_space(
     State(handler): State<Arc<SpaceHandler>>,
     axum::Extension(user_id): axum::Extension<Uuid>,
+    axum::Extension(username): axum::Extension<String>,
     Json(req): Json<CreateSpaceRequest>,
 ) -> Result<Json<ApiResponse<SpacePublic>>, AppError> {
-    let space = handler.create_space(user_id, req).await?;
+    let space = handler.create_space(user_id, &username, req).await?;
     Ok(Json(ApiResponse::success(space)))
 }
 

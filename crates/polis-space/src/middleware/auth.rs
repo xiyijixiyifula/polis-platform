@@ -60,6 +60,7 @@ pub async fn auth_middleware(
         .map_err(|_| AppError::Unauthorized)?;
 
     req.extensions_mut().insert(user_id);
+    req.extensions_mut().insert(claims.username);
 
     Ok(next.run(req).await)
 }

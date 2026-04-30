@@ -29,6 +29,7 @@ impl SpaceHandler {
     pub async fn create_space(
         &self,
         user_id: Uuid,
+        username: &str,
         req: CreateSpaceRequest,
     ) -> Result<SpacePublic, AppError> {
         // 验证 slug
@@ -48,8 +49,8 @@ impl SpaceHandler {
             (true, None)
         };
 
-        // 构建 namespace - 用户社区始终使用 user_id/slug 格式
-        let namespace = format!("{}/{}", user_id, req.slug);
+        // 构建 namespace - GitHub 风格: username/slug
+        let namespace = format!("{}/{}", username, req.slug);
 
         // 检查 namespace 唯一性
         if let Some(_) = self.repo.find_by_namespace(&namespace).await? {
