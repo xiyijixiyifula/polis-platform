@@ -4,6 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.10', date: '2026-04-30', title: '社区概览页 — GitHub 风格 README 首页',
+      items: [
+        '🏠 社区概览 Tab: 默认首页替代直接跳转文章列表，类似 GitHub 仓库页',
+        '🏠 社区描述卡: 展示社区介绍 + 统计数据 (成员/帖子/投票/公告/可见性)',
+        '🏠 快速操作入口: "发布文章"和"发起投票"两个快捷卡片',
+        '📌 精选内容: Pinned/Featured 帖子展示区 (类似 GitHub Pinned repos)',
+        '📰 最新文章预览: 前 5 篇帖子 + "查看全部"跳转链接',
+        '🎨 Layout/Pin/ExternalLink 图标集成，概览页视觉增强',
+        '🔧 默认 Tab 调整: activeTab 初始值从 posts 改为 overview',
+        '📦 featured 数据获取: 新增 /api/spaces/{ns}/featured 并行请求',
+      ],
+    },
+    {
       ver: '0.2.9', date: '2026-04-30', title: '社区模块配置 + GitHub 风格命名空间索引',
       items: [
         '⚙️ 模块配置系统: 社区页可自行开关模块（文章/投票/公告/成员），默认仅显示文章',
@@ -215,7 +228,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.9' && (
+              {v.ver === '0.2.10' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
