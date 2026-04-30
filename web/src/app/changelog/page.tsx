@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.24', date: '2026-05-01', title: '专栏 Phase 3 + 用户关系页面',
+      items: [
+        '编辑器: 发帖时可选收录到系列（专栏）',
+        '新增: /profile/[user]/followers 粉丝列表页',
+        '新增: /profile/[user]/following 关注列表页',
+        '修复: 粉丝/关注页 404 → 独立路由页面',
+        '增强: 系列 post_count 自动更新（添加/移除帖子）',
+      ],
+    },
+
+    {
       ver: '0.2.23', date: '2026-05-01', title: '专栏/内容系列 Phase 2 — 前端系列展示页面',
       items: [
         '前端: 新增 SeriesCard 系列卡片组件',
@@ -314,7 +325,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.23' && (
+              {v.ver === '0.2.24' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
