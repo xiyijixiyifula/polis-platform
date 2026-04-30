@@ -275,3 +275,23 @@ export const posts = {
   delete: (namespace: string, id: string) =>
     request<void>(`/spaces/${namespace}/posts/${id}`, { method: 'DELETE' }),
 };
+
+export interface VoteScore {
+  target_type: string;
+  target_id: string;
+  upvotes: number;
+  downvotes: number;
+  score: number;
+  user_vote?: number;
+}
+
+export const vote = {
+  getScore: (targetType: string, targetId: string) =>
+    request<VoteScore>(`/vote?target_type=${encodeURIComponent(targetType)}&target_id=${encodeURIComponent(targetId)}`),
+
+  cast: (targetType: string, targetId: string, value: number) =>
+    request<VoteScore>('/vote', {
+      method: 'POST',
+      body: JSON.stringify({ target_type: targetType, target_id: targetId, value }),
+    }),
+};

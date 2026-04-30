@@ -4,6 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.7', date: '2026-04-30', title: '赞同/反对投票系统',
+      items: [
+        '🗳️ 赞同/反对投票: 帖子列表 + 帖子详情页集成 VoteButton 组件',
+        '🗳️ 投票分数展示: 实时显示赞同数/反对数/净得分，赞同橙色、反对蓝色',
+        '🗳️ 乐观更新: 点击瞬间更新 UI，服务器同步后校正，失败自动回滚',
+        '🗳️ GET /api/vote: 新增公开 API 获取投票分数 (无需登录即可查看)',
+        '🗳️ POST /api/vote: 投票响应增强，返回完整 upvotes/downvotes/score',
+        '🎨 VoteButton 组件: 上/下箭头 + 分数 + 加载态骨架屏 + 暗黑模式适配',
+        '🎨 PostCard 增强: 帖子卡片左侧新增投票列，Reddit 风格交互',
+        '📡 api.ts: 新增 vote.getScore() / vote.cast() 客户端函数',
+      ],
+    },
+    {
       ver: '0.2.6', date: '2026-04-30', title: 'DESIGN.md 设计系统 + 页面修复与文档完善',
       items: [
         '🎨 DESIGN.md: 完整设计系统文档 (426行)，符合 awesome-design-md 标准',
@@ -175,7 +188,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.6' && (
+              {v.ver === '0.2.7' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

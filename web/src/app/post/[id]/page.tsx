@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
 import { posts, Comment, Post } from '@/lib/api';
+import { VoteButton } from '@/components/VoteButton';
 
 function renderMarkdown(md: string): string {
   let html = md
@@ -193,7 +194,8 @@ function PostDetailContent() {
 
         <div className="prose prose-gray max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.body) }} />
 
-        <div className="mt-8 flex items-center gap-4 border-t border-gray-100 pt-4 flex-wrap">
+        <div className="mt-8 flex items-center gap-4 border-t border-gray-100 dark:border-gray-700 pt-4 flex-wrap">
+          <VoteButton targetType="post" targetId={post.id} />
           <button onClick={handleLike}
             className={`flex items-center gap-1.5 text-sm transition-colors ${liked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}>
             <Heart className={`h-5 w-5 ${liked ? 'fill-current' : ''}`} /> {formatCount(likeCount)}

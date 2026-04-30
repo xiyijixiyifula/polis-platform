@@ -26,6 +26,9 @@ pub struct ReportRequest { pub reason: String }
 pub struct VoteRequest { pub target_type: String, pub target_id: Uuid, pub value: i16 }
 
 #[derive(Deserialize)]
+pub struct GetVoteQuery { pub target_type: String, pub target_id: Uuid }
+
+#[derive(Deserialize)]
 pub struct CreatePollRequest { pub space_id: Uuid, pub title: String, pub description: Option<String>, pub poll_type: Option<String>, pub options: Vec<String>, pub expires_at: Option<String> }
 
 #[derive(Deserialize)]
@@ -84,7 +87,9 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     let public = Router::new()
         .route("/api/spaces/{*path}", get(handle_public_content))
         // 公开的投票/问卷结果
-        .route("/api/polls/{id}", get(get_poll_public));
+        .route("/api/polls/{id}", get(get_poll_public))
+        // 获取投票分数（赞同/反对）
+        .route("/api/vote", get(get_vote_score_route));
 
     // 需要认证的路由
     let auth = Router::new()
@@ -223,13 +228,35 @@ async fn handle_auth_content(
 
 // ===== 投票（赞同/反对） =====
 
+/// 获取投票分数（公开接口）
+async fn get_vote_score_route(
+    State(h): State<Arc<ContentHandler>>,
+    Query(q): Query<GetVoteQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let (upvotes, downvotes, score) = h.get_vote_score(&q.target_type, q.target_id).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({
+        "target_type": q.target_type,
+        "target_id": q.target_id.to_string(),
+        "upvotes": upvotes,
+        "downvotes": downvotes,
+        "score": score,
+    }))))
+}
+
 async fn handle_vote(
     State(h): State<Arc<ContentHandler>>,
     axum::Extension(uid): axum::Extension<Uuid>,
     Json(req): Json<VoteRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let result = h.vote(uid, &req.target_type, req.target_id, req.value).await?;
-    Ok(json_ok(ApiResponse::success(result)))
+    // 返回完整分数信息，方便前端更新
+    let (upvotes, downvotes, score) = h.get_vote_score(&req.target_type, req.target_id).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({
+        "user_vote": result,
+        "upvotes": upvotes,
+        "downvotes": downvotes,
+        "score": score,
+    }))))
 }
 
 // ===== 投票/问卷 =====
