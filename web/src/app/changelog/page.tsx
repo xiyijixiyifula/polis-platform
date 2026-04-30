@@ -4,6 +4,26 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.6', date: '2026-04-30', title: 'DESIGN.md 设计系统 + 页面修复与文档完善',
+      items: [
+        '🎨 DESIGN.md: 完整设计系统文档 (426行)，符合 awesome-design-md 标准',
+        '🎨 设计令牌: 颜色体系 (Purple/Indigo)、字体阶梯、间距系统、圆角规范',
+        '🎨 组件规范: 按钮 (primary/secondary/ghost)、卡片、输入框、徽章、标签页',
+        '🎨 布局模式: 页面/网格/侧边栏/导航栏/空状态/加载态 完整规范',
+        '🎨 暗黑模式: 完整的 dark: 变体映射表 + 主题切换策略',
+        '🎨 响应式: sm/md/lg/xl 断点 + 移动端适配规范',
+        '🐛 修复: /trending 热门页面 404 (Header/Sidebar 引用但页面缺失)',
+        '🐛 修复: /hot 热榜页面 404 (Sidebar 引用但页面缺失)',
+        '🐛 修复: /polls 投票中心页面 404 (仅 /polls/new 存在)',
+        '🐛 修复: /space/* 空间页面 404 (服务器 page.tsx 被误删)',
+        '📖 USER-GUIDE.md: 245行完整用户使用指南 (注册到管理后台全流程)',
+        '📖 README.md: 重写，移除16项不实功能描述，标注10个桩代码状态',
+        '🔒 HTTPS 已配置: Let\'s Encrypt + TLS 1.3 + HSTS + 安全响应头',
+        '📋 HTTPS-CONFIG.md: 完整证书/Nginx/故障排查/急救流程参考手册',
+        '✅ 全量页面测试: 30+ 路由全部 200，注册+创建+发帖+评论+投票实测通过',
+      ],
+    },
+    {
       ver: '0.2.5', date: '2026-04-30', title: '关注/粉丝社交系统',
       items: [
         '👥 关注/取关功能: 用户主页一键关注，再次点击取关',
@@ -155,7 +175,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.5' && (
+              {v.ver === '0.2.6' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
