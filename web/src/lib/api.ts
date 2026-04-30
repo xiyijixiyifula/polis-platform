@@ -153,11 +153,44 @@ export const auth = {
     request<LoginResponse>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+export interface FollowUser {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
 export const users = {
   getProfile: (username: string) => request<User>(`/users/${username}`),
 
   updateProfile: (data: { display_name?: string; avatar_url?: string; bio?: string }) =>
     request<User>('/users/me', { method: 'PUT', body: JSON.stringify(data) }),
+
+  toggleFollow: (followeeType: string, followeeId: string) =>
+    request<boolean>('/follow', {
+      method: 'POST',
+      body: JSON.stringify({ followee_type: followeeType, followee_id: followeeId }),
+    }),
+
+  getFollowers: (username: string) =>
+    request<FollowUser[]>(`/users/${username}/followers`),
+
+  getFollowing: (username: string) =>
+    request<FollowUser[]>(`/users/${username}/following`),
+};
+
+export const follow = {
+  toggle: (followeeType: string, followeeId: string) =>
+    request<boolean>('/follow', {
+      method: 'POST',
+      body: JSON.stringify({ followee_type: followeeType, followee_id: followeeId }),
+    }),
+
+  followers: (username: string) =>
+    request<FollowUser[]>(`/users/${username}/followers`),
+
+  following: (username: string) =>
+    request<FollowUser[]>(`/users/${username}/following`),
 };
 
 export const spaces = {

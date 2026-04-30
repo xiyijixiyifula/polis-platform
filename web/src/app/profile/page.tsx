@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
-import { Settings, Calendar } from 'lucide-react';
-import { users, posts, User } from '@/lib/api';
+import { Settings, Calendar, Users, UserCheck } from 'lucide-react';
+import { users, posts, follow, type User, type FollowUser } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 
 interface StoredUser {
@@ -18,6 +18,31 @@ interface StoredUser {
   created_at: string;
 }
 
+function FollowList({ users: list, loading, emptyText }: {
+  users: FollowUser[];
+  loading: boolean;
+  emptyText: string;
+}) {
+  if (loading) return <div className="text-center py-8 text-gray-500 dark:text-gray-400">加载中...</div>;
+  if (list.length === 0) return <div className="text-center py-8 text-gray-500 dark:text-gray-400">{emptyText}</div>;
+  return (
+    <div className="space-y-2">
+      {list.map((u: FollowUser) => (
+        <Link key={u.id} href={`/profile/${u.username}`}
+          className="card flex items-center gap-3 py-3 px-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
+            {u.display_name?.charAt(0) || '?'}
+          </div>
+          <div>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">{u.display_name}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">@{u.username}</p>
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
@@ -25,6 +50,11 @@ export default function ProfilePage() {
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('posts');
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followers, setFollowers] = useState<FollowUser[]>([]);
+  const [followingList, setFollowingList] = useState<FollowUser[]>([]);
+  const [listLoading, setListLoading] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('polis_user');
@@ -73,9 +103,42 @@ export default function ProfilePage() {
           setUserPosts(allPosts);
         }
       } catch {}
+
+      // Load follow counts
+      try {
+        const fRes = await follow.followers(user.username);
+        if (fRes.code === 0 && fRes.data) setFollowerCount(fRes.data.length);
+      } catch {}
+      try {
+        const fgRes = await follow.following(user.username);
+        if (fgRes.code === 0 && fgRes.data) setFollowingCount(fgRes.data.length);
+      } catch {}
+
       setLoading(false);
     })();
   }, [user]);
+
+  const loadFollowers = async () => {
+    if (!user) return;
+    setListLoading(true);
+    try {
+      const res = await follow.followers(user.username);
+      if (res.code === 0 && res.data) setFollowers(res.data);
+    } catch {}
+    setListLoading(false);
+    setActiveTab('followers');
+  };
+
+  const loadFollowing = async () => {
+    if (!user) return;
+    setListLoading(true);
+    try {
+      const res = await follow.following(user.username);
+      if (res.code === 0 && res.data) setFollowingList(res.data);
+    } catch {}
+    setListLoading(false);
+    setActiveTab('following');
+  };
 
   if (!user) return null;
 
@@ -91,8 +154,8 @@ export default function ProfilePage() {
           <div className="flex-1">
             <div className="flex items-start justify-between">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{displayUser.display_name}</h1>
-                <p className="text-sm text-gray-500">@{displayUser.username}</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{displayUser.display_name}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">@{displayUser.username}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Link href="/settings" className="btn-secondary text-sm px-4 py-1.5">
@@ -102,29 +165,36 @@ export default function ProfilePage() {
               </div>
             </div>
             {displayUser.bio && (
-              <p className="mt-2 text-sm text-gray-600">{displayUser.bio}</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{displayUser.bio}</p>
             )}
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1">
                 <Calendar className="h-3.5 w-3.5" />
                 {formatDate(displayUser.created_at)} 加入
               </span>
+              <button onClick={loadFollowers} className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer">
+                <Users className="h-3.5 w-3.5" />
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{followerCount}</span> 粉丝
+              </button>
+              <button onClick={loadFollowing} className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer">
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{followingCount}</span> 关注
+              </button>
               {displayUser.verified && (
-                <span className="inline-flex items-center gap-0.5 text-blue-600 font-medium">✓ 已认证</span>
+                <span className="inline-flex items-center gap-0.5 text-blue-600 dark:text-blue-400 font-medium">✓ 已认证</span>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mt-6 mb-4 border-b border-gray-200">
+      <div className="mt-6 mb-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex gap-0">
-          {['posts', 'spaces'].map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
+          {['posts', 'spaces', 'followers', 'following'].map((tab) => (
+            <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'followers') loadFollowers(); if (tab === 'following') loadFollowing(); }}
               className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}>
-              {{posts:'帖子', spaces:'社区'}[tab]}
+              {{posts:'帖子', spaces:'社区', followers: `粉丝 (${followerCount})`, following: `关注 (${followingCount})`}[tab]}
             </button>
           ))}
         </div>
@@ -135,8 +205,8 @@ export default function ProfilePage() {
           <div className="space-y-3">
             {[...Array(2)].map((_, i) => (
               <div key={i} className="card animate-pulse">
-                <div className="h-4 w-2/3 bg-gray-200 rounded mb-2" />
-                <div className="h-3 w-full bg-gray-100 rounded" />
+                <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded" />
               </div>
             ))}
           </div>
@@ -147,7 +217,7 @@ export default function ProfilePage() {
             ))}
           </div>
         ) : (
-          <div className="card py-12 text-center text-gray-500">
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
             <div className="text-3xl mb-2">📝</div>
             <p className="text-sm">还没有发布过帖子</p>
             <Link href="/explore" className="mt-2 inline-block text-sm text-primary-600 hover:underline">
@@ -158,13 +228,21 @@ export default function ProfilePage() {
       )}
 
       {activeTab === 'spaces' && (
-        <div className="card py-12 text-center text-gray-500">
+        <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
           <div className="text-3xl mb-2">🏛️</div>
           <p className="text-sm">还没有创建社区</p>
           <Link href="/create" className="mt-2 inline-block text-sm text-primary-600 hover:underline">
             创建你的第一个社区 →
           </Link>
         </div>
+      )}
+
+      {activeTab === 'followers' && (
+        <FollowList users={followers} loading={listLoading} emptyText="暂无粉丝" />
+      )}
+
+      {activeTab === 'following' && (
+        <FollowList users={followingList} loading={listLoading} emptyText="还没有关注任何人" />
       )}
     </div>
   );
