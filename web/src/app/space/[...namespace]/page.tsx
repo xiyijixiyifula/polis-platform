@@ -330,7 +330,7 @@ export default function SpacePage() {
 
               {/* Quick actions */}
               <div className="flex gap-3">
-                <Link href={`/post/new?space=${namespace}`}
+                <Link href={`/post/new?space=${encodeURIComponent(namespace)}`}
                   className="flex-1 card flex items-center gap-2 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group py-3">
                   <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
                     <PenLine className="h-4 w-4" />
@@ -339,7 +339,7 @@ export default function SpacePage() {
                   <ExternalLink className="h-3 w-3 text-gray-400 ml-auto" />
                 </Link>
                 {modules.polls && (
-                  <Link href={`/polls/new?space=${namespace}`}
+                  <Link href={`/polls/new?space=${encodeURIComponent(namespace)}`}
                     className="flex-1 card flex items-center gap-2 hover:border-amber-300 dark:hover:border-amber-600 transition-colors group py-3">
                     <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
                       <Vote className="h-4 w-4" />
@@ -407,7 +407,7 @@ export default function SpacePage() {
                   <div className="card py-8 text-center text-gray-400 dark:text-gray-500">
                     <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">还没有文章</p>
-                    <Link href={`/post/new?space=${namespace}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
+                    <Link href={`/post/new?space=${encodeURIComponent(namespace)}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
                       发布第一篇文章
                     </Link>
                   </div>
@@ -419,7 +419,7 @@ export default function SpacePage() {
           {/* === Posts Tab === */}
           {activeTab === 'posts' && (
             <>
-              <Link href={`/post/new?space=${namespace}`}
+              <Link href={`/post/new?space=${encodeURIComponent(namespace)}`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <PenLine className="h-5 w-5" />
@@ -483,7 +483,7 @@ export default function SpacePage() {
           {/* === Polls Tab === */}
           {activeTab === 'polls' && (
             <>
-              <Link href={`/polls/new?space=${namespace}`}
+              <Link href={`/polls/new?space=${encodeURIComponent(namespace)}`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <Vote className="h-5 w-5" />
