@@ -144,7 +144,50 @@ impl ContentHandler {
         Ok(post)
     }
 
+    /// 搜索帖子（按标题和正文模糊匹配）
+    pub async fn search_posts(&self, query: &str, limit: u32) -> Result<Vec<PostPublic>, AppError> {
+        let posts = self.repo.search_posts(query, limit).await?;
+        let author_ids: Vec<Uuid> = posts.iter().map(|p| p.author_id).collect();
+        let authors = self.repo.find_users_batch(&author_ids).await?;
+        let post_publics = posts
+            .into_iter()
+            .map(|p| {
+                let author = authors.get(&p.author_id).cloned().unwrap_or(UserPublic {
+                    id: p.author_id,
+                    username: String::new(),
+                    display_name: String::new(),
+                    avatar_url: None,
+                    bio: String::new(),
+                    verified: false,
+                    created_at: p.created_at,
+                });
+                let mt = format!("\"{}\"", p.module_type);
+                let ct = format!("\"{}\"", p.content_type);
+                PostPublic {
+                    id: p.id,
+                    space_id: p.space_id,
+                    module_type: serde_json::from_str(&mt).unwrap_or_default(),
+                    author,
+                    title: p.title,
+                    body: p.body,
+                    content_type: serde_json::from_str(&ct).unwrap_or_default(),
+                    media_urls: serde_json::from_value(p.media_urls).unwrap_or_default(),
+                    tags: serde_json::from_value(p.tags).unwrap_or_default(),
+                    is_pinned: p.is_pinned,
+                    is_featured: p.is_featured,
+                    view_count: p.view_count,
+                    like_count: p.like_count,
+                    comment_count: p.comment_count,
+                    created_at: p.created_at,
+                    updated_at: p.updated_at,
+                }
+            })
+            .collect();
+        Ok(post_publics)
+    }
+
     /// 获取帖子公开信息（含作者详情）
+
     pub async fn get_post_public(&self, post_id: Uuid) -> Result<PostPublic, AppError> {
         let post = self
             .repo

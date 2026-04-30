@@ -513,6 +513,20 @@ impl ContentRepo {
     }
 
     /// 批量查询用户信息
+
+    /// 搜索帖子（按标题和正文模糊匹配）
+    pub async fn search_posts(&self, query: &str, limit: u32) -> Result<Vec<Post>, AppError> {
+        let pattern = format!("%{}%", query);
+        let posts = sqlx::query_as::<_, Post>(
+            "SELECT * FROM posts WHERE is_deleted = FALSE AND visibility = 'public' AND (title ILIKE $1 OR body ILIKE $1) ORDER BY created_at DESC LIMIT $2",
+        )
+        .bind(&pattern)
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(posts)
+    }
+
     pub async fn find_users_batch(&self, user_ids: &[Uuid]) -> Result<HashMap<Uuid, UserPublic>, AppError> {
         if user_ids.is_empty() {
             return Ok(HashMap::new());

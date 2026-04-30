@@ -240,6 +240,12 @@ export const search = {
     if (pageSize) params.set('page_size', String(pageSize));
     return request<Space[]>('/search?' + params.toString());
   },
+  /** 搜索帖子 */
+  posts: (q: string, pageSize?: number) => {
+    const params = new URLSearchParams({ q });
+    if (pageSize) params.set('page_size', String(pageSize));
+    return request<Post[]>('/posts/search?' + params.toString());
+  },
 };
 
 export const posts = {

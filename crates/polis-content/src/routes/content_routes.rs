@@ -104,6 +104,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         // 公开的投票/问卷结果
         .route("/api/polls/{id}", get(get_poll_public))
         // 通过 ID 获取帖子（无需知道 namespace）
+        .route("/api/posts/search", get(search_posts_route))
         .route("/api/posts/{id}", get(get_post_by_id_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route))
         // 获取投票分数（赞同/反对）
@@ -389,6 +390,22 @@ async fn mark_all_read_route(
     sqlx::query("UPDATE notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE")
         .bind(uid).execute(&h.pool).await?;
     Ok(json_ok(ApiResponse::success(())))
+}
+
+#[derive(Deserialize)]
+pub struct SearchPostsQuery {
+    pub q: String,
+    pub page_size: Option<u32>,
+}
+
+/// 搜索帖子（公开接口）
+async fn search_posts_route(
+    State(h): State<Arc<ContentHandler>>,
+    Query(q): Query<SearchPostsQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let limit = q.page_size.unwrap_or(20).min(50);
+    let posts = h.search_posts(&q.q, limit).await?;
+    Ok(json_ok(ApiResponse::success(posts)))
 }
 
 // ===== 通过 ID 获取帖子（无需 namespace） =====
