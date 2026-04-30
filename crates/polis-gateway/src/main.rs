@@ -96,6 +96,7 @@ async fn proxy_space_router(
     req: Request,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path = req.uri().path();
+    let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or(path);
     // 判断是否是内容服务路径（包含 /posts, /featured, /bookmarks, /announcements）
     let remaining = path.strip_prefix("/api/spaces").unwrap_or(path);
     let is_content = remaining.contains("/posts") || remaining.contains("/featured") || remaining.contains("/bookmarks") || remaining.contains("/announcements");
@@ -106,7 +107,7 @@ async fn proxy_space_router(
         &state.config.space_service_url
     };
 
-    let target_url = format!("{}{}", base_url, path);
+    let target_url = format!("{}{}", base_url, path_and_query);
     proxy_request(&state.client, &target_url, req).await
 }
 
@@ -115,8 +116,8 @@ async fn proxy_to_user(
     State(state): State<Arc<GatewayState>>,
     req: Request,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
-    let path = req.uri().path();
-    let target_url = format!("{}{}", state.config.user_service_url, path);
+    let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
+    let target_url = format!("{}{}", state.config.user_service_url, path_and_query);
     proxy_request(&state.client, &target_url, req).await
 }
 
@@ -125,8 +126,8 @@ async fn proxy_to_space(
     State(state): State<Arc<GatewayState>>,
     req: Request,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
-    let path = req.uri().path();
-    let target_url = format!("{}{}", state.config.space_service_url, path);
+    let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
+    let target_url = format!("{}{}", state.config.space_service_url, path_and_query);
     proxy_request(&state.client, &target_url, req).await
 }
 
@@ -135,8 +136,8 @@ async fn proxy_to_content(
     State(state): State<Arc<GatewayState>>,
     req: Request,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
-    let path = req.uri().path();
-    let target_url = format!("{}{}", state.config.content_service_url, path);
+    let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
+    let target_url = format!("{}{}", state.config.content_service_url, path_and_query);
     proxy_request(&state.client, &target_url, req).await
 }
 
@@ -145,8 +146,8 @@ async fn proxy_to_admin(
     State(state): State<Arc<GatewayState>>,
     req: Request,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
-    let path = req.uri().path();
-    let target_url = format!("{}{}", state.config.admin_service_url, path);
+    let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
+    let target_url = format!("{}{}", state.config.admin_service_url, path_and_query);
     proxy_request(&state.client, &target_url, req).await
 }
 
