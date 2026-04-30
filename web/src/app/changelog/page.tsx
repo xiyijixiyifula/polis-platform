@@ -184,50 +184,6 @@ export default function ChangelogPage() {
         '📋 自动更新日志 (auto-changelog.sh)',
       ],
     },
-    {
-      ver: '0.3.0', date: '2026-05', title: '社交与互动',
-      items: [
-        '🔔 通知系统 (WebSocket + NATS)',
-        '👥 用户关注/粉丝系统',
-        '💬 WebSocket 实时聊天',
-        '📨 私信系统',
-        '⭐ 帖子收藏/推荐系统',
-        '📊 社区统计分析',
-      ],
-    },
-    {
-      ver: '0.4.0', date: '2026-06', title: '内容生态扩展',
-      items: [
-        '🎬 视频上传与转码 (FFmpeg)',
-        '📌 帖子置顶与精华',
-        '🚩 内容举报与审核系统',
-        '🌐 国际化 (i18n)',
-        '🔍 全文搜索 (Meilisearch/PostgreSQL GIN)',
-        '📁 文件分享系统 (百度网盘风格)',
-      ],
-    },
-    {
-      ver: '0.5.0', date: '2026-06', title: '高级功能',
-      items: [
-        '💻 Git 代码仓库托管 (基于 Git)',
-        '🧩 WASM 插件引擎',
-        '💎 支付与打赏系统',
-        '📦 数据导入/导出 (Markdown/JSON)',
-        '🔑 OAuth 第三方登录',
-        '🤖 AI 助手集成 (内容推荐、自动审核)',
-      ],
-    },
-    {
-      ver: '0.6.0', date: '2026-07', title: '运维与生态',
-      items: [
-        '🛠️ 管理后台 ✅ (用户/社区/内容管理已上线)',
-        '📈 Prometheus + Grafana 监控',
-        '🔄 自动化 CI/CD 流水线 ✅ (auto-dev.sh + cron)',
-        '📄 API 文档 (OpenAPI/Swagger)',
-        '🧪 端到端测试套件 ✅ (10项自动化测试)',
-        '📋 系统健康检查与自动恢复 ✅ (每2小时检查+自动重启)',
-      ],
-    },
   ];
 
   return (
