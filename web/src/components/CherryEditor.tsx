@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, forwardRef, useImperativeHandle, useState } from 'react';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle, useState, useId } from 'react';
 import dynamic from 'next/dynamic';
 
 type EditorModel = 'editOnly' | 'edit&preview' | 'previewOnly';
@@ -31,6 +31,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(({
 }, ref) => {
   const cherryRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const editorId = useId().replace(/:/g, '');
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,7 +62,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(({
         const h = minHeight || computed;
 
         instance = new Cherry({
-          id: containerRef.current as any,
+          id: editorId,
           value: value,
 
           editor: {
@@ -172,6 +173,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(({
       )}
       <div
         ref={containerRef}
+        id={editorId}
         className="cherry-markdown"
         style={{
           minHeight: minHeight || (typeof height === 'number' ? height + 'px' : height),
