@@ -42,6 +42,22 @@ export default function ChangelogPage() {
       cli_desc: '命令行管理后台：login/dashboard/users/spaces/posts/comments/reports/transactions/analytics',
 
     },
+    {
+      ver: '0.2.33', date: '2026-05-01', title: '定时测试 + 全部 11 项测试通过 + 性能观测',
+      items: [
+        '测试: 6 项核心测试全部通过（Gateway/首页/Changelog/Trending/Vote/Health）',
+        '测试: 3 项扩展 API 测试通过（Registration/Login/Search）',
+        '测试: 6 项服务 systemctl is-active 全部 active',
+        '测试: 安全测试通过（XSS 空结果/HTTPS 301/CORS */HSTS）',
+        '测试: 端到端用户流程测试通过（注册→登录→个人资料→列表→搜索）',
+        '测试: 未认证端点正确返回 1001 Auth Required',
+        '性能: 首页 2.5s, Changelog 14.3s, API 0.8-1.3s（需优化）',
+        '运维: Content 服务 NATS 连接警告（可忽略，NATS 未部署）',
+        '维护: README.md 同步到 v0.2.32 + CLI-GUIDE.md 确认对齐',
+      ],
+    },
+
+
 
     {
       ver: '0.2.29', date: '2026-05-01', title: '管理后台完善 + 性能优化',
@@ -419,7 +435,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.32' && (
+              {v.ver === '0.2.33' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
