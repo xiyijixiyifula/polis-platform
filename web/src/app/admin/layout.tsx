@@ -7,20 +7,27 @@ import { useEffect, useState } from 'react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('polis_admin_token');
-    setIsAdmin(!!token);
+    setMounted(true);
   }, []);
 
-  // Login page doesn't need the admin layout
+  // Login page does not need the admin layout
   if (pathname === '/admin/login') {
     return <>{children}</>;
   }
 
+  // During SSR/hydration, do not redirect
+  if (!mounted) {
+    return null;
+  }
+
+  // Synchronous token check - evaluates on every client-side render
+  const isAdmin = !!localStorage.getItem('polis_admin_token');
+
   if (!isAdmin) {
-    if (typeof window !== 'undefined' && pathname !== '/admin/login') {
+    if (typeof window !== 'undefined') {
       window.location.href = '/admin/login';
     }
     return null;

@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     middleware,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Json, Router,
 };
 use serde::Deserialize;
@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use polis_core::admin::*;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, PaginationParams};
+use polis_core::models::{ApiResponse, Pagination, PaginationParams};
 
 use crate::admin_handler::AdminHandler;
 use crate::admin_middleware::admin_auth;
@@ -42,6 +42,22 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
         .route("/api/admin/posts/{id}/delete", post(delete_post))
         .route("/api/admin/posts/{id}/feature", post(feature_post))
         .route("/api/admin/posts/{id}/unfeature", post(unfeature_post))
+        .route("/api/admin/reports", get(get_reports))
+        .route("/api/admin/reports/{id}/resolve", post(resolve_report))
+        .route("/api/admin/dashboard", get(get_dashboard))
+        // Detail endpoints
+        .route("/api/admin/users/{id}", get(get_user_detail))
+        .route("/api/admin/spaces/{id}", get(get_space_detail))
+        .route("/api/admin/posts/{id}", get(get_post_detail))
+        .route("/api/admin/posts/{id}", delete(delete_post_handler))
+        // Management endpoints
+        .route("/api/admin/spaces/{id}/status", put(update_space_status))
+        .route("/api/admin/transactions", get(get_transactions))
+        .route("/api/admin/comments", get(get_comments))
+        .route("/api/admin/comments/{id}", delete(delete_comment))
+        // Analytics endpoints
+        .route("/api/admin/analytics/users", get(get_user_analytics))
+        .route("/api/admin/analytics/posts", get(get_post_analytics))
         .route_layer(middleware::from_fn_with_state(handler.clone(), admin_auth));
 
     public.merge(auth).with_state(handler)
@@ -177,3 +193,153 @@ async fn unfeature_post(
     handler.unfeature_post(id).await?;
     Ok(Json(ApiResponse::success(())))
 }
+
+/// GET /api/admin/reports
+async fn get_reports(
+    State(handler): State<Arc<AdminHandler>>,
+    Query(params): Query<PaginationParams>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let (reports, total) = handler.get_reports(params.page.unwrap_or(1), params.page_size.unwrap_or(20)).await?;
+    Ok(Json(ApiResponse::success_with_pagination(
+        serde_json::json!({ "items": reports, "total": total }),
+        Pagination {
+            page: params.page.unwrap_or(1),
+            page_size: params.page_size.unwrap_or(20),
+            total: total as u64,
+            total_pages: ((total as f64) / (params.page_size.unwrap_or(20) as f64)).ceil() as u32,
+        },
+    )))
+}
+
+#[derive(Deserialize)]
+pub struct ResolveReportRequest {
+    pub action: String,
+}
+
+async fn resolve_report(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+    Extension(user_id): Extension<Uuid>,
+    Json(req): Json<ResolveReportRequest>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.resolve_report(id, &req.action, user_id).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn get_dashboard(
+    State(handler): State<Arc<AdminHandler>>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let data = handler.get_dashboard().await?;
+    Ok(Json(ApiResponse::success(data)))
+}
+
+// ============================================================
+// Detail endpoints
+// ============================================================
+
+async fn get_user_detail(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let user = handler.get_user_detail(id).await?;
+    Ok(Json(ApiResponse::success(user)))
+}
+
+async fn get_space_detail(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let space = handler.get_space_detail(id).await?;
+    Ok(Json(ApiResponse::success(space)))
+}
+
+async fn get_post_detail(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let post = handler.get_post_detail(id).await?;
+    Ok(Json(ApiResponse::success(post)))
+}
+
+// ============================================================
+// Management endpoints
+// ============================================================
+
+/// DELETE /api/admin/posts/{id} - alternative to POST .../delete
+async fn delete_post_handler(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.delete_post(id).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+#[derive(Deserialize)]
+pub struct UpdateSpaceStatusRequest {
+    pub status: String,
+}
+
+async fn update_space_status(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UpdateSpaceStatusRequest>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.update_space_status(id, &req.status).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn get_transactions(
+    State(handler): State<Arc<AdminHandler>>,
+    Query(params): Query<PaginationParams>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let (txs, total) = handler.get_transactions(params.page.unwrap_or(1), params.page_size.unwrap_or(20)).await?;
+    Ok(Json(ApiResponse::success_with_pagination(
+        serde_json::json!({ "items": txs, "total": total }),
+        Pagination { page: params.page.unwrap_or(1), page_size: params.page_size.unwrap_or(20), total: total as u64, total_pages: ((total as f64) / (params.page_size.unwrap_or(20) as f64)).ceil() as u32 },
+    )))
+}
+
+async fn get_comments(
+    State(handler): State<Arc<AdminHandler>>,
+    Query(params): Query<PaginationParams>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let (comments, total) = handler.get_comments(params.page.unwrap_or(1), params.page_size.unwrap_or(20)).await?;
+    Ok(Json(ApiResponse::success_with_pagination(
+        serde_json::json!({ "items": comments, "total": total }),
+        Pagination { page: params.page.unwrap_or(1), page_size: params.page_size.unwrap_or(20), total: total as u64, total_pages: ((total as f64) / (params.page_size.unwrap_or(20) as f64)).ceil() as u32 },
+    )))
+}
+
+async fn delete_comment(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.delete_comment(id).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+// ============================================================
+// Analytics endpoints
+// ============================================================
+
+#[derive(Deserialize)]
+pub struct AnalyticsQuery {
+    pub days: Option<i32>,
+}
+
+async fn get_user_analytics(
+    State(handler): State<Arc<AdminHandler>>,
+    Query(params): Query<AnalyticsQuery>,
+) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
+    let data = handler.get_user_analytics(params.days.unwrap_or(30)).await?;
+    Ok(Json(ApiResponse::success(data)))
+}
+
+async fn get_post_analytics(
+    State(handler): State<Arc<AdminHandler>>,
+    Query(params): Query<AnalyticsQuery>,
+) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
+    let data = handler.get_post_analytics(params.days.unwrap_or(30)).await?;
+    Ok(Json(ApiResponse::success(data)))
+}
+

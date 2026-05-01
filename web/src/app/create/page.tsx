@@ -6,15 +6,17 @@ import { Github, Plus } from 'lucide-react';
 import { spaces } from '@/lib/api';
 
 function deriveSlug(title: string): string {
-  const latin = title
+  // Keep a-z, 0-9, Chinese CJK (一-鿿), spaces, and hyphens
+  const cleaned = title
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 
-  if (latin.length >= 2) return latin;
+  if (cleaned.length >= 2) return cleaned;
 
+  // Fallback for titles with no valid slug characters
   let hash = 0;
   for (let i = 0; i < title.length; i++) {
     hash = ((hash << 5) - hash + title.charCodeAt(i)) | 0;
@@ -158,10 +160,10 @@ export default function CreateSpacePage() {
                   className="flex-1 border-0 bg-transparent py-2 text-sm focus:outline-none dark:text-white font-mono"
                   placeholder="custom-slug"
                   value={slug}
-                  onChange={e => setSlug(e.target.value.replace(/[^a-z0-9-]/g, '').toLowerCase())}
+                  onChange={e => setSlug(e.target.value.replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf-]/g, '').toLowerCase())}
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">只能包含小写字母、数字和连字符</p>
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">支持中文、字母、数字和连字符</p>
             </div>
           )}
         </div>

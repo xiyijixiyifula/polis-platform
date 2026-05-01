@@ -4,6 +4,47 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+    {
+      ver: '0.2.31', date: '2026-05-01', title: 'Polis 命令行工具 polisctl',
+      items: [
+        '工具: polisctl.sh 命令行工具（772行，20+ 子命令）',
+        '用户: 注册/登录/资料/社区/帖子/评论/点赞/投票/收藏',
+        '内容: 发帖/评论/投票/草稿/通知/书签/专栏/会员/订阅',
+        '管理: admin 子命令（dashboard/stats/users/spaces/posts/comments/reports/analytics）',
+        '设计: JSON 模式输出，AI 代理友好，配合 jq 自动化',
+        '文档: docs/CLI-GUIDE.md（450行，4个AI工作流）',
+        '页面: /cli 网页版完整命令参考 + 安装指南',
+      ],
+    },
+
+      ver: '0.2.30', date: '2026-05-01', title: 'Admin API 全面增强 + CLI 管理工具',
+      items: [
+        '新增: 详情端点（users/{id}, spaces/{id}, posts/{id}）含作者/所属信息',
+        '新增: DELETE /api/admin/posts/{id} 和 PUT /api/admin/spaces/{id}/status',
+        '新增: 评论管理端点（GET 列表 + DELETE 删除）',
+        '新增: 交易记录列表端点（关联用户/社区信息）',
+        '新增: 数据分析端点（用户/帖子日增长趋势，支持 days 参数）',
+        '工具: adminctl.sh CLI 管理工具（22 个命令，支持所有 CRUD 操作）',
+        '修复: 创建社区支持中文命名空间自动填充',
+      ],
+      cli: 'adminctl.sh',
+      cli_desc: '命令行管理后台：login/dashboard/users/spaces/posts/comments/reports/transactions/analytics',
+
+    },
+
+    {
+      ver: '0.2.29', date: '2026-05-01', title: '管理后台完善 + 性能优化',
+      items: [
+        '修复: 管理后台登录后页面不跳转（layout token 检查改为同步）',
+        '新增: /api/admin/reports 举报管理 API',
+        '新增: /api/admin/dashboard 仪表盘 API（含 pending_reports 等新指标）',
+        '新增: /api/health 健康检查端点',
+        '性能: /api/admin/stats 从 3.96s 优化到 12ms（单查询替代 8 次查询）',
+        '安全: 管理后台用户列表 API 邮箱脱敏显示',
+      ],
+    },
+
+    {
       ver: '0.2.28', date: '2026-05-01', title: 'QA Bug 修复 + 品牌色更新',
       items: [
         '修复: get_following SQL bug（WHERE follower_id 替代 followee_id）',
@@ -367,7 +408,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.28' && (
+              {v.ver === '0.2.31' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

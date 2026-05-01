@@ -79,6 +79,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/admin", any(proxy_to_admin))
         // 健康检查
         .route("/health", get(health_check))
+        .route("/api/health", get(health_check))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state);
