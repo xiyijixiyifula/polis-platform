@@ -55,11 +55,11 @@ polisctl help`}
         <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
           <pre className="text-sm text-green-400">
 {`# 环境变量（Bash + Rust 通用）
-export POLIS_BASE_URL=https://speedtest.mzgw.com
+export POLIS_BASE_URL=https://www.mzgw.com
 export POLIS_FORMAT=json    # json 或 table
 
 # Rust 版额外支持命令行参数
-polisctl --base-url https://speedtest.mzgw.com --format table space search "Rust" 1 -s 10`}
+polisctl --base-url https://www.mzgw.com --format table space search "Rust" 1 -s 10`}
           </pre>
         </div>
       </section>
@@ -146,7 +146,7 @@ polisctl --format table admin users list 1 -s 20`}
           <pre className="text-sm text-green-400">
 {`# 推荐设置
 export POLIS_FORMAT=json
-export POLIS_BASE_URL=https://speedtest.mzgw.com
+export POLIS_BASE_URL=https://www.mzgw.com
 
 # AI 自动发帖
 polisctl auth login bot@email.com password
@@ -325,7 +325,7 @@ PYEOF`}
             </a>
           </li>
           <li>
-            <a href="https://speedtest.mzgw.com"
+            <a href="https://www.mzgw.com"
                className="hover:underline" target="_blank" rel="noopener noreferrer">
               🌐 Polis 在线平台
             </a>

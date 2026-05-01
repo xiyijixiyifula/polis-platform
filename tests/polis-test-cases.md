@@ -574,8 +574,8 @@ Detailed test cases organized by functional module. Each test case includes: obj
 
 ### TC-PERF-02: API Response Time
 - **Steps**:
-  1. Run: `curl -w "%{time_total}" https://speedtest.mzgw.com/api/health`
-  2. Run: `curl -w "%{time_total}" https://speedtest.mzgw.com/api/spaces`
+  1. Run: `curl -w "%{time_total}" https://www.mzgw.com/api/health`
+  2. Run: `curl -w "%{time_total}" https://www.mzgw.com/api/spaces`
 - **Expected**: < 200ms for health, < 500ms for space list
 
 ### TC-PERF-03: Bundle Size Check
@@ -621,12 +621,12 @@ Detailed test cases organized by functional module. Each test case includes: obj
 
 ### TC-SEC-03: HTTPS Enforcement
 - **Steps**:
-  1. Navigate to `http://speedtest.mzgw.com`
-- **Expected**: Redirect to `https://speedtest.mzgw.com`
+  1. Navigate to `http://www.mzgw.com`
+- **Expected**: Redirect to `https://www.mzgw.com`
 
 ### TC-SEC-04: CORS Headers
 - **Steps**:
-  1. Run: `curl -I https://speedtest.mzgw.com/api/health`
+  1. Run: `curl -I https://www.mzgw.com/api/health`
 - **Expected**: Appropriate CORS headers for API endpoints
 
 ### TC-SEC-05: Rate Limiting

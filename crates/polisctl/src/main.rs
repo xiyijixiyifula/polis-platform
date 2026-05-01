@@ -13,7 +13,7 @@ use http::HttpClient;
 #[derive(Parser)]
 #[command(name = "polisctl", version = "1.0.0", about, long_about = None)]
 struct Cli {
-    /// Override API base URL (default: $POLIS_BASE_URL or https://speedtest.mzgw.com)
+    /// Override API base URL (default: $POLIS_BASE_URL or https://www.mzgw.com)
     #[arg(long, global = true)]
     base_url: Option<String>,
     /// Output format: json or table (default: $POLIS_FORMAT or json)

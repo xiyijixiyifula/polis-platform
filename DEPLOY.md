@@ -4,8 +4,8 @@
 
 | 项目 | 值 |
 |------|-----|
-| 服务器 | 47.253.123.3 (root@speedtest.mzgw.com) |
-| 在线地址 | https://speedtest.mzgw.com |
+| 服务器 | 47.253.123.3 (root@www.mzgw.com) |
+| 在线地址 | https://www.mzgw.com |
 | 部署方式 | 服务器本地编译 + systemd 管理 |
 | 反向代理 | Nginx (:80→443 重定向, :443 HTTPS → Gateway :8080 / Next.js :3000) |
 | SSL 证书 | Let's Encrypt (certbot, 自动续期) |

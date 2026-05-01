@@ -1,8 +1,8 @@
 # 🔒 HTTPS 配置参考手册
 
-> 服务器: 47.253.123.3 (root@speedtest.mzgw.com)
+> 服务器: 47.253.123.3 (root@www.mzgw.com)
 > 配置日期: 2026-04-30
-> 域名: speedtest.mzgw.com
+> 域名: www.mzgw.com
 
 ---
 
@@ -11,14 +11,14 @@
 | 项目 | 值 |
 |------|-----|
 | 证书类型 | Let's Encrypt (R3) |
-| 域名 | speedtest.mzgw.com |
+| 域名 | www.mzgw.com |
 | 签发日 | 2026-04-30 |
 | 到期日 | 2026-07-29 (90天) |
 | TLS 版本 | TLSv1.2 / TLSv1.3 |
 | 证书路径 | `/etc/letsencrypt/live/speedtest.mzgw.com/` |
 | 私钥路径 | `/etc/letsencrypt/live/speedtest.mzgw.com/privkey.pem` |
 | 完整链 | `/etc/letsencrypt/live/speedtest.mzgw.com/fullchain.pem` |
-| 归档目录 | `/etc/letsencrypt/archive/speedtest.mzgw.com/` |
+| 归档目录 | `/etc/letsencrypt/archive/www.mzgw.com/` |
 
 ---
 
@@ -44,7 +44,7 @@ upstream api_gateway {
 # HTTP -> HTTPS redirect
 server {
     listen 80;
-    server_name speedtest.mzgw.com _;
+    server_name www.mzgw.com _;
 
     location /.well-known/acme-challenge/ {
         root /var/www/html;
@@ -58,7 +58,7 @@ server {
 # HTTPS server
 server {
     listen 443 ssl http2;
-    server_name speedtest.mzgw.com _;
+    server_name www.mzgw.com _;
     client_max_body_size 50M;
 
     # SSL certificates
@@ -161,8 +161,8 @@ ss -tlnp | grep -E ':80 |:443 '
 
 ### 测试 HTTPS 连接
 ```bash
-curl -sI https://speedtest.mzgw.com
-echo | openssl s_client -connect speedtest.mzgw.com:443 -servername speedtest.mzgw.com 2>&1 | grep -E "subject=|Verify|TLS"
+curl -sI https://www.mzgw.com
+echo | openssl s_client -connect www.mzgw.com:443 -servername www.mzgw.com 2>&1 | grep -E "subject=|Verify|TLS"
 ```
 
 ### 查看证书错误日志
@@ -183,7 +183,7 @@ tail -f /var/log/nginx/error.log
 systemctl stop nginx
 
 # 用 standalone 模式重新申请
-certbot certonly --standalone -d speedtest.mzgw.com --agree-tos --email admin@speedtest.mzgw.com
+certbot certonly --standalone -d www.mzgw.com --agree-tos --email admin@speedtest.mzgw.com
 
 # 恢复 nginx
 systemctl start nginx

@@ -7,7 +7,7 @@
 [![Rust](https://img.shields.io/badge/Rust-1.81%2B-orange)](https://rust-lang.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![HTTPS](https://img.shields.io/badge/HTTPS-Let's%20Encrypt-green)](https://speedtest.mzgw.com)
+[![HTTPS](https://img.shields.io/badge/HTTPS-Let's%20Encrypt-green)](https://www.mzgw.com)
 
 </div>
 
@@ -76,7 +76,7 @@
 
 ```bash
 # 拉取代码
-ssh root@speedtest.mzgw.com "cd /root/polis && git pull origin main"
+ssh root@www.mzgw.com "cd /root/polis && git pull origin main"
 
 # 构建并部署（auto-dev.sh 自动化）
 ./auto-dev.sh
@@ -154,7 +154,7 @@ systemctl restart polis-gateway
 | [用户使用指南](docs/USER-GUIDE.md) | 完整功能使用说明 |
 | [HTTPS 配置手册](docs/HTTPS-CONFIG.md) | SSL 证书/Nginx 配置/故障排查 |
 | [部署方案](DEPLOY.md) | 生产部署架构与改进计划 |
-| [更新日志](https://speedtest.mzgw.com/changelog) | 在线版本历史 |
+| [更新日志](https://www.mzgw.com/changelog) | 在线版本历史 |
 
 ---
 
@@ -210,7 +210,7 @@ polis/
 
 | `admin` | 管理后台（dashboard/stats/users/spaces/posts/...） |
 
-📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://speedtest.mzgw.com/cli)
+📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://www.mzgw.com/cli)
 
 ## 🏗️ 自动化系统
 ## 🖥️ 命令行工具 (polisctl)
@@ -232,7 +232,7 @@ wget https://github.com/xiyijixiyifula/polis-platform/releases/latest/download/p
 ### 配置
 
 ```bash
-export POLIS_BASE_URL=https://speedtest.mzgw.com
+export POLIS_BASE_URL=https://www.mzgw.com
 export POLIS_FORMAT=json    # json（AI/脚本推荐）或 table（人类可读）
 ```
 

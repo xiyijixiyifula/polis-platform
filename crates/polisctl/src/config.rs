@@ -20,7 +20,7 @@ pub enum OutputFormat {
 impl Config {
     pub fn new() -> Self {
         let base_url = env::var("POLIS_BASE_URL")
-            .unwrap_or_else(|_| "https://speedtest.mzgw.com".to_string())
+            .unwrap_or_else(|_| "https://www.mzgw.com".to_string())
             .trim_end_matches('/')
             .to_string();
 

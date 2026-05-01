@@ -11,7 +11,7 @@
 set -euo pipefail
 
 # === Configuration ===
-BASE_URL="${POLIS_BASE_URL:-https://speedtest.mzgw.com}"
+BASE_URL="${POLIS_BASE_URL:-https://www.mzgw.com}"
 CONFIG_DIR="${HOME}/.polis"
 TOKEN_FILE="${CONFIG_DIR}/token"
 USER_FILE="${CONFIG_DIR}/user"
@@ -746,7 +746,7 @@ main() {
             echo "  announce  <namespace>"
             echo "  admin     {login|dashboard|stats|users|spaces|posts|comments|reports|transactions|analytics}"
             echo ""
-            echo "ENV: POLIS_BASE_URL (default: https://speedtest.mzgw.com)"
+            echo "ENV: POLIS_BASE_URL (default: https://www.mzgw.com)"
             echo "     POLIS_FORMAT (json|table, default: json)"
             echo ""
             echo "AI AGENTS: Set POLIS_FORMAT=json and pipe through jq for structured output."
