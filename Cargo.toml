@@ -17,6 +17,7 @@ members = [
     "crates/polis-export",
     "crates/polis-plugin-engine",
     "crates/polis-admin",
+    "crates/polisctl",
 ]
 
 [workspace.package]

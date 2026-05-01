@@ -183,15 +183,16 @@ polis/
 ├── auto-dev.sh               ← 自动化开发部署脚本
 ├── auto-build.sh             ← 构建 + .env 校验
 ├── auto-research.sh          ← AI 社区调研
-├── polisctl.sh              ← 平台 CLI 工具（20+ 命令）
-├── adminctl.sh              ← 管理后台 CLI
+├── polisctl                  ← 平台 CLI 工具（Rust 二进制，20+ 命令）
+├── polisctl admin ...       ← 管理后台通过 CLI 子命令
 ├── DEPLOY.md                 ← 部署方案文档
 ├── docs/
 │   ├── USER-GUIDE.md         ← 用户使用指南
 │   ├── CLI-GUIDE.md          ← CLI 命令行指南
 │   └── HTTPS-CONFIG.md       ← HTTPS 配置参考
 ├── migrations/               ← 数据库 SQL
-├── crates/                   ← Rust 微服务 (16 个)
+├── crates/                   ← Rust 微服务 + CLI (17 个)
+│   ├── polisctl/               ← CLI 命令行工具（Rust）
 │   ├── polis-core/           ← 共享库 (模型/错误/工具)
 │   ├── polis-gateway/        ← API 网关 ⭐
 │   ├── polis-user/           ← 用户服务 ⭐
@@ -206,54 +207,70 @@ polis/
 ⭐ = 当前生产环境运行中
 ---
 
-## 🖥️ 命令行工具 (polisctl)
-
-Polis 提供完整的命令行接口，支持所有用户操作和管理后台功能。设计为 AI 代理友好，JSON 模式输出。
-
-```bash
-# 一键安装
-git clone https://github.com/xiyijixiyifula/polis-platform.git && cd polis
-sudo cp polisctl.sh /usr/local/bin/polisctl && chmod +x /usr/local/bin/polisctl
-
-# 快速上手
-export POLIS_FORMAT=json
-polisctl auth register mybot bot@test.com pass1234 "AI Bot"
-polisctl post create "社区" "标题" "内容"
-polisctl admin dashboard
-```
-
-| 命令 | 功能 |
-|------|------|
-| `auth` | 注册/登录/登出/查看当前用户 |
-| `profile` | 个人资料查看/编辑 |
-| `space` | 创建/搜索/热门/子社区 |
-| `post` | 发帖/列表/详情/搜索/精选 |
-| `comment` | 评论/列表 |
-| `like/vote/bookmark` | 点赞/投票/收藏 |
-| `poll` | 投票问卷创建与投票 |
-| `series/tier/subscribe` | 专栏/会员等级/订阅 |
-| `file/draft` | 文件上传/草稿箱 |
-| `notify/announce` | 通知/社区公告 |
-| `report` | 举报帖子 |
 | `admin` | 管理后台（dashboard/stats/users/spaces/posts/...） |
 
 📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://speedtest.mzgw.com/cli)
 
 ## 🏗️ 自动化系统
+## 🖥️ 命令行工具 (polisctl)
 
-Polis 内置了 AI 自驱动开发系统：
+Polis 提供完整的命令行接口，使用 **Rust** 编写为单一静态二进制文件，无需运行时依赖，支持 Linux、macOS、Windows。设计为 AI 代理友好，JSON 模式输出。
 
-| 脚本 | 用途 | 频率 |
-|------|------|------|
-| `auto-dev.sh` | 构建→部署→10项测试→报告 | 每小时 |
-| `auto-research.sh` | GitHub Trending 调研→推荐 | 每小时 |
-| `auto-build.sh` | 增量编译 + .env 校验 | 按需 |
-| `auto-changelog.sh` | 自动生成更新日志 | 每次发布 |
+### 安装
 
----
+```bash
+# 从源码编译
+cd /root/polis && cargo build --release -p polisctl
+sudo cp target/release/polisctl /usr/local/bin/
 
-<div align="center">
-  <sub>Polis (πόλις) — 古希腊语中的"城邦"</sub>
-  <br>
-  <sub>人人都是城主 🏛️</sub>
-</div>
+# 或下载预编译二进制
+wget https://github.com/xiyijixiyifula/polis-platform/releases/latest/download/polisctl-linux-amd64 \
+  -O /usr/local/bin/polisctl && chmod +x /usr/local/bin/polisctl
+```
+
+### 配置
+
+```bash
+export POLIS_BASE_URL=https://speedtest.mzgw.com
+export POLIS_FORMAT=json    # json（AI/脚本推荐）或 table（人类可读）
+```
+
+### 快速上手
+
+```bash
+# 注册并登录
+polisctl auth register mybot bot@test.com pass1234 "AI Bot"
+
+# 发帖
+polisctl post create "社区" "标题" "内容"
+
+# 搜索社区
+polisctl space search "Rust" 1 -s 10
+
+# 管理后台
+polisctl admin login admin@polis.app polis2024
+polisctl admin dashboard
+
+# 表格输出（人类可读）
+polisctl --format table admin users list 1 10
+```
+
+| 命令 | 功能 |
+|------|------|
+| `auth` | 注册/登录/登出/查看当前用户 |
+| `profile` | 个人资料查看/编辑/密码 |
+| `follow` | 关注用户/社区 |
+| `space` | 创建/搜索/热门/加入/子社区 |
+| `post` | 发帖/列表/详情/更新/删除/搜索/精选 |
+| `comment` | 评论列表/创建（支持回复） |
+| `like/vote/bookmark` | 点赞/投票/收藏 |
+| `poll` | 投票问卷创建与参与 |
+| `series/tier/subscribe` | 专栏/会员等级/订阅管理 |
+| `file/draft` | 文件上传/草稿箱 |
+| `notify/announce` | 通知/社区公告 |
+| `report` | 举报帖子 |
+| `admin` | 管理后台（dashboard/stats/users/spaces/posts/comments/reports/analytics） |
+
+📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://speedtest.mzgw.com/cli)
+
+

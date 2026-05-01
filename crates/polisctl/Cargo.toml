@@ -1,0 +1,31 @@
+[package]
+name = "polisctl"
+version = "1.0.0"
+edition = "2021"
+description = "Polis Platform CLI — Complete command-line interface for the Polis community platform"
+authors = ["Polis Team"]
+license = "MIT"
+
+[[bin]]
+name = "polisctl"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+colored = "2"
+dirs = "5"
+anyhow = "1"
+base64 = "0.22"
+mime_guess = "2"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1
