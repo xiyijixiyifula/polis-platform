@@ -27,10 +27,10 @@ pub struct VerifyRequest {
 }
 
 pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
-    Router::new()
-        // 公开
-        .route("/api/admin/login", post(admin_login))
-        // 需要认证
+    let public = Router::new()
+        .route("/api/admin/login", post(admin_login));
+
+    let auth = Router::new()
         .route("/api/admin/stats", get(get_stats))
         .route("/api/admin/users", get(get_users))
         .route("/api/admin/users/{id}/ban", post(ban_user))
@@ -42,8 +42,9 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
         .route("/api/admin/posts/{id}/delete", post(delete_post))
         .route("/api/admin/posts/{id}/feature", post(feature_post))
         .route("/api/admin/posts/{id}/unfeature", post(unfeature_post))
-        .route_layer(middleware::from_fn_with_state(handler.clone(), admin_auth))
-        .with_state(handler)
+        .route_layer(middleware::from_fn_with_state(handler.clone(), admin_auth));
+
+    public.merge(auth).with_state(handler)
 }
 
 /// POST /api/admin/login - 管理员登录
