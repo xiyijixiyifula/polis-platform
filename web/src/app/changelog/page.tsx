@@ -4,7 +4,6 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-    {
       ver: '0.2.31', date: '2026-05-01', title: 'Polis 命令行工具 polisctl',
       items: [
         '工具: polisctl.sh 命令行工具（772行，20+ 子命令）',
@@ -17,6 +16,7 @@ export default function ChangelogPage() {
       ],
     },
 
+    {
       ver: '0.2.30', date: '2026-05-01', title: 'Admin API 全面增强 + CLI 管理工具',
       items: [
         '新增: 详情端点（users/{id}, spaces/{id}, posts/{id}）含作者/所属信息',
