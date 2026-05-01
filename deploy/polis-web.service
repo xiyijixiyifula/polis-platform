@@ -1,0 +1,18 @@
+[Unit]
+Description=Polis Web Frontend (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/polis/web/.next/standalone
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+StandardOutput=append:/root/polis/web.log
+StandardError=append:/root/polis/web.log
+
+[Install]
+WantedBy=multi-user.target

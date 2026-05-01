@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.28', date: '2026-05-01', title: 'QA Bug 修复 + 品牌色更新',
+      items: [
+        '修复: get_following SQL bug（WHERE follower_id 替代 followee_id）',
+        '修复: followers/following API 改为公开端点（无需认证）',
+        '修复: polis-web systemd 服务切换为 standalone 模式启动',
+        'UI: 品牌色从蓝色(#2563eb)更新为紫色(#8b5cf6)',
+      ],
+    },
+
+    {
       ver: '0.2.27', date: '2026-05-01', title: '付费社区 Phase 3 — 等级管理 UI',
       items: [
         '前端: 空间主可创建/编辑/删除会员等级（内联表单）',
@@ -357,7 +367,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.27' && (
+              {v.ver === '0.2.28' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

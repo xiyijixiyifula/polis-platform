@@ -303,7 +303,7 @@ impl UserHandler {
         let rows = sqlx::query_as::<_, (serde_json::Value,)>(
             r#"SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name)
                FROM follows f JOIN users u ON f.followee_id = u.id
-               WHERE f.followee_type = 'user' AND f.followee_id = (SELECT id FROM users WHERE username = $1)"#
+               WHERE f.followee_type = 'user' AND f.follower_id = (SELECT id FROM users WHERE username = $1)"#
         ).bind(username).fetch_all(&self.repo.pool).await?;
         Ok(rows.into_iter().map(|r| r.0).collect())
     }

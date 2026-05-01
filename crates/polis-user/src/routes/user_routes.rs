@@ -20,14 +20,14 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/auth/login", post(login))
         .route("/api/auth/forgot-password", post(forgot_password))
         .route("/api/users/{username}", get(get_user_profile))
-        .route("/api/users/{username}/spaces", get(get_user_spaces));
+        .route("/api/users/{username}/spaces", get(get_user_spaces))
+        .route("/api/users/{username}/followers", get(get_followers))
+        .route("/api/users/{username}/following", get(get_following));
     let auth = Router::new()
         .route("/api/users/me", get(get_my_profile).put(update_profile))
         .route("/api/users/me/password", put(change_password))
         .route("/api/users/me/settings", put(update_settings))
         .route("/api/follow", post(toggle_follow))
-        .route("/api/users/{username}/followers", get(get_followers))
-        .route("/api/users/{username}/following", get(get_following))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
     public.merge(auth).with_state(handler)
 }
