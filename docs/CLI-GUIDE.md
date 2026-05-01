@@ -104,8 +104,8 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 | `polisctl space join <ns>` | POST | `/api/spaces/{ns}/join` | Yes |
 | `polisctl space leave <ns>` | POST | `/api/spaces/{ns}/leave` | Yes |
 | `polisctl space members <ns>` | GET | `/api/spaces/{ns}/members` | No |
-| `polisctl space search <query> [limit]` | GET | `/api/search` | No |
-| `polisctl space trending [limit]` | GET | `/api/spaces/trending` | No |
+| `polisctl space search <query> [page] -s <size>` | GET | `/api/search` | No |
+| `polisctl space trending [page] -s <size>` | GET | `/api/spaces/trending` | No |
 | `polisctl space root <slug>` | GET | `/api/root/{slug}` | No |
 | `polisctl space subspaces <slug>` | GET | `/api/root/{slug}/subspaces` | No |
 
@@ -113,10 +113,10 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 
 | Command | Method | Endpoint | Auth |
 |---------|--------|----------|------|
-| `polisctl post create <ns> <title> [body] [tags] [module]` | POST | `/api/spaces/{ns}/posts` | Yes |
-| `polisctl post list <ns> [page] [size] [module]` | GET | `/api/spaces/{ns}/posts` | No |
+| `polisctl post create <ns> <title> <body> -g <tags> -m <module>` | POST | `/api/spaces/{ns}/posts` | Yes |
+| `polisctl post list <ns> [page] -s <size> -m <module>` | GET | `/api/spaces/{ns}/posts` | No |
 | `polisctl post get <post_id>` | GET | `/api/posts/{id}` | No |
-| `polisctl post update <ns> <post_id> <title> [body] [tags]` | PUT | `/api/spaces/{ns}/posts/{id}` | Yes |
+| `polisctl post update <ns> <post_id> <title> -b <body> -g <tags>` | PUT | `/api/spaces/{ns}/posts/{id}` | Yes |
 | `polisctl post delete <ns> <post_id>` | DELETE | `/api/spaces/{ns}/posts/{id}` | Yes |
 | `polisctl post featured <ns>` | GET | `/api/spaces/{ns}/featured` | No |
 | `polisctl post search <query> [limit]` | GET | `/api/posts/search` | No |
@@ -125,7 +125,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 
 | Command | Method | Endpoint | Auth |
 |---------|--------|----------|------|
-| `polisctl comment create <ns> <post_id> <body> [parent_id]` | POST | `/api/spaces/{ns}/posts/{id}/comments` | Yes |
+| `polisctl comment create <post_id> <body> -p <parent_id>` | POST | `/api/posts/{id}/comments` | Yes |
 | `polisctl comment list <post_id>` | GET | `/api/posts/{id}/comments` | No |
 
 ### 3.7 Voting (Upvote/Downvote)
@@ -189,7 +189,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 
 | Command | Action |
 |---------|--------|
-| `polisctl draft save <space_id> <title> <body>` | Save draft |
+| `polisctl draft save <title> <body> -s <space_id>` | Save draft |
 | `polisctl draft list` | List my drafts |
 | `polisctl notify list` | List notifications |
 | `polisctl notify unread` | Get unread count |

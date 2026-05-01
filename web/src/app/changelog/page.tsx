@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.32', date: '2026-05-01', title: 'CLI 文档同步 + Rust CLI 参数格式对齐',
+      items: [
+        '文档: CLI-GUIDE.md 参数格式对齐 Rust CLI v1.0.0（-s size / -b body / -g tags / -p parent_id）',
+        '测试: Rust CLI 端到端测试 11/11 通过（注册/登录/社区/帖子/评论/投票/管理后台/表格输出）',
+        '测试: 服务器核心测试 7/7 通过（Gateway/首页/Changelog/Trending/Vote/CLI/Explore）',
+        '修复: CLI-GUIDE.md 中 7 处参数格式与 Rust CLI 实际行为不匹配（comment create 无 ns、draft save 参数顺序等）',
+        '维护: 定时任务.md 版本号更新到 v0.2.32 + 补充已完成功能记录',
+      ],
+    },
+
+    {
       ver: '0.2.31', date: '2026-05-01', title: 'Polis 命令行工具 polisctl',
       items: [
         '工具: polisctl.sh 命令行工具（772行，20+ 子命令）',
@@ -408,7 +419,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.31' && (
+              {v.ver === '0.2.32' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
