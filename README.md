@@ -212,7 +212,7 @@ Polis 提供完整的命令行接口，支持所有用户操作和管理后台�
 
 ```bash
 # 一键安装
-git clone https://github.com/wansichao/polis.git && cd polis
+git clone https://github.com/xiyijixiyifula/polis-platform.git && cd polis
 sudo cp polisctl.sh /usr/local/bin/polisctl && chmod +x /usr/local/bin/polisctl
 
 # 快速上手

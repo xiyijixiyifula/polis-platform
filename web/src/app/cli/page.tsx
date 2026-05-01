@@ -18,7 +18,7 @@ export default function CLIPage() {
         <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
           <pre className="text-sm text-green-400">
 {`# 从 GitHub 下载
-git clone https://github.com/wansichao/polis.git
+git clone https://github.com/xiyijixiyifula/polis-platform.git
 cd polis
 sudo cp polisctl.sh /usr/local/bin/polisctl
 chmod +x /usr/local/bin/polisctl
@@ -173,7 +173,7 @@ polisctl admin analytics users 30 | jq '.'`}
         <p className="text-blue-700 dark:text-blue-300 mb-3">
           查看 GitHub 上的 CLI-GUIDE.md，包含 4 个实战工作流示例。
         </p>
-        <a href="https://github.com/wansichao/polis/blob/main/docs/CLI-GUIDE.md"
+        <a href="https://github.com/xiyijixiyifula/polis-platform/blob/main/docs/CLI-GUIDE.md"
            className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline font-medium"
            target="_blank" rel="noopener noreferrer">
           📖 查看 CLI-GUIDE.md (GitHub)
