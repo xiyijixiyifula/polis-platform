@@ -264,6 +264,74 @@ export const search = {
 };
 
 
+export interface SpaceTier {
+  id: string;
+  space_id: string;
+  name: string;
+  price_cents: number;
+  currency: string;
+  description: string;
+  benefits: string[];
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Subscription {
+  id: string;
+  space_id: string;
+  user_id: string;
+  tier_id: string;
+  status: string;
+  started_at: string;
+  expires_at: string | null;
+  auto_renew: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const tiers = {
+  /** 获取空间的会员等级列表 */
+  list: (namespace: string) =>
+    request<SpaceTier[]>(`/tiers/space/${namespace}`),
+
+  /** 创建会员等级 */
+  create: (namespace: string, data: { name: string; price_cents: number; description?: string; benefits?: string[] }) =>
+    request<{id: string}>(`/tiers/space/${namespace}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** 更新会员等级 */
+  update: (namespace: string, tierId: string, data: { name?: string; price_cents?: number; description?: string; benefits?: string[]; is_active?: boolean }) =>
+    request<void>(`/tiers/${tierId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  /** 删除会员等级 */
+  delete: (namespace: string, tierId: string) =>
+    request<void>(`/tiers/${tierId}`, { method: 'DELETE' }),
+};
+
+export const subscribe = {
+  /** 订阅付费会员 */
+  join: (namespace: string, tierId: string) =>
+    request<{id: string}>(`/subscribe/space/${namespace}`, {
+      method: 'POST',
+      body: JSON.stringify({ tier_id: tierId }),
+    }),
+
+  /** 取消订阅 */
+  cancel: (namespace: string) =>
+    request<void>(`/subscribe/space/${namespace}`, { method: 'DELETE' }),
+
+  /** 获取当前用户订阅状态 */
+  get: (namespace: string) =>
+    request<Subscription | null>(`/subscribe/space/${namespace}`),
+};
+
 export const series = {
   /** 创建系列（专栏） */
   create: (namespace: string, data: { title: string; description?: string; cover_url?: string; visibility?: string }) =>

@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.25', date: '2026-05-01', title: '付费社区 Phase 1 — 会员等级 + 订阅系统',
+      items: [
+        '迁移: 新增 space_tiers 会员等级表和 subscriptions 订阅表',
+        '后端: 会员等级 CRUD（创建/编辑/删除/列表）',
+        '后端: 订阅管理 API（加入/取消/查询订阅状态）',
+        '网关: 代理 /api/tiers/* 和 /api/subscribe/* 到 content 服务',
+        '前端: api.ts 新增 tiers + subscribe 客户端方法',
+      ],
+    },
+
+    {
       ver: '0.2.24', date: '2026-05-01', title: '专栏 Phase 3 + 用户关系页面',
       items: [
         '编辑器: 发帖时可选收录到系列（专栏）',
@@ -325,7 +336,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.24' && (
+              {v.ver === '0.2.25' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

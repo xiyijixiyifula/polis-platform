@@ -4,7 +4,7 @@ use axum::{
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, Post, PostPublic, UpdatePostRequest, PaginationParams};
+use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, Post, PostPublic, UpdatePostRequest, PaginationParams, CreateTierRequest, UpdateTierRequest};
 use polis_core::resolver::resolve::resolve_space_id;
 use crate::handlers::content_handler::ContentHandler;
 use crate::middleware::auth::auth_middleware;
@@ -110,6 +110,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         // 获取投票分数（赞同/反对）
         .route("/api/vote", get(get_vote_score_route))
         // 系列（专栏）公开接口
+        .route("/api/tiers/space/{*ns}", get(list_tiers_route))
         .route("/api/series/{id}", get(get_series_route))
         .route("/api/series/space/{*ns}", get(list_series_route));
 
@@ -133,6 +134,10 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/series/{id}", put(update_series_route).delete(delete_series_route))
         .route("/api/series/{id}/posts", post(add_post_to_series_route))
         .route("/api/series/{id}/posts/{post_id}", delete(remove_post_from_series_route))
+        .route("/api/tiers/space/{*ns}", post(create_tier_route))
+        .route("/api/tiers/{id}", put(update_tier_route).delete(delete_tier_route))
+        .route("/api/subscribe/space/{*ns}", post(subscribe_route).delete(unsubscribe_route))
+        .route("/api/subscribe/space/{*ns}", get(get_subscription_route))
         .route("/api/files/{id}", get(get_file_route))
         .route("/api/files/share", post(create_file_share_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
@@ -620,4 +625,90 @@ async fn get_file_route(
         .header(axum::http::header::CONTENT_TYPE, content_type)
         .body(axum::body::Body::from(data))
         .unwrap())
+}
+// ===== 付费社区（会员等级）路由处理函数 =====
+
+#[derive(serde::Deserialize)]
+struct TierNsPath { ns: String }
+
+#[derive(serde::Deserialize)]
+struct UpdateTierBody { space_ns: Option<String>, name: Option<String>, price_cents: Option<i64>, description: Option<String>, benefits: Option<Vec<String>>, sort_order: Option<i32>, is_active: Option<bool> }
+
+#[derive(serde::Deserialize)]
+struct DeleteTierBody { space_ns: Option<String> }
+
+#[derive(serde::Deserialize)]
+struct SubscribeBody { tier_id: Uuid }
+
+async fn list_tiers_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(p): Path<TierNsPath>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let space_id = resolve_space_id(&h.pool, &p.ns).await?;
+    let tiers = h.list_tiers(space_id).await?;
+    Ok(json_ok(ApiResponse::success(tiers)))
+}
+
+async fn create_tier_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(_uid): axum::Extension<Uuid>,
+    Path(p): Path<TierNsPath>,
+    Json(req): Json<CreateTierRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let space_id = resolve_space_id(&h.pool, &p.ns).await?;
+    let id = h.create_tier(space_id, req).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"id": id}))))
+}
+
+async fn update_tier_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(_uid): axum::Extension<Uuid>,
+    Path(tier_id): Path<Uuid>,
+    Json(req): Json<UpdateTierRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    // Fetch tier to get space_id for authorization
+    let tier = h.repo.get_tier(tier_id).await?;
+    h.update_tier(tier_id, tier.space_id, req).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+async fn delete_tier_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(_uid): axum::Extension<Uuid>,
+    Path(tier_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let tier = h.repo.get_tier(tier_id).await?;
+    h.delete_tier(tier_id, tier.space_id).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+async fn subscribe_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(p): Path<TierNsPath>,
+    Json(body): Json<SubscribeBody>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let space_id = resolve_space_id(&h.pool, &p.ns).await?;
+    let id = h.subscribe_to_tier(space_id, uid, body.tier_id).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"id": id}))))
+}
+
+async fn unsubscribe_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(p): Path<TierNsPath>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let space_id = resolve_space_id(&h.pool, &p.ns).await?;
+    h.cancel_subscription(space_id, uid).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+async fn get_subscription_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(p): Path<TierNsPath>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let space_id = resolve_space_id(&h.pool, &p.ns).await?;
+    let sub = h.get_user_subscription(space_id, uid).await?;
+    Ok(json_ok(ApiResponse::success(sub)))
 }

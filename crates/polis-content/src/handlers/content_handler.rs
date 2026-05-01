@@ -1,6 +1,6 @@
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
-use polis_core::models::{
+use polis_core::models::{CreateTierRequest, UpdateTierRequest, JoinPaidSpaceRequest, SpaceTier, Subscription, 
     Comment, ContentType, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest,
     ModuleType, Pagination, Post, PostPublic, Series, SeriesPublic, UpdatePostRequest, UserPublic, PaginationParams,
 };
@@ -187,6 +187,42 @@ impl ContentHandler {
     }
 
     // ===== 专栏/内容系列 =====
+
+    // ===== 付费社区（会员等级） =====
+
+    pub async fn list_tiers(&self, space_id: Uuid) -> Result<Vec<SpaceTier>, AppError> {
+        self.repo.list_tiers(space_id).await
+    }
+
+    pub async fn create_tier(&self, space_id: Uuid, req: CreateTierRequest) -> Result<Uuid, AppError> {
+        let currency = req.currency.as_deref().unwrap_or("CNY");
+        let description = req.description.as_deref().unwrap_or("");
+        let benefits = req.benefits.as_ref().map(|b| serde_json::to_value(b).unwrap_or_default()).unwrap_or(serde_json::json!([]));
+        let sort_order = req.sort_order.unwrap_or(0);
+        self.repo.create_tier(space_id, &req.name, req.price_cents, currency, description, &benefits, sort_order).await
+    }
+
+    pub async fn update_tier(&self, tier_id: Uuid, space_id: Uuid, req: UpdateTierRequest) -> Result<(), AppError> {
+        let desc_str = req.description.as_deref();
+        let b_val = req.benefits.as_ref().map(|b| serde_json::to_value(b).unwrap_or_default());
+        self.repo.update_tier(tier_id, space_id, req.name.as_deref(), req.price_cents, desc_str, b_val.as_ref(), req.sort_order, req.is_active).await
+    }
+
+    pub async fn delete_tier(&self, tier_id: Uuid, space_id: Uuid) -> Result<(), AppError> {
+        self.repo.delete_tier(tier_id, space_id).await
+    }
+
+    pub async fn subscribe_to_tier(&self, space_id: Uuid, user_id: Uuid, tier_id: Uuid) -> Result<Uuid, AppError> {
+        self.repo.subscribe(space_id, user_id, tier_id).await
+    }
+
+    pub async fn cancel_subscription(&self, space_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        self.repo.cancel_subscription(space_id, user_id).await
+    }
+
+    pub async fn get_user_subscription(&self, space_id: Uuid, user_id: Uuid) -> Result<Option<Subscription>, AppError> {
+        self.repo.get_user_subscription(space_id, user_id).await
+    }
 
     pub async fn create_series(&self, space_id: Uuid, author_id: Uuid, req: CreateSeriesRequest) -> Result<Uuid, AppError> {
         let desc = req.description.unwrap_or_default();

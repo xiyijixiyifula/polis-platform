@@ -239,6 +239,63 @@ pub struct UpdatePostRequest {
 }
 
 
+
+// ==================== 付费社区（会员等级） ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SpaceTier {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub name: String,
+    pub price_cents: i64,
+    pub currency: String,
+    pub description: String,
+    pub benefits: serde_json::Value,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateTierRequest {
+    pub name: String,
+    pub price_cents: i64,
+    pub currency: Option<String>,
+    pub description: Option<String>,
+    pub benefits: Option<Vec<String>>,
+    pub sort_order: Option<i32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateTierRequest {
+    pub name: Option<String>,
+    pub price_cents: Option<i64>,
+    pub description: Option<String>,
+    pub benefits: Option<Vec<String>>,
+    pub sort_order: Option<i32>,
+    pub is_active: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Subscription {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub user_id: Uuid,
+    pub tier_id: Uuid,
+    pub status: String,
+    pub started_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub auto_renew: bool,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JoinPaidSpaceRequest {
+    pub tier_id: Uuid,
+}
+
 // ==================== 专栏/内容系列 ====================
 
 /// 系列（专栏）模型
