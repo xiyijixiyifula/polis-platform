@@ -15,7 +15,7 @@
 
 ## 🌐 在线体验
 
-**https://speedtest.mzgw.com**
+**https://www.mzgw.com**
 
 测试账号：注册免费，即刻体验所有功能。
 
@@ -272,6 +272,6 @@ polisctl --format table admin users list 1 10
 | `report` | 举报帖子 |
 | `admin` | 管理后台（dashboard/stats/users/spaces/posts/comments/reports/analytics） |
 
-📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://speedtest.mzgw.com/cli)
+📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://www.mzgw.com/cli)
 
 
