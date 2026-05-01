@@ -6,6 +6,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/polis/web/.next/standalone
+ExecStartPre=/bin/bash -c "cp -rn /root/polis/web/.next/static /root/polis/web/.next/standalone/.next/static 2>/dev/null; cp -rn /root/polis/web/public /root/polis/web/.next/standalone/public 2>/dev/null; true"
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=5
