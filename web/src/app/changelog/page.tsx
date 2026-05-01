@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.26', date: '2026-05-01', title: '付费社区 Phase 2 — 前端会员面板',
+      items: [
+        '前端: 空间页新增「会员」Tab（会员等级展示 + 订阅/取消按钮）',
+        '前端: 订阅状态实时显示（当前订阅高亮 + 绿色提示）',
+        '前端: SpaceSettings 新增会员模块开关',
+        'UI: 等级卡片含价格、权益列表、操作按钮',
+      ],
+    },
+
+    {
       ver: '0.2.25', date: '2026-05-01', title: '付费社区 Phase 1 — 会员等级 + 订阅系统',
       items: [
         '迁移: 新增 space_tiers 会员等级表和 subscriptions 订阅表',
@@ -336,7 +346,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.25' && (
+              {v.ver === '0.2.26' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

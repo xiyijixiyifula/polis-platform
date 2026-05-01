@@ -7,9 +7,10 @@ import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
-import type { Space, Post, Series } from '@/lib/api';
+import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
+import { tiers, subscribe } from '@/lib/api';
 
 interface Announcement {
   id: string; title: string; body: string;
@@ -24,7 +25,7 @@ export default function SpacePage() {
 
   // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
   const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
-    'members', 'settings', 'video', 'code_repo', 'qa', 'files', 'series']);
+    'members', 'settings', 'video', 'code_repo', 'qa', 'files', 'series', 'membership']);
   const nsParts = namespace.split('/');
   let urlTab: string | null = null;
   if (nsParts.length > 1 && knownSubRoutes.has(nsParts[nsParts.length - 1])) {
@@ -47,6 +48,7 @@ export default function SpacePage() {
     { id: 'overview', label: '概览', icon: Layout, enabled: true },
     { id: 'posts', label: '文章', icon: MessageCircle, enabled: modules.posts },
     { id: 'series', label: '系列', icon: BookOpen, enabled: modules.series },
+    { id: 'membership', label: '会员', icon: Crown, enabled: modules.membership },
     { id: 'video', label: '视频', icon: Video, enabled: modules.video },
     { id: 'code_repo', label: '代码', icon: Code, enabled: modules.code_repo },
     { id: 'qa', label: '问答', icon: HelpCircle, enabled: modules.qa },
@@ -82,6 +84,12 @@ export default function SpacePage() {
   const [newSeriesTitle, setNewSeriesTitle] = useState('');
   const [newSeriesDesc, setNewSeriesDesc] = useState('');
   const [seriesCreating, setSeriesCreating] = useState(false);
+
+  // Membership state
+  const [spaceTiers, setSpaceTiers] = useState<SpaceTier[]>([]);
+  const [mySubscription, setMySubscription] = useState<Subscription | null>(null);
+  const [tiersLoading, setTiersLoading] = useState(false);
+  const [subscribing, setSubscribing] = useState<string | null>(null);
 
   // Parse namespace for GitHub-style display: username/community-name
   const ghParts = namespace.split('/');
@@ -163,6 +171,20 @@ export default function SpacePage() {
         .finally(() => setSeriesLoading(false));
     }
   }, [namespace, activeTab, modules.series]);
+
+  useEffect(() => {
+    if (!namespace || !modules.membership) return;
+    if (activeTab === 'membership') {
+      setTiersLoading(true);
+      Promise.all([
+        tiers.list(namespace),
+        subscribe.get(namespace).catch(() => ({ code: 0, data: null })),
+      ]).then(([tRes, sRes]) => {
+        if (tRes.code === 0) setSpaceTiers(tRes.data || []);
+        if (sRes.code === 0 && sRes.data) setMySubscription(sRes.data);
+      }).catch(() => {}).finally(() => setTiersLoading(false));
+    }
+  }, [namespace, activeTab, modules.membership]);
 
   const handleCreateSeries = async () => {
     const token = localStorage.getItem('polis_access_token');
@@ -590,6 +612,84 @@ export default function SpacePage() {
                   <p className="text-sm mt-1">创建系列来组织你的文章合集</p>
                 </div>
               )}
+            </>
+          )}
+
+          {/* === Membership Tab === */}
+          {activeTab === 'membership' && (
+            <>
+              <div className="mb-4">
+                <div className="card">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Crown className="h-4 w-4 text-amber-500" />
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">会员等级</h3>
+                  </div>
+                  {mySubscription && (
+                    <div className="mb-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 py-3">
+                      <p className="text-sm font-medium text-green-700 dark:text-green-400">你已是付费会员</p>
+                      <p className="text-xs text-green-600 dark:text-green-500 mt-1">订阅生效中</p>
+                    </div>
+                  )}
+                  {tiersLoading ? (
+                    <div className="text-center py-6 text-gray-400 animate-pulse">加载会员等级...</div>
+                  ) : spaceTiers.length > 0 ? (
+                    <div className="space-y-3">
+                      {spaceTiers.map((tier: any) => {
+                        const benefits: string[] = Array.isArray(tier.benefits) ? tier.benefits : [];
+                        const isMyTier = mySubscription?.tier_id === tier.id;
+                        const price = (tier.price_cents / 100).toFixed(0);
+                        return (
+                          <div key={tier.id} className={'rounded-lg border p-4 ' + (isMyTier ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10' : 'border-gray-200 dark:border-gray-700')}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-base font-bold text-gray-900 dark:text-white">{tier.name}</h4>
+                                  {isMyTier && <span className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">当前订阅</span>}
+                                </div>
+                                {tier.description && <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{tier.description}</p>}
+                                <div className="mt-2"><span className="text-2xl font-bold text-gray-900 dark:text-white">{price}</span><span className="text-sm text-gray-500 dark:text-gray-400"> {tier.currency === 'CNY' ? '元' : tier.currency}/月</span></div>
+                                {benefits.length > 0 && (
+                                  <ul className="mt-3 space-y-1">
+                                    {benefits.map((b: string, i: number) => (<li key={i} className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400"><span className="text-green-500">&#x2713;</span> {b}</li>))}
+                                  </ul>
+                                )}
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  const token = localStorage.getItem('polis_access_token');
+                                  if (!token) { alert('请先登录'); return; }
+                                  if (isMyTier) {
+                                    if (!confirm('确定要取消订阅吗？')) return;
+                                    setSubscribing(tier.id);
+                                    try { await subscribe.cancel(namespace); setMySubscription(null); } catch (e: any) { alert(e?.message || '取消失败'); } finally { setSubscribing(null); }
+                                  } else {
+                                    setSubscribing(tier.id);
+                                    try {
+                                      const res = await subscribe.join(namespace, tier.id);
+                                      if (res.code === 0) { const sRes = await subscribe.get(namespace); if (sRes.code === 0 && sRes.data) setMySubscription(sRes.data); }
+                                      else { alert(res.message || '订阅失败'); }
+                                    } catch (e: any) { alert(e?.message || '订阅失败'); } finally { setSubscribing(null); }
+                                  }
+                                }}
+                                disabled={subscribing === tier.id}
+                                className={'shrink-0 ml-4 px-4 py-2 rounded-lg text-sm font-medium transition-colors ' + (isMyTier ? 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600' : 'bg-amber-500 hover:bg-amber-600 text-white')}
+                              >
+                                {subscribing === tier.id ? '处理中...' : isMyTier ? '取消订阅' : tier.price_cents > 0 ? '订阅' : '免费加入'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-400 dark:text-gray-500">
+                      <Crown className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                      <p>暂无会员等级</p>
+                      <p className="text-sm mt-1">社区尚未设置付费会员等级</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </>
           )}
 

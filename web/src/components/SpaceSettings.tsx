@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   Settings, X, MessageCircle, BarChart3, Megaphone,
   UserCheck, Video, Code, HelpCircle, MessageSquare,
-  ShoppingBag, GraduationCap, BookOpen,
+  ShoppingBag, GraduationCap, BookOpen, Crown,
 } from 'lucide-react';
 
 export interface SpaceModules {
@@ -19,6 +19,7 @@ export interface SpaceModules {
   store: boolean;          // 商城
   course: boolean;         // 课程
   members: boolean;        // 成员
+  membership: boolean;     // 付费会员
 }
 
 const defaultModules: SpaceModules = {
@@ -33,6 +34,7 @@ const defaultModules: SpaceModules = {
   store: false,
   course: false,
   members: false,
+  membership: false,
 };
 
 function getModulesKey(namespace: string) {
@@ -71,6 +73,7 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
   const availableModules: ModuleDef[] = [
     { key: 'posts', label: '文章', icon: MessageCircle, locked: true, comingSoon: false, desc: '社区文章和帖子，默认模块' },
     { key: 'series', label: '系列', icon: BookOpen, locked: false, comingSoon: false, desc: '内容系列/专栏，组织帖子合集' },
+    { key: 'membership', label: '会员', icon: Crown, locked: false, comingSoon: false, desc: '付费会员等级与订阅管理' },
     { key: 'video', label: '视频', icon: Video, locked: false, comingSoon: true, desc: '视频内容发布与播放' },
     { key: 'code_repo', label: '代码仓库', icon: Code, locked: false, comingSoon: true, desc: 'Git 代码仓库托管' },
     { key: 'qa', label: '问答', icon: HelpCircle, locked: false, comingSoon: false, desc: '提问与回答' },
