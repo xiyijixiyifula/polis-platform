@@ -312,11 +312,11 @@ cmd_comment() {
     case "$action" in
         create)
             local t; t=$(require_auth)
-            local ns="${1:?Usage: polisctl comment create <namespace> <post_id> <body> [parent_id]}"
-            local pid="${2:?}"; local body="${3:?}"; local parent="${4:-}"
+            local pid="${1:?Usage: polisctl comment create <post_id> <body> [parent_id]}"
+            local body="${2:?}"; local parent="${3:-}"
             local body_json="{\"body\":\"$body\"}"
             [ -n "$parent" ] && body_json=$(echo "$body_json" | jq --arg v "$parent" '.parent_id=$v')
-            http_post "/api/spaces/${ns}/posts/${pid}/comments" "$t" -d "$body_json" | output '.data'
+            http_post "/api/posts/${pid}/comments" "$t" -d "$body_json" | output '.data'
             ;;
         list)
             local pid="${1:?Usage: polisctl comment list <post_id>}"
@@ -505,7 +505,14 @@ cmd_subscribe() {
             ;;
         status)
             local ns="${1:?}"
-            http_get "/api/subscribe/space/${ns}" "$t" | output '.data'
+            local resp; resp=$(http_get "/api/subscribe/space/${ns}" "$t")
+            local sub; sub=$(echo "$resp" | jq -r '.data')
+            if [ "$sub" = "null" ] || [ -z "$sub" ]; then
+                echo -e "${GREEN}No active subscription${NC}" >&2
+                echo 'null'
+            else
+                echo "$resp" | output '.data'
+            fi
             ;;
         *)
             echo "Usage: polisctl subscribe {join|cancel|status}" >&2; exit 1 ;;

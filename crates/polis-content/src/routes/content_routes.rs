@@ -8,6 +8,8 @@ use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostR
 use polis_core::resolver::resolve::resolve_space_id;
 use crate::handlers::content_handler::ContentHandler;
 use crate::middleware::auth::auth_middleware;
+use jsonwebtoken::{decode, DecodingKey, Validation};
+use serde::Deserialize as SerdeDeserialize;
 
 /// Helper to wrap a value in Json response
 fn json_ok<T: serde::Serialize>(value: T) -> Json<serde_json::Value> {
@@ -106,7 +108,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         // 通过 ID 获取帖子（无需知道 namespace）
         .route("/api/posts/search", get(search_posts_route))
         .route("/api/posts/{id}", get(get_post_by_id_route))
-        .route("/api/posts/{id}/comments", get(get_post_comments_route))
+        .route("/api/posts/{id}/comments", get(get_post_comments_route).post(create_comment_by_post_id))
         // 获取投票分数（赞同/反对）
         .route("/api/vote", get(get_vote_score_route))
         // 系列（专栏）公开接口
@@ -430,6 +432,40 @@ async fn get_post_by_id_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let post = h.get_post_public(id).await?;
     Ok(json_ok(ApiResponse::success(post)))
+}
+
+
+/// 通过帖子 ID 创建评论（无需知道 namespace，自动解析）
+async fn create_comment_by_post_id(
+    State(h): State<Arc<ContentHandler>>,
+    headers: axum::http::HeaderMap,
+    Path(id): Path<Uuid>,
+    Json(req): Json<CreateCommentRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let auth_header = headers
+        .get("Authorization")
+        .and_then(|v| v.to_str().ok())
+        .ok_or(AppError::Unauthorized)?;
+    let token = auth_header
+        .strip_prefix("Bearer ")
+        .ok_or(AppError::Unauthorized)?;
+    let secret = std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+    let token_data = decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default())
+        .map_err(|_| AppError::Unauthorized)?;
+    let uid = Uuid::parse_str(&token_data.claims.sub)
+        .map_err(|_| AppError::Unauthorized)?;
+    let comment = h.create_comment(id, uid, req).await?;
+    Ok(json_ok(ApiResponse::success(comment)))
+}
+
+#[derive(Debug, SerdeDeserialize)]
+struct Claims {
+    pub sub: String,
+    #[allow(dead_code)]
+    pub token_type: String,
+    #[allow(dead_code)]
+    pub exp: usize,
 }
 
 /// 通过帖子 ID 获取评论列表（公开接口）
