@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.27', date: '2026-05-01', title: '付费社区 Phase 3 — 等级管理 UI',
+      items: [
+        '前端: 空间主可创建/编辑/删除会员等级（内联表单）',
+        '前端: 等级卡片含编辑（Pencil）和删除（Trash2）按钮',
+        '前端: 所有者检测（isOwner）根据 localStorage 判断',
+        '后端: 等级 CRUD API 权限验证（仅空间主可操作）',
+        'UI: 等级管理表单含名称、价格、描述、权益字段',
+      ],
+    },
+
+    {
       ver: '0.2.26', date: '2026-05-01', title: '付费社区 Phase 2 — 前端会员面板',
       items: [
         '前端: 空间页新增「会员」Tab（会员等级展示 + 订阅/取消按钮）',
@@ -346,7 +357,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.26' && (
+              {v.ver === '0.2.27' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

@@ -8,6 +8,7 @@ import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
 import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
 import { tiers, subscribe } from '@/lib/api';
@@ -90,6 +91,23 @@ export default function SpacePage() {
   const [mySubscription, setMySubscription] = useState<Subscription | null>(null);
   const [tiersLoading, setTiersLoading] = useState(false);
   const [subscribing, setSubscribing] = useState<string | null>(null);
+
+  // Space ownership + tier management
+  const [isOwner, setIsOwner] = useState(false);
+  const [showTierForm, setShowTierForm] = useState(false);
+  const [editingTier, setEditingTier] = useState<any>(null);
+  const [tierForm, setTierForm] = useState({ name: '', price_cents: '0', description: '', benefits: '' });
+  const [tierSaving, setTierSaving] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('polis_user');
+      if (stored && space?.owner_id) {
+        const me = JSON.parse(stored);
+        setIsOwner(me.id === space.owner_id);
+      }
+    } catch {}
+  }, [space?.owner_id]);
 
   // Parse namespace for GitHub-style display: username/community-name
   const ghParts = namespace.split('/');
@@ -623,7 +641,65 @@ export default function SpacePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <Crown className="h-4 w-4 text-amber-500" />
                     <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">会员等级</h3>
+                    {isOwner && (
+                      <button onClick={() => { setShowTierForm(!showTierForm); setEditingTier(null); setTierForm({ name: '', price_cents: '0', description: '', benefits: '' }); }} className="ml-auto text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
+                        <Plus className="h-3 w-3" />{showTierForm ? '收起' : '管理等级'}
+                      </button>
+                    )}
                   </div>
+                  {isOwner && showTierForm && (
+                    <div className="mb-4 rounded-lg border border-primary-200 dark:border-primary-800 bg-primary-50/30 dark:bg-primary-900/10 p-4">
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{editingTier ? '编辑等级' : '创建等级'}</h4>
+                      <div className="space-y-2">
+                        <input type="text" placeholder="等级名称" value={tierForm.name}
+                          onChange={e => setTierForm({ ...tierForm, name: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
+                        <div className="flex gap-2">
+                          <input type="number" placeholder="价格（分）" value={tierForm.price_cents}
+                            onChange={e => setTierForm({ ...tierForm, price_cents: e.target.value })}
+                            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
+                        </div>
+                        <textarea placeholder="等级描述（可选）" value={tierForm.description}
+                          onChange={e => setTierForm({ ...tierForm, description: e.target.value })}
+                          rows={2} className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
+                        <input type="text" placeholder="权益（逗号分隔，如：全部文章,评论权限）" value={tierForm.benefits}
+                          onChange={e => setTierForm({ ...tierForm, benefits: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" />
+                        <div className="flex gap-2 pt-1">
+                          <button onClick={async () => {
+                            if (!tierForm.name.trim()) { alert('请输入名称'); return; }
+                            const benefits = tierForm.benefits ? tierForm.benefits.split(/[,，]/).map((s: string) => s.trim()).filter(Boolean) : [];
+                            setTierSaving(true);
+                            try {
+                              if (editingTier) {
+                                await tiers.update(namespace, editingTier.id, {
+                                  name: tierForm.name.trim(),
+                                  price_cents: parseInt(tierForm.price_cents) || 0,
+                                  description: tierForm.description.trim(),
+                                  benefits,
+                                });
+                              } else {
+                                await tiers.create(namespace, {
+                                  name: tierForm.name.trim(),
+                                  price_cents: parseInt(tierForm.price_cents) || 0,
+                                  description: tierForm.description.trim(),
+                                  benefits,
+                                });
+                              }
+                              setShowTierForm(false); setEditingTier(null);
+                              // Refresh
+                              const tRes = await tiers.list(namespace);
+                              if (tRes.code === 0) setSpaceTiers(tRes.data || []);
+                            } catch (e: any) { alert(e?.message || '保存失败'); }
+                            finally { setTierSaving(false); }
+                          }} disabled={tierSaving} className="btn-primary text-xs px-4 py-2">
+                            {tierSaving ? '保存中...' : editingTier ? '更新' : '创建'}
+                          </button>
+                          <button onClick={() => { setShowTierForm(false); setEditingTier(null); }} className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 px-3 py-2">取消</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {mySubscription && (
                     <div className="mb-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 py-3">
                       <p className="text-sm font-medium text-green-700 dark:text-green-400">你已是付费会员</p>
@@ -640,6 +716,26 @@ export default function SpacePage() {
                         const price = (tier.price_cents / 100).toFixed(0);
                         return (
                           <div key={tier.id} className={'rounded-lg border p-4 ' + (isMyTier ? 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10' : 'border-gray-200 dark:border-gray-700')}>
+                            {isOwner && (<div className="flex gap-1 shrink-0 mb-3">
+                                <button onClick={(e) => { e.preventDefault(); e.stopPropagation();
+                                  setEditingTier({ id: tier.id, name: tier.name, price_cents: tier.price_cents, description: tier.description, benefits: tier.benefits });
+                                  setTierForm({ name: tier.name, price_cents: String(tier.price_cents), description: tier.description, benefits: Array.isArray(tier.benefits) ? tier.benefits.join(', ') : '' });
+                                  setShowTierForm(true);
+                                }} title="编辑" className="p-1.5 rounded text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20">
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button onClick={async (e) => { e.preventDefault(); e.stopPropagation();
+                                  if (!confirm('确定删除等级 "' + tier.name + '" 吗？')) return;
+                                  try {
+                                    await tiers.delete(namespace, tier.id);
+                                    const tRes = await tiers.list(namespace);
+                                    if (tRes.code === 0) setSpaceTiers(tRes.data || []);
+                                  } catch (e: any) { alert(e?.message || '删除失败'); }
+                                }} title="删除" className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>)}
+                            
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
