@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use axum::{
-    response::{IntoResponse, Response},extract::{Path, Query, Request, State}, middleware, routing::{delete, get, post, put}, Json, Router};
+    response::{IntoResponse, Response},extract::{Path, Query, Request, State, Extension}, middleware, routing::{delete, get, post, put}, Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
@@ -107,7 +107,8 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/polls/{id}", get(get_poll_public))
         // 通过 ID 获取帖子（无需知道 namespace）
         .route("/api/posts/search", get(search_posts_route))
-        .route("/api/feed", get(feed_route))
+    .route("/api/files/{id}", get(get_file_route))
+    .route("/api/feed", get(feed_route))
         .route("/api/posts/{id}", get(get_post_by_id_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route).post(create_comment_by_post_id))
         // 获取投票分数（赞同/反对）
@@ -141,8 +142,8 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/tiers/{id}", put(update_tier_route).delete(delete_tier_route))
         .route("/api/subscribe/space/{*ns}", post(subscribe_route).delete(unsubscribe_route))
         .route("/api/subscribe/space/{*ns}", get(get_subscription_route))
-        .route("/api/files/{id}", get(get_file_route))
         .route("/api/files/share", post(create_file_share_route))
+        .route("/api/upload", post(upload_file_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
     let share_routes = Router::new()
@@ -739,6 +740,24 @@ async fn unsubscribe_route(
     h.cancel_subscription(space_id, uid).await?;
     Ok(json_ok(ApiResponse::success(())))
 }
+
+async fn upload_file_route(
+    State(h): State<Arc<ContentHandler>>,
+    Extension(uid): Extension<Uuid>,
+    Json(r): Json<UploadFileRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let data = base64_decode(&r.data_base64)?;
+    let mime = r.mime_type.clone().unwrap_or_else(|| "application/octet-stream".to_string());
+    let result = h.upload_file_generic(uid, &r.filename, &data, &mime).await?;
+    Ok(Json(serde_json::json!({"code": 0, "data": result})))
+}
+
+fn base64_decode(input: &str) -> Result<Vec<u8>, AppError> {
+    use base64::Engine;
+    base64::engine::general_purpose::STANDARD.decode(input)
+        .map_err(|e| AppError::Validation(format!("Invalid base64: {}", e)))
+}
+
 
 async fn feed_route(
     State(h): State<Arc<ContentHandler>>,

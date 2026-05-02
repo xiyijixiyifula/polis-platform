@@ -552,6 +552,21 @@ impl ContentHandler {
 
     // ===== File Sharing =====
 
+    pub async fn upload_file_generic(&self, user_id: Uuid, filename: &str, data: &[u8], mime_type: &str) -> Result<serde_json::Value, AppError> {
+        let file_id = Uuid::new_v4();
+        let storage_dir = "/root/polis/uploads/general";
+        tokio::fs::create_dir_all(storage_dir).await.map_err(|e| AppError::External(format!("Failed to create upload dir: {}", e)))?;
+        let storage_path = format!("{}/{}", storage_dir, file_id);
+        tokio::fs::write(&storage_path, data).await.map_err(|e| AppError::External(format!("Failed to write file: {}", e)))?;
+        let file_size = data.len() as i64;
+        // Use an existing space_id for generic uploads (games space)
+        let space_id = sqlx::query_scalar::<_, Uuid>("SELECT id FROM spaces ORDER BY created_at ASC LIMIT 1")
+            .fetch_one(&self.pool).await
+            .map_err(|_| AppError::Internal("No space found for upload".to_string()))?;
+        let id = self.repo.create_file_record(space_id, user_id, filename, file_size, mime_type, &storage_path).await?;
+        Ok(serde_json::json!({ "id": id.to_string(), "filename": filename, "file_size": file_size, "mime_type": mime_type, "url": format!("/api/files/{}", id) }))
+    }
+
     pub async fn upload_file(&self, space_id: Uuid, user_id: Uuid, filename: &str, data: &[u8], mime_type: &str) -> Result<serde_json::Value, AppError> {
         let file_id = Uuid::new_v4();
         let storage_dir = format!("/root/polis/uploads/{}", space_id);

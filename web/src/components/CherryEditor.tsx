@@ -83,7 +83,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(({
             toolbar: [
               'bold', 'italic', 'strikethrough', '|',
               'header', '|',
-              'list', 'image', { insert: ['link', 'code', 'table'] }, '|',
+              'list', 'image', 'file', { insert: ['link', 'code', 'table'] }, '|',
               'undo', 'redo', '|',
               'switchModel',
             ],
@@ -109,39 +109,50 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(({
           },
 
           fileUpload: async (file: File, callback: (url: string) => void) => {
-            try {
-              const reader = new FileReader();
-              reader.onload = async (e) => {
-                const base64 = (e.target?.result as string)?.split(',')[1];
-                if (!base64 || !spaceNs) {
-                  // Fallback: use data URL directly
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+              const base64 = (e.target?.result as string)?.split(',')[1];
+              if (!base64) return;
+              try {
+                const token = localStorage.getItem('polis_access_token');
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = 'Bearer ' + token;
+                
+                // Try space-specific upload first, fallback to generic upload
+                const endpoints = spaceNs 
+                  ? ['/api/spaces/' + spaceNs + '/files', '/api/upload']
+                  : ['/api/upload'];
+                
+                for (const endpoint of endpoints) {
+                  try {
+                    const res = await fetch(endpoint, {
+                      method: 'POST',
+                      headers,
+                      body: JSON.stringify({
+                        filename: file.name,
+                        data_base64: base64,
+                        mime_type: file.type || 'application/octet-stream',
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.code === 0 && data.data?.id) {
+                      const url = data.data.url || '/api/files/' + data.data.id;
+                      callback(url);
+                      return;
+                    }
+                  } catch {}
+                }
+                // Last resort: small files only (< 100KB) use data URL
+                if (base64.length < 136000) {
                   callback(e.target?.result as string);
-                  return;
+                } else {
+                  console.error('Upload failed: file too large for inline embed');
                 }
-                try {
-                  const res = await fetch('/api/spaces/' + spaceNs + '/files', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      filename: file.name,
-                      data_base64: base64,
-                      mime_type: file.type || 'application/octet-stream',
-                    }),
-                  });
-                  const data = await res.json();
-                  if (data.code === 0 && data.data?.id) {
-                    callback('/api/files/' + data.data.id);
-                    return;
-                  }
-                } catch (uploadErr) {
-                  console.warn('Server upload failed, using base64:', uploadErr);
-                }
-                callback(e.target?.result as string);
-              };
-              reader.readAsDataURL(file);
-            } catch (err) {
-              console.warn('Upload failed:', err);
-            }
+              } catch (err) {
+                console.warn('Upload error:', err);
+              }
+            };
+            reader.readAsDataURL(file);
           },
         });
 
