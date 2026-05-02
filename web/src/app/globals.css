@@ -231,3 +231,259 @@
 .preview-content th { background: rgb(249 250 251); font-weight: 600; }
 .dark .preview-content th { background: rgb(31 41 55); }
 .preview-content input[type="checkbox"] { margin-right: 0.375rem; }
+/* ========================================
+   Cherry Markdown Dark Mode & Style Overrides
+   ======================================== */
+
+/* Dark mode: editor wrapper */
+.dark .cherry-editor-wrapper .cherry-editor {
+  background: #1a1a2e !important;
+  color: #e0e0e0 !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-toolbar {
+  background: #16213e !important;
+  border-bottom: 1px solid #2a2a4a !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-toolbar .cherry-toolbar-btn {
+  color: #aaa !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-toolbar .cherry-toolbar-btn:hover {
+  background: #2a2a4a !important;
+  color: #fff !important;
+}
+
+/* Dark mode: main editor area */
+.dark .cherry-editor-wrapper .cherry-main {
+  background: #1a1a2e !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-edit {
+  background: #0f0f23 !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-edit .CodeMirror {
+  background: #0f0f23 !important;
+  color: #e0e0e0 !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-edit .CodeMirror-cursor {
+  border-left: 2px solid #80b4ff !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-edit .CodeMirror-selected {
+  background: #2a2a5a !important;
+}
+
+/* Dark mode: preview panel */
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview {
+  background: #1a1a2e !important;
+  border-left: 1px solid #2a2a4a !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview * {
+  color: #e0e0e0 !important;
+}
+
+/* Dark mode: preview typography */
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview h1,
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview h2,
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview h3,
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview h4,
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview h5,
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview h6 {
+  color: #f0f0f0 !important;
+  border-bottom-color: #2a2a4a !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview blockquote {
+  border-left-color: #4a4a8a !important;
+  background: #12122a !important;
+  color: #c0c0d0 !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview code {
+  background: #1a1a3e !important;
+  color: #e0a0f0 !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview pre {
+  background: #0a0a1a !important;
+  border: 1px solid #2a2a4a !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview table {
+  border-color: #2a2a4a !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview th,
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview td {
+  border-color: #2a2a4a !important;
+  background: #1a1a3e !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview th {
+  background: #222242 !important;
+}
+
+.dark .cherry-editor-wrapper .cherry-main .cherry-preview a {
+  color: #80b4ff !important;
+}
+
+/* Dark mode: split line */
+.dark .cherry-editor-wrapper .cherry-main .cherry-split {
+  border-color: #2a2a4a !important;
+}
+
+/* Dark mode: bubble toolbar */
+.dark .cherry-bubble-toolbar {
+  background: #16213e !important;
+  border: 1px solid #2a2a4a !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+.dark .cherry-bubble-toolbar .cherry-toolbar-btn {
+  color: #aaa !important;
+}
+
+.dark .cherry-bubble-toolbar .cherry-toolbar-btn:hover {
+  background: #2a2a4a !important;
+  color: #fff !important;
+}
+
+/* Dark mode: float toolbar */
+.dark .cherry-float-toolbar {
+  background: #16213e !important;
+  border: 1px solid #2a2a4a !important;
+}
+
+.dark .cherry-float-toolbar .cherry-toolbar-btn {
+  color: #aaa !important;
+}
+
+.dark .cherry-float-toolbar .cherry-toolbar-btn:hover {
+  background: #2a2a4a !important;
+  color: #fff !important;
+}
+
+/* Dark mode: settings panel */
+.dark .cherry-setting-panel {
+  background: #16213e !important;
+  border: 1px solid #2a2a4a !important;
+  color: #e0e0e0 !important;
+}
+
+.dark .cherry-setting-panel * {
+  color: #e0e0e0 !important;
+}
+
+/* Dark mode: fullscreen overlay */
+.dark .cherry-fullscreen-editor {
+  background: #0f0f23 !important;
+}
+
+/* Dark mode: code block one-dark theme (default) */
+.ch-cb-one-dark .ch-cb-line-number {
+  color: #636d83 !important;
+  border-right: 1px solid #2d2d3a !important;
+}
+
+/* Scrollbar styling */
+.dark .cherry-editor-wrapper ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark .cherry-editor-wrapper ::-webkit-scrollbar-track {
+  background: #0f0f23;
+}
+
+.dark .cherry-editor-wrapper ::-webkit-scrollbar-thumb {
+  background: #2a2a5a;
+  border-radius: 4px;
+}
+
+.dark .cherry-editor-wrapper ::-webkit-scrollbar-thumb:hover {
+  background: #3a3a6a;
+}
+
+/* Light mode fine-tuning */
+.cherry-editor-wrapper .cherry-main .cherry-edit {
+  background: #F5F5F5 !important;
+}
+
+.cherry-editor-wrapper .cherry-main .cherry-edit .CodeMirror {
+  background: #F5F5F5 !important;
+  padding: 16px 20px !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+
+.cherry-editor-wrapper .cherry-main .cherry-preview {
+  padding: 16px 20px !important;
+  border-left: 1px solid #E0E0E0 !important;
+}
+
+.cherry-editor-wrapper .cherry-toolbar {
+  padding: 4px 8px !important;
+  min-height: 44px !important;
+  flex-wrap: wrap !important;
+}
+
+.cherry-editor-wrapper .cherry-toolbar .cherry-toolbar-btn {
+  margin: 2px !important;
+  border-radius: 4px !important;
+  min-width: 30px !important;
+  height: 32px !important;
+}
+
+/* ===== Cherry Markdown Integration Styles ===== */
+
+.cherry-editor-wrapper { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.cherry-editor-wrapper:focus-within { border-color: rgb(167 139 250); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1); }
+.cherry-markdown .cherry-toolbar { border-bottom: 1px solid rgb(229 231 235); }
+
+.dark .cherry-markdown .cherry-toolbar { background-color: rgb(31 41 55); border-color: rgb(55 65 81); }
+.dark .cherry-markdown .cherry-toolbar .toolbar-item { color: rgb(209 213 219); }
+.dark .cherry-markdown .cherry-toolbar .toolbar-item:hover { background-color: rgb(55 65 81); color: rgb(243 244 246); }
+.dark .cherry-markdown .cherry-toolbar .toolbar-item .item-split { border-color: rgb(75 85 105); }
+.dark .cherry-markdown .CodeMirror { background-color: rgb(17 24 39); color: rgb(209 213 219); }
+.dark .cherry-markdown .CodeMirror-gutters { background-color: rgb(17 24 39); border-color: rgb(55 65 81); }
+.dark .cherry-markdown .CodeMirror-linenumber { color: rgb(107 114 128); }
+.dark .cherry-markdown .cherry-previewer { background-color: rgb(17 24 39); color: rgb(209 213 219); }
+.dark .cherry-markdown .cherry-previewer table th, .dark .cherry-markdown .cherry-previewer table td { border-color: rgb(55 65 81); }
+.dark .cherry-markdown .cherry-previewer table th { background-color: rgb(31 41 55); }
+.dark .cherry-bubble { background-color: rgb(31 41 55); border-color: rgb(55 65 81); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+.dark .cherry-bubble .toolbar-item { color: rgb(209 213 219); }
+.dark .cherry-bubble .toolbar-item:hover { background-color: rgb(55 65 81); }
+.dark .cherry-float-menu { background-color: rgb(31 41 55); border-color: rgb(55 65 81); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+.dark .cherry-float-menu .toolbar-item { color: rgb(209 213 219); }
+.cherry-markdown .cherry-code-block pre { border-radius: 0.5rem; }
+.cherry-markdown .cherry-previewer .katex-display { margin: 1rem 0; overflow-x: auto; }
+.cherry-markdown .cherry-table-container { border-radius: 0.5rem; overflow: hidden; }
+.dark .cherry-markdown .cherry-table-container { border-color: rgb(55 65 81); }
+.cherry-markdown .cherry-chart-container { border-radius: 0.5rem; padding: 1rem; }
+.dark .cherry-markdown details { border-color: rgb(55 65 81); }
+.dark .cherry-markdown details summary { color: rgb(243 244 246); }
+.dark .cherry-markdown .cherry-toc { border-color: rgb(55 65 81); }
+.dark .cherry-markdown .cherry-toc .cherry-toc-title { color: rgb(243 244 246); }
+.dark .cherry-markdown .cherry-toc .cherry-toc-item { color: rgb(209 213 219); }
+.dark .cherry-markdown .cherry-toc .cherry-toc-item:hover { background-color: rgb(55 65 81); }
+.cherry-markdown .cherry-fullscreen { z-index: 40; }
+.dark .cherry-markdown .cherry-sidebar { background-color: rgb(17 24 39); border-color: rgb(55 65 81); }
+.dark .cherry-markdown .cherry-sidebar .cherry-sidebar-item { color: rgb(209 213 219); }
+.dark .cherry-markdown .cherry-sidebar .cherry-sidebar-item:hover { background-color: rgb(55 65 81); }
+.dark .cherry-markdown .cherry-settings-panel { background-color: rgb(31 41 55); border-color: rgb(55 65 81); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+
+@media (max-width: 768px) {
+  .cherry-editor-wrapper { border-radius: 0.5rem; }
+  .cherry-markdown .cherry-toolbar { flex-wrap: wrap; height: auto !important; min-height: 40px; }
+  .cherry-markdown .cherry-previewer { display: none; }
+  .cherry-markdown.cherry-preview--editOnly .cherry-editor { width: 100% !important; }
+}
+
+@media print {
+  .cherry-markdown .cherry-toolbar, .cherry-markdown .cherry-sidebar { display: none !important; }
+}

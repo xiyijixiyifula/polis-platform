@@ -472,8 +472,31 @@ impl ContentHandler {
     }
 
     /// 获取帖子评论
-    pub async fn get_comments(&self, post_id: Uuid) -> Result<Vec<Comment>, AppError> {
-        self.repo.find_comments_by_post(post_id).await
+    pub async fn get_comments(&self, post_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let comments = self.repo.find_comments_by_post(post_id).await?;
+        let mut result: Vec<serde_json::Value> = Vec::new();
+        let mut user_ids: Vec<Uuid> = Vec::new();
+        for c in &comments {
+            if !user_ids.contains(&c.author_id) {
+                user_ids.push(c.author_id);
+            }
+        }
+        let users = self.repo.find_users_batch(&user_ids).await?;
+        for c in comments {
+            let author = users.get(&c.author_id).map(|u| serde_json::json!({
+                "id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url
+            }));
+            result.push(serde_json::json!({
+                "id": c.id,
+                "post_id": c.post_id,
+                "author": author,
+                "parent_id": c.parent_id,
+                "body": c.body,
+                "like_count": c.like_count,
+                "created_at": c.created_at,
+            }));
+        }
+        Ok(result)
     }
 
     /// 获取精选帖子
