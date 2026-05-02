@@ -107,6 +107,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/polls/{id}", get(get_poll_public))
         // 通过 ID 获取帖子（无需知道 namespace）
         .route("/api/posts/search", get(search_posts_route))
+        .route("/api/feed", get(feed_route))
         .route("/api/posts/{id}", get(get_post_by_id_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route).post(create_comment_by_post_id))
         // 获取投票分数（赞同/反对）
@@ -737,6 +738,16 @@ async fn unsubscribe_route(
     let space_id = resolve_space_id(&h.pool, &p.ns).await?;
     h.cancel_subscription(space_id, uid).await?;
     Ok(json_ok(ApiResponse::success(())))
+}
+
+async fn feed_route(
+    State(h): State<Arc<ContentHandler>>,
+    Query(q): Query<PaginationParams>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let page = q.page.unwrap_or(1);
+    let page_size = q.page_size.unwrap_or(20).min(50);
+    let items = h.get_feed(page, page_size).await?;
+    Ok(Json(serde_json::json!({"code": 0, "data": items, "pagination": {"page": page, "page_size": page_size}})))
 }
 
 async fn get_subscription_route(

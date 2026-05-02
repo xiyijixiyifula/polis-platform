@@ -3,7 +3,22 @@ export const metadata: Metadata = { title: '更新日志' };
 
 export default function ChangelogPage() {
   const versions = [
-    {
+        {
+      ver: '0.2.34', date: '2026-05-02', title: '信息流首页 + 测试验证 + 部署',
+      items: [
+        '新功能: Feed 信息流首页（类似 X.com 时间线），@用户名/社区/模块/标题 + 内容预览',
+        '新功能: 聚合展示帖子/投票/公告，支持无限滚动加载',
+        '后端: polis-content get_feed() 联合查询 posts+polls+announcements 关联 users+spaces',
+        '网关: /api/feed 路由代理到 polis-content',
+        '前端: 全新 FeedPage 组件（骨架屏/空状态/IntersectionObserver 无限滚动）',
+        '测试: 6 项核心测试 100% 通过（Gateway/首页/Changelog/Trending/Feed/Vote）',
+        '测试: 23 项扩展测试 100% 通过（Auth/Space/Post/Search/Perf/Security/Feed）',
+        '性能: 首页 1.0s, Changelog 1.6s, API 5-8ms',
+        '维护: 服务状态全部 active，定时任务流程正常',
+      ],
+    },
+
+{
       ver: '0.2.32', date: '2026-05-01', title: 'CLI 文档同步 + Rust CLI 参数格式对齐',
       items: [
         '文档: CLI-GUIDE.md 参数格式对齐 Rust CLI v1.0.0（-s size / -b body / -g tags / -p parent_id）',
@@ -435,7 +450,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.33' && (
+              {v.ver === '0.2.34' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

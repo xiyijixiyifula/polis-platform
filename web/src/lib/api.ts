@@ -448,3 +448,31 @@ export const vote = {
       body: JSON.stringify({ target_type: targetType, target_id: targetId, value }),
     }),
 };
+
+export interface FeedItem {
+  id: string;
+  type: 'post' | 'poll' | 'announcement';
+  module_type: string;
+  title: string;
+  preview: string;
+  comment_count: number;
+  created_at: string;
+  author: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  } | null;
+  space: {
+    id: string;
+    namespace: string;
+    title: string;
+    description: string;
+  } | null;
+  importance?: string;
+}
+
+export const feed = {
+  getFeed: (page: number = 1, pageSize: number = 20) =>
+    request<FeedItem[]>(`/feed?page=${page}&page_size=${pageSize}`),
+};

@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Sidebar } from '@/components/Sidebar';
-import { SpaceCard } from '@/components/SpaceCard';
-import { TrendingUp, Users, Sparkles } from 'lucide-react';
+import { TrendingUp, Users, Sparkles, MessageCircle } from 'lucide-react';
+import { formatDate, formatCount } from '@/lib/utils';
 
 interface SpaceData {
   id: string;
@@ -97,28 +97,86 @@ function LandingPage() {
 }
 
 function FeedPage() {
-  const [trendingSpaces, setTrendingSpaces] = useState<SpaceData[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const fetchFeed = useCallback(async (pageNum: number, append: boolean = false) => {
+    try {
+      const token = localStorage.getItem('polis_access_token');
+      const url = '/api/feed?page=' + pageNum + '&page_size=20';
+      const res = await fetch(url, {
+        headers: token ? { Authorization: 'Bearer ' + token } : {},
+      });
+      const data = await res.json();
+      if (data.code === 0 && data.data) {
+        if (append) {
+          setItems(prev => [...prev, ...data.data]);
+        } else {
+          setItems(data.data);
+        }
+        if (data.data.length < 20) {
+          setHasMore(false);
+        }
+      } else {
+        setHasMore(false);
+      }
+    } catch (e) {
+      console.error('Failed to fetch feed:', e);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem('polis_access_token');
-        const res = await fetch('/api/spaces/trending', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const data = await res.json();
-        if (data.code === 0 && data.data) {
-          setTrendingSpaces(data.data);
+    fetchFeed(1);
+  }, [fetchFeed]);
+
+  useEffect(() => {
+    if (observerRef.current) observerRef.current.disconnect();
+    observerRef.current = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+          setLoadingMore(true);
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchFeed(nextPage, true);
         }
-      } catch (e) {
-        console.error('Failed to fetch trending spaces:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+      },
+      { threshold: 0.1 }
+    );
+    if (loadMoreRef.current) observerRef.current.observe(loadMoreRef.current);
+    return () => { if (observerRef.current) observerRef.current.disconnect(); };
+  }, [hasMore, loadingMore, loading, page, fetchFeed]);
+
+  const getTypeIcon = (item: any) => {
+    if (item.type === 'poll') return '📊';
+    if (item.type === 'announcement') return '📢';
+    return '📝';
+  };
+
+  const getModuleLabel = (item: any) => {
+    if (item.type === 'poll') return '投票';
+    if (item.type === 'announcement') return '公告';
+    const mt = item.module_type || '';
+    if (mt === 'discussion') return '讨论';
+    if (mt === 'article') return '文章';
+    if (mt === 'activity') return '活动';
+    if (mt === 'knowledge') return '知识库';
+    if (mt === 'resource') return '资源';
+    return mt || '帖子';
+  };
+
+  const getItemLink = (item: any) => {
+    if (item.type === 'poll') return '/polls';
+    if (item.type === 'announcement' && item.space?.namespace) return '/space/' + item.space.namespace;
+    return '/post/' + item.id;
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -129,32 +187,111 @@ function FeedPage() {
           <div className="mb-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-primary-600 dark:text-primary-400" />
-              热门社区
+              信息流
             </h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">发现你感兴趣的社区</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">所有社区的最新动态</p>
           </div>
 
           {loading ? (
             <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
+              {[...Array(5)].map((_, i) => (
                 <div key={i} className="card animate-pulse">
-                  <div className="h-5 w-2/3 bg-gray-200 rounded mb-2" />
-                  <div className="h-4 w-full bg-gray-100 rounded" />
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-700" />
+                    <div className="flex-1">
+                      <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                      <div className="h-3 w-1/2 bg-gray-100 dark:bg-gray-800 rounded" />
+                    </div>
+                  </div>
+                  <div className="mt-3 h-4 w-full bg-gray-100 dark:bg-gray-800 rounded" />
+                  <div className="mt-2 h-4 w-2/3 bg-gray-100 dark:bg-gray-800 rounded" />
                 </div>
               ))}
             </div>
-          ) : trendingSpaces.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {trendingSpaces.map((space) => (
-                <SpaceCard key={space.id} space={space} />
-              ))}
+          ) : items.length > 0 ? (
+            <div className="space-y-3">
+              {items.map((item) => {
+                const author = item.author;
+                const space = item.space;
+                const authorName = author?.display_name || author?.username || '匿名';
+                const authorUsername = author?.username || '';
+                const spaceName = space?.title || space?.namespace || '未知社区';
+                const spaceNs = space?.namespace || '';
+
+                return (
+                  <article key={item.type + '-' + item.id} className="card group cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+                    {/* Header: type icon + breadcrumb */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm">{getTypeIcon(item)}</span>
+                      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 overflow-hidden flex-wrap">
+                        <Link href={authorUsername ? '/profile/' + authorUsername : '#'} className="font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[120px]">
+                          @{authorUsername || 'anonymous'}
+                        </Link>
+                        <span className="text-gray-300 dark:text-gray-600">/</span>
+                        <Link href={spaceNs ? '/space/' + spaceNs : '#'} className="text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[130px]">
+                          {spaceName}
+                        </Link>
+                        <span className="text-gray-300 dark:text-gray-600">/</span>
+                        <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:text-gray-400">
+                          {getModuleLabel(item)}
+                        </span>
+                      </div>
+                      <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500 shrink-0">
+                        {formatDate(item.created_at)}
+                      </span>
+                    </div>
+
+                    {/* Title + Preview */}
+                    <Link href={getItemLink(item)}>
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1">
+                        {item.title || '无标题'}
+                      </h3>
+                      {item.preview && (
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                          {item.preview}
+                        </p>
+                      )}
+                    </Link>
+
+                    {/* Footer */}
+                    <div className="mt-2.5 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        <span>{formatCount(item.comment_count || 0)}</span>
+                      </span>
+                      {item.importance && (
+                        <span className="rounded-full bg-orange-100 dark:bg-orange-900/30 px-2 py-0.5 text-[10px] font-medium text-orange-600 dark:text-orange-400">
+                          {item.importance}
+                        </span>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+
+              {/* Infinite scroll trigger */}
+              {hasMore && (
+                <div ref={loadMoreRef} className="py-4 text-center">
+                  {loadingMore ? (
+                    <span className="text-sm text-gray-400">加载中...</span>
+                  ) : (
+                    <span className="text-sm text-gray-400">↓ 下滑加载更多</span>
+                  )}
+                </div>
+              )}
+              {!hasMore && items.length > 0 && (
+                <div className="py-6 text-center text-sm text-gray-400">
+                  — 已经到底了 —
+                </div>
+              )}
             </div>
           ) : (
             <div className="card py-12 text-center">
-              <div className="text-3xl mb-3">🏛️</div>
-              <p className="text-gray-500">暂无社区</p>
-              <Link href="/create" className="mt-3 inline-block text-sm text-primary-600 hover:underline">
-                创建第一个社区 →
+              <div className="text-3xl mb-3">📭</div>
+              <p className="text-gray-500 dark:text-gray-400">暂无动态</p>
+              <p className="mt-1 text-sm text-gray-400">信息流将展示所有社区的帖子、投票和公告</p>
+              <Link href="/explore" className="mt-3 inline-block text-sm text-primary-600 hover:underline">
+                探索社区 →
               </Link>
             </div>
           )}

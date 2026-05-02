@@ -595,6 +595,11 @@ impl ContentHandler {
         }))
     }
 
+    /// 获取全站信息流
+    pub async fn get_feed(&self, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
+        self.repo.get_feed(page, page_size).await
+    }
+
     pub async fn download_shared_file(&self, code: &str, password: Option<&str>) -> Result<(Vec<u8>, String, String), AppError> {
         let (link_id, file_id, stored_password, expires_at, max_downloads, download_count, is_active) = self.repo.get_share_link_by_code(code).await?;
         if !is_active { return Err(AppError::Validation("Share link has been deactivated".to_string())); }
