@@ -3,7 +3,20 @@ export const metadata: Metadata = { title: '更新日志' };
 
 export default function ChangelogPage() {
   const versions = [
-        {
+            {
+      ver: '0.2.35', date: '2026-05-02', title: '全新 3 栏信息流布局 + Landing 页移至 /about',
+      items: [
+        'UI: 全新 3 栏布局（左导航/中间信息流/右侧趋势+推荐），类似 X.com',
+        'UI: 每条信息流格式：@用户名/社区/模块 / 标题 + 预览 + 爱心/评论/收藏/转发/阅读数据',
+        'UI: 顶部标签切换：全部动态 | 关注的人 | 热门',
+        'UI: Landing 营销页移至 /about 关于我们',
+        'UI: 右侧栏集成搜索框 + 热门趋势 Top 5 + 推荐社区卡片',
+        'Backend: Feed API 新增 like_count + view_count 字段',
+        '测试: 全部端点正常返回，100% 部署验证通过',
+      ],
+    },
+
+{
       ver: '0.2.34', date: '2026-05-02', title: '信息流首页 + 测试验证 + 部署',
       items: [
         '新功能: Feed 信息流首页（类似 X.com 时间线），@用户名/社区/模块/标题 + 内容预览',
@@ -450,7 +463,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.34' && (
+              {v.ver === '0.2.35' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
