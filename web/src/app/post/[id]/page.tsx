@@ -43,7 +43,7 @@ function renderMarkdown(md: string): string {
     .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-5 mb-2 text-gray-900">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold mt-6 mb-2 text-gray-900">$1</h2>')
     .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-3 text-gray-900">$1</h1>')
-    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/~~(.+?)~~/g, '<del class="text-gray-400">$1</del>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     .replace(/\`([^\`]+)\`/g, '<code class="bg-gray-100 text-primary-600 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
