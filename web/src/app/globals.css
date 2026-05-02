@@ -487,3 +487,21 @@
 @media print {
   .cherry-markdown .cherry-toolbar, .cherry-markdown .cherry-sidebar { display: none !important; }
 }
+
+/* ===== Cherry Render Override ===== */
+/* Cherry CSS variables are scoped under .cherry, but .cherry has display:flex
+   layout styles for the editor. Override those for render-only usage. */
+.cherry-render-root.cherry {
+  display: block;
+  height: auto;
+  min-height: 0;
+  position: static;
+  flex-flow: initial;
+  align-items: initial;
+  align-content: initial;
+}
+/* Ensure the markdown content inside Cherry render root is readable */
+.cherry-render-root .cherry-markdown {
+  line-height: 1.75;
+  font-size: 0.9375rem;
+}
