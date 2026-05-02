@@ -140,12 +140,6 @@ function FeedLayout() {
             </nav>
 
             {/* Publish Button */}
-            <div className="px-3 mb-4">
-              <Link href="/post/new" className="btn-primary w-full flex items-center justify-center gap-2 py-3 rounded-full text-base font-bold shadow-lg">
-                <Plus className="h-5 w-5" />
-                发布内容
-              </Link>
-            </div>
 
             {/* User Info */}
             <div className="px-3 pb-3">
@@ -391,7 +385,7 @@ function FeedItemCard({ item }: { item: any }) {
   const bookmarkCount = Math.floor(likeCount * 0.5);
 
   return (
-    <article className="px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer">
+    <Link href={getItemLink()} className="block px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
       {/* Line 1: @username/community/module / title */}
       <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-1 flex-wrap">
         <span className="text-sm">{getTypeIcon()}</span>
@@ -455,6 +449,6 @@ function FeedItemCard({ item }: { item: any }) {
           <span>{formatCount(viewCount)}</span>
         </span>
       </div>
-    </article>
+    </Link>
   );
 }

@@ -50,8 +50,25 @@ function PostContent({ body }: { body: string }) {
       return;
     }
     getCherryRenderer().then((cherry) => {
-      const rendered = cherry.makeHtml ? cherry.makeHtml(body) : cherry.getHtml();
-      // Wrap in prose div
+      // Set content and get rendered HTML (Cherry sync render)
+      cherry.setMarkdown(body, true);
+      // Try multiple methods to get rendered HTML
+      let rendered = '';
+      try {
+        if (cherry.previewer && cherry.previewer.getHtmlString) {
+          cherry.previewer.update(body);
+          rendered = cherry.previewer.getHtmlString();
+        }
+        if (!rendered) {
+          rendered = cherry.getHtml && cherry.getHtml() || '';
+        }
+        if (!rendered && cherry.previewer && cherry.previewer.getHtml) {
+          rendered = cherry.previewer.getHtml();
+        }
+      } catch(e) {}
+      if (!rendered) {
+        rendered = '<div class="text-gray-500">渲染中...</div>';
+      }
       const wrapped = '<div class="prose prose-gray dark:prose-invert max-w-none">' + rendered + '</div>';
       renderCache.set(body, wrapped);
       setHtml(wrapped);
