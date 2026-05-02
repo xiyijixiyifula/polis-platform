@@ -4,6 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.36', date: '2026-05-03', title: 'Cherry Markdown 渲染修复 — Engine Core API 同步渲染',
+      items: [
+        '渲染: 替换 DOM 轮询方案为 Cherry Engine Core 同步 API（engine.makeHtml()），彻底解决渲染时序问题',
+        '组件: 新增 CherryRender 组件（动态导入 + 缓存引擎单例 + 降级渲染）',
+        '样式: CSS 作用域隔离（.cherry-render-root.cherry），消除 .cherry display:flex 布局破坏',
+        '代码: 帖子详情页从 589 行简化到 338 行（-43%），移除 240 行无效轮询代码',
+        '性能: Engine Core chunk 803KB，首次加载后缓存，后续渲染零网络开销',
+        '体验: 暗黑模式下 Cherry CSS 变量完整继承，Markdown 排版与编辑器预览一致',
+        '部署: 所有服务 active，全量页面 200 OK，Cherry Engine chunk 确认部署',
+      ],
+    },
+
+    {
       ver: '0.2.35', date: '2026-05-02', title: '全新 3 栏信息流布局 + Landing 页移至 /about',
       items: [
         'UI: 全新 3 栏布局（左导航/中间信息流/右侧趋势+推荐），类似 X.com',
@@ -463,7 +476,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.35' && (
+              {v.ver === '0.2.36' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
