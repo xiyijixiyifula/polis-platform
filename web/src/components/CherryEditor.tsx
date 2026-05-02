@@ -172,11 +172,9 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
             id: editorId,
             value,
 
-            // ── Editor ──────────────────────────────
             editor: {
               defaultModel,
               height: computedHeight,
-              
               codemirror: {
                 autofocus: false,
                 lineWrapping: true,
@@ -186,74 +184,47 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
               },
             },
 
-            // ── Toolbars (核心优化：丰富工具栏) ───────
             toolbars: {
               theme: 'dark',
               showToolbar: true,
               toolbar: [
-                'bold', 'italic', 'strikethrough', '|',
-                'header', '|',
-                'list', 'image', 'link', 'code', 'table', '|',
+                'header', 'list',
+                { insert: ['checklist', 'table', 'code', 'link', 'hr', 'br', 'formula'] },
+                'graph', '|',
+                'bold', 'italic', 'strikethrough',
+                { color: ['color', 'bg'] },
+                'ruby', '|',
+                'image', 'audio', 'video', 'pdf', 'word', '|',
+                'toc', 'detail', '|',
                 'undo', 'redo', '|',
-                'switchModel',
+                'switchModel', 'settings',
               ],
-              toolbarRight: ['fullScreen'],
-              bubble: ['bold', 'italic', 'underline', 'strikethrough', '|', 'color', 'header'],
-              float: ['h1', 'h2', 'h3', '|', 'quote', 'code', 'image'],
+              toolbarRight: ['fullScreen', 'export'],
+              bubble: ['bold', 'italic', 'underline', 'strikethrough', 'sub', 'sup', 'ruby', '|', 'color', 'header', '|', 'list', 'todo'],
+              float: ['h1', 'h2', 'h3', '|', 'checklist', 'quote', 'quickTable', 'code', 'image'],
             },
 
-            // ── Engine ──────────────────────────────            // ── Engine ──────────────────────────────
             engine: {
-              global: {
-                flowSessionContext: true,
-              },
+              global: { flowSessionContext: true },
               syntax: {
-                header: {
-                  anchorStyle: 'autonumber',
-                },
-                list: {
-                  listNested: true,
-                  indentSpace: 2,
-                },
-                codeBlock: {
-                  wrap: true,
-                  lineNumber: true,
-                  copyCode: true,
-                  editCode: true,
-                },
-                table: {
-                  enableChart: true,
-                },
-                fontEmphasis: {
-                  allowWhitespace: true,
-                },
-                link: {
-                },
+                header: { anchorStyle: 'autonumber' },
+                list: { listNested: true, indentSpace: 2 },
+                codeBlock: { wrap: true, lineNumber: true, copyCode: true, editCode: true },
+                table: { enableChart: true },
+                fontEmphasis: { allowWhitespace: true },
               },
             },
 
-            // ── Previewer ───────────────────────────
-            previewer: {
-              floatWhenClosePreviewer: true,
-              enablePreviewerBubble: true,
-            },
+            previewer: { floatWhenClosePreviewer: true, enablePreviewerBubble: true },
 
-            // ── Keydown Listener ────────────────────
-
-            // ── Callbacks ───────────────────────────
             callback: {
-              afterChange: (text: string, html: string) => {
-                onChange?.(text, html);
-                triggerAutoSave(text);
-              },
-              onClickPreview: (e: Event) => {}
+              afterChange: (text: string, html: string) => { onChange?.(text, html); triggerAutoSave(text); },
             },
 
-            // ── File Upload ─────────────────────────
             fileUpload: handleFileUpload,
 
-            // ── Extensions ──────────────────────────
-            // ── Theme Settings ──────────────────────
+            externals: {},
+
             themeSettings: {
               themeList: [
                 { className: 'default', label: '默认' },
@@ -265,78 +236,48 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
                 { className: 'blue', label: '海洋蓝' },
               ],
             } as any,
-
-            externals: {},
-
-            // ── Theme ───────────────────────────────
-            // Theme settings removed for compatibility
           });
 
           cherryRef.current = instance;
 
-          // 监听系统主题变化
           const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
           const handleThemeChange = (e: MediaQueryListEvent) => {
-            const theme = e.matches ? 'dark' : 'default';
-            instance.setTheme(theme);
+            instance.setTheme(e.matches ? 'dark' : 'default');
           };
           mediaQuery.addEventListener('change', handleThemeChange);
 
-          // 初始设置主题
           const isDark = document.documentElement.classList.contains('dark');
-          if (isDark) {
-            instance.setTheme('dark');
-          }
+          if (isDark) instance.setTheme('dark');
 
           if (mounted) setIsReady(true);
-
-          return () => {
-            mediaQuery.removeEventListener('change', handleThemeChange);
-          };
+          return () => { mediaQuery.removeEventListener('change', handleThemeChange); };
         } catch (e: any) {
           console.error('Cherry init error:', e);
-          if (mounted) {
-            setError(e?.message || '编辑器加载失败，请刷新页面重试');
-          }
+          if (mounted) setError(e?.message || '编辑器加载失败，请刷新页面重试');
         }
       };
-
       init();
-
       return () => {
         mounted = false;
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-        if (instance) {
-          try {
-            instance.destroy();
-          } catch {}
-          cherryRef.current = null;
-        }
+        if (instance) { try { instance.destroy(); } catch {} cherryRef.current = null; }
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ─── Sync external value ───────────────────────────
     useEffect(() => {
       if (cherryRef.current && isReady) {
         const current = cherryRef.current.getMarkdown();
-        if (current !== value) {
-          cherryRef.current.setMarkdown(value, true);
-        }
+        if (current !== value) cherryRef.current.setMarkdown(value, true);
       }
     }, [value, isReady]);
 
-    // ─── Restore draft on mount ────────────────────────
     useEffect(() => {
       if (autoSaveKey && isReady && !value) {
         const saved = localStorage.getItem(autoSaveKey);
-        if (saved) {
-          cherryRef.current?.setMarkdown(saved, true);
-        }
+        if (saved) cherryRef.current?.setMarkdown(saved, true);
       }
     }, [autoSaveKey, isReady, value]);
 
-    // ─── Error UI ──────────────────────────────────────
     if (error) {
       return (
         <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-600 dark:text-red-400">
@@ -350,28 +291,17 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
       );
     }
 
-    // ─── Render ────────────────────────────────────────
     return (
-      <div
-        className="cherry-editor-wrapper relative rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary-200 dark:focus-within:ring-primary-900"
-        style={{ minHeight: minHeight || height }}
-      >
+      <div className="cherry-editor-wrapper relative rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary-200 dark:focus-within:ring-primary-900"
+        style={{ minHeight: minHeight || height }}>
         {!isReady && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/90 dark:bg-gray-900/90 rounded-xl backdrop-blur-sm">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-            <span className="text-sm text-gray-400 dark:text-gray-500">
-              编辑器加载中...
-            </span>
+            <span className="text-sm text-gray-400 dark:text-gray-500">编辑器加载中...</span>
           </div>
         )}
-        <div
-          ref={containerRef}
-          id={editorId}
-          className="cherry-markdown"
-          style={{
-            minHeight: minHeight || (typeof height === 'number' ? `${height}px` : height),
-          }}
-        />
+        <div ref={containerRef} id={editorId} className="cherry-markdown"
+          style={{ minHeight: minHeight || (typeof height === 'number' ? `${height}px` : height) }} />
       </div>
     );
   }
@@ -379,60 +309,24 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
 
 CherryEditorInner.displayName = 'CherryEditorInner';
 
-// ─── Dynamic Wrapper ─────────────────────────────────────
 const CherryEditorDynamic = dynamic(() => Promise.resolve(CherryEditorInner), {
   ssr: false,
   loading: () => (
     <div className="h-[450px] animate-pulse bg-gray-100 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center">
       <div className="flex flex-col items-center gap-2">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-500 border-t-transparent" />
-        <span className="text-sm text-gray-400 dark:text-gray-500">
-          编辑器加载中...
-        </span>
+        <span className="text-sm text-gray-400 dark:text-gray-500">编辑器加载中...</span>
       </div>
     </div>
   ),
 });
 
-// ─── Legacy-compatible wrapper ─────────────────────────
-function CherryEditorLegacyWrapper({
-  value = '',
-  onChange,
-  height,
-  minHeight,
-  placeholder,
-  defaultModel,
-  spaceNs,
-  autoSaveKey,
-  onAutoSave,
-}: CherryEditorProps & {
-  onChange?: ((value: string) => void) | ((markdown: string, html: string) => void);
-}) {
-  const handleChange = (markdown: string, _html: string) => {
-    if (onChange) {
-      (onChange as (value: string) => void)(markdown);
-    }
-  };
-
-  return (
-    <CherryEditorDynamic
-      value={value}
-      onChange={handleChange}
-      height={height}
-      minHeight={minHeight}
-      placeholder={placeholder}
-      defaultModel={defaultModel}
-      spaceNs={spaceNs}
-      autoSaveKey={autoSaveKey}
-      onAutoSave={onAutoSave}
-    />
-  );
+function CherryEditorLegacyWrapper({ value = '', onChange, height, minHeight, placeholder, defaultModel, spaceNs, autoSaveKey, onAutoSave }: CherryEditorProps & { onChange?: ((value: string) => void) | ((markdown: string, html: string) => void) }) {
+  const handleChange = (markdown: string, _html: string) => { if (onChange) (onChange as (value: string) => void)(markdown); };
+  return <CherryEditorDynamic value={value} onChange={handleChange} height={height} minHeight={minHeight} placeholder={placeholder} defaultModel={defaultModel} spaceNs={spaceNs} autoSaveKey={autoSaveKey} onAutoSave={onAutoSave} />;
 }
 
 export const CherryEditor = CherryEditorLegacyWrapper;
-export const CherryEditorWithRef = React.forwardRef<CherryEditorRef, CherryEditorProps>(
-  (props, ref) => <CherryEditorDynamic {...props} ref={ref} />
-);
+export const CherryEditorWithRef = React.forwardRef<CherryEditorRef, CherryEditorProps>((props, ref) => <CherryEditorDynamic {...props} ref={ref} />);
 CherryEditorWithRef.displayName = 'CherryEditorWithRef';
-
 export default CherryEditorDynamic;
