@@ -32,7 +32,7 @@ export function PostCard({ post }: PostCardProps) {
   const authorUsername = author?.username || '';
 
   return (
-    <article className="group card cursor-pointer transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+    <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="group card block transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
       {post.is_pinned && (
         <div className="mb-2 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
       )}
@@ -105,6 +105,6 @@ export function PostCard({ post }: PostCardProps) {
           </div>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }

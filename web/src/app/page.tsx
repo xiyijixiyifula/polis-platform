@@ -374,7 +374,9 @@ function FeedItemCard({ item }: { item: any }) {
   const getItemLink = () => {
     if (item.type === 'poll') return '/polls';
     if (item.type === 'announcement' && spaceNs) return '/space/' + spaceNs;
-    return '/post/' + item.id;
+    const base = '/post/' + item.id;
+    if (spaceNs) return base + '?space=' + encodeURIComponent(spaceNs);
+    return base;
   };
 
   const likeCount = item.like_count || 0;
