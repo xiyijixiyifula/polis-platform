@@ -9,7 +9,13 @@ import { posts, Comment, Post } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 
 function renderMarkdown(md: string): string {
-  let html = md
+  // Preserve Cherry color/span HTML before escaping
+  const spans: string[] = [];
+  const preserved = md.replace(
+    /<span[^>]*style=["'][^"']*color:[^"']*["'][^>]*>.*?<\/span>/g,
+    (m) => { spans.push(m); return `%%clr${spans.length - 1}%%`; }
+  );
+  let html = preserved
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-5 mb-2 text-gray-900">$1</h3>')
     .replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold mt-6 mb-2 text-gray-900">$1</h2>')
@@ -17,16 +23,18 @@ function renderMarkdown(md: string): string {
     .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code class="bg-gray-100 text-primary-600 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
+    .replace(/\`([^\`]+)\`/g, '<code class="bg-gray-100 text-primary-600 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-lg max-w-full my-3" loading="lazy" />')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-600 hover:underline" target="_blank">$1</a>')
     .replace(/^- (.+)$/gm, '<li class="text-gray-600 ml-5 list-disc mb-1">$1</li>')
     .replace(/^\d+\. (.+)$/gm, '<li class="text-gray-600 ml-5 list-decimal mb-1">$1</li>')
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="bg-gray-900 text-gray-100 rounded-xl p-4 my-4 overflow-x-auto text-sm leading-relaxed"><code>$2</code></pre>')
+    .replace(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/g, '<pre class="bg-gray-900 text-gray-100 rounded-xl p-4 my-4 overflow-x-auto text-sm leading-relaxed"><code>$2</code></pre>')
     .replace(/^---$/gm, '<hr class="my-6 border-gray-200" />')
     .replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-primary-300 bg-primary-50/30 pl-4 py-2 my-3 text-gray-600 italic rounded-r-lg">$1</blockquote>')
     .replace(/\n\n/g, '</p><p class="text-gray-600 mb-3 leading-relaxed">')
     .replace(/\n/g, '<br />');
+  // Restore preserved color spans
+  spans.forEach((s, i) => { html = html.replace(`%%clr${i}%%`, s); });
   return '<p class="text-gray-600 mb-3 leading-relaxed">' + html + '</p>';
 }
 
