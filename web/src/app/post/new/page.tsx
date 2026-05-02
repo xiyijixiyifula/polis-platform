@@ -122,26 +122,34 @@ function NewPostForm() {
   const handleImportMd = async (file: File) => {
     setImportingMd(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = (e.target?.result as string)?.split(',')[1];
-        if (!base64) { setImportingMd(false); return; }
-        const token = localStorage.getItem('polis_access_token');
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = 'Bearer ' + token;
-        const res = await fetch('/api/import/markdown', {
-          method: 'POST', headers,
-          body: JSON.stringify({ filename: file.name, data_base64: base64, mime_type: file.type || 'application/octet-stream' }),
-        });
-        const data = await res.json();
-        if (data.code === 0 && data.data?.content) {
-          setBody(data.data.content);
-        } else {
-          alert('导入失败：' + (data.message || '未知错误'));
-        }
+      if (file.name.endsWith('.zip') || file.name.endsWith('.ZIP')) {
+        // ZIP files: send to backend for extraction
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const base64 = (e.target?.result as string)?.split(',')[1];
+          if (!base64) { setImportingMd(false); return; }
+          const token = localStorage.getItem('polis_access_token');
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = 'Bearer ' + token;
+          const res = await fetch('/api/import/markdown', {
+            method: 'POST', headers,
+            body: JSON.stringify({ filename: file.name, data_base64: base64, mime_type: file.type || 'application/octet-stream' }),
+          });
+          const data = await res.json();
+          if (data.code === 0 && data.data?.content) {
+            setBody(data.data.content);
+          } else {
+            alert('导入失败：' + (data.message || '未知错误'));
+          }
+          setImportingMd(false);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        // .md files: read directly as text (skip backend)
+        const text = await file.text();
+        setBody(text);
         setImportingMd(false);
-      };
-      reader.readAsDataURL(file);
+      }
     } catch { setImportingMd(false); }
   };
 
