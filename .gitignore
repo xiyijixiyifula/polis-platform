@@ -31,3 +31,4 @@ docker-data/
 research-reports/
 research-log.txt
 auto-*.log
+.env.backup.*
