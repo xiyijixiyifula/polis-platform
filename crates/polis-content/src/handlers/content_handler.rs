@@ -578,7 +578,7 @@ impl ContentHandler {
     pub async fn import_markdown(&self, user_id: Uuid, filename: &str, data: &[u8]) -> Result<String, AppError> {
         use std::process::Command;
         let tmp_dir = format!("/tmp/polis_import_{}", Uuid::new_v4());
-        let tmp_file = format!("{}/input", tmp_dir);
+        let tmp_file = format!("{}/input.zip", tmp_dir);
         tokio::fs::create_dir_all(&tmp_dir).await.map_err(|e| AppError::External(format!("Failed to create tmp dir: {}", e)))?;
         tokio::fs::write(&tmp_file, data).await.map_err(|e| AppError::External(format!("Failed to write tmp file: {}", e)))?;
 
@@ -587,15 +587,18 @@ impl ContentHandler {
             let output = Command::new("unzip").arg("-o").arg(&tmp_file).arg("-d").arg(&tmp_dir).output()
                 .map_err(|e| AppError::External(format!("Failed to run unzip: {}", e)))?;
             if !output.status.success() {
-                let err = String::from_utf8_lossy(&output.stderr);
-                return Err(AppError::External(format!("Unzip failed: {}", err)));
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                return Err(AppError::External(format!("Unzip failed: stderr={} stdout={}", stderr, stdout)));
             }
             // Find README.md (case-insensitive)
             let find_output = Command::new("find").arg(&tmp_dir).arg("-iname").arg("readme.md").output()
                 .map_err(|e| AppError::External(format!("Failed to find README: {}", e)))?;
             let readme_path = String::from_utf8_lossy(&find_output.stdout).trim().to_string();
             if readme_path.is_empty() {
-                return Err(AppError::NotFound("No README.md found in zip".to_string()));
+                let ls = Command::new("ls").arg("-R").arg(&tmp_dir).output().map_err(|_| AppError::External("".to_string())).unwrap().stdout;
+                let listing = String::from_utf8_lossy(&ls);
+                return Err(AppError::NotFound(format!("No README.md found in zip. Files: {}", listing)));
             }
             let content = tokio::fs::read_to_string(&readme_path).await
                 .map_err(|e| AppError::External(format!("Failed to read README: {}", e)))?;
