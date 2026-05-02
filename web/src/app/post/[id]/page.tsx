@@ -11,9 +11,32 @@ import { VoteButton } from '@/components/VoteButton';
 function renderMarkdown(md: string): string {
   // Preserve Cherry color/span HTML before escaping
   const spans: string[] = [];
-  const preserved = md.replace(
+  let preserved = md.replace(
     /<span[^>]*style=["'][^"']*color:[^"']*["'][^>]*>.*?<\/span>/g,
-    (m) => { spans.push(m); return `%%clr${spans.length - 1}%%`; }
+    (m) => { spans.push(m); return '%%clr' + spans.length + '%%'; }
+  );
+  // Extract and render tables before HTML escaping
+  const tables: string[] = [];
+  preserved = preserved.replace(
+    /(^\|.+\|\n(?:\|[-| :]+\|\n)?(?:\|.+\|\n?)+)/gm,
+    (m) => {
+      const lines = m.trim().split('\n');
+      const rows = lines.filter((r: string) => !r.match(/^\|[-| :]+\|$/));
+      let tbl = '<div class="overflow-x-auto my-4"><table class="min-w-full border-collapse border border-gray-300 dark:border-gray-600 rounded-lg">';
+      rows.forEach((row: string, ri: number) => {
+        var cells = row.split('|').filter(function(c: string) { return c.trim() !== ''; });
+        var cellTag = ri === 0 ? 'th' : 'td';
+        var cellCls = ri === 0 ? 'bg-gray-50 dark:bg-gray-800 font-semibold' : '';
+        tbl += '<tr>';
+        cells.forEach(function(cell: string) {
+          tbl += '<' + cellTag + ' class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm ' + cellCls + '">' + cell.trim() + '</' + cellTag + '>';
+        });
+        tbl += '</tr>';
+      });
+      tbl += '</table></div>';
+      tables.push(tbl);
+      return '%%tbl' + (tables.length - 1) + '%%';
+    }
   );
   let html = preserved
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -34,7 +57,9 @@ function renderMarkdown(md: string): string {
     .replace(/\n\n/g, '</p><p class="text-gray-600 mb-3 leading-relaxed">')
     .replace(/\n/g, '<br />');
   // Restore preserved color spans
-  spans.forEach((s, i) => { html = html.replace(`%%clr${i}%%`, s); });
+  spans.forEach(function(s: string, i: number) { html = html.replace('%%clr' + i + '%%', s); });
+  // Restore rendered tables
+  tables.forEach(function(t: string, i: number) { html = html.replace('%%tbl' + i + '%%', t); });
   return '<p class="text-gray-600 mb-3 leading-relaxed">' + html + '</p>';
 }
 
