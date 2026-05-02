@@ -755,8 +755,8 @@ impl ContentRepo {
     pub async fn get_feed(&self, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
         let offset = ((page.saturating_sub(1)) * page_size) as i64;
         let limit = page_size as i64;
-        let posts = sqlx::query_as::<_, (Uuid, Uuid, String, Uuid, String, String, String, i64, chrono::DateTime<chrono::Utc>,)>(
-            "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.created_at FROM posts p WHERE p.is_deleted = FALSE AND p.visibility = 'public' ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
+        let posts = sqlx::query_as::<_, (Uuid, Uuid, String, Uuid, String, String, String, i64, i64, i64, chrono::DateTime<chrono::Utc>,)>(
+            "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at FROM posts p WHERE p.is_deleted = FALSE AND p.visibility = 'public' ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
         ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
         let polls = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, chrono::DateTime<chrono::Utc>,)>(
             "SELECT id, space_id, author_id, title, COALESCE(description, ''), created_at FROM polls WHERE status = 'active' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
@@ -766,26 +766,26 @@ impl ContentRepo {
         ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
         let mut user_ids: Vec<Uuid> = Vec::new();
         let mut space_ids: Vec<Uuid> = Vec::new();
-        for (_, sid, _, aid, _, _, _, _, _) in &posts { user_ids.push(*aid); space_ids.push(*sid); }
+        for (_, sid, _, aid, _, _, _, _, _, _, _) in &posts { user_ids.push(*aid); space_ids.push(*sid); }
         for (_, sid, aid, _, _, _) in &polls { user_ids.push(*aid); space_ids.push(*sid); }
         for (_, sid, aid, _, _, _, _) in &announcements { user_ids.push(*aid); space_ids.push(*sid); }
         let users = self.find_users_batch(&user_ids).await?;
         let spaces = self.find_spaces_batch(&space_ids).await?;
         let mut items: Vec<serde_json::Value> = Vec::new();
-        for (id, space_id, module_type, author_id, title, body_preview, content_type, comment_count, created_at) in &posts {
+        for (id, space_id, module_type, author_id, title, body_preview, content_type, comment_count, like_count, view_count, created_at) in &posts {
             let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));
             let space_info = spaces.get(space_id);
-            items.push(serde_json::json!({"id": id, "type": "post", "module_type": module_type, "title": title, "preview": body_preview, "comment_count": comment_count, "created_at": created_at, "author": author, "space": space_info}));
+            items.push(serde_json::json!({"id": id, "type": "post", "module_type": module_type, "title": title, "preview": body_preview, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "author": author, "space": space_info}));
         }
         for (id, space_id, author_id, title, desc, created_at) in &polls {
             let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));
             let space_info = spaces.get(space_id);
-            items.push(serde_json::json!({"id": id, "type": "poll", "module_type": "poll", "title": title, "preview": desc, "comment_count": 0, "created_at": created_at, "author": author, "space": space_info}));
+            items.push(serde_json::json!({"id": id, "type": "poll", "module_type": "poll", "title": title, "preview": desc, "comment_count": 0, "like_count": 0, "view_count": 0, "created_at": created_at, "author": author, "space": space_info}));
         }
         for (id, space_id, author_id, title, body_preview, importance, created_at) in &announcements {
             let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));
             let space_info = spaces.get(space_id);
-            items.push(serde_json::json!({"id": id, "type": "announcement", "module_type": "announcement", "title": title, "preview": body_preview, "importance": importance, "comment_count": 0, "created_at": created_at, "author": author, "space": space_info}));
+            items.push(serde_json::json!({"id": id, "type": "announcement", "module_type": "announcement", "title": title, "preview": body_preview, "importance": importance, "comment_count": 0, "like_count": 0, "view_count": 0, "created_at": created_at, "author": author, "space": space_info}));
         }
         items.sort_by(|a, b| {
             let ta = a["created_at"].as_str().unwrap_or("");
