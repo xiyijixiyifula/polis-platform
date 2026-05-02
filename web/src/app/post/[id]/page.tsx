@@ -165,21 +165,25 @@ function PostContent({ body }: { body: string }) {
             try {
               let rendered = '';
 
-              // Try multiple methods to get rendered content
+              // Get rendered HTML from Cherry's previewer DOM
               if (cherry.previewer) {
-                const dom = cherry.previewer.getPreviewerDom
-                  ? cherry.previewer.getPreviewerDom()
-                  : null;
-                if (dom) rendered = dom.innerHTML;
-                if (!rendered && cherry.previewer.getHtmlString) {
-                  rendered = cherry.previewer.getHtmlString();
-                }
+                try {
+                  const container = cherry.previewer.getDomContainer
+                    ? cherry.previewer.getDomContainer()
+                    : null;
+                  if (container) {
+                    // Try to get the preview content (cherry-previewer class or first child)
+                    const previewEl = container.querySelector('.cherry-previewer')
+                      || container.querySelector('.cherry-edit')
+                      || container.firstElementChild
+                      || container;
+                    rendered = previewEl.innerHTML || '';
+                  }
+                } catch(e1) { console.warn('Previewer DOM error:', e1); }
               }
-              if (!rendered && cherry.getHtml) {
-                rendered = cherry.getHtml();
-              }
-              if (!rendered && cherry.makeHtml) {
-                rendered = cherry.makeHtml(body);
+              // Fallback: try getHtml on Cherry instance
+              if (!rendered) {
+                try { rendered = cherry.getHtml ? cherry.getHtml() : ''; } catch(e2) {}
               }
 
               // Use fallback if nothing rendered
