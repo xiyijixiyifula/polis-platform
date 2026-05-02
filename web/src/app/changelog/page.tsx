@@ -4,6 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.37', date: '2026-05-03', title: '维护轮次 — 全量 37 项测试 100% 通过',
+      items: [
+        '测试: 23 个页面全部返回 200（首页/登录/注册/空间/个人/搜索/CLI/关于）',
+        '测试: 9 个 API 端点全部正确（health/trending/feed/search/vote/root/post/featured/auth）',
+        '测试: 安全验证通过（HTTPS 301 重定向 + CORS * + HSTS preload）',
+        '测试: 端到端流程通过（注册→登录→创建社区→发帖→投票）',
+        '性能: 首页 0.81s, API health 0.74s, Feed 0.81s, Changelog 1.9s',
+        '运维: 6 项服务全部 active, 近 1 小时零错误日志, 磁盘 72% 正常',
+        '调研: Next.js v16.2.4, Rust 1.95.0 — Polis 运行稳定, 无紧急更新需求',
+      ],
+    },
+
+    {
       ver: '0.2.36', date: '2026-05-03', title: 'Cherry Markdown 渲染修复 — Engine Core API 同步渲染',
       items: [
         '渲染: 替换 DOM 轮询方案为 Cherry Engine Core 同步 API（engine.makeHtml()），彻底解决渲染时序问题',
@@ -476,7 +489,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.36' && (
+              {v.ver === '0.2.37' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
