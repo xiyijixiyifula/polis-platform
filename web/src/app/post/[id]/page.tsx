@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight } from 'lucide-react';
@@ -8,59 +8,61 @@ import { formatDate, formatCount } from '@/lib/utils';
 import { posts, Comment, Post } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 
+// Use Cherry Markdown engine for rendering (same as editor preview)
+const cherryRenderer: any = { instance: null };
+
+async function getCherryRenderer(): Promise<any> {
+  if (cherryRenderer.instance) return cherryRenderer.instance;
+  const { default: Cherry } = await import('cherry-markdown');
+  cherryRenderer.instance = new Cherry({
+    id: 'cherry-renderer-' + Math.random().toString(36).slice(2),
+    value: '',
+    editor: { defaultModel: 'previewOnly' },
+    toolbars: { showToolbar: false },
+    engine: {
+      syntax: {
+        codeBlock: { wrap: true, lineNumber: true, copyCode: true },
+        table: { enableChart: true },
+      },
+    },
+    externals: {},
+  });
+  return cherryRenderer.instance;
+}
+
+let renderCache = new Map<string, string>();
+
 function renderMarkdown(md: string): string {
-  // Preserve Cherry color/span HTML before escaping
-  const spans: string[] = [];
-  let preserved = md.replace(
-    /<span[^>]*style=["'][^"']*color:[^"']*["'][^>]*>.*?<\/span>/g,
-    (m) => { spans.push(m); return '%%clr' + spans.length + '%%'; }
-  );
-  // Extract and render tables before HTML escaping
-  const tables: string[] = [];
-  preserved = preserved.replace(
-    /(^\|.+\|\n(?:\|[-| :]+\|\n)?(?:\|.+\|\n?)+)/gm,
-    (m) => {
-      const lines = m.trim().split('\n');
-      const rows = lines.filter((r: string) => !r.match(/^\|[-| :]+\|$/));
-      let tbl = '<div class="overflow-x-auto my-4"><table class="min-w-full border-collapse border border-gray-300 dark:border-gray-600 rounded-lg">';
-      rows.forEach((row: string, ri: number) => {
-        var cells = row.split('|').filter(function(c: string) { return c.trim() !== ''; });
-        var cellTag = ri === 0 ? 'th' : 'td';
-        var cellCls = ri === 0 ? 'bg-gray-50 dark:bg-gray-800 font-semibold' : '';
-        tbl += '<tr>';
-        cells.forEach(function(cell: string) {
-          tbl += '<' + cellTag + ' class="border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm ' + cellCls + '">' + cell.trim() + '</' + cellTag + '>';
-        });
-        tbl += '</tr>';
-      });
-      tbl += '</table></div>';
-      tables.push(tbl);
-      return '%%tbl' + (tables.length - 1) + '%%';
+  if (!md) return '';
+  // Use synchronous wrapper - actual rendering happens in useEffect
+  return '<div class="cherry-render-placeholder" data-md="' + md.replace(/"/g, '&quot;') + '">加载中...</div>';
+}
+
+// Set up effect to render after mount (in the PostContent component)
+function PostContent({ body }: { body: string }) {
+  const [html, setHtml] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!body) return;
+    if (renderCache.has(body)) {
+      setHtml(renderCache.get(body)!);
+      return;
     }
+    getCherryRenderer().then((cherry) => {
+      const rendered = cherry.makeHtml ? cherry.makeHtml(body) : cherry.getHtml();
+      // Wrap in prose div
+      const wrapped = '<div class="prose prose-gray dark:prose-invert max-w-none">' + rendered + '</div>';
+      renderCache.set(body, wrapped);
+      setHtml(wrapped);
+    });
+  }, [body]);
+
+  return html ? (
+    <div ref={containerRef} className="cherry-rendered" dangerouslySetInnerHTML={{ __html: html }} />
+  ) : (
+    <div className="animate-pulse bg-gray-100 dark:bg-gray-800 rounded-lg h-48" />
   );
-  let html = preserved
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-5 mb-2 text-gray-900">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-xl font-semibold mt-6 mb-2 text-gray-900">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-3 text-gray-900">$1</h1>')
-    .replace(/~~(.+?)~~/g, '<del class="text-gray-400">$1</del>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\`([^\`]+)\`/g, '<code class="bg-gray-100 text-primary-600 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-lg max-w-full my-3" loading="lazy" />')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-600 hover:underline" target="_blank">$1</a>')
-    .replace(/^- (.+)$/gm, '<li class="text-gray-600 ml-5 list-disc mb-1">$1</li>')
-    .replace(/^\d+\. (.+)$/gm, '<li class="text-gray-600 ml-5 list-decimal mb-1">$1</li>')
-    .replace(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/g, '<pre class="bg-gray-900 text-gray-100 rounded-xl p-4 my-4 overflow-x-auto text-sm leading-relaxed"><code>$2</code></pre>')
-    .replace(/^---$/gm, '<hr class="my-6 border-gray-200" />')
-    .replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-primary-300 bg-primary-50/30 pl-4 py-2 my-3 text-gray-600 italic rounded-r-lg">$1</blockquote>')
-    .replace(/\n\n/g, '</p><p class="text-gray-600 mb-3 leading-relaxed">')
-    .replace(/\n/g, '<br />');
-  // Restore preserved color spans
-  spans.forEach(function(s: string, i: number) { html = html.replace('%%clr' + i + '%%', s); });
-  // Restore rendered tables
-  tables.forEach(function(t: string, i: number) { html = html.replace('%%tbl' + i + '%%', t); });
-  return '<p class="text-gray-600 mb-3 leading-relaxed">' + html + '</p>';
 }
 
 function PostDetailContent() {
@@ -270,7 +272,7 @@ function PostDetailContent() {
           </div>
         )}
 
-        <div className="prose prose-gray max-w-none" dangerouslySetInnerHTML={{ __html: renderMarkdown(post.body) }} />
+        <PostContent body={post.body} />
 
         <div className="mt-8 flex items-center gap-4 border-t border-gray-100 dark:border-gray-700 pt-4 flex-wrap">
           <VoteButton targetType="post" targetId={post.id} />
