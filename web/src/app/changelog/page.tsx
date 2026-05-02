@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.38', date: '2026-05-03', title: '维护轮次 — 23 页面 + 6 API + E2E 全部通过，系统稳定运行',
+      items: [
+        '测试: 23 页面全部 200 OK, 6 API 端点全部正常, E2E 认证流程通过',
+        '安全: HTTPS 301, CORS *, HSTS preload 全部正常',
+        '性能: 首页 0.85s, API 0.61s, Feed 0.81s',
+        '运维: 6 服务 active, 近 2 小时零错误日志',
+        '调研: Next.js v16.2.4, Rust 1.95.0 — 无紧急更新',
+      ],
+    },
+
+    {
       ver: '0.2.37', date: '2026-05-03', title: '维护轮次 — 全量 37 项测试 100% 通过',
       items: [
         '测试: 23 个页面全部返回 200（首页/登录/注册/空间/个人/搜索/CLI/关于）',
@@ -489,7 +500,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.37' && (
+              {v.ver === '0.2.38' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
