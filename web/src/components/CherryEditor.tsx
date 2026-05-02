@@ -189,19 +189,18 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
               showToolbar: true,
               toolbar: [
                 'header', 'list',
-                { insert: ['checklist', 'table', 'code', 'link', 'hr', 'br', 'formula'] },
-                'graph', '|',
+                {
+                  insert: ['checklist', 'table', 'code', 'link', 'hr', 'br'],
+                },
                 'bold', 'italic', 'strikethrough',
                 { color: ['color', 'bg'] },
-                'ruby', '|',
-                'image', 'audio', 'video', 'pdf', 'word', '|',
-                'toc', 'detail', '|',
+                'image', '|',
                 'undo', 'redo', '|',
-                'switchModel', 'settings',
+                'switchModel',
               ],
-              toolbarRight: ['fullScreen', 'export'],
-              bubble: ['bold', 'italic', 'underline', 'strikethrough', 'sub', 'sup', 'ruby', '|', 'color', 'header', '|', 'list', 'todo'],
-              float: ['h1', 'h2', 'h3', '|', 'checklist', 'quote', 'quickTable', 'code', 'image'],
+              toolbarRight: ['fullScreen'],
+              bubble: ['bold', 'italic', 'underline', 'strikethrough', '|', 'color', 'header'],
+              float: ['h1', 'h2', 'h3', '|', 'checklist', 'quote', 'quickTable', 'code'],
             },
 
             engine: {
