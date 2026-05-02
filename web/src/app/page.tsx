@@ -28,12 +28,9 @@ function FeedLayout() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('polis_access_token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setCurrentUser({ username: payload.sub || payload.username, display_name: payload.display_name || payload.sub });
-      } catch {}
+    const stored = localStorage.getItem('polis_user');
+    if (stored) {
+      try { setCurrentUser(JSON.parse(stored)); } catch {}
     }
   }, []);
 

@@ -76,6 +76,7 @@ impl UserHandler {
         let access_token = auth::generate_access_token(
             user.id,
             &user.username,
+            &user.display_name,
             &self.config.jwt_secret,
             self.config.jwt_access_expiry,
         )
@@ -84,6 +85,7 @@ impl UserHandler {
         let refresh_token = auth::generate_refresh_token(
             user.id,
             &user.username,
+            &user.display_name,
             &self.config.jwt_secret,
             self.config.jwt_refresh_expiry,
         )
@@ -121,6 +123,7 @@ impl UserHandler {
         let access_token = auth::generate_access_token(
             user.id,
             &user.username,
+            &user.display_name,
             &self.config.jwt_secret,
             self.config.jwt_access_expiry,
         )
@@ -129,6 +132,7 @@ impl UserHandler {
         let refresh_token = auth::generate_refresh_token(
             user.id,
             &user.username,
+            &user.display_name,
             &self.config.jwt_secret,
             self.config.jwt_refresh_expiry,
         )
@@ -264,7 +268,7 @@ impl UserHandler {
     pub async fn generate_reset_token(&self, email: &str) -> Result<String, AppError> {
         let user = self.repo.find_by_email(email).await?
             .ok_or(AppError::NotFound("Email not found".to_string()))?;
-        let token = crate::auth::generate_access_token(user.id, &user.username, &self.config.jwt_secret, 3600)
+        let token = crate::auth::generate_access_token(user.id, &user.username, &user.display_name, &self.config.jwt_secret, 3600)
             .map_err(|e| AppError::Internal(format!("Token error: {}", e)))?;
         Ok(token)
     }

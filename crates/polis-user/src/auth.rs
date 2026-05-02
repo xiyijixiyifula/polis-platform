@@ -11,6 +11,7 @@ use uuid::Uuid;
 pub struct Claims {
     pub sub: String,        // 用户 ID
     pub username: String,   // 用户名
+    pub display_name: String, // 显示名称
     pub exp: usize,         // 过期时间
     pub iat: usize,         // 签发时间
     pub token_type: String, // "access" | "refresh"
@@ -37,6 +38,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, argon2::passw
 pub fn generate_access_token(
     user_id: Uuid,
     username: &str,
+    display_name: &str,
     secret: &str,
     expiry_seconds: i64,
 ) -> Result<String, jsonwebtoken::errors::Error> {
@@ -44,6 +46,7 @@ pub fn generate_access_token(
     let claims = Claims {
         sub: user_id.to_string(),
         username: username.to_string(),
+        display_name: display_name.to_string(),
         exp: now + expiry_seconds as usize,
         iat: now,
         token_type: "access".to_string(),
@@ -59,6 +62,7 @@ pub fn generate_access_token(
 pub fn generate_refresh_token(
     user_id: Uuid,
     username: &str,
+    display_name: &str,
     secret: &str,
     expiry_seconds: i64,
 ) -> Result<String, jsonwebtoken::errors::Error> {
@@ -66,6 +70,7 @@ pub fn generate_refresh_token(
     let claims = Claims {
         sub: user_id.to_string(),
         username: username.to_string(),
+        display_name: display_name.to_string(),
         exp: now + expiry_seconds as usize,
         iat: now,
         token_type: "refresh".to_string(),
