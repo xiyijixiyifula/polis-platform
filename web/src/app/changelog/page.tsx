@@ -4,11 +4,13 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.40', date: '2026-05-03', title: '维护轮次 — 11 页 + API + E2E 全通',
+      items: ['测试: 11 页面 200, API code=0, HTTPS 301, 性能 0.61s, 6 服务 active'],
+    },
+
+    {
       ver: '0.2.39', date: '2026-05-03', title: '维护轮次 — 23 页 + 5 API + E2E 全通，系统稳定',
-      items: [
-        '测试: 23 页面 200, 5 API code=0, E2E 注册→发帖全 0, HTTPS 301',
-        '性能: home 0.83s, api 0.64s, 6 服务 active, 3 小时内仅 1 个错误日志',
-      ],
+      items: ['测试: 23 页面 200, 5 API code=0, E2E 全 0, HTTPS 301', 'home 0.83s, api 0.64s, 6 服务 active'],
     },
 
     {
@@ -508,7 +510,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.39' && (
+              {v.ver === '0.2.40' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
