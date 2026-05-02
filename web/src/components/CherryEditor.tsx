@@ -185,7 +185,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
             },
 
             toolbars: {
-              theme: 'dark',
+              theme: 'light',
               showToolbar: true,
               toolbar: [
                 'header', 'list',

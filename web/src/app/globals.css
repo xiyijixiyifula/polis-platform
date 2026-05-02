@@ -442,7 +442,7 @@
 /* ===== Cherry Markdown Integration Styles ===== */
 
 .cherry-editor-wrapper { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
-.cherry-editor-wrapper:focus-within { border-color: rgb(167 139 250); box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1); }
+.cherry-editor-wrapper:focus-within { border-color: rgb(52 211 153); box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.1); }
 .cherry-markdown .cherry-toolbar { border-bottom: 1px solid rgb(229 231 235); }
 
 .dark .cherry-markdown .cherry-toolbar { background-color: rgb(31 41 55); border-color: rgb(55 65 81); }
