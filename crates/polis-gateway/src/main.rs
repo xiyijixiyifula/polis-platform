@@ -75,6 +75,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/share/{*path}", any(proxy_to_content))
         .route("/api/announcements/{*path}", any(proxy_to_content))
         .route("/api/upload", any(proxy_to_content))
+        .route("/api/import/markdown", any(proxy_to_content))
         .route("/api/feed", any(proxy_to_content))
         // 代理路由 - 管理后台服务
         .route("/api/admin/{*path}", any(proxy_to_admin))

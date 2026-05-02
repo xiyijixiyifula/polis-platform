@@ -190,93 +190,19 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
             toolbars: {
               theme: 'dark',
               showToolbar: true,
-
               toolbar: [
-                'header',
-                'list',
-                {
-                  insert: [
-                    'checklist',
-                    'table',
-                    'code',
-                    'link',
-                    'hr',
-                    'br',
-                    'formula',
-                  ],
-                },
-                'graph',
-                '|',
-                'bold',
-                'italic',
-                'strikethrough',
-                {
-                  color: ['color', 'bg'],
-                },
-                'ruby',
-                '|',
-                'image',
-                'audio',
-                'video',
-                'pdf',
-                'word',
-                '|',
-                'toc',
-                'detail',
-                '|',
-                'undo',
-                'redo',
-                '|',
+                'bold', 'italic', 'strikethrough', '|',
+                'header', '|',
+                'list', 'image', 'link', 'code', 'table', '|',
+                'undo', 'redo', '|',
                 'switchModel',
-                'settings',
               ],
-
-              toolbarRight: ['fullScreen', 'export'],
-
-              bubble: [
-                'bold',
-                'italic',
-                'underline',
-                'strikethrough',
-                'sub',
-                'sup',
-                'ruby',
-                '|',
-                'color',
-                'header',
-                '|',
-                'list',
-                'todo',
-              ],
-
-              float: [
-                'h1',
-                'h2',
-                'h3',
-                '|',
-                'checklist',
-                'quote',
-                'quickTable',
-                'code',
-                'image',
-              ],
-
-              shortcutKey: {
-                bold: { shortcutKey: 'Ctrl-B' },
-                italic: { shortcutKey: 'Ctrl-I' },
-                header: { shortcutKey: 'Ctrl-Shift-H' },
-                strikethrough: { shortcutKey: 'Ctrl-Shift-S' },
-                code: { shortcutKey: 'Ctrl-Shift-C' },
-                list: { shortcutKey: 'Ctrl-Shift-L' },
-                link: { shortcutKey: 'Ctrl-Shift-I' },
-                undo: { shortcutKey: 'Ctrl-Z' },
-                redo: { shortcutKey: 'Ctrl-Y' },
-                table: { shortcutKey: 'Ctrl-Alt-T' },
-                image: { shortcutKey: 'Ctrl-Shift-U' },
-              },
+              toolbarRight: ['fullScreen'],
+              bubble: ['bold', 'italic', 'underline', 'strikethrough', '|', 'color', 'header'],
+              float: ['h1', 'h2', 'h3', '|', 'quote', 'code', 'image'],
             },
 
-            // ── Engine ──────────────────────────────
+            // ── Engine ──────────────────────────────            // ── Engine ──────────────────────────────
             engine: {
               global: {
                 flowSessionContext: true,
@@ -327,6 +253,19 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
             fileUpload: handleFileUpload,
 
             // ── Extensions ──────────────────────────
+            // ── Theme Settings ──────────────────────
+            themeSettings: {
+              themeList: [
+                { className: 'default', label: '默认' },
+                { className: 'dark', label: '暗黑' },
+                { className: 'light', label: '明亮' },
+                { className: 'green', label: '护眼' },
+                { className: 'red', label: '热情' },
+                { className: 'violet', label: '紫罗兰' },
+                { className: 'blue', label: '海洋蓝' },
+              ],
+            } as any,
+
             externals: {},
 
             // ── Theme ───────────────────────────────

@@ -575,6 +575,87 @@ impl ContentHandler {
 
     // ===== File Sharing =====
 
+    pub async fn import_markdown(&self, user_id: Uuid, filename: &str, data: &[u8]) -> Result<String, AppError> {
+        use std::process::Command;
+        let tmp_dir = format!("/tmp/polis_import_{}", Uuid::new_v4());
+        let tmp_file = format!("{}/input", tmp_dir);
+        tokio::fs::create_dir_all(&tmp_dir).await.map_err(|e| AppError::External(format!("Failed to create tmp dir: {}", e)))?;
+        tokio::fs::write(&tmp_file, data).await.map_err(|e| AppError::External(format!("Failed to write tmp file: {}", e)))?;
+
+        if filename.ends_with(".zip") {
+            // Unzip first
+            let output = Command::new("unzip").arg("-o").arg(&tmp_file).arg("-d").arg(&tmp_dir).output()
+                .map_err(|e| AppError::External(format!("Failed to run unzip: {}", e)))?;
+            if !output.status.success() {
+                let err = String::from_utf8_lossy(&output.stderr);
+                return Err(AppError::External(format!("Unzip failed: {}", err)));
+            }
+            // Find README.md (case-insensitive)
+            let find_output = Command::new("find").arg(&tmp_dir).arg("-iname").arg("readme.md").output()
+                .map_err(|e| AppError::External(format!("Failed to find README: {}", e)))?;
+            let readme_path = String::from_utf8_lossy(&find_output.stdout).trim().to_string();
+            if readme_path.is_empty() {
+                return Err(AppError::NotFound("No README.md found in zip".to_string()));
+            }
+            let content = tokio::fs::read_to_string(&readme_path).await
+                .map_err(|e| AppError::External(format!("Failed to read README: {}", e)))?;
+            // Find and upload referenced images
+            let base_dir = std::path::Path::new(&readme_path).parent().unwrap_or(std::path::Path::new(&tmp_dir));
+            let mut processed = content.clone();
+            // Match ![alt](path) and <img src="path">
+            // Simple string-based image reference replacement
+            let mut remaining = content.as_str();
+            let mut processed = String::new();
+            while let Some(pos) = remaining.find("![") {
+                processed.push_str(&remaining[..pos]);
+                remaining = &remaining[pos..];
+                if let Some(cp) = remaining.find(')') {
+                    let seg = &remaining[..=cp];
+                    if let Some(op) = seg.find('(') {
+                        let alt = &seg[2..op];
+                        let path = &seg[op+1..seg.len()-1];
+                        if path.starts_with("http") {
+                            processed.push_str(seg);
+                        } else {
+                            let absp = base_dir.join(path);
+                            if absp.exists() {
+                                if let Ok(img_data) = tokio::fs::read(&absp).await {
+                                    let ext = absp.extension().and_then(|e| e.to_str()).unwrap_or("png");
+                                    let mime = match ext { "jpg"|"jpeg" => "image/jpeg", "png" => "image/png", "gif" => "image/gif", "svg" => "image/svg+xml", "webp" => "image/webp", _ => "application/octet-stream" };
+                                    let fname = absp.file_name().and_then(|n| n.to_str()).unwrap_or("img.png");
+                                    if let Ok(result) = self.upload_file_generic(user_id, fname, &img_data, mime).await {
+                                        if let Some(url) = result.get("url").and_then(|u| u.as_str()) {
+                                            processed.push_str(&format!("![{}]({})", alt, url));
+                                            remaining = &remaining[seg.len()..];
+                                            continue;
+                                        }
+                                    }
+                                }
+                            }
+                            processed.push_str(seg);
+                        }
+                        remaining = &remaining[seg.len()..];
+                    } else {
+                        processed.push_str(&remaining[..=cp]);
+                        remaining = &remaining[cp+1..];
+                    }
+                } else {
+                    processed.push_str(remaining);
+                    break;
+                }
+            }
+            processed.push_str(remaining);
+            let _ = tokio::fs::remove_dir_all(&tmp_dir).await;
+            Ok(processed)
+        } else {
+            // Direct .md file
+            let content = String::from_utf8(data.to_vec())
+                .map_err(|_| AppError::Validation("Invalid UTF-8 in markdown file".to_string()))?;
+            let _ = tokio::fs::remove_dir_all(&tmp_dir).await;
+            Ok(content)
+        }
+    }
+
     pub async fn upload_file_generic(&self, user_id: Uuid, filename: &str, data: &[u8], mime_type: &str) -> Result<serde_json::Value, AppError> {
         let file_id = Uuid::new_v4();
         let storage_dir = "/root/polis/uploads/general";

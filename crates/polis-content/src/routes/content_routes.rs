@@ -144,6 +144,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/subscribe/space/{*ns}", get(get_subscription_route))
         .route("/api/files/share", post(create_file_share_route))
         .route("/api/upload", post(upload_file_route))
+        .route("/api/import/markdown", post(import_markdown_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
     let share_routes = Router::new()
@@ -739,6 +740,16 @@ async fn unsubscribe_route(
     let space_id = resolve_space_id(&h.pool, &p.ns).await?;
     h.cancel_subscription(space_id, uid).await?;
     Ok(json_ok(ApiResponse::success(())))
+}
+
+async fn import_markdown_route(
+    State(h): State<Arc<ContentHandler>>,
+    Extension(uid): Extension<Uuid>,
+    Json(r): Json<UploadFileRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let data = base64_decode(&r.data_base64)?;
+    let content = h.import_markdown(uid, &r.filename, &data).await?;
+    Ok(Json(serde_json::json!({"code": 0, "data": {"content": content}})))
 }
 
 async fn upload_file_route(

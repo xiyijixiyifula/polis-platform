@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CherryEditor } from '@/components/CherryEditor';
 import {
@@ -9,6 +9,8 @@ import {
   LogIn,
   BookOpen,
   RotateCcw,
+  Paperclip,
+  Upload,
   Maximize2,
   Minimize2,
   Save,
@@ -38,6 +40,9 @@ function NewPostForm() {
   const [showDraftRestore, setShowDraftRestore] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
   const [hasDraft, setHasDraft] = useState(false);
+  const [importingMd, setImportingMd] = useState(false);
+  const mdFileInputRef = useRef<HTMLInputElement>(null);
+  const attachFileInputRef = useRef<HTMLInputElement>(null);
 
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [selectedSeriesId, setSelectedSeriesId] = useState('');
@@ -112,6 +117,58 @@ function NewPostForm() {
     localStorage.removeItem(`${AUTOSAVE_KEY(space)}_time`);
     setShowDraftRestore(false);
     setHasDraft(false);
+  };
+
+  const handleImportMd = async (file: File) => {
+    setImportingMd(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = (e.target?.result as string)?.split(',')[1];
+        if (!base64) { setImportingMd(false); return; }
+        const token = localStorage.getItem('polis_access_token');
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        const res = await fetch('/api/import/markdown', {
+          method: 'POST', headers,
+          body: JSON.stringify({ filename: file.name, data_base64: base64, mime_type: file.type || 'application/octet-stream' }),
+        });
+        const data = await res.json();
+        if (data.code === 0 && data.data?.content) {
+          setBody(data.data.content);
+        } else {
+          alert('导入失败：' + (data.message || '未知错误'));
+        }
+        setImportingMd(false);
+      };
+      reader.readAsDataURL(file);
+    } catch { setImportingMd(false); }
+  };
+
+  const handleAttachmentUpload2 = async (file: File) => {
+    if (file.size > 8 * 1024 * 1024) { alert('文件大小不能超过 8MB'); return; }
+    try {
+      const token = localStorage.getItem('polis_access_token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = (e.target?.result as string)?.split(',')[1];
+        if (!base64) return;
+        const res = await fetch('/api/upload', {
+          method: 'POST', headers,
+          body: JSON.stringify({ filename: file.name, data_base64: base64, mime_type: file.type || 'application/octet-stream' }),
+        });
+        const data = await res.json();
+        if (data.code === 0 && data.data?.id) {
+          const url = data.data.url || '/api/files/' + data.data.id;
+          // Insert as markdown link at cursor position - use a prompt
+          const linkText = '[' + file.name + '](' + url + ')';
+          setBody(prev => prev + "\n" + linkText);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {}
   };
 
   const handleAutoSave = useCallback((markdown: string) => {
@@ -426,15 +483,29 @@ function NewPostForm() {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              支持 Markdown：标题、粗体、斜体、代码、表格、公式、图表等
+            <input ref={attachFileInputRef} type="file" className="hidden" onChange={e => {
+              const f = e.target.files?.[0]; if (f) { handleAttachmentUpload2(f); } e.target.value = '';
+            }} />
+            <button type="button" onClick={() => attachFileInputRef.current?.click()}
+              className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
+              <Paperclip className="h-3.5 w-3.5" />
+              附件
+            </button>
+            <input ref={mdFileInputRef} type="file" accept=".md,.zip" className="hidden" onChange={e => {
+              const f = e.target.files?.[0]; if (f) { handleImportMd(f); } e.target.value = '';
+            }} />
+            <button type="button" onClick={() => mdFileInputRef.current?.click()} disabled={importingMd}
+              className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
+              <Upload className="h-3.5 w-3.5" />
+              {importingMd ? '导入中...' : '导入 MD'}
+            </button>
+            <p className="text-xs text-gray-400 dark:text-gray-500 hidden sm:block">
+              支持 Markdown：标题、粗体、斜体、代码、表格
             </p>
             {hasDraft && (
               <span className="hidden sm:inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
                 <Save className="h-3 w-3" />
-                {lastSavedTime
-                  ? `已保存于 ${lastSavedTime}`
-                  : '已自动保存'}
+                {lastSavedTime ? `已保存 ${lastSavedTime}` : '已自动保存'}
               </span>
             )}
           </div>
