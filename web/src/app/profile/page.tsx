@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
 import { SpaceCard } from '@/components/SpaceCard';
-import { Settings, Calendar, Users, UserCheck } from 'lucide-react';
+import { Settings, Calendar, Users, UserCheck, Heart, Bookmark, MessageCircle, Repeat2, Eye } from 'lucide-react';
 import { users, posts, follow, type User, type FollowUser } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 
@@ -17,6 +17,68 @@ interface StoredUser {
   bio: string;
   verified: boolean;
   created_at: string;
+}
+
+// Feed 风格卡片（用于收藏/点赞）
+function FeedItem({ item }: { item: any }) {
+  const author = item.author || {};
+  const space = item.space || {};
+  const authorUsername = author.username || '';
+  const authorDisplayName = author.display_name || authorUsername || '用户';
+  const spaceNs = space.namespace || '';
+  const spaceName = space.title || spaceNs;
+
+  const getItemLink = () => {
+    const base = '/post/' + item.id;
+    if (spaceNs) return base + '?space=' + encodeURIComponent(spaceNs);
+    return base;
+  };
+
+  const likeCount = item.like_count || 0;
+  const commentCount = item.comment_count || 0;
+  const viewCount = item.view_count || 0;
+
+  return (
+    <Link href={getItemLink()} className="block px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
+      {/* Line 1: @author/community/module / title */}
+      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-1 flex-wrap">
+        <Link href={'/profile/' + authorUsername} className="font-semibold text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[130px]">
+          @{authorUsername}
+        </Link>
+        <span className="text-gray-300 dark:text-gray-600">/</span>
+        <Link href={spaceNs ? '/space/' + spaceNs : '#'} className="text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[140px]">
+          {spaceName}
+        </Link>
+        <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
+        <span className="text-gray-900 dark:text-white font-semibold truncate">
+          {item.title || '无标题'}
+        </span>
+      </div>
+
+      {/* Line 2: Preview */}
+      {item.preview && (
+        <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 pl-5">
+          {item.preview}
+        </p>
+      )}
+
+      {/* Line 3: Social stats */}
+      <div className="flex items-center gap-5 pl-5 mt-1 text-xs text-gray-400">
+        <span className="flex items-center gap-1">
+          <Heart className="h-3.5 w-3.5" />
+          <span>{likeCount}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <MessageCircle className="h-3.5 w-3.5" />
+          <span>{commentCount}</span>
+        </span>
+        <span className="flex items-center gap-1 ml-auto">
+          <Eye className="h-3.5 w-3.5" />
+          <span>{viewCount}</span>
+        </span>
+      </div>
+    </Link>
+  );
 }
 
 function FollowList({ users: list, loading, emptyText }: {
@@ -48,17 +110,19 @@ export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<StoredUser | null>(null);
   const [profile, setProfile] = useState<User | null>(null);
-  const [userPosts, setUserPosts] = useState<any[]>([]);
   const [userSpaces, setUserSpaces] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('posts');
+  const [activeTab, setActiveTab] = useState('spaces');
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [followers, setFollowers] = useState<FollowUser[]>([]);
   const [followingList, setFollowingList] = useState<FollowUser[]>([]);
   const [listLoading, setListLoading] = useState(false);
-  const [userArticles, setUserArticles] = useState<any[]>([]);
-  const [articlesLoading, setArticlesLoading] = useState(false);
+  // 收藏 & 点赞
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [likedPosts, setLikedPosts] = useState<any[]>([]);
+  const [bookmarksLoading, setBookmarksLoading] = useState(false);
+  const [likedLoading, setLikedLoading] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('polis_user');
@@ -75,6 +139,11 @@ export default function ProfilePage() {
     }
   }, [router]);
 
+  const getAuthHeaders = useCallback(() => ({
+    Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || ''),
+    'Content-Type': 'application/json',
+  }), []);
+
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -87,31 +156,15 @@ export default function ProfilePage() {
 
       try {
         const spacesRes = await fetch('/api/users/' + user.username + '/spaces', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` },
+          headers: getAuthHeaders(),
         });
         const spacesData = await spacesRes.json();
         if (spacesData.code === 0 && spacesData.data) {
           const allSpaces: any[] = spacesData.data;
-          // 只显示自己拥有的社区（namespace 以 username/ 开头）
           const ownedSpaces = allSpaces.filter((s: any) =>
             s.namespace?.startsWith(user.username + '/')
           );
           setUserSpaces(ownedSpaces);
-
-          // Fetch recent posts from user's spaces for the posts tab
-          const allPosts: any[] = [];
-          for (const sp of allSpaces.slice(0, 3)) {
-            try {
-              const ns = sp.namespace || sp.slug || sp.id;
-              const postRes = await posts.list(ns, { page_size: 5 });
-              if (postRes.data) {
-                for (const p of postRes.data) {
-                  allPosts.push({ ...p, space_ns: ns, space_name: sp.title });
-                }
-              }
-            } catch {}
-          }
-          setUserPosts(allPosts);
         }
       } catch {}
 
@@ -127,40 +180,35 @@ export default function ProfilePage() {
 
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, getAuthHeaders]);
 
-  // Fetch user's own articles across all spaces
+  // 加载收藏
   useEffect(() => {
     if (!user) return;
-    setArticlesLoading(true);
+    setBookmarksLoading(true);
     (async () => {
-      const articles: any[] = [];
       try {
-        const spacesRes = await fetch('/api/users/' + user.username + '/spaces', {
-          headers: { Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
-        });
-        const spacesData = await spacesRes.json();
-        if (spacesData.code === 0 && spacesData.data) {
-          for (const sp of spacesData.data.slice(0, 10)) {
-            try {
-              const ns = sp.namespace || sp.slug || sp.id;
-              const postRes = await posts.list(ns, { page_size: 20 });
-              if (postRes.data) {
-                for (const p of postRes.data) {
-                  const authorId = p.author_id || p.author?.id || '';
-                  if (authorId === user.id) {
-                    articles.push({ ...p, space_ns: ns, space_name: sp.title || ns });
-                  }
-                }
-              }
-            } catch {}
-          }
-        }
+        const res = await fetch('/api/bookmarks', { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (data.code === 0 && data.data) setBookmarks(data.data);
       } catch {}
-      setUserArticles(articles);
-      setArticlesLoading(false);
+      setBookmarksLoading(false);
     })();
-  }, [user]);
+  }, [user, getAuthHeaders]);
+
+  // 加载点赞
+  useEffect(() => {
+    if (!user) return;
+    setLikedLoading(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/liked-posts', { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (data.code === 0 && data.data) setLikedPosts(data.data);
+      } catch {}
+      setLikedLoading(false);
+    })();
+  }, [user, getAuthHeaders]);
 
   const loadFollowers = async () => {
     if (!user) return;
@@ -232,69 +280,53 @@ export default function ProfilePage() {
       </div>
 
       <div className="mt-6 mb-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex gap-0">
-          {['articles', 'posts', 'spaces', 'followers', 'following'].map((tab) => (
-            <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'followers') loadFollowers(); if (tab === 'following') loadFollowing(); if (tab === 'articles') setActiveTab('articles'); }}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+        <div className="flex gap-0 overflow-x-auto">
+          {['spaces', 'bookmarks', 'likes', 'followers', 'following'].map((tab) => (
+            <button key={tab} onClick={() => {
+              setActiveTab(tab);
+              if (tab === 'followers') loadFollowers();
+              if (tab === 'following') loadFollowing();
+            }}
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
               }`}>
-              {{articles: `文章 (${userArticles.length})`, posts:'帖子', spaces: `社区 (${userSpaces.length})`, followers: `粉丝 (${followerCount})`, following: `关注 (${followingCount})`}[tab]}
+              {{spaces: `社区 (${userSpaces.length})`, bookmarks: `收藏 (${bookmarks.length})`, likes: `点赞 (${likedPosts.length})`, followers: `粉丝 (${followerCount})`, following: `关注 (${followingCount})`}[tab]}
             </button>
           ))}
         </div>
       </div>
 
-      
-      {activeTab === 'articles' && (
-        articlesLoading ? (
-          <div className="space-y-3">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="card animate-pulse">
-                <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-                <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : userArticles.length > 0 ? (
-          <div className="space-y-3">
-            {userArticles.map((p: any) => (
-              <PostCard key={p.id} post={p} />
+
+      {activeTab === 'bookmarks' && (
+        bookmarksLoading ? (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+        ) : bookmarks.length > 0 ? (
+          <div className="card divide-y divide-gray-100 dark:divide-gray-800">
+            {bookmarks.map((item: any) => (
+              <FeedItem key={item.id} item={item} />
             ))}
           </div>
         ) : (
           <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
-            <div className="text-3xl mb-2">📄</div>
-            <p className="text-sm">还没有发布过文章</p>
-            <Link href="/explore" className="mt-2 inline-block text-sm text-primary-600 hover:underline">
-              去探索社区发文 →
-            </Link>
+            <Bookmark className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">还没有收藏过帖子</p>
           </div>
         )
       )}
 
-      {activeTab === 'posts' && (
-        loading ? (
-          <div className="space-y-3">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="card animate-pulse">
-                <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
-                <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded" />
-              </div>
-            ))}
-          </div>
-        ) : userPosts.length > 0 ? (
-          <div className="space-y-3">
-            {userPosts.map((p: any) => (
-              <PostCard key={p.id} post={p} />
+      {activeTab === 'likes' && (
+        likedLoading ? (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+        ) : likedPosts.length > 0 ? (
+          <div className="card divide-y divide-gray-100 dark:divide-gray-800">
+            {likedPosts.map((item: any) => (
+              <FeedItem key={item.id} item={item} />
             ))}
           </div>
         ) : (
           <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
-            <div className="text-3xl mb-2">📝</div>
-            <p className="text-sm">还没有发布过帖子</p>
-            <Link href="/explore" className="mt-2 inline-block text-sm text-primary-600 hover:underline">
-              去探索社区发帖 →
-            </Link>
+            <Heart className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">还没有点赞过帖子</p>
           </div>
         )
       )}
