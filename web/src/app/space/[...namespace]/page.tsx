@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
@@ -21,10 +21,10 @@ interface Announcement {
 
 export default function SpacePage() {
   const params = useParams();
-  const rawNs = params.namespace;
-  let namespace = Array.isArray(rawNs)
-    ? (rawNs as string[]).map(s => decodeURIComponent(s)).join('/')
-    : decodeURIComponent(rawNs as string);
+  const pathname = usePathname();
+  // Use pathname for reliable decoding: /space/112233/新的世界 -> "112233/新的世界"
+  const pathNs = pathname.replace(/^\/space\//, '');
+  let namespace = decodeURIComponent(pathNs);
 
   // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
   const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
