@@ -4,47 +4,66 @@ export const metadata: Metadata = { title: 'AI 研究报告 - Polis' };
 
 const roadmap = [
   {
-    ver: 'v0.3.0', date: '2026-05', title: '社交与互动',
+    ver: 'H+0', icon: '🏠', title: '健康检查 + 基础维护',
     items: [
-      '🔔 通知系统 (WebSocket + NATS)',
-      '👥 用户关注/粉丝系统✅',
-      '💬 WebSocket 实时聊天',
-      '📨 私信系统',
-      '⭐ 帖子收藏/推荐系统✅',
-      '📊 社区统计分析',
+      '🔥 冒烟测试: 首页/Changelog/API 端点 200 验证',
+      '🔧 6 服务 systemctl is-active 检查',
+      '📊 全量测试: 17 页面 200 + API 端点 + E2E',
+      '📝 版本递增: update changelog + README + 定时任务.md',
+      '🚀 部署: git push → server pull → build → restart → verify',
     ],
   },
   {
-    ver: 'v0.4.0', date: '2026-06', title: '内容生态扩展',
+    ver: 'H+1', icon: '🔬', title: '社区调研 + 功能规划',
     items: [
-      '🎬 视频上传与转码 (FFmpeg)',
-      '📌 帖子置顶与精华',
-      '🚩 内容举报与审核系统',
-      '🌐 国际化 (i18n)',
-      '🔍 全文搜索 (Meilisearch/PostgreSQL GIN)',
-      '📁 文件分享系统 (百度网盘风格)',
+      '📈 GitHub Trending (type=rust, community 项目)',
+      '🦀 Rust 官方动态 (blog.rust-lang.org)',
+      '⚛️ Next.js 发布检查 (github.com/vercel/next.js/releases)',
+      '🔍 ActivityPub/federation/social Rust 项目搜索',
+      '🎯 对标产品更新: Discord, Notion, 知识星球, 知乎, 小红书',
+      '📋 输出: 最有价值功能 + 实现评估 (1小时内能否完成)',
     ],
   },
   {
-    ver: 'v0.5.0', date: '2026-06', title: '高级功能',
+    ver: 'H+2', icon: '💡', title: '小功能开发 (30-50 分钟)',
     items: [
-      '💻 Git 代码仓库托管 (基于 Git)',
-      '🧩 WASM 插件引擎',
-      '💎 支付与打赏系统',
-      '📦 数据导入/导出 (Markdown/JSON)',
-      '🔑 OAuth 第三方登录',
-      '🤖 AI 助手集成 (内容推荐、自动审核)',
+      '🎨 前端集成: 后端已就绪的前端组件',
+      '🖥️ CLI 功能增强: 新增命令/参数',
+      '🧩 单路由/单组件: 一个 API + 一个页面',
+      '🔗 链接/导航优化: 已有功能的交互改进',
+      '⚠️ Bug 修复: 单文件修改的快速修复',
     ],
   },
   {
-    ver: 'v0.6.0', date: '2026-07', title: '运维与生态',
+    ver: 'H+3~H+4', icon: '🏗️', title: '中等功能 (2 小时分拆)',
     items: [
-      '🛠️ 管理后台 ✅ (用户/社区/内容管理已上线)',
-      '📈 Prometheus + Grafana 监控',
-      '🔄 自动化 CI/CD 流水线 ✅ (auto-dev.sh + cron)',
-      '📄 API 文档 (OpenAPI/Swagger)',
-      '🧪 端到端测试套件 ✅ (10项自动化测试)',
-      '📋 系统健康检查与自动恢复 ✅ (每2小时检查+自动重启)',
+      'H+3: 后端实现 — 数据库迁移 + Rust API + 构建验证',
+      'H+4: 前端集成 — 页面/组件 + API 对接 + 部署',
+      '📋 示例: 新 Tab 页面、新交互组件、数据导入导出',
+    ],
+  },
+  {
+    ver: 'H+5~H+8', icon: '🚀', title: '大型功能 (4-8 小时分拆)',
+    items: [
+      '💬 WebSocket 实时聊天 (H+5: 后端, H+6: 前端, H+7: 测试, H+8: 部署)',
+      '🔑 OAuth 第三方登录 (H+5: GitHub OAuth, H+6: 前端集成)',
+      '📈 社区统计分析 (H+5: API + 数据, H+6: 图表展示)',
+      '🎬 视频上传 (H+5: 存储 + API, H+6: 前端 + 转码, H+7: 播放器)',
+    ],
+  },
+  {
+    ver: '长期', icon: '🎯', title: '持续迭代方向',
+    items: [
+      '🛠️ 管理后台增强 ✅ (用户/社区/内容管理已上线)',
+      '🧪 端到端测试套件 ✅ (17 页面 + 8 API)',
+      '📋 系统健康检查 ✅ (每小时自动执行)',
+      '📁 文件分享系统 ✅ (上传/分享/密码/过期)',
+      '💰 付费社区 ✅ (会员等级 + 订阅 + 前端面板)',
+      '📖 专栏/内容系列 ✅ (系列创建/收录/展示)',
+      '💻 Git 代码仓库 (规划中)',
+      '🧩 WASM 插件引擎 (规划中)',
+      '💎 支付/打赏 (规划中)',
+      '🌐 国际化 i18n (规划中)',
     ],
   },
 ];
@@ -75,9 +94,9 @@ export default function ResearchPage() {
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">AI 研究报告</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">🤖 AI 研究院</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {reportTime ? `更新时间: ${reportTime}` : '每小时自动更新'}
+            {reportTime ? `更新时间: ${reportTime}` : '每小时自动研究 + 规划 + 开发'}
             {currentVer ? ` | ${currentVer}` : ''}
           </p>
         </div>
@@ -86,19 +105,20 @@ export default function ResearchPage() {
         </a>
       </div>
 
-      {/* Product Roadmap */}
+      {/* 每小时计划 — 按小时划分 */}
       <div className="mb-10">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-          <span className="text-2xl">🚀</span> 产品路线图
+          <span className="text-2xl">⏰</span> 每小时任务计划 <span className="text-sm font-normal text-gray-400 dark:text-gray-500">(AI 每小时循环执行一次)</span>
         </h2>
         <div className="space-y-4">
           {roadmap.map((v) => (
-            <div key={v.ver} className="relative pl-8 border-l-2 border-amber-200 dark:border-amber-800">
-              <div className="absolute -left-2.5 top-0 h-5 w-5 rounded-full bg-amber-500 border-2 border-white dark:border-gray-900" />
+            <div key={v.ver} className={`relative pl-8 border-l-2 ${v.ver === 'H+0' ? 'border-green-400 dark:border-green-600' : 'border-amber-200 dark:border-amber-800'}`}>
+              <div className={`absolute -left-2.5 top-0 h-5 w-5 rounded-full border-2 border-white dark:border-gray-900 ${v.ver === 'H+0' ? 'bg-green-500' : 'bg-amber-500'}`} />
               <div className="mb-2 flex items-center gap-3">
-                <span className="text-base font-bold text-gray-900 dark:text-white">{v.ver}</span>
-                <span className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">{v.date}</span>
-                <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-500 dark:text-gray-400">规划中</span>
+                <span className="text-base font-bold text-gray-900 dark:text-white">{v.icon} {v.ver}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${v.ver === 'H+0' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+                  {v.ver === 'H+0' ? '每小时执行' : v.ver.startsWith('H+') ? '按需执行' : '持续迭代'}
+                </span>
               </div>
               <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{v.title}</h3>
               <div className="grid grid-cols-2 gap-1.5">
