@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.45', date: '2026-05-03', title: '维护轮次 — 全量 48 项测试 100% 通过',
+      items: [
+        '测试: 17 页面 200, 9 API 端点正常, 6 服务 active, E2E 5/5',
+        '安全: HTTPS 200, CORS *, HSTS preload, XSS headers 全量正确',
+        '性能: Home 1.6s, Changelog 1.7s, Feed API 1.8s, Space 0.97s',
+        'API: PUT/DELETE /api/posts/{id} 认证返回 401 正确',
+      ],
+    },
+
+    {
       ver: '0.2.44', date: '2026-05-03', title: '维护轮次 + API 增强 — PUT/DELETE 帖子端点',
       items: [
         '测试: 11 页面 200, Feed API 20 items, 6 服务 active',
@@ -540,7 +550,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.44' && (
+              {v.ver === '0.2.45' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
