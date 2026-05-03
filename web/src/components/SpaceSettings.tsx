@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   Settings, X, MessageCircle, BarChart3, Megaphone,
   UserCheck, Video, Code, HelpCircle, MessageSquare,
-  ShoppingBag, GraduationCap, BookOpen, Crown,
+  ShoppingBag, GraduationCap, BookOpen, Crown, Library,
 } from 'lucide-react';
 
 export interface SpaceModules {
@@ -21,6 +21,7 @@ export interface SpaceModules {
   course: boolean;         // 课程
   members: boolean;        // 成员
   membership: boolean;     // 付费会员
+  wiki: boolean;            // 知识库 - 协作文档
 }
 
 const defaultModules: SpaceModules = {
@@ -37,6 +38,7 @@ const defaultModules: SpaceModules = {
   course: false,
   members: false,
   membership: false,
+  wiki: false,
 };
 
 function getModulesKey(namespace: string) {
@@ -55,6 +57,7 @@ export function loadModules(namespace: string): SpaceModules {
       const parsed = JSON.parse(saved);
       // Ensure share has a default value if missing in old data
       if (parsed.share === undefined) parsed.share = false;
+      if (parsed.wiki === undefined) parsed.wiki = false;
       return { ...defaultModules, ...parsed, posts: true };
     }
   } catch {}
@@ -85,6 +88,7 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
   const availableModules: ModuleDef[] = [
     { key: 'posts', label: '交流', icon: MessageCircle, locked: true, comingSoon: false, desc: '社区交流与讨论板块，所有成员可发帖互动' },
     { key: 'share', label: '分享', icon: MessageSquare, locked: false, comingSoon: false, desc: '个人内容分享空间，仅社区创建者可发布' },
+    { key: 'wiki', label: '知识库', icon: Library, locked: false, comingSoon: false, desc: '协作文档，所有成员可编辑知识库页面' },
     { key: 'series', label: '系列', icon: BookOpen, locked: false, comingSoon: false, desc: '内容系列/专栏，组织帖子合集' },
     { key: 'membership', label: '会员', icon: Crown, locked: false, comingSoon: false, desc: '付费会员等级与订阅管理' },
     { key: 'video', label: '视频', icon: Video, locked: false, comingSoon: true, desc: '视频内容发布与播放' },

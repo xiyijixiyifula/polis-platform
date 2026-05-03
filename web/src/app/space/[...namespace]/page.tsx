@@ -7,7 +7,7 @@ import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library } from 'lucide-react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
@@ -59,6 +59,7 @@ export default function SpacePage() {
     { id: 'overview', label: '概览', icon: Layout, enabled: true },
     { id: 'posts', label: '交流', icon: MessageCircle, enabled: modules.posts },
     { id: 'share', label: '分享', icon: Share2, enabled: modules.share },
+    { id: 'wiki', label: '知识库', icon: Library, enabled: modules.wiki },
     { id: 'series', label: '系列', icon: BookOpen, enabled: modules.series },
     { id: 'membership', label: '会员', icon: Crown, enabled: modules.membership },
     { id: 'video', label: '视频', icon: Video, enabled: modules.video },
@@ -455,8 +456,8 @@ export default function SpacePage() {
                 ) : posts.length > 0 ? (
                   <div className="space-y-1">
                     {posts.slice(0, 20).map((post) => {
-                      const moduleIcon = post.module_type === 'share' ? '🔖' : '📄';
-                      const moduleLabel = post.module_type === 'share' ? '分享' : '交流';
+                      const moduleIcon = post.module_type === 'share' ? '🔖' : post.module_type === 'wiki' ? '📚' : '📄';
+                      const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : '交流';
                       const author = (post.author || {}) as any;
                       const authorUsername = author.username || '';
                       const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
@@ -799,6 +800,55 @@ export default function SpacePage() {
                   )}
                 </div>
               </div>
+            </>
+          )}
+
+          {/* === Wiki Tab（知识库 — 所有成员可编辑）=== */}
+          {activeTab === 'wiki' && (
+            <>
+              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=wiki`}
+                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
+                  <Library className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">编写知识库页面</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法，所有成员可编辑</p>
+                </div>
+                <div className="btn-primary text-xs px-4 py-1.5 gap-1">
+                  <Plus className="h-3.5 w-3.5" /> 创建
+                </div>
+              </Link>
+
+              {postLoading ? (
+                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+              ) : posts.filter(p => p.module_type === 'wiki').length > 0 ? (
+                <div className="space-y-3">
+                  {posts.filter(p => p.module_type === 'wiki').map((post) => (
+                    <PostCard key={post.id} post={{
+                      id: post.id,
+                      title: post.title,
+                      body: post.body,
+                      author: post.author,
+                      space_id: post.space_id,
+                      space_ns: namespace,
+                      space_name: space.title,
+                      like_count: post.like_count,
+                      comment_count: post.comment_count,
+                      view_count: post.view_count,
+                      created_at: post.created_at,
+                      tags: post.tags,
+                      is_pinned: post.is_pinned,
+                    }} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                  <Library className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>暂无知识库页面</p>
+                  <p className="text-sm mt-1">创建第一篇知识库文档吧！</p>
+                </div>
+              )}
             </>
           )}
 
