@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.64', date: '2026-05-04', title: '成员模块上线 — 空间成员列表 + 后端API修复',
+      items: [
+        '👥 新模块: 成员列表 - 空间页"成员"Tab 展示真实成员数据 (头像/用户名/角色/加入时间)',
+        '🔧 后端: 修复 /api/spaces/{ns}/members 从空数据 ↔ 真正查询 memberships JOIN users 表',
+        '📊 新增 get_members_with_users() 方法 (按角色排序: owner → moderator → member)',
+        '🎨 前端: 角色徽章 (创建者/管理员/成员) + 可点击跳转用户主页 + 验证标识',
+        '✅ 50/50 全量测试通过，构建成功，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.63', date: '2026-05-04', title: '新模块: 问答(QA) — 社区提问与回答系统',
       items: [
         '❓ 新模块: 问答(QA) - 空间内提问与回答，复用 ModuleType::Qa 后端 (无需后端改动)',
@@ -732,7 +742,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.63' && (
+              {v.ver === '0.2.64' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

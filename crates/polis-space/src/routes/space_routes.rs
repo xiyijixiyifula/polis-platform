@@ -94,7 +94,10 @@ async fn handle_public_path(
         .unwrap_or(remaining);
 
     if remaining.ends_with("/members") {
-        return Ok(Json(serde_json::json!({"code": 0, "data": []})));
+        let decoded_ns = decode_namespace(ns)?;
+        let space = handler.get_space(&decoded_ns).await?;
+        let members = handler.repo.get_members_with_users(space.id).await.unwrap_or_default();
+        return Ok(Json(serde_json::json!({"code": 0, "data": members})));
     }
 
     // URL 解码命名空间（支持中文等非 ASCII 字符）

@@ -237,7 +237,15 @@ export const spaces = {
     request<void>(`/spaces/${namespace}/leave`, { method: 'POST' }),
 
   trending: () => request<Space[]>('/spaces/trending'),
+
+  members: (namespace: string) => request<SpaceMember[]>('/spaces/' + namespace + '/members'),
 };
+
+export interface SpaceMember {
+  user: User;
+  role: string;
+  joined_at: string;
+}
 
 export interface Comment {
   id: string;

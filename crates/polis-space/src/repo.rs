@@ -207,6 +207,59 @@ impl SpaceRepo {
         Ok(members)
     }
 
+    /// 获取社区所有成员（含用户信息）
+    pub async fn get_members_with_users(&self, space_id: Uuid) -> Result<Vec<polis_core::models::MemberInfo>, AppError> {
+        use polis_core::models::{MemberInfo, UserPublic};
+        use sqlx::Row;
+
+        let rows = sqlx::query(
+            r#"
+            SELECT
+                u.id,
+                u.username,
+                u.display_name,
+                u.avatar_url,
+                u.bio,
+                u.verified,
+                u.created_at,
+                m.role,
+                m.joined_at
+            FROM memberships m
+            JOIN users u ON u.id = m.user_id
+            WHERE m.space_id = $1 AND m.role != 'banned'
+            ORDER BY
+                CASE m.role
+                    WHEN 'owner' THEN 0
+                    WHEN 'moderator' THEN 1
+                    ELSE 2
+                END,
+                m.joined_at ASC
+            "#,
+        )
+        .bind(space_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let members: Vec<MemberInfo> = rows.iter().map(|r| {
+            let role_str: String = r.get("role");
+            MemberInfo {
+                user: UserPublic {
+                    id: r.get("id"),
+                    username: r.get("username"),
+                    display_name: r.get("display_name"),
+                    avatar_url: r.get("avatar_url"),
+                    bio: r.get("bio"),
+                    verified: r.get("verified"),
+                    created_at: r.get("created_at"),
+                },
+                role: serde_json::from_value(serde_json::Value::String(role_str)).unwrap_or_default(),
+                joined_at: r.get("joined_at"),
+            }
+        }).collect();
+
+        Ok(members)
+    }
+
     /// 获取用户在社区的角色
     pub async fn get_member_role(
         &self,

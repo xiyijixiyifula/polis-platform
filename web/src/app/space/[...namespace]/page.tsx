@@ -104,6 +104,26 @@ export default function SpacePage() {
   const [tiersLoading, setTiersLoading] = useState(false);
   const [subscribing, setSubscribing] = useState<string | null>(null);
 
+  // Members state
+  const [members, setMembers] = useState<Array<{ user: { id: string; username: string; display_name: string; avatar_url: string | null; verified: boolean }; role: string; joined_at: string }>>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+
+  // Fetch members when tab changes to 'members'
+  useEffect(() => {
+    if (activeTab === 'members' && namespace && members.length === 0) {
+      setMembersLoading(true);
+      fetch(`/api/spaces/${namespace}/members`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.code === 0 && Array.isArray(data.data)) {
+            setMembers(data.data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setMembersLoading(false));
+    }
+  }, [activeTab, namespace]);
+
   // Space ownership + tier management
   const [isOwner, setIsOwner] = useState(false);
   const [showTierForm, setShowTierForm] = useState(false);
@@ -979,11 +999,51 @@ export default function SpacePage() {
 
           {/* === Members Tab === */}
           {activeTab === 'members' && (
-            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
-              <UserCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>成员列表</p>
-              <p className="text-sm mt-1">成员浏览功能开发中</p>
-            </div>
+            <>
+              {membersLoading ? (
+                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+              ) : members.length > 0 ? (
+                <div className="space-y-2">
+                  {members.map((m) => (
+                    <Link
+                      key={m.user.id}
+                      href={`/profile/${m.user.username}`}
+                      className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group"
+                    >
+                      <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
+                        {(m.user.display_name || m.user.username).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                            {m.user.display_name || m.user.username}
+                          </span>
+                          {m.user.verified && (
+                            <span className="text-blue-500 text-xs">✓</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          @{m.user.username}
+                        </p>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        m.role === 'owner' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400' :
+                        m.role === 'moderator' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                        'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {{'owner': '创建者', 'moderator': '管理员', 'member': '成员', 'admin': '管理员'}[m.role] || m.role}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                  <UserCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>暂无成员</p>
+                  <p className="text-sm mt-1">成为第一个加入的成员吧！</p>
+                </div>
+              )}
+            </>
           )}
 
           {activeTab === 'video' && (
