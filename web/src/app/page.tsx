@@ -399,9 +399,9 @@ function FeedItemCard({ item }: { item: any }) {
           {spaceName}
         </Link>
         <span className="text-gray-300 dark:text-gray-600">/</span>
-        <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0">
+        <Link href={spaceNs ? '/space/' + spaceNs + '/posts' : '#'} className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
           {getModuleLabel()}
-        </span>
+        </Link>
         <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
         <span className="text-gray-900 dark:text-white font-semibold truncate">
           {item.title || '无标题'}
