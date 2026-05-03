@@ -22,7 +22,9 @@ interface Announcement {
 export default function SpacePage() {
   const params = useParams();
   const rawNs = params.namespace;
-  let namespace = Array.isArray(rawNs) ? (rawNs as string[]).join('/') : (rawNs as string);
+  let namespace = Array.isArray(rawNs)
+    ? (rawNs as string[]).map(s => decodeURIComponent(s)).join('/')
+    : decodeURIComponent(rawNs as string);
 
   // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
   const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',

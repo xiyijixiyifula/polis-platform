@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.57', date: '2026-05-03', title: '修复: 空间页中文路由显示 URL 编码问题',
+      items: [
+        '🐛 Bug: useParams() 返回 catch-all 路由参数未解码，中文社区名显示为 %E6%96%B0%E7%9A%84...',
+        '🔧 修复: namespace 解析时对每个 segment 调用 decodeURIComponent()',
+        '🏠 概览页新增"社区动态"聚合列表（取代原"发布文章+最新文章"区域）',
+        '✏️ 文章→交流全面改名 + 新增分享模块权限控制',
+        '✅ 17 页面 200, 6 API OK, 中文路由显示正常',
+      ],
+    },
+
+    {
       ver: '0.2.56', date: '2026-05-03', title: '三大社区改造 — 概览重构 + 文章→交流改名 + 新增分享模块',
       items: [
         '🏠 概览页重构: 移除"发布文章"和"最新文章"，新增"社区动态"聚合列表（各模块混排展示）',
@@ -657,7 +668,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.56' && (
+              {v.ver === '0.2.57' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
