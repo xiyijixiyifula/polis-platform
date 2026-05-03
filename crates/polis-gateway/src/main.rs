@@ -70,6 +70,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/notifications/unread-count", any(proxy_to_content))
         .route("/api/notifications/read-all", any(proxy_to_content))
         .route("/api/bookmarks", any(proxy_to_content))
+        .route("/api/liked-posts", any(proxy_to_content))
         // File sharing
         .route("/api/files/{*path}", any(proxy_to_content))
         .route("/api/share/{*path}", any(proxy_to_content))
