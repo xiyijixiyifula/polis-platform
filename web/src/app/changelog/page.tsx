@@ -3,6 +3,17 @@ export const metadata: Metadata = { title: '更新日志' };
 
 export default function ChangelogPage() {
   const versions = [
+    {
+      ver: '0.2.63', date: '2026-05-04', title: '新模块: 问答(QA) — 社区提问与回答系统',
+      items: [
+        '❓ 新模块: 问答(QA) - 空间内提问与回答，复用 ModuleType::Qa 后端 (无需后端改动)',
+        '🔧 空间页新增"问答"Tab 内容 (提问入口 + 问题列表过滤 module_type=qa + PostCard 展示)',
+        '📝 发帖页问答模块选项可用 (module=qa URL 参数 + moduleType 初始化)',
+        '🏠 首页 Feed 问答标签映射 + 概览页社区动态识别问答类型 (❓图标)',
+        '🛠️ polisctl 已原生支持 --module qa 参数 (无需 CLI 改动)',
+        '✅ 50/50 全量测试通过，构建成功，6 服务 active',
+      ],
+    },
             {
       ver: '0.2.62', date: '2026-05-04', title: '维护轮次 — 全量测试通过 + 系统稳定运行',
       items: [
@@ -721,7 +732,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.62' && (
+              {v.ver === '0.2.63' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

@@ -65,7 +65,7 @@ function NewPostForm() {
     return all.filter((m) => enabledModules[m.moduleKey]);
   }, [enabledModules]);
 
-  const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'wiki' ? 'wiki' : urlModule === 'forum' ? 'article' : 'article');
+  const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'wiki' ? 'wiki' : urlModule === 'qa' ? 'qa' : urlModule === 'forum' ? 'article' : 'article');
   useEffect(() => {
     if (
       availableModules.length > 0 &&

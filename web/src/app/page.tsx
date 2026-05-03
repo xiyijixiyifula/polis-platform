@@ -367,6 +367,7 @@ function FeedItemCard({ item }: { item: any }) {
     if (mt === 'article' || mt === 'forum') return '交流';
     if (mt === 'share') return '分享';
     if (mt === 'wiki') return '知识库';
+    if (mt === 'qa') return '问答';
     if (mt === 'activity') return '活动';
     if (mt === 'knowledge') return '知识库';
     if (mt === 'resource') return '资源';

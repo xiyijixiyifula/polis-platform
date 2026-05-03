@@ -456,8 +456,8 @@ export default function SpacePage() {
                 ) : posts.length > 0 ? (
                   <div className="space-y-1">
                     {posts.slice(0, 20).map((post) => {
-                      const moduleIcon = post.module_type === 'share' ? '🔖' : post.module_type === 'wiki' ? '📚' : '📄';
-                      const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : '交流';
+                      const moduleIcon = post.module_type === 'share' ? '🔖' : post.module_type === 'wiki' ? '📚' : post.module_type === 'qa' ? '❓' : '📄';
+                      const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : post.module_type === 'qa' ? '问答' : '交流';
                       const author = (post.author || {}) as any;
                       const authorUsername = author.username || '';
                       const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
@@ -1002,12 +1002,53 @@ export default function SpacePage() {
             </div>
           )}
 
+          {/* === QA Tab（问答 — 提问与回答）=== */}
           {activeTab === 'qa' && (
-            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
-              <HelpCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>问答模块</p>
-              <p className="text-sm mt-1">即将推出提问与回答功能</p>
-            </div>
+            <>
+              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=qa`}
+                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
+                  <HelpCircle className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">提出问题</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法，描述问题详情</p>
+                </div>
+                <div className="btn-primary text-xs px-4 py-1.5 gap-1">
+                  <Plus className="h-3.5 w-3.5" /> 提问
+                </div>
+              </Link>
+
+              {postLoading ? (
+                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+              ) : posts.filter(p => p.module_type === 'qa').length > 0 ? (
+                <div className="space-y-3">
+                  {posts.filter(p => p.module_type === 'qa').map((post) => (
+                    <PostCard key={post.id} post={{
+                      id: post.id,
+                      title: post.title,
+                      body: post.body,
+                      author: post.author,
+                      space_id: post.space_id,
+                      space_ns: namespace,
+                      space_name: space.title,
+                      like_count: post.like_count,
+                      comment_count: post.comment_count,
+                      view_count: post.view_count,
+                      created_at: post.created_at,
+                      tags: post.tags,
+                      is_pinned: post.is_pinned,
+                    }} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                  <HelpCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>暂无问答</p>
+                  <p className="text-sm mt-1">提出第一个问题吧！</p>
+                </div>
+              )}
+            </>
           )}
 
           {activeTab === 'chat' && (
