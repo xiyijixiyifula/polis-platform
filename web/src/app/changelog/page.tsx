@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.59', date: '2026-05-03', title: '维护轮次 — 全面测试 + 中文路由修复验证 + 系统健康检查',
+      items: [
+        '🧪 测试: 18 页面全 200, 7 API 端点正常, E2E 注册→空间→发帖 全通',
+        '🔤 验证: 中文 namespace 发帖修复持续生效 (112233/新的世界 POST → code=0)',
+        '🛡️ 安全: HTTP→HTTPS 301, CORS 头完整, 认证路由保护正常',
+        '⚡ 性能: API < 800ms, Feed 20 条正常, 6 服务 active',
+        '📊 覆盖率: TC-AUTH ✅ TC-SPACE ✅ TC-POST ✅ TC-SEC ✅',
+      ],
+    },
+
+            {
       ver: '0.2.58', date: '2026-05-03', title: '修复: 模块设置 localStorage key 迁移 + 中文路由兼容',
       items: [
         '🐛 Bug: 命名空间编码方式变更后，旧设置存在 URL 编码 key 下（polis_space_modules_112233/%E6%96%B0...），新代码读解码 key（112233/新的世界），导致设置丢失',
@@ -678,7 +689,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.58' && (
+              {v.ver === '0.2.59' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
