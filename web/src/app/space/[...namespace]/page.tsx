@@ -47,7 +47,8 @@ export default function SpacePage() {
   // Active tab - default to overview (GitHub style)
   const availableTabs = [
     { id: 'overview', label: '概览', icon: Layout, enabled: true },
-    { id: 'posts', label: '文章', icon: MessageCircle, enabled: modules.posts },
+    { id: 'posts', label: '交流', icon: MessageCircle, enabled: modules.posts },
+    { id: 'share', label: '分享', icon: Share2, enabled: modules.share },
     { id: 'series', label: '系列', icon: BookOpen, enabled: modules.series },
     { id: 'membership', label: '会员', icon: Crown, enabled: modules.membership },
     { id: 'video', label: '视频', icon: Video, enabled: modules.video },
@@ -378,10 +379,10 @@ export default function SpacePage() {
 
       <div className="flex gap-6">
         <main className="flex-1 max-w-3xl">
-          {/* === Overview Tab (GitHub-style README) === */}
+          {/* === Overview Tab — 各模块动态聚合 === */}
           {activeTab === 'overview' && (
             <div className="space-y-5">
-              {/* Community Description (like GitHub README) */}
+              {/* Community Description */}
               {space.description && (
                 <div className="card">
                   <div className="flex items-center gap-2 mb-3">
@@ -405,29 +406,7 @@ export default function SpacePage() {
                 </div>
               )}
 
-              {/* Quick actions */}
-              <div className="flex gap-3">
-                <Link href={`/post/new?space=${encodeURIComponent(namespace)}`}
-                  className="flex-1 card flex items-center gap-2 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group py-3">
-                  <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
-                    <PenLine className="h-4 w-4" />
-                  </div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">发布文章</span>
-                  <ExternalLink className="h-3 w-3 text-gray-400 ml-auto" />
-                </Link>
-                {modules.polls && (
-                  <Link href={`/polls/new?space=${encodeURIComponent(namespace)}`}
-                    className="flex-1 card flex items-center gap-2 hover:border-amber-300 dark:hover:border-amber-600 transition-colors group py-3">
-                    <div className="h-8 w-8 shrink-0 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
-                      <Vote className="h-4 w-4" />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">发起投票</span>
-                    <ExternalLink className="h-3 w-3 text-gray-400 ml-auto" />
-                  </Link>
-                )}
-              </div>
-
-              {/* Featured/Pinned Posts (like GitHub pinned repos) */}
+              {/* Featured/Pinned Posts */}
               {featured.length > 0 && (
                 <div>
                   <div className="flex items-center gap-2 mb-3">
@@ -453,39 +432,61 @@ export default function SpacePage() {
                 </div>
               )}
 
-              {/* Recent posts preview */}
+              {/* 社区动态 — 各模块内容聚合 */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="h-4 w-4 text-gray-400" />
-                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">最新文章</h3>
-                  </div>
-                  <button onClick={() => setActiveTab('posts')}
-                    className="text-xs text-primary-600 dark:text-primary-400 hover:underline">
-                    查看全部 →
-                  </button>
+                <div className="flex items-center gap-2 mb-3">
+                  <MessageCircle className="h-4 w-4 text-gray-400" />
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">社区动态</h3>
                 </div>
                 {postLoading ? (
                   <div className="card py-6 text-center text-gray-400 animate-pulse">加载中...</div>
                 ) : posts.length > 0 ? (
-                  <div className="space-y-2">
-                    {posts.slice(0, 5).map((post) => (
-                      <PostCard key={post.id} post={{
-                        id: post.id, title: post.title, body: post.body,
-                        author: post.author, space_id: post.space_id,
-                        space_ns: namespace, space_name: space.title,
-                        like_count: post.like_count, comment_count: post.comment_count,
-                        view_count: post.view_count, created_at: post.created_at,
-                        tags: post.tags, is_pinned: post.is_pinned,
-                      }} />
-                    ))}
+                  <div className="space-y-1">
+                    {posts.slice(0, 20).map((post) => {
+                      const moduleIcon = post.module_type === 'share' ? '🔖' : '📄';
+                      const moduleLabel = post.module_type === 'share' ? '分享' : '交流';
+                      const author = (post.author || {}) as any;
+                      const authorUsername = author.username || '';
+                      const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
+                      return (
+                        <Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(namespace)}`
+                        } className="block px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors rounded-lg border-b border-gray-100 dark:border-gray-800 last:border-0">
+                        {/* Module / Title line */}
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-0.5 flex-wrap">
+                          <span>{moduleIcon}</span>
+                          <span className="font-medium text-primary-600 dark:text-primary-400">{moduleLabel}</span>
+                          <span className="text-gray-300 dark:text-gray-600">/</span>
+                          <span className="text-gray-900 dark:text-white font-semibold truncate">
+                            {post.title || '无标题'}
+                          </span>
+                        </div>
+                        {/* Preview */}
+                        {bodyPreview && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-1.5 ml-5">
+                            {bodyPreview}
+                          </p>
+                        )}
+                        {/* Author + Social stats */}
+                        <div className="flex items-center gap-3 ml-5 text-xs text-gray-400">
+                          <Link href={`/profile/${authorUsername}`} onClick={e => e.stopPropagation()} className="hover:text-primary-600 dark:hover:text-primary-400">
+                            @{authorUsername}
+                          </Link>
+                          <span>·</span>
+                          <span>{new Date(post.created_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="flex items-center gap-1">👍 {post.like_count || 0}</span>
+                          <span className="flex items-center gap-1">💬 {post.comment_count || 0}</span>
+                          <span className="flex items-center gap-1">👁 {post.view_count || 0}</span>
+                        </div>
+                      </Link>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="card py-8 text-center text-gray-400 dark:text-gray-500">
                     <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">还没有文章</p>
+                    <p className="text-sm">还没有内容</p>
                     <Link href={`/post/new?space=${encodeURIComponent(namespace)}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
-                      发布第一篇文章
+                      发布第一篇帖子
                     </Link>
                   </div>
                 )}
@@ -493,17 +494,17 @@ export default function SpacePage() {
             </div>
           )}
 
-          {/* === Posts Tab === */}
+          {/* === Posts Tab (交流) === */}
           {activeTab === 'posts' && (
             <>
-              <Link href={`/post/new?space=${encodeURIComponent(namespace)}`}
+              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=forum`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <PenLine className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">写文章</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">发布帖子</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法，所有成员可发帖</p>
                 </div>
                 <div className="btn-primary text-xs px-4 py-1.5 gap-1">
                   <Plus className="h-3.5 w-3.5" /> 发布
@@ -786,6 +787,62 @@ export default function SpacePage() {
                   )}
                 </div>
               </div>
+            </>
+          )}
+
+          {/* === Share Tab（分享 — 仅创建者可发布）=== */}
+          {activeTab === 'share' && (
+            <>
+              {isOwner ? (
+                <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=share`}
+                  className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
+                    <PenLine className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">发布分享</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法，仅创建者可发布</p>
+                  </div>
+                  <div className="btn-primary text-xs px-4 py-1.5 gap-1">
+                    <Plus className="h-3.5 w-3.5" /> 发布
+                  </div>
+                </Link>
+              ) : (
+                <div className="card mb-4 py-4 px-4 text-center">
+                  <Share2 className="h-8 w-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">此模块仅社区创建者可发布内容</p>
+                </div>
+              )}
+
+              {postLoading ? (
+                <div className="card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
+              ) : posts.filter(p => p.module_type === 'share' || !p.module_type).length > 0 ? (
+                <div className="space-y-3">
+                  {posts.filter(p => p.module_type === 'share' || !p.module_type).map((post) => (
+                    <PostCard key={post.id} post={{
+                      id: post.id,
+                      title: post.title,
+                      body: post.body,
+                      author: post.author,
+                      space_id: post.space_id,
+                      space_ns: namespace,
+                      space_name: space.title,
+                      like_count: post.like_count,
+                      comment_count: post.comment_count,
+                      view_count: post.view_count,
+                      created_at: post.created_at,
+                      tags: post.tags,
+                      is_pinned: post.is_pinned,
+                    }} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                  <Share2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>暂无分享内容</p>
+                  {isOwner && <p className="text-sm mt-1">发布你的第一篇分享吧！</p>}
+                </div>
+              )}
             </>
           )}
 

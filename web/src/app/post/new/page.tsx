@@ -21,7 +21,7 @@ import {
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { posts, series, getToken, type Series } from '@/lib/api';
-import { loadModules } from '@/components/SpaceSettings';
+import { loadModules, type SpaceModules } from '@/components/SpaceSettings';
 
 const AUTOSAVE_KEY = (space: string) => `polis_draft_${space}`;
 
@@ -29,6 +29,7 @@ function NewPostForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const space = searchParams.get('space') || '';
+  const urlModule = searchParams.get('module') || '';
 
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -54,15 +55,16 @@ function NewPostForm() {
   }, [space]);
 
   const availableModules = useMemo(() => {
-    const all = [
-      { id: 'article', label: '文章', moduleKey: 'posts' as const },
+    const all: { id: string; label: string; moduleKey: keyof SpaceModules }[] = [
+      { id: 'article', label: '交流', moduleKey: 'posts' as const },
+      { id: 'share', label: '分享', moduleKey: 'share' as const },
       { id: 'qa', label: '问答', moduleKey: 'qa' as const },
     ];
     if (!enabledModules) return all;
     return all.filter((m) => enabledModules[m.moduleKey]);
   }, [enabledModules]);
 
-  const [moduleType, setModuleType] = useState('article');
+  const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'forum' ? 'article' : 'article');
   useEffect(() => {
     if (
       availableModules.length > 0 &&
@@ -432,7 +434,7 @@ function NewPostForm() {
         )}
         {availableModules.length <= 1 && (
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            发布为文章
+            发布帖子
           </p>
         )}
 

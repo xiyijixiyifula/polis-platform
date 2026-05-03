@@ -210,7 +210,7 @@ export default function CreateSpacePage() {
 
         {/* 提示 */}
         <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3 text-xs text-blue-700 dark:text-blue-400">
-          💡 默认启用<strong>文章</strong>模块。创建后可在社区设置中开启更多模块（投票、公告、成员等）。
+          💡 默认启用<strong>交流</strong>模块。创建后可在社区设置中开启更多模块（分享、投票、公告、成员等）。
         </div>
 
         <button

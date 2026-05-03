@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 
 export interface SpaceModules {
-  posts: boolean;          // 文章 - 默认开启不可关闭
+  posts: boolean;          // 交流 - 默认开启不可关闭
+  share: boolean;          // 分享 - 仅创建者可发布
   series: boolean;         // 系列/专栏
   video: boolean;          // 视频
   code_repo: boolean;      // 代码仓库
@@ -24,6 +25,7 @@ export interface SpaceModules {
 
 const defaultModules: SpaceModules = {
   posts: true,
+  share: false,
   series: false,
   video: false,
   code_repo: false,
@@ -71,7 +73,8 @@ interface ModuleDef {
 
 export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSettingsProps) {
   const availableModules: ModuleDef[] = [
-    { key: 'posts', label: '文章', icon: MessageCircle, locked: true, comingSoon: false, desc: '社区文章和帖子，默认模块' },
+    { key: 'posts', label: '交流', icon: MessageCircle, locked: true, comingSoon: false, desc: '社区交流与讨论板块，所有成员可发帖互动' },
+    { key: 'share', label: '分享', icon: MessageSquare, locked: false, comingSoon: false, desc: '个人内容分享空间，仅社区创建者可发布' },
     { key: 'series', label: '系列', icon: BookOpen, locked: false, comingSoon: false, desc: '内容系列/专栏，组织帖子合集' },
     { key: 'membership', label: '会员', icon: Crown, locked: false, comingSoon: false, desc: '付费会员等级与订阅管理' },
     { key: 'video', label: '视频', icon: Video, locked: false, comingSoon: true, desc: '视频内容发布与播放' },

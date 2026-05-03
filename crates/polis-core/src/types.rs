@@ -100,6 +100,8 @@ pub enum ModuleType {
     Wiki,
     #[serde(rename = "paid_content")]
     PaidContent,
+    #[serde(rename = "share")]
+    Share,
 }
 
 impl Default for ModuleType {
@@ -125,6 +127,7 @@ impl std::fmt::Display for ModuleType {
             Self::MiniApp => write!(f, "mini_app"),
             Self::Wiki => write!(f, "wiki"),
             Self::PaidContent => write!(f, "paid_content"),
+            Self::Share => write!(f, "share"),
         }
     }
 }

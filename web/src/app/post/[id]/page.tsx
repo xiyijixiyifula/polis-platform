@@ -298,7 +298,7 @@ function PostDetailContent() {
 
       {relatedPosts.length > 0 && (
         <div className="mt-6">
-          <h3 className="font-semibold text-gray-900 mb-4">同社区更多文章</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">同社区更多帖子</h3>
           <div className="space-y-3">
             {relatedPosts.map((p) => (
               <Link key={p.id} href={`/post/${p.id}?space=${currentNs}`} className="card block hover:border-primary-300 transition-colors">

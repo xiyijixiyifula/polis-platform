@@ -364,7 +364,8 @@ function FeedItemCard({ item }: { item: any }) {
     if (item.type === 'announcement') return '公告';
     const mt = item.module_type || '';
     if (mt === 'discussion') return '讨论';
-    if (mt === 'article') return '文章';
+    if (mt === 'article' || mt === 'forum') return '交流';
+    if (mt === 'share') return '分享';
     if (mt === 'activity') return '活动';
     if (mt === 'knowledge') return '知识库';
     if (mt === 'resource') return '资源';

@@ -241,6 +241,23 @@ async fn handle_auth_content(
                     let r: CreatePostRequest = serde_json::from_slice(&body_bytes)
                         .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
                     let space_id = resolve_space_id(&h.pool, &ns).await?;
+
+                    // 分享模块权限校验：仅创建者可发布
+                    if let Some(ref mt) = r.module_type {
+                        if mt.to_string() == "share" {
+                            let owner_id: Option<Uuid> = sqlx::query_scalar(
+                                "SELECT owner_id FROM spaces WHERE id = $1"
+                            )
+                            .bind(space_id)
+                            .fetch_optional(&h.pool)
+                            .await?
+                            .flatten();
+                            if owner_id != Some(uid) {
+                                return Err(AppError::Forbidden("仅社区创建者可发布分享内容".to_string()));
+                            }
+                        }
+                    }
+
                     let post = h.create_post(space_id, uid, r).await?;
                     Ok(json_ok(ApiResponse::success(post)))
                 }
