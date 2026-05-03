@@ -4,6 +4,28 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.60', date: '2026-05-03', title: '新增知识库(Wiki)模块 + 全功能E2E测试框架',
+      items: [
+        '📚 新模块: 知识库(Wiki) - 协作文档模块，所有成员可编写知识库页面 (复用 ModuleType::Wiki)',
+        '🔧 空间页新增"知识库"Tab + SpaceSettings 知识库开关 + 发帖页 wiki 模块选项',
+        '📊 概览页社区动态识别 wiki 类型 (📚图标) + 首页 Feed wiki 标签映射',
+        '🧪 测试框架: tests/polis-e2e-full-test.sh 覆盖 16 功能类别 50 项测试 + 5 项回归测试',
+        '✅ 50/50 全部通过，24 页面全量 200，6 服务 active',
+      ],
+    },
+
+    {
+      ver: '0.2.61', date: '2026-05-04', title: '维护轮次 — 全量测试通过 + 系统健康检查',
+      items: [
+        '🧪 测试: 50/50 全部通过 (E2E测试框架 v1.0，16 类别全覆盖)',
+        '🔤 回归: 中文路由修复持续生效 (API查询/发帖/页面全通)',
+        '🛡️ 安全: HTTP→HTTPS 301, 未认证拒绝, CORS 头完整',
+        '⚡ 性能: Feed 20条正常, 6 服务 active, 24 页面全 200',
+        '📚 知识库模块: 发帖/列表/过滤均正常 (module_type=wiki)',
+      ],
+    },
+
+    {
       ver: '0.2.59', date: '2026-05-03', title: '维护轮次 — 全面测试 + 中文路由修复验证 + 系统健康检查',
       items: [
         '🧪 测试: 18 页面全 200, 7 API 端点正常, E2E 注册→空间→发帖 全通',
@@ -689,7 +711,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.59' && (
+              {v.ver === '0.2.61' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
