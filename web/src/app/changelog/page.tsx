@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.47', date: '2026-05-03', title: '维护轮次 — 全量测试通过，系统稳定',
+      items: [
+        '测试: 17 页面 200, 8 API 端点正常, 6 服务 active',
+        '安全: HTTPS/CORS/HSTS 全部正确',
+        'API: bookmark/liked-posts 认证保护 401 正常',
+      ],
+    },
+
+    {
       ver: '0.2.46', date: '2026-05-03', title: '个人中心重构 — 新增收藏/点赞 Tab，移除文章/帖子',
       items: [
         '重构: 个人中心页 /profile 去掉"文章"和"帖子" Tab，保留"社区""粉丝""关注"',
@@ -562,7 +571,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.46' && (
+              {v.ver === '0.2.47' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
