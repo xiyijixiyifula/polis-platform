@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.46', date: '2026-05-03', title: '个人中心重构 — 新增收藏/点赞 Tab，移除文章/帖子',
+      items: [
+        '重构: 个人中心页 /profile 去掉"文章"和"帖子" Tab，保留"社区""粉丝""关注"',
+        '新增: "收藏" Tab — 从 /api/bookmarks 获取，Feed 风格索引展示',
+        '新增: "点赞" Tab — 从 /api/liked-posts 获取，Feed 风格索引展示',
+        'API: 新增后端 GET /api/liked-posts 路由（点赞帖子列表），Feed 风格数据格式',
+        'API: 增强 GET /api/bookmarks 返回完整 Feed 风格数据（作者/社区/计数）',
+        '网关: 新增 /api/liked-posts 路由代理到内容服务',
+      ],
+    },
+
+    {
       ver: '0.2.45', date: '2026-05-03', title: '维护轮次 — 全量 48 项测试 100% 通过',
       items: [
         '测试: 17 页面 200, 9 API 端点正常, 6 服务 active, E2E 5/5',
@@ -550,7 +562,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.45' && (
+              {v.ver === '0.2.46' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
