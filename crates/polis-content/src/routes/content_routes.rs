@@ -3,6 +3,7 @@ use axum::{
     response::{IntoResponse, Response},extract::{Path, Query, Request, State, Extension}, middleware, routing::{delete, get, post, put}, Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
+use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
 use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, Post, PostPublic, UpdatePostRequest, PaginationParams, CreateTierRequest, UpdateTierRequest};
 use polis_core::resolver::resolve::resolve_space_id;
@@ -43,10 +44,15 @@ pub struct SaveDraftRequest { pub space_id: Option<Uuid>, pub title: String, pub
 /// 从路径中提取 namespace 和 post ID
 /// 返回 (namespace, post_id, sub_action)
 fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String>), AppError> {
-    let remaining = path.strip_prefix("/api/spaces/").unwrap_or("");
-    if remaining.is_empty() {
+    let remaining_raw = path.strip_prefix("/api/spaces/").unwrap_or("");
+    if remaining_raw.is_empty() {
         return Err(AppError::NotFound("Invalid path".to_string()));
     }
+    // URL 解码命名空间（支持中文等非 ASCII 字符）
+    let remaining = percent_decode_str(remaining_raw)
+        .decode_utf8()
+        .map_err(|_| AppError::Validation("Invalid UTF-8 in path".to_string()))?
+        .to_string();
 
     // 找到 /posts 或 /featured 或 /announcements
     if let Some(pos) = remaining.find("/posts") {
@@ -68,7 +74,7 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     }
 
     if remaining.contains("/featured") {
-        let ns = remaining.strip_suffix("/featured").unwrap_or(remaining);
+        let ns = remaining.strip_suffix("/featured").unwrap_or(remaining.as_str());
         if ns.is_empty() {
             return Err(AppError::NotFound("Missing namespace".to_string()));
         }
@@ -76,7 +82,7 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     }
 
     if remaining.contains("/announcements") {
-        let ns = remaining.strip_suffix("/announcements").unwrap_or(remaining);
+        let ns = remaining.strip_suffix("/announcements").unwrap_or(remaining.as_str());
         if ns.is_empty() {
             return Err(AppError::NotFound("Missing namespace".to_string()));
         }
@@ -84,13 +90,13 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     }
 
     if remaining.contains("/files") {
-        let ns = remaining.strip_suffix("/files").unwrap_or(remaining);
+        let ns = remaining.strip_suffix("/files").unwrap_or(remaining.as_str());
         if ns.is_empty() { return Err(AppError::NotFound("Missing namespace".to_string())); }
         return Ok((ns.to_string(), None, Some("files".to_string())));
     }
 
     if remaining.contains("/polls") {
-        let ns = remaining.strip_suffix("/polls").unwrap_or(remaining);
+        let ns = remaining.strip_suffix("/polls").unwrap_or(remaining.as_str());
         if ns.is_empty() {
             return Err(AppError::NotFound("Missing namespace".to_string()));
         }
