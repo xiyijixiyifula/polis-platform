@@ -8,6 +8,7 @@ use axum::{
 };
 use uuid::Uuid;
 
+use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
 use serde::Deserialize;
 
@@ -63,6 +64,14 @@ pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
     public.merge(auth).with_state(handler)
 }
 
+/// URL 解码命名空间，支持中文 slug
+fn decode_namespace(raw: &str) -> Result<String, AppError> {
+    percent_decode_str(raw)
+        .decode_utf8()
+        .map(|s| s.to_string())
+        .map_err(|_| AppError::Validation("Invalid UTF-8 in namespace".to_string()))
+}
+
 /// 处理公共 GET 路径
 async fn handle_public_path(
     State(handler): State<Arc<SpaceHandler>>,
@@ -88,7 +97,9 @@ async fn handle_public_path(
         return Ok(Json(serde_json::json!({"code": 0, "data": []})));
     }
 
-    let space = handler.get_space(ns).await?;
+    // URL 解码命名空间（支持中文等非 ASCII 字符）
+    let decoded_ns = decode_namespace(ns)?;
+    let space = handler.get_space(&decoded_ns).await?;
     Ok(Json(serde_json::json!({"code": 0, "data": space})))
 }
 
@@ -116,13 +127,16 @@ async fn handle_auth_path(
         return Err(AppError::NotFound("Invalid namespace".to_string()));
     }
 
+    // URL 解码命名空间（支持中文等非 ASCII 字符）
+    let decoded_ns = decode_namespace(ns)?;
+
     if remaining.ends_with("/join") {
-        handler.join_space(ns, user_id).await?;
+        handler.join_space(&decoded_ns, user_id).await?;
         return Ok(Json(serde_json::json!({"code": 0, "data": null, "message": "ok"})));
     }
 
     if remaining.ends_with("/leave") {
-        handler.leave_space(ns, user_id).await?;
+        handler.leave_space(&decoded_ns, user_id).await?;
         return Ok(Json(serde_json::json!({"code": 0, "data": null, "message": "ok"})));
     }
 
@@ -131,7 +145,7 @@ async fn handle_auth_path(
             .map_err(|_| AppError::Validation("Failed to read body".to_string()))?;
         let update_req: UpdateSpaceRequest = serde_json::from_slice(&body_bytes)
             .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
-        let space = handler.update_space(ns, user_id, update_req).await?;
+        let space = handler.update_space(&decoded_ns, user_id, update_req).await?;
         return Ok(Json(serde_json::json!({"code": 0, "data": space})));
     }
 

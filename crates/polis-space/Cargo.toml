@@ -6,6 +6,7 @@ description = "Space service - community CRUD, member management, module config"
 
 [dependencies]
 polis-core = { path = "../polis-core" }
+percent-encoding = "2.3"
 tokio = { workspace = true }
 axum = { workspace = true }
 tower = { workspace = true }
