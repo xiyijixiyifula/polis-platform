@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.41', date: '2026-05-03', title: '紧急修复 — standalone 部署文件同步缺失导致 500 错误',
+      items: [
+        'Bug: npm run build 后 .next/ 更新但 .next/standalone/.next/server/ 未同步，导致除首页外全部 500',
+        '修复: ExecStartPre 增加 server/ + BUILD_ID + *.json 同步到 standalone 目录',
+        '验证: 13 页面全部恢复 200, API 正常, 6 服务 active',
+        '预防: systemd polis-web.service 更新，后续构建自动同步所有必需文件',
+      ],
+    },
+
+    {
       ver: '0.2.40', date: '2026-05-03', title: '维护轮次 — 11 页 + API + E2E 全通',
       items: ['测试: 11 页面 200, API code=0, HTTPS 301, 性能 0.61s, 6 服务 active'],
     },
@@ -510,7 +520,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.40' && (
+              {v.ver === '0.2.41' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
