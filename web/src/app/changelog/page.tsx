@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.62', date: '2026-05-04', title: '维护轮次 — 全量测试通过 + 系统稳定运行',
+      items: [
+        '🧪 测试: 50/50 全部通过 (E2E框架 v1.0，16 类别全覆盖)',
+        '🔤 回归: 中文路由修复持续生效 (API查询/发帖/页面全通)',
+        '🛡️ 安全: HTTP→HTTPS 301, 未认证拒绝, CORS 完整',
+        '⚡ 性能: Feed 20条正常, 6 服务 active, 24 页面全 200',
+        '📚 模块: 知识库(Wiki)模块运行正常 (module_type=wiki 发帖/列表)',
+      ],
+    },
+            {
       ver: '0.2.60', date: '2026-05-03', title: '新增知识库(Wiki)模块 + 全功能E2E测试框架',
       items: [
         '📚 新模块: 知识库(Wiki) - 协作文档模块，所有成员可编写知识库页面 (复用 ModuleType::Wiki)',
@@ -711,7 +721,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.61' && (
+              {v.ver === '0.2.62' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
