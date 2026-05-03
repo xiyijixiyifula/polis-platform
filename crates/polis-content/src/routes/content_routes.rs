@@ -109,7 +109,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/posts/search", get(search_posts_route))
     .route("/api/files/{id}", get(get_file_route))
     .route("/api/feed", get(feed_route))
-        .route("/api/posts/{id}", get(get_post_by_id_route))
+        .route("/api/posts/{id}", get(get_post_by_id_route).put(update_post_by_id_route).delete(delete_post_by_id_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route).post(create_comment_by_post_id))
         // 获取投票分数（赞同/反对）
         .route("/api/vote", get(get_vote_score_route))
@@ -769,6 +769,24 @@ fn base64_decode(input: &str) -> Result<Vec<u8>, AppError> {
         .map_err(|e| AppError::Validation(format!("Invalid base64: {}", e)))
 }
 
+async fn update_post_by_id_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(id): Path<Uuid>,
+    Extension(uid): Extension<Uuid>,
+    Json(r): Json<UpdatePostRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let post = h.update_post(id, uid, r).await?;
+    Ok(json_ok(ApiResponse::success(post)))
+}
+
+async fn delete_post_by_id_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(id): Path<Uuid>,
+    Extension(uid): Extension<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    h.delete_post(id, uid).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
 
 async fn feed_route(
     State(h): State<Arc<ContentHandler>>,
