@@ -61,6 +61,17 @@ pub async fn leave(
     Ok(())
 }
 
+pub async fn members(
+    config: &Config,
+    client: &HttpClient,
+    namespace: &str,
+) -> Result<(), anyhow::Error> {
+    let resp = client.get(&format!("/api/spaces/{}/members", namespace), None).await?;
+    let items: Vec<_> = extract_data_array(&resp).into_iter().cloned().collect();
+    print_output(&json!(items), config.format);
+    Ok(())
+}
+
 pub async fn create(
     config: &Config,
     client: &HttpClient,

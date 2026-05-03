@@ -242,6 +242,11 @@ enum SpaceAction {
         /// Space namespace
         namespace: String,
     },
+    /// List space members
+    Members {
+        /// Space namespace
+        namespace: String,
+    },
     /// Create a new space
     Create {
         /// Slug (URL-friendly name)
@@ -771,6 +776,7 @@ async fn main() -> Result<(), anyhow::Error> {
             SpaceAction::Get { namespace } => commands::space::get(&config, &client, &namespace).await,
             SpaceAction::Join { namespace } => commands::space::join(&config, &client, &namespace).await,
             SpaceAction::Leave { namespace } => commands::space::leave(&config, &client, &namespace).await,
+            SpaceAction::Members { namespace } => commands::space::members(&config, &client, &namespace).await,
             SpaceAction::Create { slug, title, description, visibility } => {
                 commands::space::create(&config, &client, &slug, &title, description.as_deref(), Some(&visibility)).await
             }

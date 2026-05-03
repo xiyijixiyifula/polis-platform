@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.65', date: '2026-05-04', title: 'CLI 增强 — polisctl space members 命令 + 维护轮次',
+      items: [
+        '🖥️ CLI: 新增 polisctl space members <ns> 命令 — 查询空间成员列表 (对接 /api/spaces/{ns}/members)',
+        '🔧 polisctl/src/main.rs: 新增 SpaceAction::Members 枚举变体 + 路由分发',
+        '📦 polisctl/src/commands/space.rs: 新增 members() 函数 (GET 公共端点，无需认证)',
+        '📋 CLI-GUIDE.md 已文档化此命令 (无需额外更新)',
+        '✅ 50/50 全量测试通过，Rust + 前端构建成功，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.64', date: '2026-05-04', title: '成员模块上线 — 空间成员列表 + 后端API修复',
       items: [
         '👥 新模块: 成员列表 - 空间页"成员"Tab 展示真实成员数据 (头像/用户名/角色/加入时间)',
@@ -742,7 +752,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.64' && (
+              {v.ver === '0.2.65' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
