@@ -109,7 +109,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/posts/search", get(search_posts_route))
     .route("/api/files/{id}", get(get_file_route))
     .route("/api/feed", get(feed_route))
-        .route("/api/posts/{id}", get(get_post_by_id_route).put(update_post_by_id_route).delete(delete_post_by_id_route))
+        .route("/api/posts/{id}", get(get_post_by_id_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route).post(create_comment_by_post_id))
         // 获取投票分数（赞同/反对）
         .route("/api/vote", get(get_vote_score_route))
@@ -145,6 +145,8 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/files/share", post(create_file_share_route))
         .route("/api/upload", post(upload_file_route))
         .route("/api/import/markdown", post(import_markdown_route))
+        // 通过 ID 更新/删除帖子（需认证）
+        .route("/api/posts/{id}", put(update_post_by_id_route).delete(delete_post_by_id_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
     let share_routes = Router::new()
