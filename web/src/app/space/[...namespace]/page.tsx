@@ -21,10 +21,18 @@ interface Announcement {
 
 export default function SpacePage() {
   const params = useParams();
-  const pathname = usePathname();
-  // Use pathname for reliable decoding: /space/112233/新的世界 -> "112233/新的世界"
-  const pathNs = pathname.replace(/^\/space\//, '');
-  let namespace = decodeURIComponent(pathNs);
+  let namespace = '';
+  // Decode namespace from browser URL (most reliable for Chinese characters)
+  if (typeof window !== 'undefined') {
+    const p = window.location.pathname;
+    namespace = decodeURIComponent(p.replace(/^\/space\//, ''));
+  } else {
+    // SSR fallback: use params
+    const rawNs = params.namespace;
+    namespace = Array.isArray(rawNs)
+      ? (rawNs as string[]).map(s => decodeURIComponent(s)).join('/')
+      : decodeURIComponent((rawNs as string) || '');
+  }
 
   // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
   const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
