@@ -30,20 +30,52 @@ impl BookmarkRepo {
         }
     }
 
-    /// 获取用户收藏
+    /// 获取用户收藏（返回 Feed 风格数据）
     pub async fn list(&self, user_id: Uuid, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
-        let offset = ((page - 1) * page_size) as i64;
-        let rows = sqlx::query_as::<_, (serde_json::Value,)>(
-            r#"SELECT json_build_object(
-                'id', b.id, 'target_type', b.target_type, 'target_id', b.target_id, 'created_at', b.created_at,
-                'post', CASE WHEN b.target_type = 'post' THEN
-                    (SELECT json_build_object('id', p.id, 'title', p.title, 'created_at', p.created_at)
-                     FROM posts p WHERE p.id = b.target_id)
-                ELSE NULL END
-            ) FROM bookmarks b WHERE b.user_id = $1 ORDER BY b.created_at DESC LIMIT $2 OFFSET $3"#
-        ).bind(user_id).bind(limit).bind(offset)
-        .fetch_all(&self.pool).await?;
-        Ok(rows.into_iter().map(|r| r.0).collect())
+        let offset = ((page.saturating_sub(1)) * page_size) as i64;
+        let limit = page_size as i64;
+        limit.checked_add(0); // suppress unused warning
+        let rows = sqlx::query_as::<_, (String, String, String, String, i64, i64, i64, String, String, String, String, String, String, String,)>(
+            r#"SELECT
+                p.id::text, p.title, LEFT(p.body, 200), p.content_type,
+                p.comment_count, p.like_count, p.view_count,
+                p.created_at::text,
+                u.id::text, u.username, u.display_name, COALESCE(u.avatar_url, ''),
+                s.id::text, s.namespace, s.title
+            FROM bookmarks b
+            JOIN posts p ON p.id = b.target_id AND b.target_type = 'post'
+            LEFT JOIN users u ON u.id = p.author_id
+            LEFT JOIN spaces s ON s.id = p.space_id
+            WHERE b.user_id = $1 AND p.is_deleted = FALSE
+            ORDER BY b.created_at DESC LIMIT $2 OFFSET $3"#
+        ).bind(user_id).bind(page_size as i64).bind(offset)
+        .fetch_all(&self.pool).await
+        .map_err(|e| AppError::Internal(format!("bookmarks list query: {}", e)))?;
+
+        Ok(rows.into_iter().map(|r| {
+            serde_json::json!({
+                "id": r.0,
+                "type": "post",
+                "module_type": r.3,
+                "title": r.1,
+                "preview": r.2,
+                "comment_count": r.4,
+                "like_count": r.5,
+                "view_count": r.6,
+                "created_at": r.7,
+                "author": {
+                    "id": r.8,
+                    "username": r.9,
+                    "display_name": r.10,
+                    "avatar_url": r.11
+                },
+                "space": {
+                    "id": r.12,
+                    "namespace": r.13,
+                    "title": r.14
+                }
+            })
+        }).collect())
     }
 }
 

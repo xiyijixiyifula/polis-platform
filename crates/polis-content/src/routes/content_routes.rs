@@ -122,6 +122,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     let auth = Router::new()
         .route("/api/spaces/{*path}", post(handle_auth_content).put(handle_auth_content).delete(handle_auth_content))
         .route("/api/bookmarks", get(list_bookmarks))
+        .route("/api/liked-posts", get(list_liked_posts_route))
         // 投票（赞同/反对）
         .route("/api/vote", post(handle_vote))
         // 投票/问卷管理
@@ -523,6 +524,12 @@ fn urlencoding_decode(s: &str) -> Option<String> {
 async fn list_bookmarks(State(h): State<Arc<ContentHandler>>, axum::Extension(uid): axum::Extension<Uuid>,
     Query(p): Query<PaginationParams>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
     Ok(Json(ApiResponse::success(h.repo.list_bookmarks(uid, p.page.unwrap_or(1), p.page_size.unwrap_or(20)).await?)))
+}
+
+/// 点赞的帖子列表（需要认证）
+async fn list_liked_posts_route(State(h): State<Arc<ContentHandler>>, axum::Extension(uid): axum::Extension<Uuid>,
+    Query(p): Query<PaginationParams>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
+    Ok(Json(ApiResponse::success(h.repo.list_liked_posts(uid, p.page.unwrap_or(1), p.page_size.unwrap_or(20)).await?)))
 }
 
 
