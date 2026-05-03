@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.58', date: '2026-05-03', title: '修复: 模块设置 localStorage key 迁移 + 中文路由兼容',
+      items: [
+        '🐛 Bug: 命名空间编码方式变更后，旧设置存在 URL 编码 key 下（polis_space_modules_112233/%E6%96%B0...），新代码读解码 key（112233/新的世界），导致设置丢失',
+        '🔧 修复: loadModules 先试解码 key，未找到时回退到 encodeURIComponent 旧 key',
+        '🏠 概览"社区动态" + 文章→交流 + 分享模块（仅创建可发）全部就绪',
+        '✅ 17 页面 200, 6 API OK, 6 服务 active',
+      ],
+    },
+
+    {
       ver: '0.2.57', date: '2026-05-03', title: '修复: 空间页中文路由显示 URL 编码问题',
       items: [
         '🐛 Bug: useParams() 返回 catch-all 路由参数未解码，中文社区名显示为 %E6%96%B0%E7%9A%84...',
@@ -668,7 +678,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.57' && (
+              {v.ver === '0.2.58' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

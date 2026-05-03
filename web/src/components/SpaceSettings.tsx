@@ -45,8 +45,18 @@ function getModulesKey(namespace: string) {
 
 export function loadModules(namespace: string): SpaceModules {
   try {
-    const saved = localStorage.getItem(getModulesKey(namespace));
-    if (saved) return { ...defaultModules, ...JSON.parse(saved), posts: true };
+    // Try decoded namespace key first (new format)
+    let saved = localStorage.getItem(getModulesKey(namespace));
+    // Fallback: try URL-encoded key (old format, for backward compatibility)
+    if (!saved) {
+      saved = localStorage.getItem(getModulesKey(encodeURIComponent(namespace)));
+    }
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Ensure share has a default value if missing in old data
+      if (parsed.share === undefined) parsed.share = false;
+      return { ...defaultModules, ...parsed, posts: true };
+    }
   } catch {}
   return { ...defaultModules };
 }
