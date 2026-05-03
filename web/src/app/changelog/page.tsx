@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.55', date: '2026-05-03', title: '维护轮次 — 中文 slug 修复持续生效，17 页 + API 全通',
+      items: [
+        '测试: 17 页面 200, 7 API 端点正常, 6 服务 active',
+        '验证: 中文 slug 社区 API 持续正常 (112233/创新 → code=0)',
+        '安全: HTTPS 301, HSTS preload, XSS headers 全量正确',
+      ],
+    },
+
+    {
       ver: '0.2.54', date: '2026-05-03', title: '修复: 中文 slug 社区路由 404 + 维护轮次',
       items: [
         '🐛 Bug: 社区 slug 含中文（如"创新"）时，handle_public_path 用 req.uri().path() 取到 URL 编码后的原始路径',
@@ -637,7 +646,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.54' && (
+              {v.ver === '0.2.55' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
