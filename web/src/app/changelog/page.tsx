@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
             {
+      ver: '0.2.56', date: '2026-05-03', title: '三大社区改造 — 概览重构 + 文章→交流改名 + 新增分享模块',
+      items: [
+        '🏠 概览页重构: 移除"发布文章"和"最新文章"，新增"社区动态"聚合列表（各模块混排展示）',
+        '✏️ 文章→交流: Tab/设置/创建页全面改名，Feed 标签映射更新',
+        '🔖 新增分享模块: 仅创建者可发布类微信公众号模式，非创建者隐藏发布入口',
+        '🔒 后端权限: 分享模块创建帖子 403 校验（非 owner 返回 Forbidden）',
+        '✅ 验证: 17 页面 200, 6 API OK, 中文 slug 持续正常, 6 服务 active',
+      ],
+    },
+
+    {
       ver: '0.2.55', date: '2026-05-03', title: '维护轮次 — 中文 slug 修复持续生效，17 页 + API 全通',
       items: [
         '测试: 17 页面 200, 7 API 端点正常, 6 服务 active',
@@ -646,7 +657,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.55' && (
+              {v.ver === '0.2.56' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
