@@ -7,8 +7,9 @@ export default function ChangelogPage() {
       ver: '0.2.44', date: '2026-05-03', title: '维护轮次 + API 增强 — PUT/DELETE 帖子端点',
       items: [
         '测试: 11 页面 200, Feed API 20 items, 6 服务 active',
-        'API: 新增 PUT /api/posts/{id} 通过 ID 更新帖子（update_post_by_id_route）',
-        'API: 新增 DELETE /api/posts/{id} 通过 ID 删除帖子（delete_post_by_id_route）',
+        'API: 新增 PUT /api/posts/{id} 通过 ID 更新帖子（需认证）',
+        'API: 新增 DELETE /api/posts/{id} 通过 ID 删除帖子（需认证）',
+        'Fix: PUT/DELETE 路由原地在 public router 导致未认证时 500，已移至 auth router 返回 401',
       ],
     },
 
