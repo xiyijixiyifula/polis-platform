@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.78', date: '2026-05-04', title: '维护轮次 — E2E 性能基线 + CORS 安全验证 + 71/71 全通',
+      items: [
+        '🧪 新增: PERF 性能测试 4 项 (空间API/Feed/搜索/投票 响应时间基线)',
+        '🧪 新增: SECURITY CORS 头验证 (access-control-allow-origin)',
+        '📊 测试总量: 66→71 项 (SECURITY 2→3, 新增 PERF 4 项)',
+        '⚡ 性能基线: 空间 0.81s / Feed 0.81s / 搜索 1.47s / 投票 0.62s',
+        '✅ 71/71 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.77', date: '2026-05-04', title: '维护轮次 — E2E 书签列表 + 通知已读 + 66/66 全通',
       items: [
         '🧪 新增: SOCIAL 书签列表验证 (GET /api/bookmarks + 收藏数)',

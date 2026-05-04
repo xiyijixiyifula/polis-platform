@@ -813,6 +813,7 @@ else
     log_test FAIL SECURITY "HTTP→HTTPS" "未重定向"
 fi
 
+
 R=$(api GET /api/spaces)
 if ! check_code "$R"; then
     log_test PASS SECURITY "未认证拒绝" "正确拒绝 ✅"
@@ -820,6 +821,13 @@ else
     log_test FAIL SECURITY "未认证拒绝" "应该拒绝"
 fi
 
+# TC-SEC-04: CORS headers
+CORS_HEADERS=$(curl -sk -D - -o /dev/null "$BASE_URL/api/spaces/trending" 2>/dev/null)
+if echo "$CORS_HEADERS" | grep -qi "access-control-allow-origin"; then
+    log_test PASS SECURITY "CORS头验证" "access-control-allow-origin ✅"
+else
+    log_test FAIL SECURITY "CORS头验证" "CORS头缺失 ❌"
+fi
 # ==========================================================
 # 18. 前端页面全量测试
 # ==========================================================
@@ -850,6 +858,40 @@ done
 log_test PASS PAGES "页面全量测试" "${PAGE_PASS}/$(($PAGE_PASS + $PAGE_FAIL)) 通过"
 
 # ==========================================================
+# 19. 性能测试
+# ==========================================================
+echo ""
+echo "--- 19. PERF 性能 ---"
+
+# TC-PERF-02: API response time baselines
+GW_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/spaces/trending" 2>/dev/null)
+if awk "BEGIN {exit !($GW_TIME < 2.0)}" 2>/dev/null; then
+    log_test PASS PERF "空间API响应时间" "${GW_TIME}s < 2s ✅"
+else
+    log_test FAIL PERF "空间API响应时间" "${GW_TIME}s >= 2s ❌"
+fi
+
+FEED_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/feed?limit=5" 2>/dev/null)
+if awk "BEGIN {exit !($FEED_TIME < 2.0)}" 2>/dev/null; then
+    log_test PASS PERF "Feed响应时间" "${FEED_TIME}s < 2s ✅"
+else
+    log_test FAIL PERF "Feed响应时间" "${FEED_TIME}s >= 2s ❌"
+fi
+
+SEARCH_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/search?q=rust" 2>/dev/null)
+if awk "BEGIN {exit !($SEARCH_TIME < 1.5)}" 2>/dev/null; then
+    log_test PASS PERF "搜索响应时间" "${SEARCH_TIME}s < 1.5s ✅"
+else
+    log_test FAIL PERF "搜索响应时间" "${SEARCH_TIME}s >= 1.5s ❌"
+fi
+
+POLL_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/polls?page_size=3" 2>/dev/null)
+if awk "BEGIN {exit !($POLL_TIME < 2.0)}" 2>/dev/null; then
+    log_test PASS PERF "投票API响应时间" "${POLL_TIME}s < 2s ✅"
+else
+    log_test FAIL PERF "投票API响应时间" "${POLL_TIME}s >= 2s ❌"
+fi
+
 # 清理
 # ==========================================================
 echo ""
