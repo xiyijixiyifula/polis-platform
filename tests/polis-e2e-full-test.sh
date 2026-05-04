@@ -921,7 +921,8 @@ else
 fi
 
 
-R=$(api GET /api/spaces)
+# v0.2.88: GET /api/spaces is now a public endpoint, test POST instead
+R=$(api POST "/api/spaces" "{\"slug\":\"test\",\"title\":\"test\"}" "")
 if ! check_code "$R"; then
     log_test PASS SECURITY "未认证拒绝" "正确拒绝 ✅"
 else
