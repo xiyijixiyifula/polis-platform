@@ -61,12 +61,13 @@ function NewPostForm() {
       { id: 'wiki', label: '知识库', moduleKey: 'wiki' as const },
       { id: 'qa', label: '问答', moduleKey: 'qa' as const },
       { id: 'novel', label: '小说', moduleKey: 'novel' as const },
+      { id: 'game', label: '游戏', moduleKey: 'game' as const },
     ];
     if (!enabledModules) return all;
     return all.filter((m) => enabledModules[m.moduleKey]);
   }, [enabledModules]);
 
-  const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'wiki' ? 'wiki' : urlModule === 'qa' ? 'qa' : urlModule === 'novel' ? 'novel' : urlModule === 'forum' ? 'article' : 'article');
+  const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'wiki' ? 'wiki' : urlModule === 'qa' ? 'qa' : urlModule === 'novel' ? 'novel' : urlModule === 'game' ? 'game' : urlModule === 'forum' ? 'article' : 'article');
   useEffect(() => {
     if (
       availableModules.length > 0 &&

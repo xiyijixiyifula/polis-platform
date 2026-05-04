@@ -299,6 +299,25 @@ if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
     fi
 fi
 
+# v0.2.70: Game 模块回归测试 — 创建游戏帖子
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    R=$(api POST "/api/spaces/$SPACE_NS/posts" \
+        "{\"title\":\"游戏回归测试\",\"body\":\"游戏攻略分享\",\"module_type\":\"game\"}" "$TOKEN")
+    if check_code "$R"; then
+        GAME_POST_ID=$(get_field "$R" "id")
+        GAME_MT=$(get_field "$R" "module_type")
+        if [ "$GAME_MT" = "game" ]; then
+            log_test PASS REGRESSION "Game模块帖子" "module_type=$GAME_MT ✅"
+        else
+            log_test FAIL REGRESSION "Game模块帖子" "module_type=$GAME_MT ❌"
+        fi
+        # Cleanup game post
+        api DELETE "/api/spaces/$SPACE_NS/posts/$GAME_POST_ID" "" "$TOKEN" > /dev/null 2>&1
+    else
+        log_test FAIL REGRESSION "Game模块帖子" "创建失败 ❌"
+    fi
+fi
+
 # ==========================================================
 # 4. 帖子测试
 # ==========================================================

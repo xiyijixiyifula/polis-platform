@@ -4,6 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.70', date: '2026-05-04', title: '新模块: 游戏 — 游戏内容讨论与分享 + 插件扩展',
+      items: [
+        '🎮 新模块: 游戏 - 空间"游戏"Tab 展示游戏内容 (过滤 module_type=game)',
+        '⚙️ 模块设置: 新增游戏模块开关 (Gamepad2 图标, 可独立启用/关闭)',
+        '✏️ 发帖页: 新增"游戏"模块类型选项 → 发布游戏攻略/评测/资讯',
+        '📰 信息流: Feed 首页新增游戏帖子识别 (🎮 + "游戏"标签)',
+        '🔌 插件化: 复用 ModuleType::Game 后端枚举 (零后端改动)',
+        '🎨 UI: 游戏 Tab 使用 green→emerald 渐变图标 + Gamepad2 图标',
+        '🧪 E2E: 新增 Game 模块回归测试 (创建 game 帖子 → 验证 module_type=game)',
+        '📊 模块统计: 15 个可用模块 (12 已上线 + 3 comingSoon)',
+      ],
+    },
+    {
       ver: '0.2.69', date: '2026-05-04', title: '新模块: 小说/阅读 — 章节连载 + 插件化模块架构',
       items: [
         '📖 新模块: 小说/阅读 - 空间"小说"Tab 展示小说内容 (过滤 module_type=novel)',
