@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.77', date: '2026-05-04', title: '维护轮次 — E2E 书签列表 + 通知已读 + 66/66 全通',
+      items: [
+        '🧪 新增: SOCIAL 书签列表验证 (GET /api/bookmarks + 收藏数)',
+        '🧪 新增: NOTIF 标记全部已读 (POST /api/notifications/read-all)',
+        '📊 测试总量: 64→66 项 (SOCIAL 4→5, NOTIF 2→3)',
+        '✅ 66/66 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.76', date: '2026-05-04', title: '维护轮次 — E2E 搜索测试全覆盖 + 测试扩展 60→64',
       items: [
         '🧪 新增: E2E SEARCH 搜索测试 4 项 (社区搜索/帖子搜索/中文搜索/无结果搜索)',

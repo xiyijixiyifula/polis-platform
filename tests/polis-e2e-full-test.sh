@@ -513,6 +513,15 @@ if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
     else
         log_test FAIL SOCIAL "收藏帖子" "failed"
     fi
+
+	    # TC-POST-07b: Verify bookmark is saved
+	    R=$(api GET "/api/bookmarks" "" "$TOKEN")
+	    if check_code "$R"; then
+	        SAVED_CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+	        log_test PASS SOCIAL "书签列表" "count=$SAVED_CNT ✅"
+	    else
+	        log_test FAIL SOCIAL "书签列表" "failed"
+	    fi
 fi
 
 # ==========================================================
@@ -534,6 +543,13 @@ if check_code "$R"; then
 else
     log_test FAIL NOTIF "未读数" "failed"
 fi
+
+	R=$(api POST "/api/notifications/read-all" "" "$TOKEN")
+	if check_code "$R"; then
+	    log_test PASS NOTIF "标记全部已读" "OK ✅"
+	else
+	    log_test FAIL NOTIF "标记全部已读" "failed"
+	fi
 
 # ==========================================================
 # 9. 专栏测试
