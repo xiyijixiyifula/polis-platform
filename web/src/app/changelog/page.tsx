@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.89', date: '2026-05-05', title: '健康检查 — 系统巡检 + 76/76 全通',
+      items: [
+        '🔍 健康检查: 6 服务全活、首页 200、76/76 E2E 全量通过',
+        '🏛️ GET /api/spaces: 公开空间列表正常 (220+ spaces)',
+        '🏥 Health: Gateway + 4微服务全部 healthy',
+        '✅ 系统稳定运行，无需变更代码',
+      ],
+    },
+    {
       ver: '0.2.88', date: '2026-05-05', title: '公共空间列表 API + space list CLI + 技术债务清理',
       items: [
         '🏛️ GET /api/spaces: 新增公共空间列表端点 — 分页查询所有公开活跃社区 (按时间倒序)',
