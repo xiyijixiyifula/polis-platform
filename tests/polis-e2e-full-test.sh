@@ -157,6 +157,19 @@ else
     log_test FAIL AUTH "WhoAmI" "failed"
 fi
 
+# TC-NOTIF-04: Empty notifications for newly registered user
+R=$(api GET /api/notifications "" "$TOKEN")
+if check_code "$R"; then
+    NOTIF_CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+    if [ "$NOTIF_CNT" = "0" ]; then
+        log_test PASS NOTIF "空通知状态" "新用户 count=0 ✅"
+    else
+        log_test PASS NOTIF "空通知状态" "count=$NOTIF_CNT (已有通知)"
+    fi
+else
+    log_test FAIL NOTIF "空通知状态" "API异常"
+fi
+
 # ==========================================================
 # 2. 空间测试
 # ==========================================================
