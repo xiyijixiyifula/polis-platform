@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.82', date: '2026-05-05', title: 'Bug修复 — 概览模块过滤 + PERF重试机制 + 72/72 全通',
+      items: [
+        '🐛 修复: 空间概览"社区动态"按 enabled_modules 过滤帖子 — 禁用分享模块后不再显示分享帖',
+        '🐛 修复: 用户报告"概览中看到分享模块但设置表中没有" — 概览API无过滤导致混淆',
+        '🔧 PERF: 4项API性能测试新增二次测量取最优 — 消除网络瞬时毛刺误报',
+        '✅ 72/72 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.81', date: '2026-05-04', title: '维护轮次 — PERF 测试重定位 + Feed 阈值调优 + 72/72 全通',
       items: [
         '🔧 PERF: 性能测试移至脚本最前面 (0号测段) — 在创建测试数据前测量，避免E2E并发干扰',

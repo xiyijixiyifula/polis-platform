@@ -199,7 +199,18 @@ export default function SpacePage() {
         const pollsIdx = modules.polls ? 2 : -1;
         const annIdx = modules.polls ? 3 : 2;
 
-        if (postsData.code === 0) setPosts(postsData.data || []);
+        if (postsData.code === 0) {
+	          const allPosts = postsData.data || [];
+	          // Filter posts by enabled module types (consistent with tab bar)
+	          const mtFilter = new Set(['forum', 'article', '']);
+	          if (modules.share) mtFilter.add('share');
+	          if (modules.wiki) mtFilter.add('wiki');
+	          if (modules.qa) mtFilter.add('qa');
+	          if (modules.novel) mtFilter.add('novel');
+	          if (modules.game) mtFilter.add('game');
+	          if (modules.mini_app) mtFilter.add('mini_app');
+	          setPosts(allPosts.filter((p: any) => mtFilter.has(p.module_type || '')));
+	        }
         if (featuredData.code === 0) setFeatured(featuredData.data || []);
         if (pollsIdx > 0 && results[pollsIdx]?.code === 0) setPolls(results[pollsIdx].data || []);
         if (results[annIdx]?.code === 0) setAnnouncements(results[annIdx].data || []);
