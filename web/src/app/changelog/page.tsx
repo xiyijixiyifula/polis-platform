@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.73', date: '2026-05-04', title: '维护轮次 — /polls/new 社区选择器 + E2E 覆盖扩展',
+      items: [
+        '🔧 修复: /polls/new 缺失社区选择器 → 新增空间下拉 (自动获取用户社区列表)',
+        '🎨 /polls/new: 暗黑模式适配 + 错误提示优化 + URL参数自动选中社区',
+        '📊 /polls 页面: 从静态占位页重写为全平台投票列表 (标题/票数/社区名/分页)',
+        '🔌 后端: 新增 GET /api/polls 全局投票 API (list_all_polls + 分页 + 空间 JOIN)',
+        '🔗 Feed导航修复: 投票项 /pools → /space/{ns}/polls, 标签 /posts → /polls',
+        '🧪 E2E: 页面全量测试新增 /polls/new, /post/new (24→26 页)',
+        '✅ 56/56 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.72', date: '2026-05-04', title: '投票中心上线 + Feed 投票导航修复',
       items: [
         '📊 投票中心: /polls 页面从静态占位页 → 全平台投票列表 (API + 前端)',
