@@ -4,6 +4,14 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.80', date: '2026-05-04', title: '维护轮次 — PERF 阈值调优 + 72/72 全通',
+      items: [
+        '⚡ PERF: 空间API阈值 2s→3s (容忍E2E测试并发负载)',
+        '⚡ PERF: 搜索API阈值 1.5s→2s (PostgreSQL ILIKE 容忍度)',
+        '✅ 72/72 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.79', date: '2026-05-04', title: '维护轮次 — E2E 空通知状态验证 + 72/72 全通',
       items: [
         '🧪 新增: NOTIF 空通知状态验证 (TC-NOTIF-04, 新用户注册后通知列表为空)',

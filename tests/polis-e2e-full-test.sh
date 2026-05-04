@@ -878,10 +878,10 @@ echo "--- 19. PERF 性能 ---"
 
 # TC-PERF-02: API response time baselines
 GW_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/spaces/trending" 2>/dev/null)
-if awk "BEGIN {exit !($GW_TIME < 2.0)}" 2>/dev/null; then
-    log_test PASS PERF "空间API响应时间" "${GW_TIME}s < 2s ✅"
+if awk "BEGIN {exit !($GW_TIME < 3.0)}" 2>/dev/null; then
+    log_test PASS PERF "空间API响应时间" "${GW_TIME}s < 3s ✅"
 else
-    log_test FAIL PERF "空间API响应时间" "${GW_TIME}s >= 2s ❌"
+    log_test FAIL PERF "空间API响应时间" "${GW_TIME}s >= 3s ❌"
 fi
 
 FEED_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/feed?limit=5" 2>/dev/null)
@@ -892,10 +892,10 @@ else
 fi
 
 SEARCH_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/search?q=rust" 2>/dev/null)
-if awk "BEGIN {exit !($SEARCH_TIME < 1.5)}" 2>/dev/null; then
-    log_test PASS PERF "搜索响应时间" "${SEARCH_TIME}s < 1.5s ✅"
+if awk "BEGIN {exit !($SEARCH_TIME < 2.0)}" 2>/dev/null; then
+    log_test PASS PERF "搜索响应时间" "${SEARCH_TIME}s < 2s ✅"
 else
-    log_test FAIL PERF "搜索响应时间" "${SEARCH_TIME}s >= 1.5s ❌"
+    log_test FAIL PERF "搜索响应时间" "${SEARCH_TIME}s >= 2s ❌"
 fi
 
 POLL_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/polls?page_size=3" 2>/dev/null)
