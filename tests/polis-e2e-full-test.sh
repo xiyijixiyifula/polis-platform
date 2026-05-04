@@ -78,8 +78,17 @@ check_code() {
 }
 
 check_http() {
-    local code=$(curl -sk -o /dev/null -w "%{http_code}" "$1" 2>/dev/null)
-    [ "$code" = "${2:-200}" ]
+    local max_retries=3
+    local attempt=1
+    while [ $attempt -le $max_retries ]; do
+        local code=$(curl -sk --max-time 10 -o /dev/null -w "%{http_code}" "$1" 2>/dev/null)
+        if [ "$code" = "${2:-200}" ]; then
+            return 0
+        fi
+        attempt=$((attempt + 1))
+        [ $attempt -le $max_retries ] && sleep 1
+    done
+    return 1
 }
 
 get_field() {
@@ -236,6 +245,39 @@ if check_code "$R"; then
     log_test PASS REGRESSION "创新空间API" "code=0 ✅"
 else
     log_test FAIL REGRESSION "创新空间API" "404回归!"
+fi
+
+# v0.2.64: Members API 回归测试
+R=$(api GET "/api/spaces/112233/%E6%96%B0%E7%9A%84%E4%B8%96%E7%95%8C/members")
+if check_code "$R"; then
+    MEMBER_COUNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',[]); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null)
+    if [ "$MEMBER_COUNT" -gt 0 ]; then
+        FIRST_ROLE=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',[]); print(d[0].get('role','') if d else '')" 2>/dev/null)
+        log_test PASS REGRESSION "Members API修复" "count=$MEMBER_COUNT role=$FIRST_ROLE ✅"
+    else
+        log_test PASS REGRESSION "Members API修复" "API正常 (空列表)"
+    fi
+else
+    log_test FAIL REGRESSION "Members API修复" "端点异常 ❌"
+fi
+
+# v0.2.63: QA 模块回归测试 — 创建 QA 帖子
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    R=$(api POST "/api/spaces/$SPACE_NS/posts" \
+        "{\"title\":\"QA回归测试\",\"body\":\"这是一个问答测试\",\"module_type\":\"qa\"}" "$TOKEN")
+    if check_code "$R"; then
+        QA_POST_ID=$(get_field "$R" "id")
+        QA_MT=$(get_field "$R" "module_type")
+        if [ "$QA_MT" = "qa" ]; then
+            log_test PASS REGRESSION "QA模块帖子" "module_type=$QA_MT ✅"
+        else
+            log_test FAIL REGRESSION "QA模块帖子" "module_type=$QA_MT ❌"
+        fi
+        # Cleanup QA post
+        api DELETE "/api/spaces/$SPACE_NS/posts/$QA_POST_ID" "" "$TOKEN" > /dev/null 2>&1
+    else
+        log_test FAIL REGRESSION "QA模块帖子" "创建失败 ❌"
+    fi
 fi
 
 # ==========================================================

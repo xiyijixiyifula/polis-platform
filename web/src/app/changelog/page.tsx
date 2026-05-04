@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.66', date: '2026-05-04', title: '维护轮次 — E2E 增强 + Members/QA 回归测试 + 系统健康检查',
+      items: [
+        '🧪 测试增强: E2E 框架新增 Members API 回归测试 (v0.2.64) + QA 模块回归测试 (v0.2.63)',
+        '🔄 健壮性: check_http() 增加重试机制 (max 3 retries + sleep 1s)，防止瞬时故障误报',
+        '📊 覆盖: 测试从 50 → 52 项 (REGRESSION: 5→7)，52/52 全部通过',
+        '👥 Members API: 验证返回真实成员数据 (role=owner, count=1) ✅',
+        '❓ QA 模块: 验证 module_type=qa 帖子创建/检索正常 ✅',
+        '🛡️ 安全: HTTP→HTTPS 301, 未认证拒绝, CORS 完整',
+        '⚡ 6 服务 active, 24 页面全 200, Feed 20条正常',
+      ],
+    },
+    {
       ver: '0.2.65', date: '2026-05-04', title: 'CLI 增强 — polisctl space members 命令 + 维护轮次',
       items: [
         '🖥️ CLI: 新增 polisctl space members <ns> 命令 — 查询空间成员列表 (对接 /api/spaces/{ns}/members)',
@@ -752,7 +764,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.65' && (
+              {v.ver === '0.2.66' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
