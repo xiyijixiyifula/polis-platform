@@ -485,17 +485,6 @@ impl ContentRepo {
 
     pub async fn create_poll(&self, space_id: Uuid, author_id: Uuid, title: &str, desc: &str,
         poll_type: &str, options: &[String], expires_at: Option<chrono::DateTime<chrono::Utc>>) -> Result<Uuid, AppError> {
-        // Verify polls module is enabled for this space
-        let modules: Option<(serde_json::Value,)> = sqlx::query_as(
-            "SELECT enabled_modules FROM spaces WHERE id = $1"
-        ).bind(space_id).fetch_optional(&self.pool).await?;
-        let poll_enabled = modules.as_ref()
-            .and_then(|(m,)| m.as_array())
-            .map(|arr| arr.iter().any(|v| v.as_str() == Some("polls")))
-            .unwrap_or(false);
-        if !poll_enabled {
-            return Err(AppError::Forbidden("该社区未启用投票模块，请先在社区设置中开启投票功能".to_string()));
-        }
         let poll_id: (Uuid,) = sqlx::query_as(
             r#"INSERT INTO polls (space_id, author_id, title, description, poll_type, expires_at)
                VALUES ($1, $2, $3, $4, $5, $6) RETURNING id"#
@@ -510,16 +499,6 @@ impl ContentRepo {
     }
 
     pub async fn vote_poll(&self, poll_id: Uuid, option_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
-        // Verify polls module is enabled in the poll's space
-        let poll_enabled: Option<(bool,)> = sqlx::query_as(
-            r#"SELECT EXISTS(
-                SELECT 1 FROM polls p JOIN spaces s ON s.id = p.space_id
-                WHERE p.id = $1 AND s.enabled_modules @> '"polls"'::jsonb
-            )"#
-        ).bind(poll_id).fetch_optional(&self.pool).await?;
-        if !poll_enabled.map(|(v,)| v).unwrap_or(false) {
-            return Err(AppError::Forbidden("该投票所属社区未启用投票模块".to_string()));
-        }
         let existing: Option<(Uuid,)> = sqlx::query_as(
             "SELECT id FROM poll_votes WHERE poll_id = $1 AND user_id = $2"
         ).bind(poll_id).bind(user_id).fetch_optional(&self.pool).await?;
@@ -567,7 +546,7 @@ impl ContentRepo {
                 'space_title', s.title
             ) FROM polls p
             JOIN spaces s ON s.id = p.space_id
-            WHERE p.status = 'active' AND s.enabled_modules @> '"polls"'::jsonb
+            WHERE p.status = 'active'
             ORDER BY p.created_at DESC
             LIMIT $1 OFFSET $2"#
         ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
