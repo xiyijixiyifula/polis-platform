@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.72', date: '2026-05-04', title: 'Bug修复: Feed 投票导航 — 首页点击投票跳转社区空间',
+      items: [
+        '🔗 修复: Feed 投票项链接到 /polls 占位页 → 改为 /space/{ns}/polls 直达社区投票Tab',
+        '🔗 修复: Feed 投票模块标签链接到 /posts → 改为 /polls 标签指向投票Tab',
+        '🧭 用户路径: 首页看到投票 → 点击 → 直达社区投票Tab (完整端到端)',
+        '📊 56/56 全量测试通过',
+      ],
+    },
+    {
       ver: '0.2.71', date: '2026-05-04', title: '新模块: 小程序 — 嵌入式小应用 + 插件架构收尾',
       items: [
         '🧩 新模块: 小程序(MiniApp) - 空间"小程序"Tab (过滤 module_type=mini_app)',
