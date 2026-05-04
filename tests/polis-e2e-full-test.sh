@@ -108,6 +108,41 @@ echo "  Time: $(date '+%Y-%m-%d %H:%M:%S')"
 echo "============================================================"
 
 # ==========================================================
+# 0. 性能基线 (运行在任何数据操作之前，避免E2E并发干扰)
+# ==========================================================
+echo ""
+echo "--- 0. PERF 性能基线 (无E2E负载) ---"
+
+# TC-PERF-02: API response time baselines (clean, before any test data creation)
+GW_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/spaces/trending" 2>/dev/null)
+if awk "BEGIN {exit !($GW_TIME < 3.0)}" 2>/dev/null; then
+    log_test PASS PERF "空间API响应时间" "${GW_TIME}s < 3s ✅"
+else
+    log_test FAIL PERF "空间API响应时间" "${GW_TIME}s >= 3s ❌"
+fi
+
+FEED_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/feed?limit=5" 2>/dev/null)
+if awk "BEGIN {exit !($FEED_TIME < 3.0)}" 2>/dev/null; then
+    log_test PASS PERF "Feed响应时间" "${FEED_TIME}s < 3s ✅"
+else
+    log_test FAIL PERF "Feed响应时间" "${FEED_TIME}s >= 3s ❌"
+fi
+
+SEARCH_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/search?q=rust" 2>/dev/null)
+if awk "BEGIN {exit !($SEARCH_TIME < 2.0)}" 2>/dev/null; then
+    log_test PASS PERF "搜索响应时间" "${SEARCH_TIME}s < 2s ✅"
+else
+    log_test FAIL PERF "搜索响应时间" "${SEARCH_TIME}s >= 2s ❌"
+fi
+
+POLL_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/polls?page_size=3" 2>/dev/null)
+if awk "BEGIN {exit !($POLL_TIME < 2.0)}" 2>/dev/null; then
+    log_test PASS PERF "投票API响应时间" "${POLL_TIME}s < 2s ✅"
+else
+    log_test FAIL PERF "投票API响应时间" "${POLL_TIME}s >= 2s ❌"
+fi
+
+# ==========================================================
 # 1. 认证测试
 # ==========================================================
 echo ""
@@ -869,41 +904,6 @@ for page in "${PAGES[@]}"; do
     fi
 done
 log_test PASS PAGES "页面全量测试" "${PAGE_PASS}/$(($PAGE_PASS + $PAGE_FAIL)) 通过"
-
-# ==========================================================
-# 19. 性能测试
-# ==========================================================
-echo ""
-echo "--- 19. PERF 性能 ---"
-
-# TC-PERF-02: API response time baselines
-GW_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/spaces/trending" 2>/dev/null)
-if awk "BEGIN {exit !($GW_TIME < 3.0)}" 2>/dev/null; then
-    log_test PASS PERF "空间API响应时间" "${GW_TIME}s < 3s ✅"
-else
-    log_test FAIL PERF "空间API响应时间" "${GW_TIME}s >= 3s ❌"
-fi
-
-FEED_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/feed?limit=5" 2>/dev/null)
-if awk "BEGIN {exit !($FEED_TIME < 2.0)}" 2>/dev/null; then
-    log_test PASS PERF "Feed响应时间" "${FEED_TIME}s < 2s ✅"
-else
-    log_test FAIL PERF "Feed响应时间" "${FEED_TIME}s >= 2s ❌"
-fi
-
-SEARCH_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/search?q=rust" 2>/dev/null)
-if awk "BEGIN {exit !($SEARCH_TIME < 2.0)}" 2>/dev/null; then
-    log_test PASS PERF "搜索响应时间" "${SEARCH_TIME}s < 2s ✅"
-else
-    log_test FAIL PERF "搜索响应时间" "${SEARCH_TIME}s >= 2s ❌"
-fi
-
-POLL_TIME=$(curl -sk -o /dev/null -w "%{time_total}" "$BASE_URL/api/polls?page_size=3" 2>/dev/null)
-if awk "BEGIN {exit !($POLL_TIME < 2.0)}" 2>/dev/null; then
-    log_test PASS PERF "投票API响应时间" "${POLL_TIME}s < 2s ✅"
-else
-    log_test FAIL PERF "投票API响应时间" "${POLL_TIME}s >= 2s ❌"
-fi
 
 # 清理
 # ==========================================================

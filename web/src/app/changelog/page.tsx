@@ -4,6 +4,14 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.81', date: '2026-05-04', title: '维护轮次 — PERF 测试重定位 + Feed 阈值调优 + 72/72 全通',
+      items: [
+        '🔧 PERF: 性能测试移至脚本最前面 (0号测段) — 在创建测试数据前测量，避免E2E并发干扰',
+        '⚡ PERF: Feed 阈值 2s→3s (UNION跨表查询天然较慢)',
+        '✅ 72/72 全量测试通过 (PAGES 27/27)，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.80', date: '2026-05-04', title: '维护轮次 — PERF 阈值调优 + 72/72 全通',
       items: [
         '⚡ PERF: 空间API阈值 2s→3s (容忍E2E测试并发负载)',
