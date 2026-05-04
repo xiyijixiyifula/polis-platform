@@ -347,7 +347,12 @@ if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
         "{\"body\":\"这是测试评论\"}" "$TOKEN")
     if check_code "$R"; then
         COMMENT_ID=$(get_field "$R" "id")
-        log_test PASS COMMENT "创建评论" "id=$COMMENT_ID"
+        COMMENT_AUTHOR=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); a=d.get('author'); print('ok' if a else 'null')" 2>/dev/null)
+        if [ "$COMMENT_AUTHOR" = "ok" ]; then
+            log_test PASS COMMENT "创建评论" "id=$COMMENT_ID author=ok ✅"
+        else
+            log_test FAIL COMMENT "创建评论" "id=$COMMENT_ID author=null ❌ (匿名Bug)"
+        fi
     else
         log_test FAIL COMMENT "创建评论" "msg=$(get_msg "$R")"
     fi

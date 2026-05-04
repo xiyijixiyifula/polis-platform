@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.68', date: '2026-05-04', title: 'Bug修复: 评论匿名 — create_comment 返回作者信息 + E2E 回归测试',
+      items: [
+        '🐛 修复: 评论匿名Bug — POST /api/spaces/{ns}/posts/{id}/comments 返回 author=null',
+        '🔧 后端: content_handler create_comment() 返回类型 Comment → serde_json::Value + 用 find_users_batch 查询作者',
+        '🧪 回归: 评论创建测试增加 author 非空验证 (防止匿名Bug复发)',
+        '✅ 53/53 全量测试通过，6 服务 active，24 页面全 200',
+      ],
+    },
+    {
       ver: '0.2.67', date: '2026-05-04', title: '维护轮次 — POST /api/vote 验证修复 + E2E 覆盖增强 + 系统健康检查',
       items: [
         '🗳️ 投票增强: POST /api/vote 网关 body 转发已修复 → E2E 新增 POST 投票测试 (score 验证)',
@@ -774,7 +783,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.67' && (
+              {v.ver === '0.2.68' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>

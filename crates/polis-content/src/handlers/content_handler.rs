@@ -439,7 +439,7 @@ impl ContentHandler {
         post_id: Uuid,
         author_id: Uuid,
         req: CreateCommentRequest,
-    ) -> Result<Comment, AppError> {
+    ) -> Result<serde_json::Value, AppError> {
         self.repo
             .find_post_by_id(post_id)
             .await?
@@ -468,7 +468,24 @@ impl ContentHandler {
             "author_id": author_id.to_string(),
         })).await;
 
-        Ok(comment)
+        // 获取作者信息并添加到响应中，防止前端显示"匿名"
+        let users = self.repo.find_users_batch(&[author_id]).await?;
+        let author = users.get(&author_id).map(|u| serde_json::json!({
+            "id": u.id,
+            "username": u.username,
+            "display_name": u.display_name,
+            "avatar_url": u.avatar_url,
+        }));
+
+        Ok(serde_json::json!({
+            "id": comment.id,
+            "post_id": comment.post_id,
+            "author": author,
+            "parent_id": comment.parent_id,
+            "body": comment.body,
+            "like_count": comment.like_count,
+            "created_at": comment.created_at,
+        }))
     }
 
     /// 获取帖子评论
