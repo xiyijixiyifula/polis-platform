@@ -4,6 +4,14 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.83', date: '2026-05-05', title: '健康检查 — 系统巡检 + 72/72 全通',
+      items: [
+        '🔍 健康检查: 6 服务全活、首页 200、72/72 E2E 全量通过',
+        '⚡ 性能基线: 空间 0.81s / Feed 0.81s / 搜索 1.00s / 投票 0.65s',
+        '✅ 系统稳定运行，无需变更代码',
+      ],
+    },
+    {
       ver: '0.2.82', date: '2026-05-05', title: 'Bug修复 — 概览模块过滤 + PERF重试机制 + 72/72 全通',
       items: [
         '🐛 修复: 空间概览"社区动态"按 enabled_modules 过滤帖子 — 禁用分享模块后不再显示分享帖',
