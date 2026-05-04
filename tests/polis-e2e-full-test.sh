@@ -406,6 +406,15 @@ if [ -n "$POST_ID" ]; then
     else
         log_test FAIL VOTE "清除投票后分数" "failed"
     fi
+
+    # POST 投票（验证网关 body 转发已修复）
+    R=$(api POST "/api/vote" "{\"target_type\":\"post\",\"target_id\":\"$POST_ID\",\"value\":1}" "$TOKEN")
+    if check_code "$R"; then
+        SC=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('score',-99))" 2>/dev/null)
+        log_test PASS VOTE "POST投票(网关修复)" "score=$SC ✅"
+    else
+        log_test FAIL VOTE "POST投票(网关修复)" "POST body转发失败 ❌"
+    fi
 fi
 
 # ==========================================================

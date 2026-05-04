@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.67', date: '2026-05-04', title: '维护轮次 — POST /api/vote 验证修复 + E2E 覆盖增强 + 系统健康检查',
+      items: [
+        '🗳️ 投票增强: POST /api/vote 网关 body 转发已修复 → E2E 新增 POST 投票测试 (score 验证)',
+        '🧪 测试覆盖: 52 → 53 项 (VOTE: 4→5)，新增 POST 投票回归测试 (网关 body 转发验证)',
+        '🔍 验证: 端到端 POST 投票通过 (code=0, upvotes=1, score=1)',
+        '📋 已知技术债务减少: POST vote 网关 body 转发 bug 已不存在',
+        '✅ 53/53 全量测试通过，6 服务 active, 24 页面全 200',
+      ],
+    },
+    {
       ver: '0.2.66', date: '2026-05-04', title: '维护轮次 — E2E 增强 + Members/QA 回归测试 + 系统健康检查',
       items: [
         '🧪 测试增强: E2E 框架新增 Members API 回归测试 (v0.2.64) + QA 模块回归测试 (v0.2.63)',
@@ -764,7 +774,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.66' && (
+              {v.ver === '0.2.67' && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
