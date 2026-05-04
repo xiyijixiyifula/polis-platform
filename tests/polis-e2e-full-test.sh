@@ -280,6 +280,25 @@ if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
     fi
 fi
 
+# v0.2.69: Novel 模块回归测试 — 创建小说帖子
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    R=$(api POST "/api/spaces/$SPACE_NS/posts" \
+        "{\"title\":\"小说回归测试\",\"body\":\"第一章：开端\",\"module_type\":\"novel\"}" "$TOKEN")
+    if check_code "$R"; then
+        NOVEL_POST_ID=$(get_field "$R" "id")
+        NOVEL_MT=$(get_field "$R" "module_type")
+        if [ "$NOVEL_MT" = "novel" ]; then
+            log_test PASS REGRESSION "Novel模块帖子" "module_type=$NOVEL_MT ✅"
+        else
+            log_test FAIL REGRESSION "Novel模块帖子" "module_type=$NOVEL_MT ❌"
+        fi
+        # Cleanup novel post
+        api DELETE "/api/spaces/$SPACE_NS/posts/$NOVEL_POST_ID" "" "$TOKEN" > /dev/null 2>&1
+    else
+        log_test FAIL REGRESSION "Novel模块帖子" "创建失败 ❌"
+    fi
+fi
+
 # ==========================================================
 # 4. 帖子测试
 # ==========================================================

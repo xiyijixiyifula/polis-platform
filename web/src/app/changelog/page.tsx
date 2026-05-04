@@ -4,6 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.69', date: '2026-05-04', title: '新模块: 小说/阅读 — 章节连载 + 插件化模块架构',
+      items: [
+        '📖 新模块: 小说/阅读 - 空间"小说"Tab 展示小说内容 (过滤 module_type=novel)',
+        '⚙️ 模块设置: 新增小说模块开关 (可独立启用/关闭，与其他模块并列)',
+        '✏️ 发帖页: 新增"小说"模块类型选项 → 发帖时可选择发布小说章节',
+        '📰 信息流: Feed 首页新增小说帖子识别 (📖 + "小说"标签)',
+        '🔌 插件化: 复用 ModuleType::Novel 后端枚举 (无需后端改动，真正插件式模块)',
+        '🎨 UI: 小说 Tab 使用 indigo→purple 渐变图标 + BookText 图标',
+        '🧪 E2E: 新增 Novel 模块回归测试 (创建 novel 帖子 → 验证 module_type=novel)',
+        '📊 模块统计: 14 个可用模块 (posts/share/wiki/series/membership/novel/qa/polls/announcements/members + 4 个 comingSoon)',
+      ],
+    },
+    {
       ver: '0.2.68', date: '2026-05-04', title: 'Bug修复: 评论匿名 — create_comment 返回作者信息 + E2E 回归测试',
       items: [
         '🐛 修复: 评论匿名Bug — POST /api/spaces/{ns}/posts/{id}/comments 返回 author=null',
