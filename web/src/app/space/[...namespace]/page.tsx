@@ -7,7 +7,7 @@ import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2 } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow } from 'lucide-react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
@@ -36,7 +36,7 @@ export default function SpacePage() {
 
   // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
   const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
-    'members', 'settings', 'video', 'code_repo', 'qa', 'files', 'series', 'membership', 'novel', 'game']);
+    'members', 'settings', 'video', 'code_repo', 'qa', 'files', 'series', 'membership', 'novel', 'game', 'mini_app']);
   const nsParts = namespace.split('/');
   let urlTab: string | null = null;
   if (nsParts.length > 1 && knownSubRoutes.has(nsParts[nsParts.length - 1])) {
@@ -72,6 +72,7 @@ export default function SpacePage() {
     { id: 'course', label: '课程', icon: GraduationCap, enabled: modules.course },
     { id: 'novel', label: '小说', icon: BookText, enabled: modules.novel },
     { id: 'game', label: '游戏', icon: Gamepad2, enabled: modules.game },
+    { id: 'mini_app', label: '小程序', icon: AppWindow, enabled: modules.mini_app },
     { id: 'members', label: '成员', icon: UserCheck, enabled: modules.members },
   ].filter(t => t.enabled);
 
@@ -478,8 +479,8 @@ export default function SpacePage() {
                 ) : posts.length > 0 ? (
                   <div className="space-y-1">
                     {posts.slice(0, 20).map((post) => {
-                      const moduleIcon = post.module_type === 'share' ? '🔖' : post.module_type === 'wiki' ? '📚' : post.module_type === 'qa' ? '❓' : post.module_type === 'novel' ? '📖' : post.module_type === 'game' ? '🎮' : '📄';
-                      const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : post.module_type === 'qa' ? '问答' : post.module_type === 'novel' ? '小说' : post.module_type === 'game' ? '游戏' : '交流';
+                      const moduleIcon = post.module_type === 'share' ? '🔖' : post.module_type === 'wiki' ? '📚' : post.module_type === 'qa' ? '❓' : post.module_type === 'novel' ? '📖' : post.module_type === 'game' ? '🎮' : post.module_type === 'mini_app' ? '🧩' : '📄';
+                      const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : post.module_type === 'qa' ? '问答' : post.module_type === 'novel' ? '小说' : post.module_type === 'game' ? '游戏' : post.module_type === 'mini_app' ? '小程序' : '交流';
                       const author = (post.author || {}) as any;
                       const authorUsername = author.username || '';
                       const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
@@ -1206,6 +1207,55 @@ export default function SpacePage() {
                   <Gamepad2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无游戏内容</p>
                   <p className="text-sm mt-1">发布你的第一篇游戏攻略吧！</p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* === MiniApp Tab（小程序 — 嵌入式小应用）=== */}
+          {activeTab === 'mini_app' && (
+            <>
+              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=mini_app`}
+                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
+                  <AppWindow className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">发布小程序</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法，发布小程序介绍与使用说明</p>
+                </div>
+                <div className="btn-primary text-xs px-4 py-1.5 gap-1">
+                  <Plus className="h-3.5 w-3.5" /> 发布
+                </div>
+              </Link>
+
+              {postLoading ? (
+                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+              ) : posts.filter(p => p.module_type === 'mini_app').length > 0 ? (
+                <div className="space-y-3">
+                  {posts.filter(p => p.module_type === 'mini_app').map((post) => (
+                    <PostCard key={post.id} post={{
+                      id: post.id,
+                      title: post.title,
+                      body: post.body,
+                      author: post.author,
+                      space_id: post.space_id,
+                      space_ns: namespace,
+                      space_name: space.title,
+                      like_count: post.like_count,
+                      comment_count: post.comment_count,
+                      view_count: post.view_count,
+                      created_at: post.created_at,
+                      tags: post.tags,
+                      is_pinned: post.is_pinned,
+                    }} />
+                  ))}
+                </div>
+              ) : (
+                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                  <AppWindow className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>暂无小程序内容</p>
+                  <p className="text-sm mt-1">发布你的第一个小程序吧！</p>
                 </div>
               )}
             </>

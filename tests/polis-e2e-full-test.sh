@@ -318,6 +318,25 @@ if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
     fi
 fi
 
+# v0.2.71: MiniApp 模块回归测试 — 创建小程序帖子
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    R=$(api POST "/api/spaces/$SPACE_NS/posts" \
+        "{\"title\":\"小程序回归测试\",\"body\":\"小程序使用指南\",\"module_type\":\"mini_app\"}" "$TOKEN")
+    if check_code "$R"; then
+        MA_POST_ID=$(get_field "$R" "id")
+        MA_MT=$(get_field "$R" "module_type")
+        if [ "$MA_MT" = "mini_app" ]; then
+            log_test PASS REGRESSION "MiniApp模块帖子" "module_type=$MA_MT ✅"
+        else
+            log_test FAIL REGRESSION "MiniApp模块帖子" "module_type=$MA_MT ❌"
+        fi
+        # Cleanup mini_app post
+        api DELETE "/api/spaces/$SPACE_NS/posts/$MA_POST_ID" "" "$TOKEN" > /dev/null 2>&1
+    else
+        log_test FAIL REGRESSION "MiniApp模块帖子" "创建失败 ❌"
+    fi
+fi
+
 # ==========================================================
 # 4. 帖子测试
 # ==========================================================

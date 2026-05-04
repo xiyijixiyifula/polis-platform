@@ -4,7 +4,7 @@ import { useState } from 'react';
 import {
   Settings, X, MessageCircle, BarChart3, Megaphone,
   UserCheck, Video, Code, HelpCircle, MessageSquare,
-  ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2,
+  ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow,
 } from 'lucide-react';
 
 export interface SpaceModules {
@@ -24,6 +24,7 @@ export interface SpaceModules {
   wiki: boolean;            // 知识库 - 协作文档
   novel: boolean;          // 小说/阅读
   game: boolean;           // 游戏
+  mini_app: boolean;       // 小程序
 }
 
 const defaultModules: SpaceModules = {
@@ -43,6 +44,7 @@ const defaultModules: SpaceModules = {
   wiki: false,
   novel: false,
   game: false,
+  mini_app: false,
 };
 
 function getModulesKey(namespace: string) {
@@ -105,6 +107,7 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
     { key: 'course', label: '课程', icon: GraduationCap, locked: false, comingSoon: true, desc: '在线课程与学习' },
     { key: 'novel', label: '小说', icon: BookText, locked: false, comingSoon: false, desc: '小说发布与阅读，支持章节连载' },
     { key: 'game', label: '游戏', icon: Gamepad2, locked: false, comingSoon: false, desc: '游戏内容讨论与分享' },
+    { key: 'mini_app', label: '小程序', icon: AppWindow, locked: false, comingSoon: false, desc: '嵌入式小应用，社区内互动工具' },
     { key: 'members', label: '成员', icon: UserCheck, locked: false, comingSoon: false, desc: '社区成员列表' },
   ];
 

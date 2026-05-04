@@ -4,6 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.71', date: '2026-05-04', title: '新模块: 小程序 — 嵌入式小应用 + 插件架构收尾',
+      items: [
+        '🧩 新模块: 小程序(MiniApp) - 空间"小程序"Tab (过滤 module_type=mini_app)',
+        '⚙️ 模块设置: 新增小程序模块开关 (AppWindow 图标, 可独立启用/关闭)',
+        '✏️ 发帖页: 新增"小程序"模块类型选项 → 发布小程序介绍与使用指南',
+        '📰 信息流: Feed 首页新增小程序帖子识别 (🧩 + "小程序"标签)',
+        '🔌 插件完成: 16 个 ModuleType 后端枚举全部映射到前端模块',
+        '🎨 UI: 小程序 Tab 使用 orange→red 渐变图标 + AppWindow 图标',
+        '🧪 E2E: 新增 MiniApp 模块回归测试',
+        '📊 模块统计: 16 个模块 (12 已上线 + 4 comingSoon)，插件架构完整',
+      ],
+    },
+    {
       ver: '0.2.70', date: '2026-05-04', title: '新模块: 游戏 — 游戏内容讨论与分享 + 插件扩展',
       items: [
         '🎮 新模块: 游戏 - 空间"游戏"Tab 展示游戏内容 (过滤 module_type=game)',

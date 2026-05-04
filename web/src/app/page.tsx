@@ -370,6 +370,7 @@ function FeedItemCard({ item }: { item: any }) {
     if (mt === 'qa') return '问答';
     if (mt === 'novel') return '小说';
     if (mt === 'game') return '游戏';
+    if (mt === 'mini_app') return '小程序';
     if (mt === 'activity') return '活动';
     if (mt === 'knowledge') return '知识库';
     if (mt === 'resource') return '资源';

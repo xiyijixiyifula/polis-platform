@@ -62,12 +62,13 @@ function NewPostForm() {
       { id: 'qa', label: '问答', moduleKey: 'qa' as const },
       { id: 'novel', label: '小说', moduleKey: 'novel' as const },
       { id: 'game', label: '游戏', moduleKey: 'game' as const },
+      { id: 'mini_app', label: '小程序', moduleKey: 'mini_app' as const },
     ];
     if (!enabledModules) return all;
     return all.filter((m) => enabledModules[m.moduleKey]);
   }, [enabledModules]);
 
-  const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'wiki' ? 'wiki' : urlModule === 'qa' ? 'qa' : urlModule === 'novel' ? 'novel' : urlModule === 'game' ? 'game' : urlModule === 'forum' ? 'article' : 'article');
+  const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'wiki' ? 'wiki' : urlModule === 'qa' ? 'qa' : urlModule === 'novel' ? 'novel' : urlModule === 'game' ? 'game' : urlModule === 'mini_app' ? 'mini_app' : urlModule === 'forum' ? 'article' : 'article');
   useEffect(() => {
     if (
       availableModules.length > 0 &&
