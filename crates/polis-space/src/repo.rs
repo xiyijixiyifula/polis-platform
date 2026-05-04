@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 /// 社区数据访问层
 pub struct SpaceRepo {
-    pool: PgPool,
+    pub pool: PgPool,
 }
 
 impl SpaceRepo {

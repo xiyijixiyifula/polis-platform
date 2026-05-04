@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
+use sqlx::PgPool;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -47,6 +48,7 @@ fn extract_namespace(path: &str, prefix: &str) -> Option<String> {
 
 pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
     let public = Router::new()
+        .route("/health", get(health_check))
         .route("/api/search", get(search_spaces))
         .route("/api/spaces/trending", get(get_trending_spaces))
         .route("/api/spaces/{*path}", get(handle_public_path))
@@ -201,4 +203,15 @@ async fn get_sub_spaces(
 ) -> Result<Json<ApiResponse<Vec<SpacePublic>>>, AppError> {
     let spaces = handler.get_sub_spaces(&slug).await?;
     Ok(Json(ApiResponse::success(spaces)))
+}
+
+
+async fn health_check(State(h): State<Arc<SpaceHandler>>) -> Json<ApiResponse<serde_json::Value>> {
+    let db_ok = sqlx::query("SELECT 1").fetch_one(&h.repo.pool).await.is_ok();
+    Json(ApiResponse::success(serde_json::json!({
+        "service": "polis-space",
+        "status": if db_ok { "healthy" } else { "degraded" },
+        "database": db_ok,
+        "version": env!("CARGO_PKG_VERSION"),
+    })))
 }

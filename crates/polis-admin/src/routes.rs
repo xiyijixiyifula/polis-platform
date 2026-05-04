@@ -28,6 +28,7 @@ pub struct VerifyRequest {
 
 pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
     let public = Router::new()
+        .route("/health", get(health_check))
         .route("/api/admin/login", post(admin_login));
 
     let auth = Router::new()
@@ -343,3 +344,14 @@ async fn get_post_analytics(
     Ok(Json(ApiResponse::success(data)))
 }
 
+
+
+async fn health_check(State(h): State<Arc<AdminHandler>>) -> Json<ApiResponse<serde_json::Value>> {
+    let db_ok = sqlx::query("SELECT 1").fetch_one(&h.pool).await.is_ok();
+    Json(ApiResponse::success(serde_json::json!({
+        "service": "polis-admin",
+        "status": if db_ok { "healthy" } else { "degraded" },
+        "database": db_ok,
+        "version": env!("CARGO_PKG_VERSION"),
+    })))
+}

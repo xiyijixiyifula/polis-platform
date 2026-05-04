@@ -12,6 +12,7 @@ use crate::handlers::content_handler::ContentHandler;
 use crate::middleware::auth::auth_middleware;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::Deserialize as SerdeDeserialize;
+use sqlx::PgPool;
 
 /// Helper to wrap a value in Json response
 fn json_ok<T: serde::Serialize>(value: T) -> Json<serde_json::Value> {
@@ -850,4 +851,15 @@ async fn get_subscription_route(
     let space_id = resolve_space_id(&h.pool, &p.ns).await?;
     let sub = h.get_user_subscription(space_id, uid).await?;
     Ok(json_ok(ApiResponse::success(sub)))
+}
+
+
+async fn health_check(State(h): State<Arc<ContentHandler>>) -> Json<ApiResponse<serde_json::Value>> {
+    let db_ok = sqlx::query("SELECT 1").fetch_one(&h.pool).await.is_ok();
+    Json(ApiResponse::success(serde_json::json!({
+        "service": "polis-content",
+        "status": if db_ok { "healthy" } else { "degraded" },
+        "database": db_ok,
+        "version": env!("CARGO_PKG_VERSION"),
+    })))
 }

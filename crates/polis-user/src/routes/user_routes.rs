@@ -3,6 +3,7 @@ use axum::{extract::{Path, State}, middleware, routing::{get, post, put}, Json, 
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
+use sqlx::PgPool;
 use polis_core::models::{ApiResponse, LoginRequest, LoginResponse, RegisterRequest, UpdateUserRequest, UserPublic};
 use crate::handlers::user_handler::UserHandler;
 use crate::middleware::auth::auth_middleware;
@@ -16,6 +17,7 @@ pub struct FollowRequest { pub followee_type: String, pub followee_id: Uuid }
 
 pub fn user_routes(handler: Arc<UserHandler>) -> Router {
     let public = Router::new()
+        .route("/health", get(health_check))
         .route("/api/auth/register", post(register))
         .route("/api/auth/login", post(login))
         .route("/api/auth/forgot-password", post(forgot_password))
@@ -70,4 +72,15 @@ async fn get_followers(State(h): State<Arc<UserHandler>>, Path(u): Path<String>)
 }
 async fn get_following(State(h): State<Arc<UserHandler>>, Path(u): Path<String>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
     Ok(Json(ApiResponse::success(h.get_following(&u).await?)))
+}
+
+
+async fn health_check(State(h): State<Arc<UserHandler>>) -> Json<ApiResponse<serde_json::Value>> {
+    let db_ok = sqlx::query("SELECT 1").fetch_one(&h.repo.pool).await.is_ok();
+    Json(ApiResponse::success(serde_json::json!({
+        "service": "polis-user",
+        "status": if db_ok { "healthy" } else { "degraded" },
+        "database": db_ok,
+        "version": env!("CARGO_PKG_VERSION"),
+    })))
 }

@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.84', date: '2026-05-05', title: '微服务 Health 端点 — 独立健康检查 + 可观测性增强',
+      items: [
+        '🏥 polis-user: 新增 /health 端点 — DB连通性检查 + 服务状态 + 版本号',
+        '🏥 polis-space: 新增 /health 端点 — DB连通性检查 + 服务状态 + 版本号',
+        '🏥 polis-content: 新增 /health 端点 — DB连通性检查 + 服务状态 + 版本号',
+        '🏥 polis-admin: 新增 /health 端点 — DB连通性检查 + 服务状态 + 版本号',
+        '📊 返回格式: { service, status (healthy/degraded), database (bool), version }',
+        '🔒 安全审计: Gateway SSRF 防护验证 — 全部代理目标硬编码 localhost 无风险',
+        '✅ 72/72 E2E 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.83', date: '2026-05-05', title: '健康检查 — 系统巡检 + 72/72 全通',
       items: [
         '🔍 健康检查: 6 服务全活、首页 200、72/72 E2E 全量通过',
