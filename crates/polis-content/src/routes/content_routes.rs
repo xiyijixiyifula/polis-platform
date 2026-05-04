@@ -110,6 +110,7 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
 
 pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     let public = Router::new()
+        .route("/health", get(health_check))
         .route("/api/spaces/{*path}", get(handle_public_content))
         // 公开的投票/问卷列表 + 单个投票详情
         .route("/api/polls", get(list_all_polls_route))
