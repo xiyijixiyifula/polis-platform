@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.86', date: '2026-05-05', title: '健康检查 — 系统巡检 + 75/75 全通',
+      items: [
+        '🔍 健康检查: 6 服务全活、首页 200、75/75 E2E 全量通过',
+        '⚡ 性能基线: 空间 0.80s / Feed 0.84s / 搜索 0.60s / 投票 0.61s',
+        '🏥 Health API: /api/health/all 4服务全部 healthy (user/space/content/admin)',
+        '✅ 系统稳定运行，无需变更代码',
+      ],
+    },
+    {
       ver: '0.2.85', date: '2026-05-05', title: 'Gateway 健康聚合 + polisctl health CLI + 可观测性增强',
       items: [
         '🏥 Gateway: 新增 /api/health/user|space|content|admin 代理端点 — 外部可访问各微服务健康状态',
