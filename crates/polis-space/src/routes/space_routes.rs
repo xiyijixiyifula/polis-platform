@@ -20,7 +20,7 @@ pub struct SearchParams {
 }
 
 use polis_core::models::{
-    ApiResponse, CreateSpaceRequest, SpacePublic, UpdateSpaceRequest, PaginationParams,
+    ApiResponse, CreateSpaceRequest, Pagination, SpacePublic, UpdateSpaceRequest, PaginationParams,
 };
 
 use crate::handlers::space_handler::SpaceHandler;
@@ -51,6 +51,7 @@ pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
         .route("/health", get(health_check))
         .route("/api/search", get(search_spaces))
         .route("/api/spaces/trending", get(get_trending_spaces))
+        .route("/api/spaces", get(list_spaces))
         .route("/api/spaces/{*path}", get(handle_public_path))
         .route("/api/root/{slug}", get(get_root_space))
         .route("/api/root/{slug}/subspaces", get(get_sub_spaces));
@@ -185,6 +186,25 @@ async fn get_trending_spaces(
     let limit = params.page_size.unwrap_or(20);
     let spaces = handler.get_trending_spaces(limit).await?;
     Ok(Json(ApiResponse::success(spaces)))
+}
+
+/// GET /api/spaces - 公共空间列表 (分页)
+async fn list_spaces(
+    State(handler): State<Arc<SpaceHandler>>,
+    Query(params): Query<PaginationParams>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let page = params.page.unwrap_or(1);
+    let page_size = params.page_size.unwrap_or(20);
+    let (spaces, total) = handler.list_spaces(page, page_size).await?;
+    Ok(Json(ApiResponse::success_with_pagination(
+        serde_json::json!({ "items": spaces, "total": total }),
+        Pagination {
+            page,
+            page_size,
+            total: total as u64,
+            total_pages: ((total as f64) / (page_size as f64)).ceil() as u32,
+        },
+    )))
 }
 
 /// GET /api/root/:slug - 根社区首页

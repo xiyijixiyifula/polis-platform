@@ -209,6 +209,15 @@ enum FollowAction {
 // === Space Subcommands ===
 #[derive(Subcommand)]
 enum SpaceAction {
+    /// List all public spaces (paginated)
+    List {
+        /// Page number
+        #[arg(default_value = "1")]
+        page: u32,
+        /// Page size
+        #[arg(short, long, default_value = "20")]
+        size: u32,
+    },
     /// Search spaces
     Search {
         /// Search query
@@ -782,6 +791,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
         // === Space ===
         Commands::Space { action } => match action {
+            SpaceAction::List { page, size } => commands::space::list(&config, &client, page, size).await,
             SpaceAction::Search { query, page, size } => commands::space::search(&config, &client, &query, page, size).await,
             SpaceAction::Trending { page, size } => commands::space::trending(&config, &client, page, size).await,
             SpaceAction::Get { namespace } => commands::space::get(&config, &client, &namespace).await,

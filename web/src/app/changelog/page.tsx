@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.88', date: '2026-05-05', title: '公共空间列表 API + space list CLI + 技术债务清理',
+      items: [
+        '🏛️ GET /api/spaces: 新增公共空间列表端点 — 分页查询所有公开活跃社区 (按时间倒序)',
+        '🖥️ CLI: polisctl space list <page> [-s size] — 列出所有公开社区 (JSON/表格)',
+        '🧪 E2E: SPACE 新增公共空间列表验证 + 测试总量 75→76',
+        '📋 技术债务: 清除"无公共空间列表端点"项 — 之前仅靠 trending 和 search 绕过',
+        '✅ 76/76 E2E 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.87', date: '2026-05-05', title: '健康检查 — 系统巡检 + 75/75 全通',
       items: [
         '🔍 健康检查: 6 服务全活、首页 200、75/75 E2E 全量通过',

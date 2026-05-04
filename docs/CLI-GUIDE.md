@@ -104,6 +104,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 | `polisctl space join <ns>` | POST | `/api/spaces/{ns}/join` | Yes |
 | `polisctl space leave <ns>` | POST | `/api/spaces/{ns}/leave` | Yes |
 | `polisctl space members <ns>` | GET | `/api/spaces/{ns}/members` | No |
+| `polisctl space list [page] -s <size>` | GET | `/api/spaces` | No |
 | `polisctl space search <query> [page] -s <size>` | GET | `/api/search` | No |
 | `polisctl space trending [page] -s <size>` | GET | `/api/spaces/trending` | No |
 | `polisctl space root <slug>` | GET | `/api/root/{slug}` | No |

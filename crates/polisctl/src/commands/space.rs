@@ -3,6 +3,17 @@ use crate::http::HttpClient;
 use crate::output::{extract_data, extract_data_array, print_output, print_success};
 use serde_json::json;
 
+pub async fn list(
+    config: &Config,
+    client: &HttpClient,
+    page: u32,
+    size: u32,
+) -> Result<(), anyhow::Error> {
+    let resp = client.get(&format!("/api/spaces?page={}&page_size={}", page, size), None).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
 pub async fn search(
     config: &Config,
     client: &HttpClient,

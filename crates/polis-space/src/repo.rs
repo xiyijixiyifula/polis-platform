@@ -147,6 +147,25 @@ impl SpaceRepo {
         Ok(spaces)
     }
 
+    /// 分页列出所有公开活跃社区
+    pub async fn find_all(&self, page: u32, page_size: u32) -> Result<(Vec<Space>, i64), AppError> {
+        let offset = ((page - 1) * page_size) as i64;
+        let limit = page_size as i64;
+        let total: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM spaces WHERE status = 'active' AND visibility = 'public'"
+        )
+        .fetch_one(&self.pool)
+        .await?;
+        let spaces = sqlx::query_as::<_, Space>(
+            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok((spaces, total.0))
+    }
+
     /// 搜索社区（按标题和描述模糊匹配）
     pub async fn search(&self, query: &str, limit: u32) -> Result<Vec<Space>, AppError> {
         let pattern = format!("%{}%", query);

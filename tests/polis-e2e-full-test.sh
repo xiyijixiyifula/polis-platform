@@ -260,6 +260,15 @@ else
     log_test FAIL SPACE "热门空间" "failed"
 fi
 
+# Public spaces list (v0.2.88)
+R=$(api GET "/api/spaces?page=1&page_size=5")
+if check_code "$R"; then
+    TOTAL=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('total','?'))" 2>/dev/null)
+    log_test PASS SPACE "公共空间列表" "total=$TOTAL ✅"
+else
+    log_test FAIL SPACE "公共空间列表" "API异常"
+fi
+
 # ==========================================================
 # 3. 回归测试: 中文命名空间 (关键!)
 # ==========================================================

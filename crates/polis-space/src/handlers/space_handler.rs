@@ -213,6 +213,12 @@ impl SpaceHandler {
         Ok(spaces.into_iter().map(|s| s.into()).collect())
     }
 
+    /// 分页列出所有公开社区
+    pub async fn list_spaces(&self, page: u32, page_size: u32) -> Result<(Vec<SpacePublic>, i64), AppError> {
+        let (spaces, total) = self.repo.find_all(page, page_size).await?;
+        Ok((spaces.into_iter().map(|s| s.into()).collect(), total))
+    }
+
     /// 加入社区
     pub async fn join_space(&self, namespace: &str, user_id: Uuid) -> Result<(), AppError> {
         let space = self
