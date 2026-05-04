@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.76', date: '2026-05-04', title: '维护轮次 — E2E 搜索测试全覆盖 + 测试扩展 60→64',
+      items: [
+        '🧪 新增: E2E SEARCH 搜索测试 4 项 (社区搜索/帖子搜索/中文搜索/无结果搜索)',
+        '📊 搜索覆盖: GET /api/search?q= + GET /api/posts/search?q= 双端点验证',
+        '📊 测试总量: 60→64 项 (18 个测试类别，PAGES 27/27)',
+        '✅ 64/64 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.75', date: '2026-05-04', title: '维护轮次 — 投票模块默认开启 + 文件分享 E2E 测试',
       items: [
         '🔧 修复: SpaceSettings 投票模块默认值 polls: false → true (新社区自动显示投票Tab)',

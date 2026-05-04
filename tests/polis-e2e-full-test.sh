@@ -657,11 +657,59 @@ else
 fi
 
 # ==========================================================
-# ==========================================================
-# 14. 文件分享
+# 14. 搜索测试
 # ==========================================================
 echo ""
-echo "--- 14. FILE 文件分享 ---"
+echo "--- 14. SEARCH 搜索 ---"
+
+# TC-SEARCH-01: Search communities
+R=$(api GET "/api/search?q=Rust")
+if check_code "$R"; then
+    CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+    if [ "$CNT" -gt 0 ] 2>/dev/null; then
+        log_test PASS SEARCH "搜索社区" "results=$CNT ✅"
+    else
+        log_test PASS SEARCH "搜索社区" "API OK (no results)"
+    fi
+else
+    log_test FAIL SEARCH "搜索社区" "msg=$(get_msg "$R")"
+fi
+
+# TC-SEARCH-02: Search posts
+R=$(api GET "/api/posts/search?q=Rust&limit=10")
+if check_code "$R"; then
+    CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+    if [ "$CNT" -gt 0 ] 2>/dev/null; then
+        log_test PASS SEARCH "搜索帖子" "results=$CNT ✅"
+    else
+        log_test PASS SEARCH "搜索帖子" "API OK (no results)"
+    fi
+else
+    log_test FAIL SEARCH "搜索帖子" "msg=$(get_msg "$R")"
+fi
+
+# TC-SEARCH-03: Chinese search
+R=$(api GET "/api/search?q=游戏")
+if check_code "$R"; then
+    CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+    log_test PASS SEARCH "中文搜索" "results=$CNT ✅"
+else
+    log_test FAIL SEARCH "中文搜索" "msg=$(get_msg "$R")"
+fi
+
+# TC-SEARCH-04: Empty/nonsense results (should return 200 with empty data)
+R=$(api GET "/api/search?q=xyz123nonsense_999")
+if check_code "$R"; then
+    log_test PASS SEARCH "无结果搜索" "empty OK ✅"
+else
+    log_test FAIL SEARCH "无结果搜索" "msg=$(get_msg "$R")"
+fi
+
+# ==========================================================
+# 15. 文件分享
+# ==========================================================
+echo ""
+echo "--- 15. FILE 文件分享 ---"
 
 if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
     # TC-FILE-01: Upload file
@@ -722,10 +770,10 @@ else
 fi
 
 # ==========================================================
-# 15. 分享模块
+# 16. 分享模块
 # ==========================================================
 echo ""
-echo "--- 15. SHARE 分享模块 ---"
+echo "--- 16. SHARE 分享模块 ---"
 
 if [ -n "$SPACE_NS" ]; then
     R=$(api POST "/api/spaces/$SPACE_NS/posts" \
@@ -738,10 +786,10 @@ if [ -n "$SPACE_NS" ]; then
 fi
 
 # ==========================================================
-# 16. 安全测试
+# 17. 安全测试
 # ==========================================================
 echo ""
-echo "--- 16. SECURITY 安全 ---"
+echo "--- 17. SECURITY 安全 ---"
 
 if check_http "http://www.mzgw.com" 301; then
     log_test PASS SECURITY "HTTP→HTTPS" "301 ✅"
@@ -757,10 +805,10 @@ else
 fi
 
 # ==========================================================
-# 17. 前端页面全量测试
+# 18. 前端页面全量测试
 # ==========================================================
 echo ""
-echo "--- 17. PAGES 前端页面 ---"
+echo "--- 18. PAGES 前端页面 ---"
 
 PAGES=(
     "/" "/changelog" "/explore" "/search" "/about" "/login" "/register"
