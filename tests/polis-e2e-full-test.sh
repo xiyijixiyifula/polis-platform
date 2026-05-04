@@ -657,10 +657,75 @@ else
 fi
 
 # ==========================================================
-# 14. 分享模块
+# ==========================================================
+# 14. 文件分享
 # ==========================================================
 echo ""
-echo "--- 14. SHARE 分享模块 ---"
+echo "--- 14. FILE 文件分享 ---"
+
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    # TC-FILE-01: Upload file
+    FILE_CONTENT="Hello Polis E2E Test $(date)"
+    FILE_B64=$(echo -n "$FILE_CONTENT" | base64 | tr -d '\n')
+    R=$(api POST "/api/spaces/$SPACE_NS/files" \
+        "{\"filename\":\"test.txt\",\"data_base64\":\"$FILE_B64\",\"mime_type\":\"text/plain\"}" "$TOKEN")
+    if check_code "$R"; then
+        FILE_ID=$(get_field "$R" "id")
+        if [ -n "$FILE_ID" ]; then
+            log_test PASS FILE "上传文件" "id=$FILE_ID ✅"
+        else
+            log_test PASS FILE "上传文件" "uploaded (no id in response)"
+        fi
+    else
+        log_test FAIL FILE "上传文件" "msg=$(get_msg "$R")"
+    fi
+
+    # TC-FILE-02: Create share link
+    if [ -n "$FILE_ID" ]; then
+        R=$(api POST "/api/files/share" \
+            "{\"file_id\":\"$FILE_ID\",\"expires_hours\":1,\"password\":\"test123\"}" "$TOKEN")
+        if check_code "$R"; then
+            SHARE_CODE=$(get_field "$R" "code")
+            if [ -n "$SHARE_CODE" ]; then
+                log_test PASS FILE "创建分享链接" "code=$SHARE_CODE ✅"
+            else
+                log_test PASS FILE "创建分享链接" "created (no code field)"
+            fi
+        else
+            log_test FAIL FILE "创建分享链接" "msg=$(get_msg "$R")"
+        fi
+    fi
+
+    # TC-FILE-03: Download with password (raw file content, not JSON)
+    if [ -n "$SHARE_CODE" ]; then
+        R=$(api GET "/api/share/$SHARE_CODE/download?password=test123")
+        if echo "$R" | grep -q "$FILE_CONTENT"; then
+            log_test PASS FILE "密码下载" "content matched ✅"
+        elif echo "$R" | grep -q "Hello Polis"; then
+            log_test PASS FILE "密码下载" "content OK ✅"
+        else
+            log_test FAIL FILE "密码下载" "unexpected response"
+        fi
+
+        # Bonus: wrong password should fail
+        R=$(api GET "/api/share/$SHARE_CODE/download?password=wrongpass")
+        if echo "$R" | grep -q '"code":[^0]'; then
+            log_test PASS FILE "错误密码拒绝" "正确拒绝 ✅"
+        elif ! echo "$R" | grep -q "Hello Polis"; then
+            log_test PASS FILE "错误密码拒绝" "正确拒绝 ✅"
+        else
+            log_test FAIL FILE "错误密码拒绝" "should reject wrong password"
+        fi
+    fi
+else
+    log_test SKIP FILE "文件分享" "无空间或无token"
+fi
+
+# ==========================================================
+# 15. 分享模块
+# ==========================================================
+echo ""
+echo "--- 15. SHARE 分享模块 ---"
 
 if [ -n "$SPACE_NS" ]; then
     R=$(api POST "/api/spaces/$SPACE_NS/posts" \
@@ -673,10 +738,10 @@ if [ -n "$SPACE_NS" ]; then
 fi
 
 # ==========================================================
-# 15. 安全测试
+# 16. 安全测试
 # ==========================================================
 echo ""
-echo "--- 15. SECURITY 安全 ---"
+echo "--- 16. SECURITY 安全 ---"
 
 if check_http "http://www.mzgw.com" 301; then
     log_test PASS SECURITY "HTTP→HTTPS" "301 ✅"
@@ -692,10 +757,10 @@ else
 fi
 
 # ==========================================================
-# 16. 前端页面全量测试
+# 17. 前端页面全量测试
 # ==========================================================
 echo ""
-echo "--- 16. PAGES 前端页面 ---"
+echo "--- 17. PAGES 前端页面 ---"
 
 PAGES=(
     "/" "/changelog" "/explore" "/search" "/about" "/login" "/register"

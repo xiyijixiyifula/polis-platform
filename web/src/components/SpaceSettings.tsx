@@ -34,7 +34,7 @@ const defaultModules: SpaceModules = {
   video: false,
   code_repo: false,
   qa: false,
-  polls: false,
+  polls: true,
   announcements: false,
   chat: false,
   store: false,

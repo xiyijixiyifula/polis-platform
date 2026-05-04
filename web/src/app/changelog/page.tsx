@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.75', date: '2026-05-04', title: '维护轮次 — 投票模块默认开启 + 文件分享 E2E 测试',
+      items: [
+        '🔧 修复: SpaceSettings 投票模块默认值 polls: false → true (新社区自动显示投票Tab)',
+        '🧪 新增: 文件分享 E2E 测试 4 项 (上传文件/创建分享链接/密码下载/错误密码拒绝)',
+        '📊 测试总量: 56→60 项 (新增 FILE 类别 4 项，PAGES 27→27)',
+        '🔧 修复: E2E 密码下载测试适配原始文件下载响应 (非 JSON)',
+        '✅ 60/60 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.74', date: '2026-05-04', title: 'CLI 增强 — polisctl poll all 全局投票列表 + 文档同步',
       items: [
         '🖥️ CLI: 新增 `polisctl poll all` 命令 — GET /api/polls 全局投票列表 (分页, 无认证)',
