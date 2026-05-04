@@ -550,6 +550,11 @@ impl ContentHandler {
         self.repo.list_polls_by_space(space_id).await
     }
 
+    /// List all polls across all spaces
+    pub async fn list_all_polls(&self, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
+        self.repo.list_all_polls(page, page_size).await
+    }
+
     pub async fn get_poll_results(&self, poll_id: Uuid) -> Result<serde_json::Value, AppError> {
         self.repo.get_poll_results(poll_id).await
     }

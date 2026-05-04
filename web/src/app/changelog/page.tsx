@@ -4,11 +4,14 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.2.72', date: '2026-05-04', title: 'Bug修复: Feed 投票导航 — 首页点击投票跳转社区空间',
+      ver: '0.2.72', date: '2026-05-04', title: '投票中心上线 + Feed 投票导航修复',
       items: [
+        '📊 投票中心: /polls 页面从静态占位页 → 全平台投票列表 (API + 前端)',
+        '🔌 后端: 新增 GET /api/polls 全局投票列表 API (分页+空间信息JOIN)',
         '🔗 修复: Feed 投票项链接到 /polls 占位页 → 改为 /space/{ns}/polls 直达社区投票Tab',
         '🔗 修复: Feed 投票模块标签链接到 /posts → 改为 /polls 标签指向投票Tab',
-        '🧭 用户路径: 首页看到投票 → 点击 → 直达社区投票Tab (完整端到端)',
+        '🧭 用户路径: 首页 Feed→投票项→直达社区投票Tab / 投票中心浏览全平台投票',
+        '🎨 前端: 投票卡片 (标题/描述/票数/社区名/日期) + 分页导航 + 加载态',
         '📊 56/56 全量测试通过',
       ],
     },

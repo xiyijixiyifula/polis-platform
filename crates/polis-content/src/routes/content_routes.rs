@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::collections::HashMap;
 use axum::{
     response::{IntoResponse, Response},extract::{Path, Query, Request, State, Extension}, middleware, routing::{delete, get, post, put}, Json, Router};
 use serde::Deserialize;
@@ -109,7 +110,8 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
 pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     let public = Router::new()
         .route("/api/spaces/{*path}", get(handle_public_content))
-        // 公开的投票/问卷结果
+        // 公开的投票/问卷列表 + 单个投票详情
+        .route("/api/polls", get(list_all_polls_route))
         .route("/api/polls/{id}", get(get_poll_public))
         // 通过 ID 获取帖子（无需知道 namespace）
         .route("/api/posts/search", get(search_posts_route))
@@ -361,6 +363,16 @@ async fn create_poll_route(
     let desc = req.description.unwrap_or_default();
     let poll_id = h.create_poll(req.space_id, uid, &req.title, &desc, &poll_type, &req.options, expires_at).await?;
     Ok(json_ok(ApiResponse::success(serde_json::json!({"id": poll_id}))))
+}
+
+async fn list_all_polls_route(
+    State(h): State<Arc<ContentHandler>>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let page: u32 = params.get("page").and_then(|s| s.parse().ok()).unwrap_or(1);
+    let page_size: u32 = params.get("page_size").and_then(|s| s.parse().ok()).unwrap_or(20);
+    let polls = h.list_all_polls(page, page_size).await?;
+    Ok(json_ok(ApiResponse::success(polls)))
 }
 
 async fn get_poll_public(
