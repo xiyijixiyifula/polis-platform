@@ -81,7 +81,7 @@ enum Commands {
         /// Report reason
         reason: String,
     },
-    /// Poll management: list, get, vote, create
+    /// Poll management: list, all, get, vote, create
     Poll {
         #[command(subcommand)]
         action: PollAction,
@@ -419,6 +419,15 @@ enum PollAction {
     List {
         /// Space namespace
         namespace: String,
+    },
+    /// List all platform polls (global, no auth required)
+    All {
+        /// Page number
+        #[arg(default_value = "1")]
+        page: u32,
+        /// Page size
+        #[arg(short, long, default_value = "20")]
+        size: u32,
     },
     /// Get poll details
     Get {
@@ -844,6 +853,7 @@ async fn main() -> Result<(), anyhow::Error> {
         // === Poll ===
         Commands::Poll { action } => match action {
             PollAction::List { namespace } => commands::content::poll_list(&config, &client, &namespace).await,
+            PollAction::All { page, size } => commands::content::poll_all(&config, &client, page, size).await,
             PollAction::Get { poll_id } => commands::content::poll_get(&config, &client, &poll_id).await,
             PollAction::Vote { poll_id, option_id } => commands::content::poll_vote(&config, &client, &poll_id, &option_id).await,
             PollAction::Create { space_id, title, options, poll_type } => {

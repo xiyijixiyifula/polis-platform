@@ -4,6 +4,18 @@ use crate::output::{extract_data, extract_data_array, print_output, print_succes
 use serde_json::json;
 
 // === Poll ===
+pub async fn poll_all(
+    config: &Config,
+    client: &HttpClient,
+    page: u32,
+    page_size: u32,
+) -> Result<(), anyhow::Error> {
+    let resp = client.get(&format!("/api/polls?page={}&page_size={}", page, page_size), None).await?;
+    let items: Vec<_> = extract_data_array(&resp).into_iter().cloned().collect();
+    print_output(&json!(items), config.format);
+    Ok(())
+}
+
 pub async fn poll_list(
     config: &Config,
     client: &HttpClient,

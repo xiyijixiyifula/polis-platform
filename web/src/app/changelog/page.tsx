@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.74', date: '2026-05-04', title: 'CLI 增强 — polisctl poll all 全局投票列表 + 文档同步',
+      items: [
+        '🖥️ CLI: 新增 `polisctl poll all` 命令 — GET /api/polls 全局投票列表 (分页, 无认证)',
+        '📊 CLI: poll all 返回空间标题/命名空间/票数信息 (JOIN spaces 表)',
+        '📖 CLI: `--help` 输出更新 — poll 管理扩展为 5 子命令 (list/all/get/vote/create)',
+        '📝 文档: README + 定时任务 + changelog 版本号同步 v0.2.74',
+        '✅ 56/56 全量测试通过，6 服务 active，CLI 编译通过',
+      ],
+    },
+    {
       ver: '0.2.73', date: '2026-05-04', title: '维护轮次 — /polls/new 社区选择器 + E2E 覆盖扩展',
       items: [
         '🔧 修复: /polls/new 缺失社区选择器 → 新增空间下拉 (自动获取用户社区列表)',
