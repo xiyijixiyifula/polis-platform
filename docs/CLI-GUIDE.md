@@ -201,6 +201,26 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 |---------|--------|
 | `polisctl announce <ns>` | Get space announcements |
 
+### 3.15 Health Check
+
+| Command | Action |
+|---------|--------|
+| `polisctl health` | Check health of gateway + all 4 microservices (DB connectivity + status + version) |
+
+Health check returns service status (`healthy` / `degraded` / `unreachable`) for gateway, polis-user, polis-space, polis-content, and polis-admin. In JSON mode, returns full health data; in table mode, prints a human-readable summary with icons.
+
+**Example (JSON)**:
+```bash
+polisctl health
+# Returns: { "gateway": "healthy", "services": { "user": {...}, "space": {...}, ... }, "all_healthy": true }
+```
+
+**Example (Table)**:
+```bash
+polisctl --format table health
+# Prints formatted table with ✅/⚠️/❌ status icons
+```
+
 ---
 
 ## 4. Admin Operations

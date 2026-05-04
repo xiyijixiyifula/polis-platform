@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.85', date: '2026-05-05', title: 'Gateway 健康聚合 + polisctl health CLI + 可观测性增强',
+      items: [
+        '🏥 Gateway: 新增 /api/health/user|space|content|admin 代理端点 — 外部可访问各微服务健康状态',
+        '🏥 Gateway: 新增 /api/health/all 聚合检查 — 并行查询4个微服务 + 返回整体状态',
+        '🖥️ CLI: 新增 polisctl health 命令 — 表格/JSON 查看所有服务健康状态',
+        '🧪 E2E: 新增 HEALTH 测试类别 3 项 — Gateway健康 + 单服务代理 + 聚合检查',
+        '✅ 72+3=75 项测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.84', date: '2026-05-05', title: '微服务 Health 端点 — 独立健康检查 + 可观测性增强',
       items: [
         '🏥 polis-user: 新增 /health 端点 — DB连通性检查 + 服务状态 + 版本号',

@@ -21,7 +21,7 @@
 
 ---
 
-## ✨ 当前功能 (v0.2.84)
+## ✨ 当前功能 (v0.2.85)
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -49,7 +49,7 @@
 | 🤖 AI 研究 | ✅ | 自动社区调研 + `/research` 报告页 |
 | 🔒 HTTPS | ✅ | Let's Encrypt TLS 1.3 |
 | 📦 数据导出 | ✅ | Markdown/JSON 格式导出 |
-| 🏥 服务健康检查 | ✅ | 4 微服务独立 /health 端点 (DB连通性 + 状态 + 版本号) |
+| 🏥 服务健康检查 | ✅ | Gateway 聚合 /api/health/all + 4 微服务独立 /health + polisctl health CLI |
 | 📝 Markdown 编辑器 | ✅ | Cherry Markdown 集成，完整工具栏 |
 | 📁 文件分享系统 | ✅ | 文件上传、分享链接、密码保护下载 |
 | 🧩 小程序 | ✅ | 嵌入式小应用，ModuleType::MiniApp 后端复用 |

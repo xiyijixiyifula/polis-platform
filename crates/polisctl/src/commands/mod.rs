@@ -7,4 +7,5 @@ pub mod comment;
 pub mod interaction;
 pub mod content;
 pub mod notify;
+pub mod health;
 pub mod admin;

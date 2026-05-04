@@ -121,6 +121,8 @@ enum Commands {
         /// Space namespace
         namespace: String,
     },
+    /// Health check: check gateway and all microservices
+    Health,
     /// Admin operations (requires admin login)
     Admin {
         #[command(subcommand)]
@@ -913,6 +915,9 @@ async fn main() -> Result<(), anyhow::Error> {
             NotifyAction::Unread => commands::notify::unread(&config, &client).await,
             NotifyAction::ReadAll => commands::notify::read_all(&config, &client).await,
         },
+
+        // === Health ===
+        Commands::Health => commands::health::check(&config, &client).await,
 
         // === Announce ===
         Commands::Announce { namespace } => commands::notify::announce(&config, &client, &namespace).await,

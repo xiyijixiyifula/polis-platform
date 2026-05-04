@@ -866,10 +866,44 @@ if [ -n "$SPACE_NS" ]; then
 fi
 
 # ==========================================================
-# 17. 安全测试
+# 17. HEALTH 服务健康检查
 # ==========================================================
 echo ""
-echo "--- 17. SECURITY 安全 ---"
+echo "--- 17. HEALTH 服务健康检查 ---"
+
+# Gateway 自身健康检查
+R=$(api GET "/api/health")
+if check_code "$R"; then
+    GW_STATUS=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',''))" 2>/dev/null)
+    log_test PASS HEALTH "Gateway健康检查" "✅ Gateway running"
+else
+    log_test FAIL HEALTH "Gateway健康检查" "Gateway异常"
+fi
+
+# 单服务 health 代理
+R=$(api GET "/api/health/user")
+if check_code "$R"; then
+    SVC=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('service','?')+' '+d.get('status','?'))" 2>/dev/null)
+    log_test PASS HEALTH "用户服务健康" "$SVC ✅"
+else
+    log_test FAIL HEALTH "用户服务健康" "代理异常"
+fi
+
+# 聚合 health 检查
+R=$(api GET "/api/health/all")
+if check_code "$R"; then
+    ALL_OK=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print('ALL_HEALTHY' if d.get('all_healthy') else 'DEGRADED')" 2>/dev/null)
+    SVC_COUNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}).get('services',{}); print(len(d))" 2>/dev/null)
+    log_test PASS HEALTH "聚合健康检查" "$ALL_OK (${SVC_COUNT} services) ✅"
+else
+    log_test FAIL HEALTH "聚合健康检查" "API异常"
+fi
+
+# ==========================================================
+# 18. 安全测试
+# ==========================================================
+echo ""
+echo "--- 18. SECURITY 安全 ---"
 
 if check_http "http://www.mzgw.com" 301; then
     log_test PASS SECURITY "HTTP→HTTPS" "301 ✅"
@@ -896,7 +930,7 @@ fi
 # 18. 前端页面全量测试
 # ==========================================================
 echo ""
-echo "--- 18. PAGES 前端页面 ---"
+echo "--- 19. PAGES 前端页面 ---"
 
 PAGES=(
     "/" "/changelog" "/explore" "/search" "/about" "/login" "/register"

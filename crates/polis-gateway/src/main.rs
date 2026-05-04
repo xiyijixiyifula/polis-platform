@@ -7,6 +7,7 @@ use axum::{
     routing::{any, get, Router},
     Json,
 };
+use serde_json::{json, Value};
 use polis_core::models::ApiResponse;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
@@ -81,9 +82,16 @@ async fn main() -> anyhow::Result<()> {
         // 代理路由 - 管理后台服务
         .route("/api/admin/{*path}", any(proxy_to_admin))
         .route("/api/admin", any(proxy_to_admin))
-        // 健康检查
+        // 健康检查 - Gateway 自身
         .route("/health", get(health_check))
         .route("/api/health", get(health_check))
+        // 健康检查 - 各微服务代理
+        .route("/api/health/user", get(proxy_health_user))
+        .route("/api/health/space", get(proxy_health_space))
+        .route("/api/health/content", get(proxy_health_content))
+        .route("/api/health/admin", get(proxy_health_admin))
+        // 健康检查 - 聚合
+        .route("/api/health/all", get(health_check_all))
         .layer(TraceLayer::new_for_http())
         .layer(cors)
         .with_state(state);
@@ -100,6 +108,91 @@ async fn main() -> anyhow::Result<()> {
 /// 健康检查
 async fn health_check() -> Json<ApiResponse<String>> {
     Json(ApiResponse::success("Polis API Gateway is running".to_string()))
+}
+
+/// 代理 health 请求到指定 URL，返回服务健康 JSON
+async fn proxy_health(client: &reqwest::Client, service_url: &str) -> Value {
+    match client
+        .get(format!("{}/health", service_url))
+        .timeout(std::time::Duration::from_secs(5))
+        .send()
+        .await
+    {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                match resp.json::<Value>().await {
+                    Ok(body) => body.get("data").cloned().unwrap_or(json!({
+                        "service": "unknown",
+                        "status": "degraded",
+                        "error": "Invalid response format"
+                    })),
+                    Err(_) => json!({"service": "unknown", "status": "degraded", "error": "JSON parse error"})
+                }
+            } else {
+                json!({"status": "degraded", "error": format!("HTTP {}", resp.status().as_u16())})
+            }
+        }
+        Err(e) => json!({"status": "unreachable", "error": e.to_string()})
+    }
+}
+
+/// 聚合所有微服务健康状态
+async fn health_check_all(
+    State(state): State<Arc<GatewayState>>,
+) -> Json<ApiResponse<Value>> {
+    let user_health = proxy_health(&state.client, &state.config.user_service_url);
+    let space_health = proxy_health(&state.client, &state.config.space_service_url);
+    let content_health = proxy_health(&state.client, &state.config.content_service_url);
+    let admin_health = proxy_health(&state.client, &state.config.admin_service_url);
+
+    let (u, s, c, a) = tokio::join!(user_health, space_health, content_health, admin_health);
+
+    let all_healthy = [&u, &s, &c, &a].iter().all(|h| {
+        h.get("status").and_then(|v| v.as_str()) == Some("healthy")
+    });
+
+    Json(ApiResponse::success(json!({
+        "gateway": "healthy",
+        "services": {
+            "user": u,
+            "space": s,
+            "content": c,
+            "admin": a,
+        },
+        "all_healthy": all_healthy,
+    })))
+}
+
+/// 代理用户服务 health
+async fn proxy_health_user(
+    State(state): State<Arc<GatewayState>>,
+) -> Json<ApiResponse<Value>> {
+    let health = proxy_health(&state.client, &state.config.user_service_url).await;
+    Json(ApiResponse::success(health))
+}
+
+/// 代理空间服务 health
+async fn proxy_health_space(
+    State(state): State<Arc<GatewayState>>,
+) -> Json<ApiResponse<Value>> {
+    let health = proxy_health(&state.client, &state.config.space_service_url).await;
+    Json(ApiResponse::success(health))
+}
+
+/// 代理内容服务 health
+async fn proxy_health_content(
+    State(state): State<Arc<GatewayState>>,
+) -> Json<ApiResponse<Value>> {
+    let health = proxy_health(&state.client, &state.config.content_service_url).await;
+    Json(ApiResponse::success(health))
+}
+
+/// 代理管理后台 health
+async fn proxy_health_admin(
+    State(state): State<Arc<GatewayState>>,
+) -> Json<ApiResponse<Value>> {
+    let health = proxy_health(&state.client, &state.config.admin_service_url).await;
+    Json(ApiResponse::success(health))
 }
 
 /// 空间/内容路由分发器
