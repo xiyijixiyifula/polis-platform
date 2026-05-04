@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.87', date: '2026-05-05', title: '健康检查 — 系统巡检 + 75/75 全通',
+      items: [
+        '🔍 健康检查: 6 服务全活、首页 200、75/75 E2E 全量通过',
+        '⚡ 性能基线: 空间 0.83s / Feed 0.81s / 搜索 0.61s / 投票 0.62s',
+        '🏥 Health: Gateway + 4微服务全部 healthy + polisctl health 正常',
+        '📊 连续3轮 E2E 零失败 — 系统进入稳定运行期',
+        '✅ 无代码变更',
+      ],
+    },
+    {
       ver: '0.2.86', date: '2026-05-05', title: '健康检查 — 系统巡检 + 75/75 全通',
       items: [
         '🔍 健康检查: 6 服务全活、首页 200、75/75 E2E 全量通过',
