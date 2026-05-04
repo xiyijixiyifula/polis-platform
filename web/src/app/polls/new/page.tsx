@@ -23,6 +23,7 @@ function NewPollForm() {
   const [selectedSpace, setSelectedSpace] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [moduleWarning, setModuleWarning] = useState('');
 
   // Fetch user's spaces
   useEffect(() => {
@@ -61,6 +62,26 @@ function NewPollForm() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [spaceParam]);
+
+  // Validate polls module when a space is selected
+  useEffect(() => {
+    if (!selectedSpace) { setModuleWarning(''); return; }
+    const space = spaces.find(s => s.id === selectedSpace);
+    if (!space) return;
+    fetch('/api/spaces/' + space.namespace)
+      .then(r => r.json())
+      .then(data => {
+        if (data.code === 0 && data.data?.enabled_modules) {
+          const modules: string[] = data.data.enabled_modules;
+          if (!modules.includes('polls')) {
+            setModuleWarning('⚠️ 该社区未启用投票模块，请先在社区设置中开启「投票」功能后再创建');
+          } else {
+            setModuleWarning('');
+          }
+        }
+      })
+      .catch(() => {});
+  }, [selectedSpace, spaces]);
 
   const addOption = () => setOptions([...options, '']);
   const removeOption = (i: number) => { if (options.length > 2) setOptions(options.filter((_, idx) => idx !== i)); };
@@ -109,7 +130,7 @@ function NewPollForm() {
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <select
               value={selectedSpace}
-              onChange={(e) => setSelectedSpace(e.target.value)}
+              onChange={(e) => { setSelectedSpace(e.target.value); setError(''); }}
               className="input-field pl-10 appearance-none cursor-pointer"
               required
             >
@@ -123,6 +144,11 @@ function NewPollForm() {
           {spaces.length === 0 && !loading && (
             <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
               未找到你的社区。请先创建或加入一个社区。
+            </p>
+          )}
+          {moduleWarning && (
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
+              {moduleWarning}
             </p>
           )}
         </div>
@@ -174,7 +200,7 @@ function NewPollForm() {
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
-        <button type="submit" className="btn-primary w-full py-2.5" disabled={options.filter(Boolean).length < 2}>
+        <button type="submit" className="btn-primary w-full py-2.5" disabled={options.filter(Boolean).length < 2 || !selectedSpace || !!moduleWarning}>
           创建投票
         </button>
       </form>
