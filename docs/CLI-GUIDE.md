@@ -109,6 +109,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 | `polisctl space trending [page] -s <size>` | GET | `/api/spaces/trending` | No |
 | `polisctl space root <slug>` | GET | `/api/root/{slug}` | No |
 | `polisctl space subspaces <slug>` | GET | `/api/root/{slug}/subspaces` | No |
+| `polisctl space analytics <ns>` | GET | `/api/spaces/{ns}/analytics` | No |
 
 ### 3.5 Posts (Content)
 

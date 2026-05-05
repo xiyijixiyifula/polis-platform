@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.91', date: '2026-05-05', title: '空间分析 API — 社区运营数据仪表盘',
+      items: [
+        '📊 后端: GET /api/spaces/{ns}/analytics — 帖子总数/浏览量/点赞/评论聚合 + Top5热门帖',
+        '🏗️ Gateway: 新增 /analytics 内容服务路由分发 + parse_content_path 解析支持',
+        '🖥️ CLI: polisctl space analytics <ns> — 查看社区数据仪表盘 (JSON/表格)',
+        '🐛 Bug修复: PostgreSQL SUM(BIGINT)→NUMERIC 类型转换 (::BIGINT)',
+        '🐛 Bug修复: Gateway 路由 /analytics 代理到空间服务 → 修复为内容服务',
+        '🧪 E2E: SPACE 空间分析验证 — 测试总量 80→81',
+        '✅ 81/81 E2E 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.90', date: '2026-05-05', title: '帖子置顶/精选 — 空间创建者可置顶和精选帖子',
       items: [
         '📌 后端: POST /api/spaces/{ns}/posts/{id}/pin — toggle 置顶帖子 (空间创建者或作者)',
