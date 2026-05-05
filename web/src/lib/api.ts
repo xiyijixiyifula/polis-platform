@@ -429,6 +429,9 @@ export const posts = {
       body: JSON.stringify({ body }),
     }),
 
+  likeComment: (commentId: string) =>
+    request<boolean>(`/comments/${commentId}/like`, { method: 'POST' }),
+
   like: (namespace: string, id: string) =>
     request<boolean>(`/spaces/${namespace}/posts/${id}/like`, { method: 'POST' }),
 

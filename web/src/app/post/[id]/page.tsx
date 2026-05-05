@@ -29,6 +29,7 @@ function PostDetailContent() {
   const [reportReason, setReportReason] = useState('');
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
+  const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!postId) return;
@@ -142,6 +143,24 @@ function PostDetailContent() {
     } catch {
       alert('评论失败，请重试');
     }
+  };
+
+  const handleCommentLike = async (commentId: string) => {
+    try {
+      const res = await posts.likeComment(commentId);
+      if (res.data !== null) {
+        setLikedComments((prev) => {
+          const next = new Set(prev);
+          res.data ? next.add(commentId) : next.delete(commentId);
+          return next;
+        });
+        setComments((prev) =>
+          prev.map((c) =>
+            c.id === commentId ? { ...c, like_count: c.like_count + (res.data ? 1 : -1) } : c
+          )
+        );
+      }
+    } catch {}
   };
 
   if (loading) {
@@ -278,7 +297,9 @@ function PostDetailContent() {
           <p className="text-center text-gray-400 text-sm mt-6">暂无评论，来发表第一条评论吧</p>
         ) : (
           <div className="mt-6 space-y-4">
-            {comments.map((comment) => (
+            {comments.map((comment) => {
+              const isCommentLiked = likedComments.has(comment.id);
+              return (
               <div key={comment.id} className="flex gap-3 border-t border-gray-100 dark:border-gray-700 pt-4">
                 <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-medium">
                   {(comment.author?.display_name || comment.author?.username || '匿').charAt(0)}
@@ -289,9 +310,17 @@ function PostDetailContent() {
                     <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{comment.body}</p>
+                  <button
+                    onClick={() => handleCommentLike(comment.id)}
+                    className={`mt-1.5 flex items-center gap-1 text-xs transition-colors ${isCommentLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                  >
+                    <Heart className={`h-3.5 w-3.5 ${isCommentLiked ? 'fill-current' : ''}`} />
+                    {comment.like_count > 0 ? formatCount(comment.like_count) : ''}
+                  </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
