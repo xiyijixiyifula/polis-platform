@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.11', date: '2026-05-06', title: '✏️ 帖子编辑 — 前端内联编辑模式',
+      ver: '0.3.12', date: '2026-05-06', title: '🗑️ 帖子删除 + 可见性编辑 — 作者前端能力完善',
       isLatest: true,
+      items: [
+        '🗑️ **删除按钮**: 帖子详情页删除按钮 (Trash2) — 仅作者可见, 确认后删除并跳转',
+        '🔄 **可见性编辑**: 编辑模式下可切换公开/私密/社区成员 三级可见性',
+        '🌐 **跳转逻辑**: 删除后自动跳转至所属空间或首页',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.11', date: '2026-05-06', title: '✏️ 帖子编辑 — 前端内联编辑模式',
+      isLatest: false,
       items: [
         '✏️ **编辑按钮**: 帖子详情页新增 Edit 按钮 — 仅帖子作者可见',
         '🔐 **作者识别**: JWT 解码识别当前用户是否为帖子作者',

@@ -372,7 +372,19 @@ Detailed test cases organized by functional module. Each test case includes: obj
   3. Click Edit → inline form shows title input, tags input, body textarea
   4. Modify title, tags, body
   5. Click save → POST /api/spaces/{ns}/posts/{id} (PUT) updates post
-- **Expected**: Edit button visible only to author; save updates the post and exits edit mode; cancel reverts without saving
+- **Expected**: Edit button visible only to author; save updates the post and exits edit mode; cancel reverts without saving; visibility selector available in edit mode
+
+### TC-POST-17: Delete Post from Frontend
+- **Objective**: Verify post deletion from frontend post detail page
+- **Coverage**: ✅ Frontend integration (v0.3.12) — Trash2 delete button on post detail
+- **Preconditions**: Logged in as post author
+- **Steps**:
+  1. Navigate to `/post/{id}?space={ns}` as the post author
+  2. Verify Delete button (Trash2 icon) appears next to Edit button
+  3. Click Delete → confirmation dialog appears with post title
+  4. Confirm → DELETE /api/spaces/{ns}/posts/{id} removes post
+  5. Redirect to space page or home page
+- **Expected**: Delete button visible only to author; confirmation before delete; redirect after deletion
 
 ---
 
