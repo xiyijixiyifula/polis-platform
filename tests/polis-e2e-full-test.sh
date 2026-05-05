@@ -840,6 +840,51 @@ if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
 fi
 
 # ==========================================================
+# 7.5. USER 用户档案测试
+# ==========================================================
+echo ""
+echo "--- 8.5. USER 用户档案 ---"
+
+# TC-USER-01: View public profile API
+R=$(api GET "/api/users/wangwu")
+if check_code "$R"; then
+    UNAME=$(get_field "$R" "username")
+    DISPLAY=$(get_field "$R" "display_name")
+    [ "$UNAME" = "wangwu" ] && log_test PASS USER "查看用户档案" "user=$UNAME display=$DISPLAY ✅" || log_test FAIL USER "查看用户档案" "got username=$UNAME"
+else
+    log_test FAIL USER "查看用户档案" "API异常"
+fi
+
+# TC-USER-04: Follower list API
+R=$(api GET "/api/users/wangwu/followers")
+if check_code "$R"; then
+    FCNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data'); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null)
+    log_test PASS USER "粉丝列表" "count=$FCNT ✅"
+else
+    log_test FAIL USER "粉丝列表" "API异常"
+fi
+
+# TC-USER-05: Following list API
+R=$(api GET "/api/users/wangwu/following")
+if check_code "$R"; then
+    FCNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data'); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null)
+    log_test PASS USER "关注列表" "count=$FCNT ✅"
+else
+    log_test FAIL USER "关注列表" "API异常"
+fi
+
+# Verify multiple profiles return valid data
+for PROFILE_USER in wangwu zhangsan; do
+    R=$(api GET "/api/users/$PROFILE_USER")
+    if check_code "$R"; then
+        AVATAR=$(get_field "$R" "avatar_letter")
+        [ -n "$AVATAR" ] && log_test PASS USER "$PROFILE_USER头像" "letter=$AVATAR ✅" || log_test FAIL USER "$PROFILE_USER头像" "no avatar letter"
+    else
+        log_test FAIL USER "$PROFILE_USER档案" "API异常"
+    fi
+done
+
+# ==========================================================
 # 8. 通知测试
 # ==========================================================
 echo ""
@@ -1182,6 +1227,29 @@ if ! check_code "$R"; then
     log_test PASS SECURITY "未认证拒绝" "正确拒绝 ✅"
 else
     log_test FAIL SECURITY "未认证拒绝" "应该拒绝"
+fi
+
+# TC-SEC-01: XSS prevention in Markdown
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    R=$(api POST "/api/spaces/$SPACE_NS/posts" \
+        "{\"title\":\"XSS测试\",\"body\":\"<script>alert('xss')</script>\",\"module_type\":\"forum\"}" "$TOKEN")
+    if check_code "$R"; then
+        XSS_POST_ID=$(get_field "$R" "id")
+        if [ -n "$XSS_POST_ID" ]; then
+            R2=$(api GET "/api/spaces/$SPACE_NS/posts/$XSS_POST_ID")
+            if check_code "$R2"; then
+                BODY=$(echo "$R2" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('body',''))" 2>/dev/null)
+                if echo "$BODY" | grep -q '&lt;script' || ! echo "$BODY" | grep -q '<script'; then
+                    log_test PASS SECURITY "XSS防护" "script sanitized ✅"
+                else
+                    log_test FAIL SECURITY "XSS防护" "raw script tag found in body ❌"
+                fi
+            fi
+            api DELETE "/api/spaces/$SPACE_NS/posts/$XSS_POST_ID" "" "$TOKEN" > /dev/null 2>&1
+        fi
+    else
+        log_test SKIP SECURITY "XSS防护" "post creation failed"
+    fi
 fi
 
 # TC-SEC-04: CORS headers
