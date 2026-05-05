@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.96', date: '2026-05-05', title: '空间分析仪表盘 — 社区运营数据可视化',
+      items: [
+        '📊 **前端**: SpaceAnalytics 组件 — 6 项指标卡片 (帖子/浏览/点赞/评论/投票/系列)',
+        '🏆 热门内容排行: Top 5 浏览量 + Top 5 点赞量, 带排名徽章, 点击直达帖子',
+        '🖥️ 空间页: "分析" Tab (仅空间创建者可见) + 右侧栏数据速览迷你卡片',
+        '🎨 响应式网格: 2-col sm/3-col 自适应, 暗黑模式适配',
+        '🔗 SpaceAnalyticsMini 紧凑版: 右侧栏 3 项核心指标快速一览',
+        '✅ 84/84 E2E 全量通过, PERF 全部达标, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.95', date: '2026-05-05', title: '索引管理前端 + CLI 完善 — hide/unhide 全覆盖',
       items: [
         '🖥️ **CLI**: polisctl post hide <ns> <post_id> — 空间创建者隐藏/恢复帖子索引',

@@ -7,11 +7,12 @@ import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp } from 'lucide-react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
 import { tiers, subscribe } from '@/lib/api';
+import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
 
 interface Announcement {
   id: string; title: string; body: string;
@@ -54,6 +55,9 @@ export default function SpacePage() {
     setShowSettings(false);
   }, [namespace]);
 
+  // Space ownership (must be declared before availableTabs — analytics tab depends on it)
+  const [isOwner, setIsOwner] = useState(false);
+
   // Active tab - default to overview (GitHub style)
   const availableTabs = [
     { id: 'overview', label: '概览', icon: Layout, enabled: true },
@@ -74,6 +78,7 @@ export default function SpacePage() {
     { id: 'game', label: '游戏', icon: Gamepad2, enabled: modules.game },
     { id: 'mini_app', label: '小程序', icon: AppWindow, enabled: modules.mini_app },
     { id: 'members', label: '成员', icon: UserCheck, enabled: modules.members },
+    { id: 'analytics', label: '分析', icon: TrendingUp, enabled: isOwner },
   ].filter(t => t.enabled);
 
   const [activeTab, setActiveTab] = useState(urlTab || 'overview');
@@ -128,7 +133,6 @@ export default function SpacePage() {
   }, [activeTab, namespace]);
 
   // Space ownership + tier management
-  const [isOwner, setIsOwner] = useState(false);
   const [showTierForm, setShowTierForm] = useState(false);
   const [editingTier, setEditingTier] = useState<any>(null);
   const [tierForm, setTierForm] = useState({ name: '', price_cents: '0', description: '', benefits: '' });
@@ -1342,6 +1346,11 @@ export default function SpacePage() {
               <p className="text-sm mt-1">即将推出在线课程功能</p>
             </div>
           )}
+
+          {/* === Analytics Tab (空间创建者专属) === */}
+          {activeTab === 'analytics' && isOwner && (
+            <SpaceAnalytics namespace={namespace} spaceTitle={space?.title} />
+          )}
         </main>
 
         {/* Right sidebar */}
@@ -1380,6 +1389,11 @@ export default function SpacePage() {
                 </div>
               </div>
             </div>
+
+            {/* Analytics mini card (owner only) */}
+            {isOwner && (
+              <SpaceAnalyticsMini namespace={namespace} />
+            )}
 
             {/* Clustered communities info */}
             {space.is_root && (
