@@ -671,6 +671,22 @@ if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
     fi
 fi
 
+# TC-SOC-02: 点赞评论 (Comment Like)
+# 后端 toggle_like 支持 "comment" target type，通过 POST /api/comments/{id}/like
+if [ -n "$COMMENT_ID" ]; then
+    R=$(api POST "/api/comments/$COMMENT_ID/like" "" "$TOKEN")
+    if check_code "$R"; then
+        LIKED=$(get_field "$R" "data")
+        if [ "$LIKED" = "true" ]; then
+            log_test PASS SOCIAL "点赞评论" "liked=true ✅"
+        else
+            log_test FAIL SOCIAL "点赞评论" "liked=$LIKED"
+        fi
+    else
+        log_test FAIL SOCIAL "点赞评论" "msg=$(get_msg "$R")"
+    fi
+fi
+
 # ==========================================================
 # 6. 投票测试
 # ==========================================================

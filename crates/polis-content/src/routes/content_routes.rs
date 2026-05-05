@@ -164,6 +164,8 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/files/share", post(create_file_share_route))
         .route("/api/upload", post(upload_file_route))
         .route("/api/import/markdown", post(import_markdown_route))
+        // 评论点赞（仅认证用户）
+        .route("/api/comments/{id}/like", post(like_comment_route))
         // 通过 ID 更新/删除帖子（需认证）
         .route("/api/posts/{id}", put(update_post_by_id_route).delete(delete_post_by_id_route))
         // 创作中心：作者查看所有自己的内容（用户Ⓚ OS: /home/user/ 目录）
@@ -558,6 +560,16 @@ async fn get_post_comments_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let comments = h.get_comments(id).await?;
     Ok(json_ok(ApiResponse::success(comments)))
+}
+
+/// 点赞/取消点赞评论
+async fn like_comment_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let liked = h.toggle_like("comment", id, uid).await?;
+    Ok(json_ok(ApiResponse::success(liked)))
 }
 
 /// 解析查询参数（手动解析，避免额外依赖）
