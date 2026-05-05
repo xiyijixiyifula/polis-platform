@@ -90,17 +90,18 @@ Complete inventory of all known pages and routes in the Polis platform for syste
 | `/explore` | Explore Communities | Sidebar nav, community grid (2-col sm, 3-col lg), SpaceCards with member/post counts | No |
 | `/trending` | Trending | Ranked community list with rank badges (#1 amber, #2 gray, #3 amber-700) | No |
 | `/hot` | Hot | Popular communities by recent activity | No |
-| `/space/{ns}` | Space Overview | Community header, tabs (概览/文章/投票/公告/成员/设置), about card, featured posts, quick actions | No |
+| `/space/{ns}` | Space Overview | Community header, tabs (概览/分析/文章/投票/公告/成员/设置), about card, featured posts, quick actions | No |
 | `/space/{ns}/posts` | Space Posts | Post list with filters, sort options | No |
 | `/space/{ns}/polls` | Space Polls | Poll cards with vote counts | No |
 | `/space/{ns}/members` | Space Members | Member list with roles | No |
 | `/space/{ns}/settings` | Space Settings | Module toggles, visibility settings | Yes (owner) |
-| `/create` | Create Community | Form: name, description, visibility (public/private/unlisted), namespace | Yes |
+| `/space/{ns}/analytics` | Space Analytics | 6 metric cards (posts/views/likes/comments/polls/series), Top 5 ranked lists, mini sidebar card | Yes (owner) |
+| `/create-center` | Creation Center | User's all original content across spaces, edit/view/delete actions | Yes |
 
 ### Space Overview Page (`/space/{ns}`)
 - **Header**: Community icon (large rounded-xl with initial), Name, @owner/name namespace, description, stats row
 - **Actions**: 加入社区 (Join), Share button
-- **Tabs**: 概览 (Overview), 文章 (Posts), 投票 (Polls), 公告 (Announcements), 成员 (Members), 设置 (Settings — owner only)
+- **Tabs**: 概览 (Overview), 文章 (Posts), 投票 (Polls), 公告 (Announcements), 成员 (Members), 分析 (Analytics — owner only), 设置 (Settings — owner only)
 - **Overview Tab**:
   - About card (description + stats)
   - Quick action: 发布文章
