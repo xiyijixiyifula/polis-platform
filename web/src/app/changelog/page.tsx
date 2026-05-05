@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.6', date: '2026-05-06', title: '👁️ 浏览量系统 — 帖子阅读计数 + CLI 命令',
+      ver: '0.3.7', date: '2026-05-06', title: '🏷️ 标签搜索 — 按标签浏览帖子 + 可点击标签',
       isLatest: true,
+      items: [
+        '🏷️ **API**: /api/posts/search?tag=xxx — PostgreSQL JSONB @> 按标签过滤帖子',
+        '🔗 **前端**: PostCard 标签改为可点击链接 → /search?tag=xxx 一键浏览',
+        '🔍 **搜索页**: 标签模式自动切到帖子Tab, 紫色 #tag 标签显示',
+        '🖥️ **CLI**: polisctl post search --tag <tag> — 按标签搜索帖子',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.6', date: '2026-05-06', title: '👁️ 浏览量系统 — 帖子阅读计数 + CLI 命令',
       items: [
         '👁️ **API**: POST /api/posts/{id}/view — 递增帖子浏览量 (公开接口, 无需认证)',
         '📊 **后端**: increment_view_count 返回新计数值 (RETURNING view_count)',

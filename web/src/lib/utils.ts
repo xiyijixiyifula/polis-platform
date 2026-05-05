@@ -29,3 +29,23 @@ export function formatCount(count: number): string {
   }
   return count.toString();
 }
+
+/** 估算阅读时间 (基于中英文混合内容, 300字/分钟) */
+export function estimateReadTime(body: string): string {
+  if (!body) return '1 分钟';
+  // Remove Markdown syntax (headings, links, code blocks, images)
+  const plain = body
+    .replace(/#{1,6}\s+/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`[^`]*`/g, '')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/[*_~>|]/g, '')
+    .replace(/\n+/g, ' ');
+  // Count Chinese characters (CJK range) + English words
+  const chineseChars = (plain.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
+  const englishWords = plain.replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, '').trim().split(/\s+/).filter(w => w.length > 0).length;
+  // Chinese: ~300 chars/min, English: ~200 words/min
+  const minutes = Math.max(1, Math.ceil(chineseChars / 300 + englishWords / 200));
+  return `${minutes} 分钟`;
+}

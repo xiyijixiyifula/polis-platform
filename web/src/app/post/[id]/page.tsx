@@ -3,8 +3,8 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight } from 'lucide-react';
-import { formatDate, formatCount } from '@/lib/utils';
+import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock } from 'lucide-react';
+import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
 import { posts, Comment, Post } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
@@ -242,6 +242,9 @@ function PostDetailContent() {
           </span>
           <span className="flex items-center gap-1.5 text-sm text-gray-400">
             <Eye className="h-5 w-5" /> {formatCount(post.view_count)}
+          </span>
+          <span className="flex items-center gap-1.5 text-sm text-gray-400">
+            <Clock className="h-5 w-5" /> {estimateReadTime(post.body || '')}
           </span>
           <button onClick={handleBookmark}
             className={`flex items-center gap-1.5 text-sm transition-colors ${bookmarked ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`}>

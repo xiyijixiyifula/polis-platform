@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Pin, EyeOff } from 'lucide-react';
-import { formatDate, formatCount } from '@/lib/utils';
+import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
+import { Clock } from 'lucide-react';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
 
@@ -151,6 +152,12 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: P
               <Eye className="h-3.5 w-3.5" />
               <span>{formatCount(post.view_count || 0)}</span>
             </span>
+            {(post as any).body && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{estimateReadTime((post as any).body || '')}</span>
+              </span>
+            )}
             <div className="ml-auto flex items-center gap-1">
               <ShareButton url={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} title={post.title} />
             </div>
