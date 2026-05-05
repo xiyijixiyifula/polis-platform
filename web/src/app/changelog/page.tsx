@@ -4,15 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.0', date: '规划中', title: '🚀 v0.3 里程碑 — 实时聊天 / 视频 / 商城 / Git 仓库',
-      isUpcoming: true,
+      ver: '0.3.0', date: '2026-05-05', title: '🚀 社区实时聊天 — v0.3 里程碑启程',
+      isLatest: true,
       items: [
-        '💬 实时聊天 (polis-chat) — WebSocket 即时通讯',
-        '🎬 视频上传与播放 (polis-video)',
-        '🛍️ 社区商城 (polis-store)',
-        '💻 Git 代码仓库托管 (polis-code)',
-        '💰 打赏/支付系统 (polis-pay)',
-        '🔍 全文搜索增强 (Tantivy)',
+        '💬 **聊天 API**: POST /api/chat/spaces/{ns} 发送 + GET 读取 — chat_messages 表持久化',
+        '🏛️ **Gateway**: /api/chat/{*path} → proxy_to_content 代理路由',
+        '💻 **前端**: SpaceChat 组件 — 3s 轮询实时消息, 头像+时间戳, Enter 发送',
+        '🗂️ **空间页**: 新增"聊天"Tab (默认启用), 移除 coming-soon 标签',
+        '📊 **DB**: migration 008 — chat_messages 表 (space_id + user_id + content + message_type)',
+        '✅ 90/90 E2E 全量通过, PERF 全部达标, 6 服务 active',
       ],
     },
     {
