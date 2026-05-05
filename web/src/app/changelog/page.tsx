@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.95', date: '2026-05-05', title: '索引管理前端 + CLI 完善 — hide/unhide 全覆盖',
+      items: [
+        '🖥️ **CLI**: polisctl post hide <ns> <post_id> — 空间创建者隐藏/恢复帖子索引',
+        '🎨 **前端**: PostCard 隐藏按钮 — 空间页所有模块 Tab (交流/知识库/分享/问答/小说/游戏/小程序)',
+        '👁️ EyeOff 图标: 空间创建者可见隐藏按钮, 点击确认后移除空间索引 (内容本体保持)',
+        '🗺️ 空间页 toggleHide: 隐藏后立即从本地列表移除, 无需刷新',
+        '📡 API: posts.hide() 客户端方法 — 统一调用 POST /api/spaces/{ns}/posts/{id}/hide',
+        '✅ 83/84 E2E (1 PERF 超时), 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.94', date: '2026-05-05', title: '创作中心 — 内容本体 vs 空间索引 架构落地',
       items: [
         '🎨 **创作中心**: /create-center 页面 — 用户管理所有原创内容 (本体)',

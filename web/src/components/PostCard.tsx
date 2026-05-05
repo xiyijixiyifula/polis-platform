@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Pin } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Pin, EyeOff } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
@@ -24,9 +24,11 @@ interface PostCardProps {
   };
   canPin?: boolean;
   onTogglePin?: () => void;
+  canHide?: boolean;
+  onToggleHide?: () => void;
 }
 
-export function PostCard({ post, canPin, onTogglePin }: PostCardProps) {
+export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: PostCardProps) {
   const excerpt = post.body ? post.body.replace(/<[^>]+>/g, '').slice(0, 200) : '';
   const spaceLink = post.space_ns || post.space_id || '';
   const author = post.author;
@@ -52,6 +54,23 @@ export function PostCard({ post, canPin, onTogglePin }: PostCardProps) {
           >
             <Pin className={`h-3.5 w-3.5 ${post.is_pinned ? 'fill-amber-500 text-amber-500' : ''}`} />
             <span>{post.is_pinned ? '已置顶' : '置顶'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Hide toggle button (space owner: index management) */}
+      {canHide && onToggleHide && (
+        <div className={`absolute top-3 right-3 z-10 ${canPin && onTogglePin ? 'right-20' : ''}`}>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleHide(); }}
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full
+              hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
+              text-gray-400 hover:text-red-500"
+            title="隐藏帖子（移除空间索引）"
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+            <span>隐藏</span>
           </button>
         </div>
       )}

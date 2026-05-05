@@ -147,3 +147,27 @@ pub async fn featuring(
     }
     Ok(())
 }
+
+pub async fn hide(
+    config: &Config,
+    client: &HttpClient,
+    namespace: &str,
+    post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_auth()?;
+    let resp = client.post(
+        &format!("/api/spaces/{}/posts/{}/hide", namespace, post_id),
+        Some(&token),
+        &json!({}),
+    ).await?;
+    let data = extract_data(&resp);
+    print_output(data, config.format);
+    if let Some(hidden) = data.get("hidden").and_then(|v| v.as_bool()) {
+        if hidden {
+            print_success("Post hidden (removed from space index)");
+        } else {
+            print_success("Post unhidden (restored to space index)");
+        }
+    }
+    Ok(())
+}

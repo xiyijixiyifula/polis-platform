@@ -382,6 +382,13 @@ enum PostAction {
         /// Post ID
         post_id: String,
     },
+    /// Toggle hide/unhide on a post (space owner only, index management)
+    Hide {
+        /// Space namespace
+        namespace: String,
+        /// Post ID
+        post_id: String,
+    },
 }
 
 // === Comment Subcommands ===
@@ -845,6 +852,7 @@ async fn main() -> Result<(), anyhow::Error> {
             PostAction::Featured { namespace } => commands::post::featured(&config, &client, &namespace).await,
             PostAction::Pin { namespace, post_id } => commands::post::pin(&config, &client, &namespace, &post_id).await,
             PostAction::Featuring { namespace, post_id } => commands::post::featuring(&config, &client, &namespace, &post_id).await,
+            PostAction::Hide { namespace, post_id } => commands::post::hide(&config, &client, &namespace, &post_id).await,
         },
 
         // === Comment ===

@@ -21,7 +21,7 @@
 
 ---
 
-## ✨ 当前功能 (v0.2.94)
+## ✨ 当前功能 (v0.2.95)
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -62,6 +62,8 @@
 | 📰 信息流首页 | ✅ | 3 栏布局、@用户/社区/模块 时间线、无限滚动 |
 | 🖥️ CLI 命令行工具 | ✅ | Rust 静态二进制、20+ 命令、JSON/Table 输出 |
 | 🎨 Cherry 渲染修复 | ✅ | Engine Core API 同步渲染、CSS 作用域隔离 |
+| 🗂️ 索引管理 | ✅ | 空间创建者可 hide/unhide 帖子 (移除/恢复空间索引) |
+| 📝 创作中心 | ✅ | /create-center 页面 — 用户管理所有原创内容 (本体) |
 
 ---
 
@@ -278,6 +280,7 @@ polisctl --format table admin users list 1 10
 | `file/draft` | 文件上传/草稿箱 |
 | `notify/announce` | 通知/社区公告 |
 | `report` | 举报帖子 |
+| `hide` | 隐藏/恢复帖子索引 (仅空间创建者) |
 | `admin` | 管理后台（dashboard/stats/users/spaces/posts/comments/reports/analytics） |
 
 📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://www.mzgw.com/cli)

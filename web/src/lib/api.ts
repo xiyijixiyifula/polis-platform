@@ -440,6 +440,9 @@ export const posts = {
   feature: (namespace: string, id: string) =>
     request<{ featured: boolean }>(`/spaces/${namespace}/posts/${id}/featured`, { method: 'POST' }),
 
+  hide: (namespace: string, id: string) =>
+    request<{ hidden: boolean }>(`/spaces/${namespace}/posts/${id}/hide`, { method: 'POST' }),
+
   delete: (namespace: string, id: string) =>
     request<void>(`/spaces/${namespace}/posts/${id}`, { method: 'DELETE' }),
 };

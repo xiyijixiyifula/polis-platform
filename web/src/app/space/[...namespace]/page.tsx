@@ -156,6 +156,19 @@ export default function SpacePage() {
     } catch {}
   }, [namespace]);
 
+  const toggleHide = useCallback(async (postId: string) => {
+    if (!confirm('确定要隐藏这篇帖子吗？隐藏后将从空间索引中移除，但内容不会删除。')) return;
+    try {
+      const res = await fetch(`/api/spaces/${namespace}/posts/${postId}/hide`, { method: 'POST' });
+      const data = await res.json();
+      if (data.code === 0) {
+        // Remove from all local lists (posts, featured, module-filtered lists)
+        setPosts(prev => prev.filter(p => p.id !== postId));
+        setFeatured(prev => prev.filter(p => p.id !== postId));
+      }
+    } catch {}
+  }, [namespace]);
+
   // Parse namespace for GitHub-style display: username/community-name
   const ghParts = namespace.split('/');
   const hasOwnerPrefix = nsParts.length >= 2;
@@ -626,7 +639,7 @@ export default function SpacePage() {
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} canPin={isOwner} onTogglePin={() => togglePin(post.id, post.is_pinned)} />
+                    }} canPin={isOwner} onTogglePin={() => togglePin(post.id, post.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} />
                   ))}
                 </div>
               ) : (
@@ -907,7 +920,7 @@ export default function SpacePage() {
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} />
+                    }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} />
                   ))}
                 </div>
               ) : (
@@ -963,7 +976,7 @@ export default function SpacePage() {
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} />
+                    }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} />
                   ))}
                 </div>
               ) : (
@@ -1146,7 +1159,7 @@ export default function SpacePage() {
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} />
+                    }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} />
                   ))}
                 </div>
               ) : (
@@ -1195,7 +1208,7 @@ export default function SpacePage() {
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} />
+                    }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} />
                   ))}
                 </div>
               ) : (
@@ -1244,7 +1257,7 @@ export default function SpacePage() {
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} />
+                    }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} />
                   ))}
                 </div>
               ) : (
@@ -1293,7 +1306,7 @@ export default function SpacePage() {
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} />
+                    }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} />
                   ))}
                 </div>
               ) : (
