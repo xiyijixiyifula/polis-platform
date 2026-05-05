@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.102', date: '2026-05-05', title: '评论点赞前端 UI — 帖子详情页评论 Heart 按钮',
+      isLatest: true,
+      items: [
+        '❤️ **前端**: 帖子详情页评论列表每个评论增加 ♥ 点赞按钮 — 点击切换红心/空心, like_count 即时更新',
+        '📡 **API**: posts.likeComment(commentId) 客户端方法 — 调用 POST /api/comments/{id}/like',
+        '🔗 后端 v0.2.101 已就绪 — toggle_like("comment") 复用, 前端接入完成',
+        '✅ 90/90 E2E 全量通过, PERF 全部达标, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.101', date: '2026-05-05', title: '评论点赞 API + E2E — TC-SOC-02 全覆盖',
       isLatest: true,
       items: [
