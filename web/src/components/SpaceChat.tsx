@@ -25,7 +25,7 @@ export function SpaceChat({ namespace }: { namespace: string }) {
 
   const fetchMessages = async () => {
     try {
-      const res = await fetch(`/api/spaces/${namespace}/chat?limit=50`);
+      const res = await fetch(`/api/chat/spaces/${namespace}?limit=50`);
       const json = await res.json();
       if (json.code === 0 && Array.isArray(json.data)) {
         setMessages(json.data);
@@ -52,7 +52,7 @@ export function SpaceChat({ namespace }: { namespace: string }) {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/spaces/${namespace}/chat`, {
+      const res = await fetch(`/api/chat/spaces/${namespace}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
