@@ -13,6 +13,7 @@ import { formatCount } from '@/lib/utils';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
 import { tiers, subscribe } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
+import { SpaceChat } from '@/components/SpaceChat';
 
 interface Announcement {
   id: string; title: string; body: string;
@@ -1109,6 +1110,17 @@ export default function SpacePage() {
                 </div>
               )}
             </>
+          )}
+
+          {/* === Chat Tab（v0.3.0 — 实时聊天）=== */}
+          {activeTab === 'chat' && (
+            <div className="card overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-primary-600" />
+                <span className="font-medium text-sm text-gray-900 dark:text-white">社区聊天室</span>
+              </div>
+              <SpaceChat namespace={namespace} />
+            </div>
           )}
 
           {activeTab === 'video' && (

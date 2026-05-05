@@ -9,6 +9,7 @@ use polis_core::error::AppError;
 use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, Post, PostPublic, UpdatePostRequest, PaginationParams, CreateTierRequest, UpdateTierRequest};
 use polis_core::resolver::resolve::{resolve_space_id, resolve_space_enabled_modules};
 use crate::handlers::content_handler::ContentHandler;
+use crate::handlers::chat_handler::ChatHandler;
 use crate::middleware::auth::auth_middleware;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::Deserialize as SerdeDeserialize;
@@ -119,6 +120,8 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
 pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     let public = Router::new()
         .route("/health", get(health_check))
+        // 聊天（公开可读）
+        .route("/api/spaces/{ns}/chat", get(get_chat_messages))
         .route("/api/spaces/{*path}", get(handle_public_content))
         // 公开的投票/问卷列表 + 单个投票详情
         .route("/api/polls", get(list_all_polls_route))
@@ -138,6 +141,8 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
 
     // 需要认证的路由
     let auth = Router::new()
+        // 聊天（发送需认证）
+        .route("/api/spaces/{ns}/chat", post(post_chat_message))
         .route("/api/spaces/{*path}", post(handle_auth_content).put(handle_auth_content).delete(handle_auth_content))
         .route("/api/bookmarks", get(list_bookmarks))
         .route("/api/liked-posts", get(list_liked_posts_route))
@@ -915,4 +920,37 @@ async fn health_check(State(h): State<Arc<ContentHandler>>) -> Json<ApiResponse<
         "database": db_ok,
         "version": env!("CARGO_PKG_VERSION"),
     })))
+}
+
+// ===== 聊天（v0.3.0） =====
+
+#[derive(Deserialize)]
+struct ChatQueryParams { limit: Option<u32> }
+
+#[derive(Deserialize)]
+struct SendChatBody { content: String }
+
+/// GET /api/spaces/{ns}/chat — 获取聊天消息列表（公开）
+async fn get_chat_messages(
+    State(h): State<Arc<ContentHandler>>,
+    Path(ns): Path<String>,
+    Query(q): Query<ChatQueryParams>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let space_id = resolve_space_id(&h.pool, &ns).await?;
+    let chat = ChatHandler::new(h.pool.clone());
+    let msgs = chat.list_messages(space_id, q.limit.unwrap_or(50)).await?;
+    Ok(json_ok(ApiResponse::success(msgs)))
+}
+
+/// POST /api/spaces/{ns}/chat — 发送聊天消息（需认证）
+async fn post_chat_message(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(ns): Path<String>,
+    Json(body): Json<SendChatBody>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let space_id = resolve_space_id(&h.pool, &ns).await?;
+    let chat = ChatHandler::new(h.pool.clone());
+    let msg = chat.send_message(space_id, uid, &body.content).await?;
+    Ok(json_ok(ApiResponse::success(msg)))
 }

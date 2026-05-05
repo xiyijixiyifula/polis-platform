@@ -11,7 +11,7 @@ use crate::handler::ChatHandler;
 
 pub fn chat_routes(handler: Arc<ChatHandler>) -> Router {
     Router::new()
-        .route("/ws/spaces/:namespace/chat", get(ws_handler))
+        .route("/ws/spaces/{namespace}/chat", get(ws_handler))
         .with_state(handler)
 }
 
