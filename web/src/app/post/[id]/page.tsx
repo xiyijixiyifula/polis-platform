@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download } from 'lucide-react';
 import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
 import { posts, Comment, Post } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
@@ -250,6 +250,11 @@ function PostDetailContent() {
             className={`flex items-center gap-1.5 text-sm transition-colors ${bookmarked ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`}>
             <Bookmark className={`h-5 w-5 ${bookmarked ? 'fill-current' : ''}`} />
           </button>
+          <a href={`https://www.mzgw.com/api/posts/${post.id}/download`}
+            className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+            title="下载 Markdown">
+            <Download className="h-5 w-5" />
+          </a>
           <button onClick={() => { const url = window.location.href; navigator.clipboard.writeText(url).then(() => alert('链接已复制')); }}
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
             <Share2 className="h-5 w-5" />

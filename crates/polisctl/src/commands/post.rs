@@ -160,6 +160,25 @@ pub async fn featuring(
     Ok(())
 }
 
+pub async fn download(
+    config: &Config,
+    client: &HttpClient,
+    post_id: &str,
+    output: Option<&str>,
+) -> Result<(), anyhow::Error> {
+    let url = format!("/api/posts/{}/download", post_id);
+    let resp = client.get_raw(&url).await?;
+    if let Some(path) = output {
+        std::fs::write(path, &resp)?;
+        println!("Saved to: {}", path);
+    } else {
+        // Print to stdout
+        let text = String::from_utf8_lossy(&resp);
+        println!("{}", text);
+    }
+    Ok(())
+}
+
 pub async fn view(
     config: &Config,
     client: &HttpClient,

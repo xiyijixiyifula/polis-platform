@@ -406,6 +406,14 @@ enum PostAction {
         /// Post ID
         post_id: String,
     },
+    /// Download post as Markdown file
+    Download {
+        /// Post ID
+        post_id: String,
+        /// Output file path (optional, prints to stdout if omitted)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
 }
 
 // === Comment Subcommands ===
@@ -908,6 +916,7 @@ async fn main() -> Result<(), anyhow::Error> {
             PostAction::Featuring { namespace, post_id } => commands::post::featuring(&config, &client, &namespace, &post_id).await,
             PostAction::Hide { namespace, post_id } => commands::post::hide(&config, &client, &namespace, &post_id).await,
             PostAction::View { post_id } => commands::post::view(&config, &client, &post_id).await,
+            PostAction::Download { post_id, output } => commands::post::download(&config, &client, &post_id, output.as_deref()).await,
         },
 
         // === Comment ===

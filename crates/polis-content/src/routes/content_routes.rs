@@ -132,6 +132,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     .route("/api/feed", get(feed_route))
         .route("/api/posts/{id}", get(get_post_by_id_route))
         .route("/api/posts/{id}/view", post(increment_view_route))
+        .route("/api/posts/{id}/download", get(download_post_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route).post(create_comment_by_post_id))
         // 获取投票分数（赞同/反对）
         .route("/api/vote", get(get_vote_score_route))
@@ -536,6 +537,42 @@ async fn increment_view_route(
         "post_id": id,
         "view_count": view_count,
     }))))
+}
+
+/// 下载帖子为 Markdown 文件（公开接口，v0.3.9）
+async fn download_post_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Response, AppError> {
+    let post = h.repo.find_post_by_id(id).await?
+        .ok_or(AppError::NotFound("Post not found".to_string()))?;
+    let filename = sanitize_filename(&post.title);
+    let tags_str = if let Some(arr) = post.tags.as_array() {
+        arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(", ")
+    } else { String::new() };
+    let frontmatter = format!(
+        "---\ntitle: \"{}\"\nauthor_id: {}\nspace_id: {}\nmodule: {}\ntags: [{}]\ndate: {}\n---\n\n",
+        post.title, post.author_id, post.space_id, post.module_type, tags_str,
+        post.created_at.format("%Y-%m-%d %H:%M:%S")
+    );
+    let markdown = format!("{}{}", frontmatter, post.body);
+    let disp = format!("attachment; filename=\"{}.md\"", filename);
+    let mut resp = Response::new(axum::body::Body::from(markdown));
+    resp.headers_mut().insert("content-type", axum::http::HeaderValue::from_static("text/markdown; charset=utf-8"));
+    resp.headers_mut().insert("content-disposition", axum::http::HeaderValue::from_str(&disp).unwrap());
+    Ok(resp)
+}
+
+/// 清理文件名中的不安全字符
+fn sanitize_filename(title: &str) -> String {
+    title.chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == ' ' || ('\u{4e00}'..='\u{9fff}').contains(&c) { c } else { '_' })
+        .collect::<String>()
+        .trim()
+        .replace(' ', "-")
+        .chars()
+        .take(80)
+        .collect()
 }
 
 

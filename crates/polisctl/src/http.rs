@@ -24,6 +24,17 @@ impl HttpClient {
         format!("{}{}", self.base_url, path)
     }
 
+    /// GET raw bytes (for file downloads, non-JSON responses)
+    pub async fn get_raw(&self, path: &str) -> Result<Vec<u8>, anyhow::Error> {
+        let req = self.client.get(&self.url(path));
+        let resp = req.send().await.context("GET request failed")?;
+        let status = resp.status();
+        if !status.is_success() {
+            anyhow::bail!("HTTP {}: request failed", status.as_u16());
+        }
+        resp.bytes().await.context("Failed to read response body").map(|b| b.to_vec())
+    }
+
     pub async fn get(&self, path: &str, token: Option<&str>) -> Result<Value, anyhow::Error> {
         let mut req = self.client.get(&self.url(path));
         if let Some(t) = token {
