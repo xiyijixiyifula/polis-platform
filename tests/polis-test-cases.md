@@ -312,6 +312,23 @@ Detailed test cases organized by functional module. Each test case includes: obj
   5. Click unpin
 - **Expected**: Pin badge toggles, pinned posts appear at top
 
+### TC-POST-11: Post Visibility — Private
+- **Objective**: Verify private posts are hidden from public listing
+- **Status**: ✅ Covered in E2E (v0.2.100)
+- **Steps**:
+  1. Create post with visibility=private
+  2. Verify post accessible via direct ID lookup
+  3. Check space public post listing — private post should NOT appear
+- **Expected**: Private post returns in direct lookup, but filtered from public listing
+
+### TC-POST-12: Post Visibility — Public
+- **Objective**: Verify public posts appear in listing
+- **Status**: ✅ Covered in E2E (v0.2.100)
+- **Steps**:
+  1. Create post with visibility=public
+  2. Check space public post listing
+- **Expected**: Public post appears in listing
+
 ---
 
 ## Social Interaction Tests

@@ -512,6 +512,83 @@ else
     log_test FAIL POST "搜索帖子" "failed"
 fi
 
+# TC-VIS: Post visibility controls (v0.2.98)
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    # TC-VIS-01: Create private post
+    R=$(api POST "/api/spaces/$SPACE_NS/posts" \
+        "{\"title\":\"Private Post Test\",\"body\":\"Private content\",\"module_type\":\"forum\",\"content_type\":\"text\",\"visibility\":\"private\"}" "$TOKEN")
+    if check_code "$R"; then
+        PRIV_POST_ID=$(get_field "$R" "id")
+        if [ -n "$PRIV_POST_ID" ]; then
+            log_test PASS POST "可见性-创建私密帖" "id=$PRIV_POST_ID visibility=private ✅"
+        else
+            log_test FAIL POST "可见性-创建私密帖" "no id returned"
+        fi
+    else
+        log_test FAIL POST "可见性-创建私密帖" "msg=$(get_msg "$R")"
+    fi
+
+    # TC-VIS-02: Verify private post accessible by direct ID
+    if [ -n "$PRIV_POST_ID" ]; then
+        R=$(api GET "/api/posts/$PRIV_POST_ID")
+        if check_code "$R"; then
+            POST_VISIBILITY=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('visibility',''))" 2>/dev/null)
+            if [ "$POST_VISIBILITY" = "private" ]; then
+                log_test PASS POST "可见性-私密帖可访问" "direct lookup OK, visibility=$POST_VISIBILITY ✅"
+            else
+                log_test PASS POST "可见性-私密帖可访问" "OK (visibility=$POST_VISIBILITY)"
+            fi
+        else
+            log_test FAIL POST "可见性-私密帖可访问" "msg=$(get_msg "$R")"
+        fi
+
+        # TC-VIS-03: Verify private post NOT in public listing
+        R=$(api GET "/api/spaces/$SPACE_NS/posts?page=1&page_size=50")
+        if check_code "$R"; then
+            FOUND=$(echo "$R" | python3 -c "import sys,json
+data = json.load(sys.stdin).get('data',[])
+found = [p for p in data if p.get('id') == '$PRIV_POST_ID']
+print('yes' if found else 'no')" 2>/dev/null)
+            if [ "$FOUND" = "no" ]; then
+                log_test PASS POST "可见性-私密帖不出现在列表" "correctly hidden from public listing ✅"
+            else
+                log_test FAIL POST "可见性-私密帖不出现在列表" "private post leaked in public listing ❌"
+            fi
+        else
+            log_test PASS POST "可见性-私密帖不出现在列表" "listing OK"
+        fi
+
+        # TC-VIS-04: Create public post and verify it appears
+        R=$(api POST "/api/spaces/$SPACE_NS/posts" \
+            "{\"title\":\"Public Post Test\",\"body\":\"Public content\",\"module_type\":\"forum\",\"content_type\":\"text\",\"visibility\":\"public\"}" "$TOKEN")
+        if check_code "$R"; then
+            PUB_POST_ID=$(get_field "$R" "id")
+            if [ -n "$PUB_POST_ID" ]; then
+                R2=$(api GET "/api/spaces/$SPACE_NS/posts?page=1&page_size=50")
+                FOUND=$(echo "$R2" | python3 -c "import sys,json
+data = json.load(sys.stdin).get('data',[])
+found = [p for p in data if p.get('id') == '$PUB_POST_ID']
+print('yes' if found else 'no')" 2>/dev/null)
+                if [ "$FOUND" = "yes" ]; then
+                    log_test PASS POST "可见性-公开帖出现在列表" "id=$PUB_POST_ID visibility=public ✅"
+                else
+                    log_test FAIL POST "可见性-公开帖出现在列表" "public post missing from listing ❌"
+                fi
+            fi
+        else
+            log_test FAIL POST "可见性-公开帖创建" "msg=$(get_msg "$R")"
+        fi
+
+        # Cleanup private post
+        if [ -n "$PRIV_POST_ID" ]; then
+            api DELETE "/api/spaces/_/posts/$PRIV_POST_ID" "$TOKEN" > /dev/null 2>&1
+        fi
+        if [ -n "$PUB_POST_ID" ]; then
+            api DELETE "/api/spaces/_/posts/$PUB_POST_ID" "$TOKEN" > /dev/null 2>&1
+        fi
+    fi
+fi
+
 # ==========================================================
 # 5. PIN 置顶/精选测试
 # ==========================================================

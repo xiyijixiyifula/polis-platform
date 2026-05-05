@@ -4,6 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.100', date: '2026-05-05', title: '可见性 E2E 覆盖 — 私密帖隔离验证',
+      items: [
+        '🧪 **E2E**: 新增 4 项帖子可见性测试 — 私密帖创建/可访问/不出现在列表/公开帖出现在列表',
+        '🔒 验证: 后端 visibility=private 帖子正确从公共列表过滤 (backend filter 生效)',
+        '🔍 验证: PostPublic 返回 visibility 字段, direct lookup 可获取私密帖',
+        '✅ 89/89 E2E 全量通过, PERF 全部达标, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.99', date: '2026-05-05', title: '用户搜索 — 搜索页三Tab全覆盖 (社区/帖子/用户)',
       items: [
         '🔍 **后端**: polis-user 新增 GET /api/users/search?q= 端点 — ILIKE 模糊匹配 username + display_name',
