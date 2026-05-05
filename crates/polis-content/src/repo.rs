@@ -968,7 +968,7 @@ impl ContentRepo {
 
         // Poll and series counts
         let poll_count: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM polls WHERE space_id = $1 AND is_deleted = FALSE"
+            "SELECT COUNT(*) FROM polls WHERE space_id = $1"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
         let series_count: (i64,) = sqlx::query_as(
