@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.94', date: '2026-05-05', title: '创作中心 — 内容本体 vs 空间索引 架构落地',
+      items: [
+        '🎨 **创作中心**: /create-center 页面 — 用户管理所有原创内容 (本体)',
+        '📂 每篇内容显示归属空间 (索引位置), 区分隐藏/可见状态',
+        '🔄 API: GET /api/my/contents — 返回作者所有内容 + 空间信息 (find_posts_by_author)',
+        '🗺️ 侧边栏新增"创作中心"入口, 编辑/查看/删除操作按钮',
+        '🏗️ Gateway: proxy_user_router 分发 /users/{*path} 到用户或内容服务',
+        '✅ 84/84 E2E 全量通过, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.93', date: '2026-05-05', title: '索引管理 — 空间创建者可隐藏他人帖子(移除索引,不删内容)',
       items: [
         '📂 **索引管理**: 空间创建者 POST /api/spaces/{ns}/posts/{id}/hide — 隐藏帖子(移除索引)',
