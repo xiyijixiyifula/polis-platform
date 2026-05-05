@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.8', date: '2026-05-06', title: '⏱️ 阅读时间估算 — 帖子预计阅读时长显示',
+      ver: '0.3.9', date: '2026-05-06', title: '📥 帖子 Markdown 下载 — 数据导出第一步',
       isLatest: true,
+      items: [
+        '📥 **API**: GET /api/posts/{id}/download — 帖子下载为 .md 文件 (含 YAML frontmatter)',
+        '📄 **格式**: YAML frontmatter (标题/作者/社区/模块/标签/日期) + Markdown 正文',
+        '🖥️ **CLI**: polisctl post download <post_id> -o output.md — 支持 stdout 输出和文件保存',
+        '🌐 **前端**: 帖子详情页新增 Download 按钮 — 一键下载 Markdown',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.8', date: '2026-05-06', title: '⏱️ 阅读时间估算 — 帖子预计阅读时长显示',
+      isLatest: false,
       items: [
         '⏱️ **工具函数**: estimateReadTime() — 中英文混合阅读时间估算 (300字/分钟中文, 200词/分钟英文)',
         '📇 **PostCard**: Clock 图标 + 预计阅读时间 — 有正文的帖子卡片显示阅读时长',
