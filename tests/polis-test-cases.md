@@ -354,6 +354,7 @@ Detailed test cases organized by functional module. Each test case includes: obj
 
 ### TC-SOC-03: User Mention in Comment
 - **Objective**: Verify @mention functionality (if supported)
+- **Coverage**: ✅ Covered in E2E (v0.3.4) — API handles @username mention in comment body
 - **Steps**:
   1. Navigate to post
   2. In comment, type `@testuser`
@@ -391,6 +392,7 @@ Detailed test cases organized by functional module. Each test case includes: obj
 
 ### TC-POLL-04: Space Poll List
 - **Objective**: Verify polls tab in space
+- **Coverage**: ✅ Covered in E2E (v0.3.4) — GET /api/spaces/{ns}/polls API validation
 - **Steps**:
   1. Navigate to `/space/wangwu/indie-game`
   2. Click 投票 tab

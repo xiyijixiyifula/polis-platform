@@ -669,6 +669,22 @@ if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
             log_test FAIL COMMENT "嵌套回复" "failed"
         fi
     fi
+
+    # TC-SOC-03: User mention in comment (verify @mention is handled)
+    if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
+        R=$(api POST "/api/spaces/$SPACE_NS/posts/$POST_ID/comments" \
+            "{\"body\":\"@wangwu 测试一下提及功能\"}" "$TOKEN")
+        if check_code "$R"; then
+            MENTION_BODY=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('body',''))" 2>/dev/null)
+            if [ -n "$MENTION_BODY" ]; then
+                log_test PASS SOCIAL "用户提及评论" "body=\"$MENTION_BODY\" ✅"
+            else
+                log_test FAIL SOCIAL "用户提及评论" "body empty"
+            fi
+        else
+            log_test FAIL SOCIAL "用户提及评论" "API异常"
+        fi
+    fi
 fi
 
 # TC-SOC-02: 点赞评论 (Comment Like)
@@ -996,6 +1012,17 @@ if [ -n "$POLL_ID" ]; then
         else
             log_test FAIL POLL "参与投票" "failed"
         fi
+    fi
+fi
+
+# TC-POLL-04: Space poll list — list polls from a specific space
+if [ -n "$SPACE_NS" ]; then
+    R=$(api GET "/api/spaces/$SPACE_NS/polls?page=1&page_size=10")
+    if check_code "$R"; then
+        P_CNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data'); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null)
+        log_test PASS POLL "空间投票列表" "count=$P_CNT ✅"
+    else
+        log_test FAIL POLL "空间投票列表" "msg=$(get_msg "$R")"
     fi
 fi
 
