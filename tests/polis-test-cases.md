@@ -332,6 +332,34 @@ Detailed test cases organized by functional module. Each test case includes: obj
   2. Check space public post listing
 - **Expected**: Public post appears in listing
 
+### TC-POST-13: Post View Count
+- **Objective**: Verify view count increment and return
+- **Coverage**: ✅ Covered in E2E (v0.3.6) — POST /api/posts/{id}/view → view_count returned
+- **Steps**:
+  1. POST /api/posts/{id}/view (no auth required)
+  2. Check response data.view_count is incremented
+  3. Call again, verify increments further
+- **Expected**: view_count increments by 1 each call, returned in response
+
+### TC-POST-14: Post Reading Time Display
+- **Objective**: Verify reading time estimation on post detail page
+- **Coverage**: ✅ Covered in E2E (v0.3.8) — PostCard + detail page Clock icon
+- **Steps**:
+  1. Navigate to post detail `/post/{id}?space={ns}`
+  2. Locate Clock icon in interaction bar (between Eye and Bookmark)
+  3. Verify reading time text format: "N 分钟"
+- **Expected**: Reading time displayed for posts with body content
+
+### TC-POST-15: Post Download as Markdown
+- **Objective**: Verify post export/download as Markdown file
+- **Coverage**: ✅ Covered in E2E (v0.3.9) — GET /api/posts/{id}/download returns .md
+- **Steps**:
+  1. GET /api/posts/{id}/download
+  2. Check Content-Disposition header (attachment; filename="...")
+  3. Check YAML frontmatter includes title, author_id, space_id, module, tags, date
+  4. Check body rendered after frontmatter
+- **Expected**: Returns text/markdown with YAML frontmatter, proper Content-Disposition
+
 ---
 
 ## Social Interaction Tests
@@ -471,6 +499,16 @@ Detailed test cases organized by functional module. Each test case includes: obj
   2. Type query
   3. Submit
 - **Expected**: Redirect to `/search?q={query}` with results
+
+### TC-SEARCH-06: Tag-Based Post Search
+- **Objective**: Verify tag filtering via API and frontend
+- **Coverage**: ✅ Covered in E2E (v0.3.7) — /api/posts/search?tag=xxx + CLI --tag
+- **Steps**:
+  1. GET /api/posts/search?tag=Rust
+  2. Verify all returned posts have "Rust" in tags array
+  3. Navigate to `/search?tag=Rust` — auto-switch to "帖子" tab, purple #Rust badge
+  4. CLI: polisctl post search --tag Rust
+- **Expected**: Only posts with matching tag returned, search page shows tag filter mode
 
 ---
 
