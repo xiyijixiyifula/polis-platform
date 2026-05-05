@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.7', date: '2026-05-06', title: '🏷️ 标签搜索 — 按标签浏览帖子 + 可点击标签',
+      ver: '0.3.8', date: '2026-05-06', title: '⏱️ 阅读时间估算 — 帖子预计阅读时长显示',
       isLatest: true,
+      items: [
+        '⏱️ **工具函数**: estimateReadTime() — 中英文混合阅读时间估算 (300字/分钟中文, 200词/分钟英文)',
+        '📇 **PostCard**: Clock 图标 + 预计阅读时间 — 有正文的帖子卡片显示阅读时长',
+        '📄 **帖子详情**: 互动栏新增阅读时间 — Eye 和 Bookmark 之间显示',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.7', date: '2026-05-06', title: '🏷️ 标签搜索 — 按标签浏览帖子 + 可点击标签',
+      isLatest: false,
       items: [
         '🏷️ **API**: /api/posts/search?tag=xxx — PostgreSQL JSONB @> 按标签过滤帖子',
         '🔗 **前端**: PostCard 标签改为可点击链接 → /search?tag=xxx 一键浏览',
