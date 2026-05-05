@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.9', date: '2026-05-06', title: '📥 帖子 Markdown 下载 — 数据导出第一步',
+      ver: '0.3.10', date: '2026-05-06', title: '👁️ 浏览量前端集成 — 浏览帖子自动+1',
       isLatest: true,
+      items: [
+        '👁️ **前端**: 帖子详情页加载时自动调用 POST /api/posts/{id}/view — 浏览量实时递增',
+        '🔄 **API Client**: 新增 posts.view(id) 方法 — 封装浏览量递增 API',
+        '📊 **UI**: view_count 在页面加载后自动更新为递增后的最新值',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.9', date: '2026-05-06', title: '📥 帖子 Markdown 下载 — 数据导出第一步',
+      isLatest: false,
       items: [
         '📥 **API**: GET /api/posts/{id}/download — 帖子下载为 .md 文件 (含 YAML frontmatter)',
         '📄 **格式**: YAML frontmatter (标题/作者/社区/模块/标签/日期) + Markdown 正文',

@@ -335,11 +335,13 @@ Detailed test cases organized by functional module. Each test case includes: obj
 ### TC-POST-13: Post View Count
 - **Objective**: Verify view count increment and return
 - **Coverage**: ✅ Covered in E2E (v0.3.6) — POST /api/posts/{id}/view → view_count returned
+- **Frontend**: ✅ Auto-increment on post detail page load (v0.3.10)
 - **Steps**:
   1. POST /api/posts/{id}/view (no auth required)
   2. Check response data.view_count is incremented
   3. Call again, verify increments further
-- **Expected**: view_count increments by 1 each call, returned in response
+  4. Navigate to `/post/{id}` in browser → page load triggers view increment
+- **Expected**: view_count increments by 1 each call, returned in response; frontend auto-triggers on post page load
 
 ### TC-POST-14: Post Reading Time Display
 - **Objective**: Verify reading time estimation on post detail page
