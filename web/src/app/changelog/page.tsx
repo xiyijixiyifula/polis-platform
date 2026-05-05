@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.92', date: '2026-05-05', title: '模块可见性强制执行 + 作者内容主权 — 权限架构重构',
+      items: [
+        '🏛️ **架构重构**: 按 OS→Disk→Folder→File 模型重构权限系统',
+        '🔒 后端强制执行: 模块关闭 → API 不再返回该模块内容 (SpaceSettings 同步服务器)',
+        '👤 作者主权: 帖子归作者所有, space owner 不能删除他人帖子 (只能控制索引)',
+        '📁 模块设置持久化: SpaceSettings 开关同步 PUT /api/spaces/{ns} (之前仅 localStorage)',
+        '🔄 空间页从服务器加载 enabled_modules 覆盖 localStorage 缓存, 确保一致',
+        '🧪 E2E: 模块可见性 3 项测试 (创建/关闭/验证隐藏) — 测试总量 81→84',
+        '✅ 84/84 E2E 全量测试通过, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.91', date: '2026-05-05', title: '空间分析 API — 社区运营数据仪表盘',
       items: [
         '📊 后端: GET /api/spaces/{ns}/analytics — 帖子总数/浏览量/点赞/评论聚合 + Top5热门帖',
