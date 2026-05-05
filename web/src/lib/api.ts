@@ -458,6 +458,12 @@ export const posts = {
   view: (id: string) =>
     request<{ view_count: number }>(`/posts/${id}/view`, { method: 'POST' }),
 
+  update: (namespace: string, id: string, data: { title?: string; body?: string; tags?: string[]; visibility?: string }) =>
+    request<Post>(`/spaces/${namespace}/posts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
   delete: (namespace: string, id: string) =>
     request<void>(`/spaces/${namespace}/posts/${id}`, { method: 'DELETE' }),
 };

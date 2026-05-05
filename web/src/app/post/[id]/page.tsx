@@ -3,11 +3,22 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3 } from 'lucide-react';
 import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
 import { posts, Comment, Post } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
+
+/** Decode JWT payload to extract user ID */
+function getCurrentUserId(): string | null {
+  try {
+    const token = localStorage.getItem('polis_access_token');
+    if (!token) return null;
+    const payload = token.split('.')[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded.sub || null;
+  } catch { return null; }
+}
 
 function PostDetailContent() {
   const params = useParams();
@@ -30,6 +41,13 @@ function PostDetailContent() {
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
+
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false);
+  const [isAuthor, setIsAuthor] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [editTags, setEditTags] = useState('');
 
   useEffect(() => {
     if (!postId) return;
@@ -113,6 +131,45 @@ function PostDetailContent() {
       setRelatedLoading(false);
     })();
   }, [post, currentNs]);
+
+  // Check if current user is the post author
+  useEffect(() => {
+    if (!post?.author) return;
+    const currentUserId = getCurrentUserId();
+    if (currentUserId && (post.author_id === currentUserId || post.author?.id === currentUserId)) {
+      setIsAuthor(true);
+    }
+  }, [post]);
+
+  const handleEdit = () => {
+    if (!post) return;
+    setIsEditing(true);
+    setEditTitle(post.title);
+    setEditBody(post.body || '');
+    setEditTags(post.tags?.join(', ') || '');
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!post || !editTitle.trim()) return;
+    try {
+      const tagArray = editTags ? editTags.split(',').map(t => t.trim()).filter(Boolean) : undefined;
+      const res = await posts.update(currentNs, post.id, {
+        title: editTitle.trim(),
+        body: editBody,
+        tags: tagArray,
+      });
+      if (res.data) {
+        setPost(res.data);
+        setIsEditing(false);
+      }
+    } catch {
+      alert('编辑失败，请重试');
+    }
+  };
 
   const handleLike = async () => {
     if (!post) return;
@@ -232,17 +289,47 @@ function PostDetailContent() {
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
-
-        {post.tags && post.tags.length > 0 && (
-          <div className="mb-6 flex flex-wrap gap-2">
-            {post.tags.map((tag: string) => (
-              <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">#{tag}</span>
-            ))}
+        {isEditing ? (
+          <div className="space-y-4">
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full text-2xl font-bold rounded-lg border border-gray-200 dark:border-gray-700 p-3 dark:bg-gray-800 dark:text-white"
+              placeholder="标题"
+            />
+            <input
+              value={editTags}
+              onChange={(e) => setEditTags(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white"
+              placeholder="标签 (用逗号分隔, 如: Rust, 教程)"
+            />
+            <textarea
+              value={editBody}
+              onChange={(e) => setEditBody(e.target.value)}
+              className="w-full min-h-[300px] rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-sm font-mono dark:bg-gray-800 dark:text-white resize-y"
+              placeholder="Markdown 正文内容"
+              rows={15}
+            />
+            <div className="flex gap-2">
+              <button onClick={handleSaveEdit} disabled={!editTitle.trim()} className="btn btn-primary text-sm disabled:opacity-50">保存修改</button>
+              <button onClick={handleCancelEdit} className="btn text-sm">取消</button>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
 
-        <CherryRender markdown={post.body} />
+            {post.tags && post.tags.length > 0 && (
+              <div className="mb-6 flex flex-wrap gap-2">
+                {post.tags.map((tag: string) => (
+                  <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">#{tag}</span>
+                ))}
+              </div>
+            )}
+
+            <CherryRender markdown={post.body} />
+          </>
+        )}
 
         <div className="mt-8 flex items-center gap-4 border-t border-gray-100 dark:border-gray-700 pt-4 flex-wrap">
           <VoteButton targetType="post" targetId={post.id} />
@@ -272,6 +359,12 @@ function PostDetailContent() {
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
             <Share2 className="h-5 w-5" />
           </button>
+          {isAuthor && (
+            <button onClick={handleEdit}
+              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary-600 transition-colors">
+              <Edit3 className="h-5 w-5" /> 编辑
+            </button>
+          )}
           <button onClick={() => setShowReport(!showReport)}
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-500 transition-colors ml-auto">
             <Flag className="h-5 w-5" /> 举报
