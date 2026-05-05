@@ -172,6 +172,28 @@ export default function SpacePage() {
         if (data.code === 0) {
           setSpace(data.data);
           // Try to resolve owner info
+          // 从服务器同步 enabled_modules：覆盖 localStorage
+          if (data.data.enabled_modules && Array.isArray(data.data.enabled_modules)) {
+            const serverMods = { ...loadModules(namespace) };
+            // 默认为 false，仅服务器启用的模块设为 true
+            for (const key of Object.keys(serverMods) as (keyof SpaceModules)[]) {
+              serverMods[key] = false;
+            }
+            for (const mod of data.data.enabled_modules) {
+              const keyMap: Record<string, keyof SpaceModules> = {
+                forum: 'posts', share: 'share', wiki: 'wiki', series: 'series',
+                membership: 'membership', video: 'video', code_repo: 'code_repo',
+                qa: 'qa', polls: 'polls', announcements: 'announcements',
+                chat: 'chat', store: 'store', course: 'course',
+                novel: 'novel', game: 'game', mini_app: 'mini_app',
+              };
+              const key = keyMap[mod as string];
+              if (key) serverMods[key] = true;
+            }
+            serverMods.posts = true; // 交流模块始终可用
+            setModules(serverMods);
+            saveModules(namespace, serverMods);
+          }
           if (data.data.owner_id) {
             fetch(`/api/users/${data.data.owner_id}`)
               .then(r => r.json())

@@ -7,7 +7,7 @@ use uuid::Uuid;
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
 use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, Post, PostPublic, UpdatePostRequest, PaginationParams, CreateTierRequest, UpdateTierRequest};
-use polis_core::resolver::resolve::resolve_space_id;
+use polis_core::resolver::resolve::{resolve_space_id, resolve_space_enabled_modules};
 use crate::handlers::content_handler::ContentHandler;
 use crate::middleware::auth::auth_middleware;
 use jsonwebtoken::{decode, DecodingKey, Validation};
@@ -192,7 +192,8 @@ async fn handle_public_content(
                 pagination: PaginationParams { page: Some(1), page_size: Some(20) },
                 module: None,
             });
-            let (posts, pagination) = h.get_posts(space_id, q.pagination, q.module).await?;
+            let enabled = resolve_space_enabled_modules(&h.pool, space_id).await.unwrap_or_default();
+            let (posts, pagination) = h.get_posts(space_id, q.pagination, q.module, enabled).await?;
             Ok(json_ok(ApiResponse::success_with_pagination(posts, pagination)))
         }
         (Some(id), None) => {

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import {
   Settings, X, MessageCircle, BarChart3, Megaphone,
   UserCheck, Video, Code, HelpCircle, MessageSquare,
   ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow,
 } from 'lucide-react';
+import { spaces } from '@/lib/api';
 
 export interface SpaceModules {
   posts: boolean;          // 交流 - 默认开启不可关闭
@@ -91,6 +92,31 @@ interface ModuleDef {
 }
 
 export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSettingsProps) {
+  const [saving, startSave] = useTransition();
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const persistModules = async (mods: SpaceModules) => {
+    const moduleNames = Object.entries(mods)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => {
+        // Map frontend module keys to backend module_type values
+        const mapping: Record<string, string> = {
+          posts: 'forum', share: 'share', wiki: 'wiki', series: 'series',
+          membership: 'membership', video: 'video', code_repo: 'code_repo',
+          qa: 'qa', polls: 'polls', announcements: 'announcements',
+          chat: 'chat', store: 'store', course: 'course',
+          novel: 'novel', game: 'game', mini_app: 'mini_app',
+        };
+        return mapping[key] || key;
+      });
+    try {
+      await spaces.update(namespace, { enabled_modules: moduleNames });
+      setSaveError(null);
+    } catch {
+      setSaveError('保存失败');
+    }
+  };
+
   const availableModules: ModuleDef[] = [
     { key: 'posts', label: '交流', icon: MessageCircle, locked: true, comingSoon: false, desc: '社区交流与讨论板块，所有成员可发帖互动' },
     { key: 'share', label: '分享', icon: MessageSquare, locked: false, comingSoon: false, desc: '个人内容分享空间，仅社区创建者可发布' },
@@ -117,6 +143,8 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
     const next = { ...modules, [key]: !modules[key] };
     onChange(next);
     saveModules(namespace, next);
+    // 持久化到服务器：模块开关 = 文件夹开关，关闭后端不再返回该模块内容
+    startSave(() => persistModules(next));
   };
 
   return (
@@ -125,9 +153,13 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
         <span className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
           <Settings className="h-3.5 w-3.5" /> 模块设置
         </span>
-        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-          <X className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {saving && <span className="text-xs text-gray-400">保存中...</span>}
+          {saveError && <span className="text-xs text-red-500">{saveError}</span>}
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       <div className="py-1">

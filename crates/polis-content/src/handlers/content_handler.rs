@@ -1,9 +1,10 @@
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
-use polis_core::models::{CreateTierRequest, UpdateTierRequest, JoinPaidSpaceRequest, SpaceTier, Subscription, 
+use polis_core::models::{CreateTierRequest, UpdateTierRequest, JoinPaidSpaceRequest, SpaceTier, Subscription,
     Comment, ContentType, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest,
     ModuleType, Pagination, Post, PostPublic, Series, SeriesPublic, UpdatePostRequest, UserPublic, PaginationParams,
 };
+use polis_core::resolver::resolve::resolve_space_enabled_modules;
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -77,12 +78,13 @@ impl ContentHandler {
         Ok(post)
     }
 
-    /// 获取帖子列表
+    /// 获取帖子列表 (按 enabled_modules 过滤)
     pub async fn get_posts(
         &self,
         space_id: Uuid,
         params: PaginationParams,
         module_type: Option<String>,
+        enabled_modules: Vec<String>,
     ) -> Result<(Vec<PostPublic>, Pagination), AppError> {
         let page = params.page.unwrap_or(1);
         let page_size = params.page_size.unwrap_or(20).min(100);
@@ -92,7 +94,13 @@ impl ContentHandler {
             .find_posts_by_space(space_id, page, page_size, module_type.as_deref())
             .await?;
 
-        // 批量查询作者信息
+        // 按 enabled_modules 过滤：模块关闭 = 内容隐藏（用户Ⓚ OS: 关闭文件夹 = 隐藏所有文件）
+        let enabled_set: std::collections::HashSet<String> = enabled_modules.into_iter().collect();
+        let posts: Vec<Post> = if module_type.is_some() {
+            posts  // 如果前端指定了模块筛选，表示用户主动进入该模块，不过滤
+        } else {
+            posts.into_iter().filter(|p| enabled_set.contains(&p.module_type)).collect()
+        };
         let author_ids: Vec<Uuid> = posts.iter().map(|p| p.author_id).collect();
         let authors = self.repo.find_users_batch(&author_ids).await?;
 

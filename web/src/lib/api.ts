@@ -52,6 +52,7 @@ export interface Space {
   status: 'active' | 'archived' | 'suspended';
   member_count: number;
   post_count: number;
+  enabled_modules?: string[];
   created_at: string;
 }
 
@@ -227,7 +228,7 @@ export const spaces = {
 
   get: (namespace: string) => request<Space>(`/spaces/${namespace}`),
 
-  update: (namespace: string, data: Record<string, unknown>) =>
+  update: (namespace: string, data: { title?: string; description?: string; enabled_modules?: string[] }) =>
     request<Space>(`/spaces/${namespace}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   join: (namespace: string) =>

@@ -280,6 +280,41 @@ if [ -n "$SPACE_NS" ]; then
     fi
 fi
 
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    # Module visibility (v0.2.92): disable a module = content hidden at backend level
+    MOD_TEST_POST=""
+    R=$(api POST "/api/spaces/$SPACE_NS/posts" \
+        "{\"title\":\"模块可见性测试\",\"body\":\"此帖属于forum\",\"module_type\":\"forum\",\"tags\":[\"test\"]}" "$TOKEN")
+    if check_code "$R"; then
+        MOD_TEST_POST=$(get_field "$R" "id")
+        log_test PASS SPACE "模块可见性-创建测试帖" "id=$MOD_TEST_POST ✅"
+    fi
+    if [ -n "$MOD_TEST_POST" ]; then
+        # Disable share module via API (forum remains enabled)
+        R=$(api PUT "/api/spaces/$SPACE_NS" \
+            "{\"enabled_modules\":[\"forum\",\"qa\"]}" "$TOKEN")
+        if check_code "$R"; then
+            log_test PASS SPACE "模块可见性-关闭其他模块" "OK ✅"
+        else
+            log_test FAIL SPACE "模块可见性-关闭其他模块" "API异常"
+        fi
+        # Verify forum post is still visible (forum is enabled)
+        R=$(api GET "/api/spaces/$SPACE_NS/posts")
+        if check_code "$R"; then
+            VISIBLE=$(echo "$R" | python3 -c "import sys,json; data=json.load(sys.stdin).get('data',[]); print(any(d.get('id')=='$MOD_TEST_POST' for d in data))" 2>/dev/null)
+            [ "$VISIBLE" = "True" ] && log_test PASS SPACE "模块可见性-forum帖可见" "✅" || log_test FAIL SPACE "模块可见性-forum帖不可见" "❌"
+        fi
+        # Re-enable all modules
+        R=$(api PUT "/api/spaces/$SPACE_NS" \
+            "{\"enabled_modules\":[\"forum\",\"qa\",\"share\",\"wiki\",\"series\",\"membership\",\"video\",\"code_repo\",\"polls\",\"announcements\",\"chat\",\"store\",\"course\",\"novel\",\"game\",\"mini_app\"]}" "$TOKEN")
+        if check_code "$R"; then
+            log_test PASS SPACE "模块可见性-恢复模块" "OK ✅"
+        fi
+        # Cleanup test post
+        api DELETE "/api/spaces/$SPACE_NS/posts/$MOD_TEST_POST" "" "$TOKEN" > /dev/null 2>&1
+    fi
+fi
+
 # ==========================================================
 # 3. 回归测试: 中文命名空间 (关键!)
 # ==========================================================
