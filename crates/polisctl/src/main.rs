@@ -60,12 +60,10 @@ enum Commands {
         #[command(subcommand)]
         action: ChatAction,
     },
-    /// Like a post
+    /// Like content: post, comment
     Like {
-        /// Space namespace
-        namespace: String,
-        /// Post ID
-        post_id: String,
+        #[command(subcommand)]
+        action: LikeAction,
     },
     /// Vote on content: up, down, score
     Vote {
@@ -419,6 +417,23 @@ enum CommentAction {
         /// Parent comment ID (for replies)
         #[arg(short, long)]
         parent_id: Option<String>,
+    },
+}
+
+// === Like Subcommands ===
+#[derive(Subcommand)]
+enum LikeAction {
+    /// Like a post
+    Post {
+        /// Space namespace
+        namespace: String,
+        /// Post ID
+        post_id: String,
+    },
+    /// Like a comment
+    Comment {
+        /// Comment ID
+        comment_id: String,
     },
 }
 
@@ -905,9 +920,14 @@ async fn main() -> Result<(), anyhow::Error> {
         },
 
         // === Like ===
-        Commands::Like { namespace, post_id } => {
-            commands::interaction::like(&config, &client, &namespace, &post_id).await
-        }
+        Commands::Like { action } => match action {
+            LikeAction::Post { namespace, post_id } => {
+                commands::interaction::like(&config, &client, &namespace, &post_id).await
+            }
+            LikeAction::Comment { comment_id } => {
+                commands::interaction::like_comment(&config, &client, &comment_id).await
+            }
+        },
 
         // === Vote ===
         Commands::Vote { action } => match action {

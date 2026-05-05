@@ -21,7 +21,7 @@
 
 ---
 
-## ✨ 当前功能 (v0.3.4)
+## ✨ 当前功能 (v0.3.5)
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -282,7 +282,8 @@ polisctl --format table admin users list 1 10
 | `post` | 发帖/列表/详情/更新/删除/搜索/精选/可见性 |
 | `comment` | 评论列表/创建（支持回复） |
 | `chat` | 聊天消息 (查看/发送，需登录) |
-| `like/vote/bookmark` | 点赞/投票/收藏 |
+| `like` | 点赞帖子/评论 (post/comment 子命令) |
+| `vote/bookmark` | 投票/收藏 |
 | `poll` | 投票问卷 (创建/参与/列表/全局all) |
 | `series/tier/subscribe` | 专栏/会员等级/订阅管理 |
 | `file/draft` | 文件上传/草稿箱 |

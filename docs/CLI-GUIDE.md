@@ -145,7 +145,8 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 
 | Command | Action |
 |---------|--------|
-| `polisctl like <ns> <post_id>` | Toggle like on post |
+| `polisctl like post <ns> <post_id>` | Toggle like on a post |
+| `polisctl like comment <comment_id>` | Toggle like on a comment |
 | `polisctl bookmark add <ns> <post_id>` | Bookmark a post |
 | `polisctl bookmark list` | List my bookmarks |
 | `polisctl report <ns> <post_id> <reason>` | Report a post |

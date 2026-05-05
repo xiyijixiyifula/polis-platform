@@ -17,6 +17,20 @@ pub async fn like(
     Ok(())
 }
 
+/// Like a comment
+pub async fn like_comment(
+    config: &Config,
+    client: &HttpClient,
+    comment_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_auth()?;
+    let body = json!({});
+    let resp = client.post(&format!("/api/comments/{}/like", comment_id), Some(&token), &body).await?;
+    let data = resp.as_object().and_then(|o| o.get("data")).and_then(|v| v.as_bool()).unwrap_or(false);
+    println!("{}", data);
+    Ok(())
+}
+
 // === Vote ===
 pub async fn vote(
     config: &Config,

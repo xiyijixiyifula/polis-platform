@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.4', date: '2026-05-05', title: '🧪 E2E 101 项 — @mention + 空间投票列表 全覆盖',
+      ver: '0.3.5', date: '2026-05-06', title: '🖥️ CLI like comment — 点赞评论命令行支持',
       isLatest: true,
+      items: [
+        '🖥️ **CLI**: polisctl like 升级为子命令模式 — post 和 comment 两个子命令',
+        '❤️ **CLI**: polisctl like comment <comment_id> — 评论点赞/取消 (true/false toggle)',
+        '📡 **CLI**: polisctl like post <ns> <post_id> — 帖子点赞 (保持向后兼容)',
+        '📋 **文档**: CLI-GUIDE.md §3.8 更新 — like post/comment 双命令参考',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.4', date: '2026-05-05', title: '🧪 E2E 101 项 — @mention + 空间投票列表 全覆盖',
       items: [
         '💬 **E2E**: 新增 TC-SOC-03 @mention 用户提及测试 — API 正确处理评论中的 @username',
         '📊 **E2E**: 新增 TC-POLL-04 空间投票列表 — GET /api/spaces/{ns}/polls 验证',
