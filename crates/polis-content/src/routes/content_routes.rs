@@ -312,6 +312,10 @@ async fn handle_auth_content(
                     let featured = h.toggle_featured_post(id, uid).await?;
                     Ok(json_ok(ApiResponse::success(serde_json::json!({"featured": featured}))))
                 }
+                (Some(id), Some("hide")) | (Some(id), Some("unhide")) => {
+                    let hidden = h.hide_post_from_space(id, uid).await?;
+                    Ok(json_ok(ApiResponse::success(serde_json::json!({"hidden": hidden}))))
+                }
                 _ => Err(AppError::NotFound("Route not found".to_string())),
             }
         }

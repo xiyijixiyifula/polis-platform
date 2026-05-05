@@ -68,7 +68,7 @@ impl ContentRepo {
 
         let (posts, total) = if let Some(mt) = module_type {
             let total: (i64,) = sqlx::query_as(
-                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public'",
+                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'",
             )
             .bind(space_id)
             .bind(mt)
@@ -76,7 +76,7 @@ impl ContentRepo {
             .await?;
 
             let posts = sqlx::query_as::<_, Post>(
-                "SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4",
+                "SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4",
             )
             .bind(space_id)
             .bind(mt)
@@ -88,14 +88,14 @@ impl ContentRepo {
             (posts, total.0 as u64)
         } else {
             let total: (i64,) = sqlx::query_as(
-                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public'",
+                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'",
             )
             .bind(space_id)
             .fetch_one(&self.pool)
             .await?;
 
             let posts = sqlx::query_as::<_, Post>(
-                "SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3",
+                "SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3",
             )
             .bind(space_id)
             .bind(limit)
@@ -148,6 +148,22 @@ impl ContentRepo {
         Ok(post)
     }
 
+    pub async fn hide_post(&self, post_id: Uuid) -> Result<(), AppError> {
+        sqlx::query("UPDATE posts SET hidden_by_owner = TRUE WHERE id = $1")
+            .bind(post_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn unhide_post(&self, post_id: Uuid) -> Result<(), AppError> {
+        sqlx::query("UPDATE posts SET hidden_by_owner = FALSE WHERE id = $1")
+            .bind(post_id)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     pub async fn delete_post(&self, id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE posts SET is_deleted = TRUE, updated_at = NOW() WHERE id = $1")
             .bind(id)
@@ -190,7 +206,7 @@ impl ContentRepo {
         limit: u32,
     ) -> Result<Vec<Post>, AppError> {
         let posts = sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE space_id = $1 AND is_featured = TRUE AND is_deleted = FALSE ORDER BY created_at DESC LIMIT $2",
+            "SELECT * FROM posts WHERE space_id = $1 AND is_featured = TRUE AND is_deleted = FALSE AND hidden_by_owner = FALSE ORDER BY created_at DESC LIMIT $2",
         )
         .bind(space_id)
         .bind(limit as i64)
@@ -862,7 +878,7 @@ impl ContentRepo {
 
     pub async fn list_series_posts(&self, series_id: Uuid) -> Result<Vec<Post>, AppError> {
         let posts = sqlx::query_as::<_, Post>(
-            "SELECT p.* FROM posts p INNER JOIN series_posts sp ON p.id = sp.post_id WHERE sp.series_id = $1 AND p.is_deleted = FALSE ORDER BY sp.sort_order ASC, sp.created_at ASC"
+            "SELECT p.* FROM posts p INNER JOIN series_posts sp ON p.id = sp.post_id WHERE sp.series_id = $1 AND p.is_deleted = FALSE AND p.hidden_by_owner = FALSE ORDER BY sp.sort_order ASC, sp.created_at ASC"
         ).bind(series_id).fetch_all(&self.pool).await?;
         Ok(posts)
     }
@@ -873,7 +889,7 @@ impl ContentRepo {
         let offset = ((page.saturating_sub(1)) * page_size) as i64;
         let limit = page_size as i64;
         let posts = sqlx::query_as::<_, (Uuid, Uuid, String, Uuid, String, String, String, i64, i64, i64, chrono::DateTime<chrono::Utc>,)>(
-            "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at FROM posts p WHERE p.is_deleted = FALSE AND p.visibility = 'public' ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
+            "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at FROM posts p WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
         ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
         let polls = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, chrono::DateTime<chrono::Utc>,)>(
             "SELECT id, space_id, author_id, title, COALESCE(description, ''), created_at FROM polls WHERE status = 'active' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
@@ -936,34 +952,34 @@ impl ContentRepo {
     }
 
     pub async fn get_space_analytics(&self, space_id: Uuid) -> Result<serde_json::Value, AppError> {
-        // Total posts (non-deleted)
+        // Total visible posts (not deleted AND not hidden by owner)
         let total_posts: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+            "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
         // Total views across all posts (CAST SUM result to BIGINT)
         let total_views: (Option<i64>,) = sqlx::query_as(
-            "SELECT SUM(view_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+            "SELECT SUM(view_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
         // Total likes across all posts
         let total_likes: (Option<i64>,) = sqlx::query_as(
-            "SELECT SUM(like_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+            "SELECT SUM(like_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
         // Total comments across all posts
         let total_comments: (Option<i64>,) = sqlx::query_as(
-            "SELECT SUM(comment_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+            "SELECT SUM(comment_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
-        // Top 5 most viewed posts
+        // Top 5 most viewed posts (visible only)
         let top_viewed = sqlx::query_as::<_, (Uuid, String, i64, i64)>(
-            "SELECT id, title, view_count, like_count FROM posts WHERE space_id = $1 AND is_deleted = FALSE ORDER BY view_count DESC LIMIT 5"
+            "SELECT id, title, view_count, like_count FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE ORDER BY view_count DESC LIMIT 5"
         ).bind(space_id).fetch_all(&self.pool).await?;
 
-        // Top 5 most liked posts
+        // Top 5 most liked posts (visible only)
         let top_liked = sqlx::query_as::<_, (Uuid, String, i64, i64)>(
-            "SELECT id, title, like_count, view_count FROM posts WHERE space_id = $1 AND is_deleted = FALSE ORDER BY like_count DESC LIMIT 5"
+            "SELECT id, title, like_count, view_count FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE ORDER BY like_count DESC LIMIT 5"
         ).bind(space_id).fetch_all(&self.pool).await?;
 
         // Poll and series counts

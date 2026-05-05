@@ -485,6 +485,43 @@ impl ContentHandler {
         Ok(featured)
     }
 
+    /// 隐藏/取消隐藏帖子（仅空间创建者可操作，移除索引而非删除内容）
+    /// 用户Ⓚ OS: 磁盘所有者可删除目录中的快捷方式，不能删除文件本身
+    pub async fn hide_post_from_space(
+        &self,
+        post_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let post = self
+            .repo
+            .find_post_by_id(post_id)
+            .await?
+            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+
+        let owner_id: Option<Uuid> = sqlx::query_scalar(
+            "SELECT owner_id FROM spaces WHERE id = $1"
+        )
+        .bind(post.space_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .flatten();
+
+        if owner_id != Some(user_id) {
+            return Err(AppError::Forbidden(
+                "Only space owner can hide posts from this space".to_string(),
+            ));
+        }
+
+        // Toggle hidden state
+        if post.hidden_by_owner {
+            self.repo.unhide_post(post_id).await?;
+            Ok(false) // now visible
+        } else {
+            self.repo.hide_post(post_id).await?;
+            Ok(true) // now hidden
+        }
+    }
+
     /// 点赞/取消点赞
     pub async fn toggle_like(
         &self,

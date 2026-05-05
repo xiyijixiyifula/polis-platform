@@ -189,6 +189,7 @@ pub struct Post {
     pub is_pinned: bool,
     pub is_featured: bool,
     pub is_deleted: bool,
+    pub hidden_by_owner: bool,
     pub view_count: i64,
     pub like_count: i64,
     pub comment_count: i64,
