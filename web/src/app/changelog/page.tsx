@@ -11,7 +11,7 @@ export default function ChangelogPage() {
         '👁️ EyeOff 图标: 空间创建者可见隐藏按钮, 点击确认后移除空间索引 (内容本体保持)',
         '🗺️ 空间页 toggleHide: 隐藏后立即从本地列表移除, 无需刷新',
         '📡 API: posts.hide() 客户端方法 — 统一调用 POST /api/spaces/{ns}/posts/{id}/hide',
-        '✅ 83/84 E2E (1 PERF 超时), 6 服务 active',
+        '✅ 84/84 E2E 全量通过, PERF 全部达标, 6 服务 active',
       ],
     },
     {
