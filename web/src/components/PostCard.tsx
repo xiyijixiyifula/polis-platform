@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Pin } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
@@ -22,9 +22,11 @@ interface PostCardProps {
     tags?: string[];
     is_pinned?: boolean;
   };
+  canPin?: boolean;
+  onTogglePin?: () => void;
 }
 
-export function PostCard({ post }: PostCardProps) {
+export function PostCard({ post, canPin, onTogglePin }: PostCardProps) {
   const excerpt = post.body ? post.body.replace(/<[^>]+>/g, '').slice(0, 200) : '';
   const spaceLink = post.space_ns || post.space_id || '';
   const author = post.author;
@@ -32,9 +34,26 @@ export function PostCard({ post }: PostCardProps) {
   const authorUsername = author?.username || '';
 
   return (
-    <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="group card block transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+    <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="relative group card block transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
       {post.is_pinned && (
         <div className="mb-2 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
+      )}
+
+      {/* Pin toggle button */}
+      {canPin && onTogglePin && (
+        <div className="absolute top-3 right-3 z-10">
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePin(); }}
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full
+              hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
+              text-gray-400 hover:text-amber-500"
+            title={post.is_pinned ? '取消置顶' : '置顶'}
+          >
+            <Pin className={`h-3.5 w-3.5 ${post.is_pinned ? 'fill-amber-500 text-amber-500' : ''}`} />
+            <span>{post.is_pinned ? '已置顶' : '置顶'}</span>
+          </button>
+        </div>
       )}
 
       <div className="flex items-start gap-3">

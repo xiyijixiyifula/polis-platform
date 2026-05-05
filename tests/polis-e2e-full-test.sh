@@ -263,8 +263,8 @@ fi
 # Public spaces list (v0.2.88)
 R=$(api GET "/api/spaces?page=1&page_size=5")
 if check_code "$R"; then
-    TOTAL=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('total','?'))" 2>/dev/null)
-    log_test PASS SPACE "公共空间列表" "total=$TOTAL ✅"
+    SPACE_TOTAL=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('total','?'))" 2>/dev/null)
+    log_test PASS SPACE "公共空间列表" "total=$SPACE_TOTAL ✅"
 else
     log_test FAIL SPACE "公共空间列表" "API异常"
 fi
@@ -467,10 +467,52 @@ else
 fi
 
 # ==========================================================
-# 5. 评论测试
+# 5. PIN 置顶/精选测试
 # ==========================================================
 echo ""
-echo "--- 5. COMMENT 评论系统 ---"
+echo "--- 5. PIN 置顶/精选 ---"
+
+if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
+    # Toggle pin (owner)
+    R=$(api POST "/api/spaces/$SPACE_NS/posts/$POST_ID/pin" "{}" "$TOKEN")
+    if check_code "$R"; then
+        PINNED=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('pinned'))" 2>/dev/null)
+        [ "$PINNED" = "True" ] && log_test PASS PIN "置顶帖子" "pinned=true ✅" || log_test FAIL PIN "置顶帖子" "pinned=$PINNED ❌"
+    else
+        log_test FAIL PIN "置顶帖子" "msg=$(get_msg "$R")"
+    fi
+
+    # Verify post shows is_pinned=true
+    R=$(api GET "/api/spaces/$SPACE_NS/posts/$POST_ID")
+    if check_code "$R"; then
+        POST_PINNED=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('is_pinned'))" 2>/dev/null)
+        [ "$POST_PINNED" = "True" ] && log_test PASS PIN "验证置顶" "is_pinned=$POST_PINNED ✅" || log_test FAIL PIN "验证置顶" "is_pinned=$POST_PINNED ❌"
+    fi
+
+    # Toggle unpin
+    R=$(api POST "/api/spaces/$SPACE_NS/posts/$POST_ID/pin" "{}" "$TOKEN")
+    if check_code "$R"; then
+        UNPINNED=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('pinned'))" 2>/dev/null)
+        [ "$UNPINNED" = "False" ] && log_test PASS PIN "取消置顶" "pinned=$UNPINNED ✅" || log_test FAIL PIN "取消置顶" "pinned=$UNPINNED ❌"
+    else
+        log_test FAIL PIN "取消置顶" "msg=$(get_msg "$R")"
+    fi
+
+    # Toggle featured (owner only)
+    R=$(api POST "/api/spaces/$SPACE_NS/posts/$POST_ID/featured" "{}" "$TOKEN")
+    if check_code "$R"; then
+        FEATURED=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('featured'))" 2>/dev/null)
+        [ "$FEATURED" = "True" ] && log_test PASS PIN "精选帖子" "featured=$FEATURED ✅" || log_test FAIL PIN "精选帖子" "featured=$FEATURED ❌"
+    else
+        log_test FAIL PIN "精选帖子" "msg=$(get_msg "$R")"
+    fi
+fi
+
+# ==========================================================
+# 6. COMMENT 评论系统
+# ==========================================================
+echo ""
+echo "--- 6. COMMENT 评论系统 ---"
 
 if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
     R=$(api POST "/api/spaces/$SPACE_NS/posts/$POST_ID/comments" \
@@ -510,7 +552,7 @@ fi
 # 6. 投票测试
 # ==========================================================
 echo ""
-echo "--- 6. VOTE 赞同/反对 ---"
+echo "--- 7. VOTE 赞同/反对 ---"
 
 if [ -n "$POST_ID" ]; then
     R=$(api GET "/api/vote?target_type=post&target_id=$POST_ID")
@@ -556,7 +598,7 @@ fi
 # 7. 社交测试
 # ==========================================================
 echo ""
-echo "--- 7. SOCIAL 社交互动 ---"
+echo "--- 8. SOCIAL 社交互动 ---"
 
 R=$(api POST /api/follow "{\"followee_type\":\"user\",\"followee_id\":\"a1000000-0000-0000-0000-000000000001\"}" "$TOKEN")
 if check_code "$R"; then
@@ -601,7 +643,7 @@ fi
 # 8. 通知测试
 # ==========================================================
 echo ""
-echo "--- 8. NOTIF 通知系统 ---"
+echo "--- 9. NOTIF 通知系统 ---"
 
 R=$(api GET /api/notifications "" "$TOKEN")
 if check_code "$R"; then
@@ -628,7 +670,7 @@ fi
 # 9. 专栏测试
 # ==========================================================
 echo ""
-echo "--- 9. SERIES 专栏 ---"
+echo "--- 10. SERIES 专栏 ---"
 
 if [ -n "$SPACE_NS" ]; then
     R=$(api POST "/api/series/space/$SPACE_NS" "{\"title\":\"E2E专栏\",\"description\":\"测试\"}" "$TOKEN")
@@ -660,7 +702,7 @@ fi
 # 10. 会员测试
 # ==========================================================
 echo ""
-echo "--- 10. TIER 会员等级 ---"
+echo "--- 11. TIER 会员等级 ---"
 
 if [ -n "$SPACE_NS" ]; then
     R=$(api POST "/api/tiers/space/$SPACE_NS" "{\"name\":\"黄金会员\",\"price_cents\":1999,\"description\":\"高级权益\"}" "$TOKEN")
@@ -682,7 +724,7 @@ fi
 # 11. 投票问卷测试
 # ==========================================================
 echo ""
-echo "--- 11. POLL 投票问卷 ---"
+echo "--- 12. POLL 投票问卷 ---"
 
 R=$(api POST /api/polls "{\"space_id\":\"$SPACE_ID\",\"title\":\"E2E投票\",\"poll_type\":\"single\",\"options\":[\"A\",\"B\",\"C\"]}" "$TOKEN")
 if check_code "$R"; then
@@ -715,7 +757,7 @@ fi
 # 12. 草稿测试
 # ==========================================================
 echo ""
-echo "--- 12. DRAFT 草稿 ---"
+echo "--- 13. DRAFT 草稿 ---"
 
 R=$(api POST /api/drafts "{\"title\":\"草稿测试\",\"body\":\"内容\",\"space_id\":\"$SPACE_ID\"}" "$TOKEN")
 if check_code "$R"; then
@@ -735,7 +777,7 @@ fi
 # 13. Feed 信息流
 # ==========================================================
 echo ""
-echo "--- 13. FEED 信息流 ---"
+echo "--- 14. FEED 信息流 ---"
 
 R=$(api GET /api/feed?limit=10)
 if check_code "$R"; then
@@ -749,7 +791,7 @@ fi
 # 14. 搜索测试
 # ==========================================================
 echo ""
-echo "--- 14. SEARCH 搜索 ---"
+echo "--- 15. SEARCH 搜索 ---"
 
 # TC-SEARCH-01: Search communities
 R=$(api GET "/api/search?q=Rust")
@@ -798,7 +840,7 @@ fi
 # 15. 文件分享
 # ==========================================================
 echo ""
-echo "--- 15. FILE 文件分享 ---"
+echo "--- 16. FILE 文件分享 ---"
 
 if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
     # TC-FILE-01: Upload file
@@ -862,7 +904,7 @@ fi
 # 16. 分享模块
 # ==========================================================
 echo ""
-echo "--- 16. SHARE 分享模块 ---"
+echo "--- 17. SHARE 分享模块 ---"
 
 if [ -n "$SPACE_NS" ]; then
     R=$(api POST "/api/spaces/$SPACE_NS/posts" \
@@ -878,7 +920,7 @@ fi
 # 17. HEALTH 服务健康检查
 # ==========================================================
 echo ""
-echo "--- 17. HEALTH 服务健康检查 ---"
+echo "--- 18. HEALTH 服务健康检查 ---"
 
 # Gateway 自身健康检查
 R=$(api GET "/api/health")
@@ -912,7 +954,7 @@ fi
 # 18. 安全测试
 # ==========================================================
 echo ""
-echo "--- 18. SECURITY 安全 ---"
+echo "--- 19. SECURITY 安全 ---"
 
 if check_http "http://www.mzgw.com" 301; then
     log_test PASS SECURITY "HTTP→HTTPS" "301 ✅"
@@ -940,7 +982,7 @@ fi
 # 18. 前端页面全量测试
 # ==========================================================
 echo ""
-echo "--- 19. PAGES 前端页面 ---"
+echo "--- 20. PAGES 前端页面 ---"
 
 PAGES=(
     "/" "/changelog" "/explore" "/search" "/about" "/login" "/register"

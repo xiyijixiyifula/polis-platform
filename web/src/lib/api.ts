@@ -433,6 +433,12 @@ export const posts = {
       body: JSON.stringify({ reason }),
     }),
 
+  pin: (namespace: string, id: string) =>
+    request<{ pinned: boolean }>(`/spaces/${namespace}/posts/${id}/pin`, { method: 'POST' }),
+
+  feature: (namespace: string, id: string) =>
+    request<{ featured: boolean }>(`/spaces/${namespace}/posts/${id}/featured`, { method: 'POST' }),
+
   delete: (namespace: string, id: string) =>
     request<void>(`/spaces/${namespace}/posts/${id}`, { method: 'DELETE' }),
 };

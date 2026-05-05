@@ -107,3 +107,43 @@ pub async fn featured(
     print_output(&json!(items), config.format);
     Ok(())
 }
+
+pub async fn pin(
+    config: &Config,
+    client: &HttpClient,
+    namespace: &str,
+    post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_auth()?;
+    let resp = client.post(
+        &format!("/api/spaces/{}/posts/{}/pin", namespace, post_id),
+        Some(&token),
+        &json!({}),
+    ).await?;
+    let data = extract_data(&resp);
+    print_output(data, config.format);
+    if let Some(pinned) = data.get("pinned").and_then(|v| v.as_bool()) {
+        if pinned { print_success("Post pinned"); } else { print_success("Post unpinned"); }
+    }
+    Ok(())
+}
+
+pub async fn featuring(
+    config: &Config,
+    client: &HttpClient,
+    namespace: &str,
+    post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_auth()?;
+    let resp = client.post(
+        &format!("/api/spaces/{}/posts/{}/featured", namespace, post_id),
+        Some(&token),
+        &json!({}),
+    ).await?;
+    let data = extract_data(&resp);
+    print_output(data, config.format);
+    if let Some(featured) = data.get("featured").and_then(|v| v.as_bool()) {
+        if featured { print_success("Post featured"); } else { print_success("Post unfeatured"); }
+    }
+    Ok(())
+}

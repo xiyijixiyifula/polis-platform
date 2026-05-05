@@ -156,6 +156,26 @@ impl ContentRepo {
         Ok(())
     }
 
+    pub async fn toggle_pin(&self, post_id: Uuid) -> Result<bool, AppError> {
+        let row: (bool,) = sqlx::query_as(
+            "UPDATE posts SET is_pinned = NOT is_pinned, updated_at = NOW() WHERE id = $1 RETURNING is_pinned"
+        )
+        .bind(post_id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.0)
+    }
+
+    pub async fn toggle_featured(&self, post_id: Uuid) -> Result<bool, AppError> {
+        let row: (bool,) = sqlx::query_as(
+            "UPDATE posts SET is_featured = NOT is_featured, updated_at = NOW() WHERE id = $1 RETURNING is_featured"
+        )
+        .bind(post_id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.0)
+    }
+
     pub async fn increment_view_count(&self, id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE posts SET view_count = view_count + 1 WHERE id = $1")
             .bind(id)

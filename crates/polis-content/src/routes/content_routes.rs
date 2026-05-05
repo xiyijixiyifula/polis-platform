@@ -291,6 +291,14 @@ async fn handle_auth_content(
                     h.repo.create_report(uid, "post", id, &r.reason).await?;
                     Ok(json_ok(ApiResponse::success(())))
                 }
+                (Some(id), Some("pin")) => {
+                    let pinned = h.toggle_pin_post(id, uid).await?;
+                    Ok(json_ok(ApiResponse::success(serde_json::json!({"pinned": pinned}))))
+                }
+                (Some(id), Some("featured")) => {
+                    let featured = h.toggle_featured_post(id, uid).await?;
+                    Ok(json_ok(ApiResponse::success(serde_json::json!({"featured": featured}))))
+                }
                 _ => Err(AppError::NotFound("Route not found".to_string())),
             }
         }

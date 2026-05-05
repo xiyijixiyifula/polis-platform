@@ -413,6 +413,70 @@ impl ContentHandler {
         self.repo.delete_post(post_id).await
     }
 
+    /// 置顶/取消置顶帖子（仅空间创建者或帖子作者可操作）
+    pub async fn toggle_pin_post(
+        &self,
+        post_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let post = self
+            .repo
+            .find_post_by_id(post_id)
+            .await?
+            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+
+        // 检查权限：空间创建者或帖子作者
+        let owner_id: Option<Uuid> = sqlx::query_scalar(
+            "SELECT owner_id FROM spaces WHERE id = $1"
+        )
+        .bind(post.space_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .flatten();
+
+        let is_owner = owner_id == Some(user_id);
+        let is_author = post.author_id == user_id;
+
+        if !is_owner && !is_author {
+            return Err(AppError::Forbidden(
+                "Only space owner or post author can pin posts".to_string(),
+            ));
+        }
+
+        let pinned = self.repo.toggle_pin(post_id).await?;
+        Ok(pinned)
+    }
+
+    /// 精选/取消精选帖子（仅空间创建者可操作）
+    pub async fn toggle_featured_post(
+        &self,
+        post_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let post = self
+            .repo
+            .find_post_by_id(post_id)
+            .await?
+            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+
+        let owner_id: Option<Uuid> = sqlx::query_scalar(
+            "SELECT owner_id FROM spaces WHERE id = $1"
+        )
+        .bind(post.space_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .flatten();
+
+        if owner_id != Some(user_id) {
+            return Err(AppError::Forbidden(
+                "Only space owner can feature posts".to_string(),
+            ));
+        }
+
+        let featured = self.repo.toggle_featured(post_id).await?;
+        Ok(featured)
+    }
+
     /// 点赞/取消点赞
     pub async fn toggle_like(
         &self,

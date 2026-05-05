@@ -363,6 +363,20 @@ enum PostAction {
         /// Space namespace
         namespace: String,
     },
+    /// Toggle pin on a post (space owner or post author)
+    Pin {
+        /// Space namespace
+        namespace: String,
+        /// Post ID
+        post_id: String,
+    },
+    /// Toggle featured on a post (space owner only)
+    Featuring {
+        /// Space namespace
+        namespace: String,
+        /// Post ID
+        post_id: String,
+    },
 }
 
 // === Comment Subcommands ===
@@ -823,6 +837,8 @@ async fn main() -> Result<(), anyhow::Error> {
             PostAction::Delete { post_id } => commands::post::delete(&config, &client, &post_id).await,
             PostAction::Search { query, limit } => commands::post::search_posts(&config, &client, &query, limit).await,
             PostAction::Featured { namespace } => commands::post::featured(&config, &client, &namespace).await,
+            PostAction::Pin { namespace, post_id } => commands::post::pin(&config, &client, &namespace, &post_id).await,
+            PostAction::Featuring { namespace, post_id } => commands::post::featuring(&config, &client, &namespace, &post_id).await,
         },
 
         // === Comment ===

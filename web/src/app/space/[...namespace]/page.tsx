@@ -144,6 +144,18 @@ export default function SpacePage() {
     } catch {}
   }, [space?.owner_id]);
 
+  const togglePin = useCallback(async (postId: string, isPinned: boolean) => {
+    try {
+      const res = await fetch(`/api/spaces/${namespace}/posts/${postId}/pin`, { method: 'POST' });
+      const data = await res.json();
+      if (data.code === 0) {
+        const newPinned = data.data?.pinned;
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_pinned: newPinned } : p));
+        setFeatured(prev => prev.map(p => p.id === postId ? { ...p, is_pinned: newPinned } : p));
+      }
+    } catch {}
+  }, [namespace]);
+
   // Parse namespace for GitHub-style display: username/community-name
   const ghParts = namespace.split('/');
   const hasOwnerPrefix = nsParts.length >= 2;
@@ -585,14 +597,14 @@ export default function SpacePage() {
                       author: post.author,
                       space_id: post.space_id,
                       space_ns: namespace,
-                      space_name: space.title,
+                      space_name: space?.title,
                       like_count: post.like_count,
                       comment_count: post.comment_count,
                       view_count: post.view_count,
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} />
+                    }} canPin={isOwner} onTogglePin={() => togglePin(post.id, post.is_pinned)} />
                   ))}
                 </div>
               ) : (
