@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.10', date: '2026-05-06', title: '👁️ 浏览量前端集成 — 浏览帖子自动+1',
+      ver: '0.3.11', date: '2026-05-06', title: '✏️ 帖子编辑 — 前端内联编辑模式',
       isLatest: true,
+      items: [
+        '✏️ **编辑按钮**: 帖子详情页新增 Edit 按钮 — 仅帖子作者可见',
+        '🔐 **作者识别**: JWT 解码识别当前用户是否为帖子作者',
+        '📝 **内联编辑**: 标题/标签/Markdown 正文 三栏编辑区 + 保存/取消',
+        '🔄 **API Client**: 新增 posts.update() — PUT /api/spaces/{ns}/posts/{id}',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.10', date: '2026-05-06', title: '👁️ 浏览量前端集成 — 浏览帖子自动+1',
+      isLatest: false,
       items: [
         '👁️ **前端**: 帖子详情页加载时自动调用 POST /api/posts/{id}/view — 浏览量实时递增',
         '🔄 **API Client**: 新增 posts.view(id) 方法 — 封装浏览量递增 API',

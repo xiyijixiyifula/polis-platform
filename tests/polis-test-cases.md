@@ -362,6 +362,18 @@ Detailed test cases organized by functional module. Each test case includes: obj
   4. Check body rendered after frontmatter
 - **Expected**: Returns text/markdown with YAML frontmatter, proper Content-Disposition
 
+### TC-POST-16: Edit Post (Inline)
+- **Objective**: Verify post editing from frontend post detail page
+- **Coverage**: ✅ Frontend integration (v0.3.11) — inline edit mode on post detail
+- **Preconditions**: Logged in as post author
+- **Steps**:
+  1. Navigate to `/post/{id}?space={ns}` as the post author
+  2. Verify Edit button (Edit3 icon) appears in interaction bar
+  3. Click Edit → inline form shows title input, tags input, body textarea
+  4. Modify title, tags, body
+  5. Click save → POST /api/spaces/{ns}/posts/{id} (PUT) updates post
+- **Expected**: Edit button visible only to author; save updates the post and exits edit mode; cancel reverts without saving
+
 ---
 
 ## Social Interaction Tests
