@@ -428,6 +428,7 @@ Detailed test cases organized by functional module. Each test case includes: obj
 
 ### TC-SEARCH-03: Search Users
 - **Objective**: Verify user search
+- **Status**: ✅ Covered in E2E (v0.2.99)
 - **Steps**:
   1. Enter username: "wangwu"
   2. Submit

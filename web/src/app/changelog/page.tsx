@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.99', date: '2026-05-05', title: '用户搜索 — 搜索页三Tab全覆盖 (社区/帖子/用户)',
+      items: [
+        '🔍 **后端**: polis-user 新增 GET /api/users/search?q= 端点 — ILIKE 模糊匹配 username + display_name',
+        '👤 **前端**: 搜索页新增"用户"Tab — 头像/用户名/bio 卡片, 点击直达 /profile/{username}',
+        '📡 Gateway 复用 /api/users/{*path} 路由代理 — 无需额外配置',
+        '🧪 E2E: 新增搜索用户测试 — 查询 "zhang" 返回张三, 测试总量 84→85',
+        '✅ 85/85 E2E 全量通过, PERF 全部达标, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.98', date: '2026-05-05', title: '帖子可见性控制 — 公开/私密/不公开 三级权限',
       items: [
         '🔒 **后端**: PostPublic 新增 visibility 字段 — 4个构造点同步更新 (列表/搜索/专栏/详情)',

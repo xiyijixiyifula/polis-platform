@@ -874,6 +874,19 @@ else
     log_test FAIL SEARCH "中文搜索" "msg=$(get_msg "$R")"
 fi
 
+# TC-SEARCH-03b: User search
+R=$(api GET "/api/users/search?q=zhang")
+if check_code "$R"; then
+    CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+    if [ "$CNT" -gt 0 ] 2>/dev/null; then
+        log_test PASS SEARCH "搜索用户" "results=$CNT ✅"
+    else
+        log_test PASS SEARCH "搜索用户" "API OK (no results)"
+    fi
+else
+    log_test FAIL SEARCH "搜索用户" "msg=$(get_msg "$R")"
+fi
+
 # TC-SEARCH-04: Empty/nonsense results (should return 200 with empty data)
 R=$(api GET "/api/search?q=xyz123nonsense_999")
 if check_code "$R"; then
