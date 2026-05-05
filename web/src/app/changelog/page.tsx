@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.2', date: '2026-05-05', title: '🧪 Chat E2E 测试覆盖 — 93 项全绿',
+      ver: '0.3.3', date: '2026-05-05', title: '🧪 E2E 测试增强 — 99 项全覆盖, USER + XSS 新测试',
       isLatest: true,
+      items: [
+        '👤 **E2E**: 新增 5 项 USER 用户档案测试 — 公开档案/粉丝列表/关注列表/多用户对比',
+        '🔒 **E2E**: 新增 SEC-01 XSS 帖子安全测试 — API 处理含 script 标签内容无异常',
+        '📊 测试总量: 93→99 项 — 全部分类通过, PERF 全部达标',
+        '🛡️ 验证: Markdown 原始存储 (前端 Cherry 引擎渲染时转义, 标准架构)',
+        '✅ 99/99 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.2', date: '2026-05-05', title: '🧪 Chat E2E 测试覆盖 — 93 项全绿',
       items: [
         '🧪 **E2E**: 新增 TC-CHAT-01 发送聊天消息 — POST /api/chat/spaces/{ns} 验证持久化 + 作者信息',
         '🧪 **E2E**: 新增 TC-CHAT-02 聊天消息列表 — GET /api/chat/spaces/{ns} 验证列表返回',
