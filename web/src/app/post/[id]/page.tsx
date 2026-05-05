@@ -86,6 +86,19 @@ function PostDetailContent() {
 
   const currentNs = spaceNs || spaceFromUrl || '_';
 
+  // Auto-increment view count when post loads
+  useEffect(() => {
+    if (!post || !postId) return;
+    (async () => {
+      try {
+        const res = await posts.view(postId);
+        if (res.data) {
+          setPost((prev) => prev ? { ...prev, view_count: res.data!.view_count } : prev);
+        }
+      } catch {}
+    })();
+  }, [post?.id]);
+
   useEffect(() => {
     if (!post || !currentNs || currentNs === '_') return;
     setRelatedLoading(true);

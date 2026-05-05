@@ -455,6 +455,9 @@ export const posts = {
   hide: (namespace: string, id: string) =>
     request<{ hidden: boolean }>(`/spaces/${namespace}/posts/${id}/hide`, { method: 'POST' }),
 
+  view: (id: string) =>
+    request<{ view_count: number }>(`/posts/${id}/view`, { method: 'POST' }),
+
   delete: (namespace: string, id: string) =>
     request<void>(`/spaces/${namespace}/posts/${id}`, { method: 'DELETE' }),
 };
