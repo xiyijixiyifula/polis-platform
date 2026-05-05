@@ -265,9 +265,11 @@ export const search = {
     if (pageSize) params.set('page_size', String(pageSize));
     return request<Space[]>('/search?' + params.toString());
   },
-  /** 搜索帖子 */
-  posts: (q: string, pageSize?: number) => {
-    const params = new URLSearchParams({ q });
+  /** 搜索帖子（支持关键词和标签） */
+  posts: (q?: string, tag?: string, pageSize?: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (tag) params.set('tag', tag);
     if (pageSize) params.set('page_size', String(pageSize));
     return request<Post[]>('/posts/search?' + params.toString());
   },

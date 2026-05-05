@@ -23,6 +23,7 @@ dirs = "5"
 anyhow = "1"
 base64 = "0.22"
 mime_guess = "2"
+urlencoding = "2"
 
 [profile.release]
 opt-level = "z"

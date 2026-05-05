@@ -96,10 +96,14 @@ pub async fn delete(
 pub async fn search_posts(
     config: &Config,
     client: &HttpClient,
-    query: &str,
+    query: Option<&str>,
+    tag: Option<&str>,
     limit: u32,
 ) -> Result<(), anyhow::Error> {
-    let resp = client.get(&format!("/api/posts/search?q={}&page_size={}", query, limit), None).await?;
+    let mut url = format!("/api/posts/search?page_size={}", limit);
+    if let Some(q) = query { url.push_str(&format!("&q={}", urlencoding::encode(q))); }
+    if let Some(t) = tag { url.push_str(&format!("&tag={}", urlencoding::encode(t))); }
+    let resp = client.get(&url, None).await?;
     let items: Vec<_> = extract_data_array(&resp).into_iter().cloned().collect();
     print_output(&json!(items), config.format);
     Ok(())

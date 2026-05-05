@@ -367,7 +367,10 @@ enum PostAction {
     /// Search posts
     Search {
         /// Search query
-        query: String,
+        query: Option<String>,
+        /// Filter by tag
+        #[arg(short, long)]
+        tag: Option<String>,
         /// Max results
         #[arg(default_value = "20")]
         limit: u32,
@@ -899,7 +902,7 @@ async fn main() -> Result<(), anyhow::Error> {
                 commands::post::update(&config, &client, &post_id, title.as_deref(), body.as_deref(), tags.as_deref(), visibility.as_deref()).await
             }
             PostAction::Delete { post_id } => commands::post::delete(&config, &client, &post_id).await,
-            PostAction::Search { query, limit } => commands::post::search_posts(&config, &client, &query, limit).await,
+            PostAction::Search { query, tag, limit } => commands::post::search_posts(&config, &client, query.as_deref(), tag.as_deref(), limit).await,
             PostAction::Featured { namespace } => commands::post::featured(&config, &client, &namespace).await,
             PostAction::Pin { namespace, post_id } => commands::post::pin(&config, &client, &namespace, &post_id).await,
             PostAction::Featuring { namespace, post_id } => commands::post::featuring(&config, &client, &namespace, &post_id).await,

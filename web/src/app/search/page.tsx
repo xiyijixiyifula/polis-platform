@@ -11,26 +11,27 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const q = searchParams.get('q') || '';
-  const [query, setQuery] = useState(q);
-  const [activeTab, setActiveTab] = useState<'space' | 'post' | 'user'>('space');
+  const tag = searchParams.get('tag') || '';
+  const [query, setQuery] = useState(q || tag);
+  const [activeTab, setActiveTab] = useState<'space' | 'post' | 'user'>(tag ? 'post' : 'space');
   const [filteredSpaces, setFilteredSpaces] = useState<any[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setQuery(q);
-  }, [q]);
+    setQuery(q || tag);
+  }, [q, tag]);
 
   useEffect(() => {
-    if (!q) return;
+    if (!q && !tag) return;
     const fetchResults = async () => {
       setLoading(true);
       try {
         const [spaceRes, postRes, userRes] = await Promise.all([
-          searchApi.spaces(q),
-          searchApi.posts(q).catch(() => ({ code: -1, data: [] })),
-          searchApi.users(q).catch(() => ({ code: -1, data: [] })),
+          tag ? Promise.resolve({ code: -1, data: [] }) : searchApi.spaces(q),
+          searchApi.posts(q || undefined, tag || undefined).catch(() => ({ code: -1, data: [] })),
+          tag ? Promise.resolve({ code: -1, data: [] }) : searchApi.users(q).catch(() => ({ code: -1, data: [] })),
         ]);
         if (spaceRes.code === 0 && spaceRes.data) {
           setFilteredSpaces(spaceRes.data);
@@ -45,7 +46,7 @@ function SearchContent() {
       setLoading(false);
     };
     fetchResults();
-  }, [q]);
+  }, [q, tag]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,10 +72,12 @@ function SearchContent() {
         </div>
       </form>
 
-      {q && (
+      {(q || tag) && (
         <>
           <div className="mb-4 flex items-center gap-4 text-sm">
-            <span className="text-gray-500 dark:text-gray-400">搜索结果: &ldquo;{q}&rdquo;</span>
+            <span className="text-gray-500 dark:text-gray-400">
+              {tag ? <>标签: <span className="text-purple-600 dark:text-purple-400 font-medium">#{tag}</span></> : <>搜索结果: &ldquo;{q}&rdquo;</>}
+            </span>
             <span className="text-gray-300 dark:text-gray-600">|</span>
             <button onClick={() => setActiveTab('space')} className={`${activeTab === 'space' ? 'text-primary-600 font-medium' : 'text-gray-500 dark:text-gray-400'} hover:text-primary-600`}>社区 ({filteredSpaces.length})</button>
             <button onClick={() => setActiveTab('post')} className={`${activeTab === 'post' ? 'text-primary-600 font-medium' : 'text-gray-500 dark:text-gray-400'} hover:text-primary-600`}>帖子 ({filteredPosts.length})</button>
@@ -110,7 +113,7 @@ function SearchContent() {
               ) : (
                 <div className="card py-12 text-center">
                   <div className="text-4xl mb-3">{loading ? '⏳' : '📝'}</div>
-                  <p className="text-gray-500 dark:text-gray-400">没有找到 &ldquo;{q}&rdquo; 的相关帖子</p>
+                  <p className="text-gray-500 dark:text-gray-400">{tag ? <>没有找到标签 #{tag} 的帖子</> : <>没有找到 &ldquo;{q}&rdquo; 的相关帖子</>}</p>
                   <p className="text-sm text-gray-400 mt-1">试试其他关键词</p>
                 </div>
               )}

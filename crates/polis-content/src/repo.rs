@@ -675,9 +675,22 @@ impl ContentRepo {
 
     /// 批量查询用户信息
 
-    /// 搜索帖子（按标题和正文模糊匹配）
-    pub async fn search_posts(&self, query: &str, limit: u32) -> Result<Vec<Post>, AppError> {
-        let pattern = format!("%{}%", query);
+    /// 搜索帖子（按标题和正文模糊匹配，或按标签搜索）
+    pub async fn search_posts(&self, query: Option<&str>, tag: Option<&str>, limit: u32) -> Result<Vec<Post>, AppError> {
+        if let Some(t) = tag {
+            // 按标签搜索
+            let tag_json = serde_json::json!([t]);
+            let posts = sqlx::query_as::<_, Post>(
+                "SELECT * FROM posts WHERE is_deleted = FALSE AND visibility = 'public' AND tags @> $1::jsonb ORDER BY created_at DESC LIMIT $2",
+            )
+            .bind(&tag_json)
+            .bind(limit as i64)
+            .fetch_all(&self.pool)
+            .await?;
+            return Ok(posts);
+        }
+        let q = query.unwrap_or("");
+        let pattern = format!("%{}%", q);
         let posts = sqlx::query_as::<_, Post>(
             "SELECT * FROM posts WHERE is_deleted = FALSE AND visibility = 'public' AND (title ILIKE $1 OR body ILIKE $1) ORDER BY created_at DESC LIMIT $2",
         )

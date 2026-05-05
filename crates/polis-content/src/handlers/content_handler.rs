@@ -194,9 +194,9 @@ impl ContentHandler {
         Ok(post)
     }
 
-    /// 搜索帖子（按标题和正文模糊匹配）
-    pub async fn search_posts(&self, query: &str, limit: u32) -> Result<Vec<PostPublic>, AppError> {
-        let posts = self.repo.search_posts(query, limit).await?;
+    /// 搜索帖子（按标题和正文模糊匹配，或按标签搜索）
+    pub async fn search_posts(&self, query: Option<&str>, tag: Option<&str>, limit: u32) -> Result<Vec<PostPublic>, AppError> {
+        let posts = self.repo.search_posts(query, tag, limit).await?;
         let author_ids: Vec<Uuid> = posts.iter().map(|p| p.author_id).collect();
         let authors = self.repo.find_users_batch(&author_ids).await?;
         let post_publics = posts

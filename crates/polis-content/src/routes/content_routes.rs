@@ -500,17 +500,18 @@ async fn mark_all_read_route(
 
 #[derive(Deserialize)]
 pub struct SearchPostsQuery {
-    pub q: String,
+    pub q: Option<String>,
+    pub tag: Option<String>,
     pub page_size: Option<u32>,
 }
 
-/// 搜索帖子（公开接口）
+/// 搜索帖子（公开接口，支持关键词和标签）
 async fn search_posts_route(
     State(h): State<Arc<ContentHandler>>,
     Query(q): Query<SearchPostsQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let limit = q.page_size.unwrap_or(20).min(50);
-    let posts = h.search_posts(&q.q, limit).await?;
+    let posts = h.search_posts(q.q.as_deref(), q.tag.as_deref(), limit).await?;
     Ok(json_ok(ApiResponse::success(posts)))
 }
 
