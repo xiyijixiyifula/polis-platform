@@ -689,6 +689,66 @@ if [ -n "$COMMENT_ID" ]; then
 fi
 
 # ==========================================================
+# 6.5 CHAT 聊天系统 (v0.3.0+)
+# ==========================================================
+echo ""
+echo "--- 6.5. CHAT 聊天系统 ---"
+
+if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
+    # TC-CHAT-01: Send a chat message
+    R=$(api POST "/api/chat/spaces/$SPACE_NS" "{\"content\":\"E2E聊天测试 $(date)\"}" "$TOKEN")
+    if check_code "$R"; then
+        CHAT_MSG_ID=$(get_field "$R" "id")
+        CHAT_CONTENT=$(get_field "$R" "content")
+        if [ -n "$CHAT_MSG_ID" ]; then
+            log_test PASS CHAT "发送聊天消息" "id=$CHAT_MSG_ID content=\"$CHAT_CONTENT\" ✅"
+        else
+            log_test FAIL CHAT "发送聊天消息" "no message id returned"
+        fi
+    else
+        log_test FAIL CHAT "发送聊天消息" "msg=$(get_msg "$R")"
+    fi
+
+    # TC-CHAT-02: List chat messages
+    R=$(api GET "/api/chat/spaces/$SPACE_NS?limit=10")
+    if check_code "$R"; then
+        CHAT_CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+        if [ "$CHAT_CNT" -gt 0 ] 2>/dev/null; then
+            log_test PASS CHAT "聊天消息列表" "count=$CHAT_CNT ✅"
+        else
+            log_test FAIL CHAT "聊天消息列表" "count=0 (消息未持久化？)"
+        fi
+    else
+        log_test FAIL CHAT "聊天消息列表" "msg=$(get_msg "$R")"
+    fi
+
+    # TC-CHAT-03: Verify message with author info (username/display_name/avatar_letter)
+    if [ -n "$CHAT_MSG_ID" ]; then
+        R=$(api GET "/api/chat/spaces/$SPACE_NS?limit=50")
+        AUTHOR_OK=$(echo "$R" | python3 -c "
+import sys,json
+data = json.load(sys.stdin).get('data',[])
+found = [m for m in data if m.get('id') == '$CHAT_MSG_ID']
+if found:
+    m = found[0]
+    if m.get('username') and m.get('display_name') and m.get('avatar_letter'):
+        print('ok')
+    else:
+        print('incomplete: u='+str(m.get('username'))+' d='+str(m.get('display_name')))
+else:
+    print('not_found')
+" 2>/dev/null)
+        if [ "$AUTHOR_OK" = "ok" ]; then
+            log_test PASS CHAT "聊天消息作者信息" "author=ok ✅"
+        else
+            log_test FAIL CHAT "聊天消息作者信息" "author=$AUTHOR_OK ❌"
+        fi
+    fi
+else
+    log_test SKIP CHAT "聊天系统" "无空间或无token"
+fi
+
+# ==========================================================
 # 6. 投票测试
 # ==========================================================
 echo ""

@@ -621,6 +621,35 @@ Detailed test cases organized by functional module. Each test case includes: obj
 
 ---
 
+## Chat Tests (v0.3.0+)
+
+### TC-CHAT-01: Send Chat Message
+- **Objective**: Verify sending chat messages via REST API
+- **Preconditions**: Logged in, space member
+- **Steps**:
+  1. POST /api/chat/spaces/{ns} with {"content":"test message"}
+  2. Verify response code=0, has id, author info
+- **Expected**: Message persisted, returns id + content + author fields
+- **Coverage**: ✅ Covered in E2E (v0.3.1)
+
+### TC-CHAT-02: List Chat Messages
+- **Objective**: Verify listing chat messages (public endpoint)
+- **Steps**:
+  1. GET /api/chat/spaces/{ns}?limit=10
+  2. Verify messages array with author info
+- **Expected**: Messages returned with username, display_name, avatar_letter per message
+- **Coverage**: ✅ Covered in E2E (v0.3.1)
+
+### TC-CHAT-03: Chat Message Author Info
+- **Objective**: Verify each message includes complete author details
+- **Steps**:
+  1. Send a message, then list messages
+  2. Check each message has username, display_name, avatar_letter fields
+- **Expected**: All author fields present and non-null
+- **Coverage**: ✅ Covered in E2E (v0.3.1)
+
+---
+
 ## Security Tests
 
 ### TC-SEC-01: XSS Prevention in Markdown
