@@ -56,6 +56,32 @@ impl ContentRepo {
         Ok(post)
     }
 
+    pub async fn find_posts_by_author(
+        &self,
+        author_id: Uuid,
+        page: u32,
+        page_size: u32,
+    ) -> Result<(Vec<Post>, Pagination), AppError> {
+        let offset = ((page - 1) * page_size) as i64;
+        let limit = page_size as i64;
+        let total: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM posts WHERE author_id = $1 AND is_deleted = FALSE"
+        )
+        .bind(author_id)
+        .fetch_one(&self.pool)
+        .await?;
+        let posts = sqlx::query_as::<_, Post>(
+            "SELECT * FROM posts WHERE author_id = $1 AND is_deleted = FALSE ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+        )
+        .bind(author_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+        let total_pages = (total.0 as f64 / page_size as f64).ceil() as u32;
+        Ok((posts, Pagination { page, page_size, total: total.0 as u64, total_pages }))
+    }
+
     pub async fn find_posts_by_space(
         &self,
         space_id: Uuid,

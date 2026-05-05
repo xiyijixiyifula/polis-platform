@@ -50,6 +50,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         // 代理路由 - 用户服务
         .route("/api/auth/{*path}", any(proxy_to_user))
+        .route("/api/users/{username}/contents", any(proxy_to_content))
         .route("/api/users/{*path}", any(proxy_to_user))
         .route("/api/follow", any(proxy_to_user))
         // 代理路由 - 社区 + 内容服务 (同一 catch-all, 按 path 分发)

@@ -78,6 +78,47 @@ impl ContentHandler {
         Ok(post)
     }
 
+    /// 获取作者的所有内容（创作中心）
+    /// 用户Ⓚ OS: 用户在/home/下的所有原创文件
+    pub async fn get_user_contents(
+        &self,
+        author_id: Uuid,
+        page: u32,
+        page_size: u32,
+    ) -> Result<serde_json::Value, AppError> {
+        let (posts, pagination) = self.repo.find_posts_by_author(author_id, page, page_size).await?;
+
+        // Enrich with space info (namespace, title)
+        let space_ids: Vec<Uuid> = posts.iter().map(|p| p.space_id).collect();
+        let spaces = self.repo.find_spaces_batch(&space_ids).await?;
+
+        let items: Vec<serde_json::Value> = posts.into_iter().map(|p| {
+            let space_info = spaces.get(&p.space_id).cloned().unwrap_or(serde_json::json!({"namespace": "?", "title": "?"}));
+            serde_json::json!({
+                "id": p.id,
+                "title": p.title,
+                "body": p.body,
+                "module_type": p.module_type,
+                "visibility": p.visibility,
+                "is_pinned": p.is_pinned,
+                "is_featured": p.is_featured,
+                "is_deleted": p.is_deleted,
+                "hidden_by_owner": p.hidden_by_owner,
+                "view_count": p.view_count,
+                "like_count": p.like_count,
+                "comment_count": p.comment_count,
+                "created_at": p.created_at,
+                "updated_at": p.updated_at,
+                "space": space_info,
+            })
+        }).collect();
+
+        Ok(serde_json::json!({
+            "items": items,
+            "pagination": pagination,
+        }))
+    }
+
     /// 获取帖子列表 (按 enabled_modules 过滤)
     pub async fn get_posts(
         &self,

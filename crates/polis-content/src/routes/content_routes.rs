@@ -166,6 +166,8 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/import/markdown", post(import_markdown_route))
         // 通过 ID 更新/删除帖子（需认证）
         .route("/api/posts/{id}", put(update_post_by_id_route).delete(delete_post_by_id_route))
+        // 创作中心：作者查看所有自己的内容（用户Ⓚ OS: /home/user/ 目录）
+        .route("/api/my/contents", get(get_my_contents_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
     let share_routes = Router::new()
@@ -390,6 +392,19 @@ async fn create_poll_route(
     let desc = req.description.unwrap_or_default();
     let poll_id = h.create_poll(req.space_id, uid, &req.title, &desc, &poll_type, &req.options, expires_at).await?;
     Ok(json_ok(ApiResponse::success(serde_json::json!({"id": poll_id}))))
+}
+
+/// 创作中心：获取当前用户所有内容
+/// 用户Ⓚ OS: 相当于 /home/user/ 目录下的所有文件
+async fn get_my_contents_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let page: u32 = params.get("page").and_then(|s| s.parse().ok()).unwrap_or(1);
+    let page_size: u32 = params.get("page_size").and_then(|s| s.parse().ok()).unwrap_or(50);
+    let contents = h.get_user_contents(uid, page, page_size).await?;
+    Ok(json_ok(ApiResponse::success(contents)))
 }
 
 async fn list_all_polls_route(

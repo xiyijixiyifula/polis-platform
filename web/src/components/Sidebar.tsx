@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Flame, Compass, Plus, TrendingUp, Gamepad2, ShoppingBag, BookOpen } from 'lucide-react';
+import { Home, Flame, Compass, Plus, TrendingUp, Gamepad2, ShoppingBag, BookOpen, PenLine } from 'lucide-react';
 
 export function Sidebar() {
   const navItems = [
@@ -9,6 +9,7 @@ export function Sidebar() {
     { icon: Flame, label: '热门', href: '/trending' },
     { icon: Compass, label: '发现', href: '/explore' },
     { icon: TrendingUp, label: '热榜', href: '/hot' },
+    { icon: PenLine, label: '创作中心', href: '/create-center' },
     { separator: true },
     { icon: BookOpen, label: '文章', href: '/explore?type=article' },
     { icon: Gamepad2, label: '游戏', href: '/explore?type=game' },
