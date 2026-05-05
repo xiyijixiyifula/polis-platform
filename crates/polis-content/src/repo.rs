@@ -935,4 +935,65 @@ impl ContentRepo {
         Ok(())
     }
 
+    pub async fn get_space_analytics(&self, space_id: Uuid) -> Result<serde_json::Value, AppError> {
+        // Total posts (non-deleted)
+        let total_posts: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+        ).bind(space_id).fetch_one(&self.pool).await?;
+
+        // Total views across all posts
+        let total_views: (Option<i64>,) = sqlx::query_as(
+            "SELECT SUM(view_count) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+        ).bind(space_id).fetch_one(&self.pool).await?;
+
+        // Total likes across all posts
+        let total_likes: (Option<i64>,) = sqlx::query_as(
+            "SELECT SUM(like_count) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+        ).bind(space_id).fetch_one(&self.pool).await?;
+
+        // Total comments across all posts
+        let total_comments: (Option<i64>,) = sqlx::query_as(
+            "SELECT SUM(comment_count) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+        ).bind(space_id).fetch_one(&self.pool).await?;
+
+        // Top 5 most viewed posts
+        let top_viewed = sqlx::query_as::<_, (Uuid, String, i64, i64)>(
+            "SELECT id, title, view_count, like_count FROM posts WHERE space_id = $1 AND is_deleted = FALSE ORDER BY view_count DESC LIMIT 5"
+        ).bind(space_id).fetch_all(&self.pool).await?;
+
+        // Top 5 most liked posts
+        let top_liked = sqlx::query_as::<_, (Uuid, String, i64, i64)>(
+            "SELECT id, title, like_count, view_count FROM posts WHERE space_id = $1 AND is_deleted = FALSE ORDER BY like_count DESC LIMIT 5"
+        ).bind(space_id).fetch_all(&self.pool).await?;
+
+        // Poll and series counts
+        let poll_count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM polls WHERE space_id = $1 AND is_deleted = FALSE"
+        ).bind(space_id).fetch_one(&self.pool).await?;
+
+        let series_count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM series WHERE space_id = $1"
+        ).bind(space_id).fetch_one(&self.pool).await?;
+
+        let top_viewed_json: Vec<_> = top_viewed.iter().map(|(id, title, vc, lc)| {
+            serde_json::json!({"id": id, "title": title, "view_count": vc, "like_count": lc})
+        }).collect();
+
+        let top_liked_json: Vec<_> = top_liked.iter().map(|(id, title, lc, vc)| {
+            serde_json::json!({"id": id, "title": title, "like_count": lc, "view_count": vc})
+        }).collect();
+
+        Ok(serde_json::json!({
+            "space_id": space_id,
+            "total_posts": total_posts.0,
+            "total_views": total_views.0.unwrap_or(0),
+            "total_likes": total_likes.0.unwrap_or(0),
+            "total_comments": total_comments.0.unwrap_or(0),
+            "poll_count": poll_count.0,
+            "series_count": series_count.0,
+            "top_viewed_posts": top_viewed_json,
+            "top_liked_posts": top_liked_json,
+        }))
+    }
+
 }

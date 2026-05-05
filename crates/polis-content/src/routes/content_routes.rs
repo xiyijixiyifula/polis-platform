@@ -213,6 +213,10 @@ async fn handle_public_content(
             let polls = h.list_polls_by_space(space_id).await?;
             Ok(json_ok(ApiResponse::success(polls)))
         }
+        (None, Some("analytics")) => {
+            let analytics = h.get_space_analytics(space_id).await?;
+            Ok(json_ok(ApiResponse::success(analytics)))
+        }
         _ => Err(AppError::NotFound("Route not found".to_string())),
     }
 }

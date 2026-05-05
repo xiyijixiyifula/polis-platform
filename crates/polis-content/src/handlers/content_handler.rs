@@ -822,4 +822,10 @@ impl ContentHandler {
         Ok((data, filename, mime_type))
     }
 
+    /// Get space analytics: aggregated post stats for space owners
+    pub async fn get_space_analytics(&self, space_id: Uuid) -> Result<serde_json::Value, AppError> {
+        let stats = self.repo.get_space_analytics(space_id).await?;
+        Ok(stats)
+    }
+
 }

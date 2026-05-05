@@ -141,3 +141,14 @@ pub async fn subspaces(
     print_output(&json!(items), config.format);
     Ok(())
 }
+
+pub async fn analytics(
+    config: &Config,
+    client: &HttpClient,
+    namespace: &str,
+) -> Result<(), anyhow::Error> {
+    let resp = client.get(&format!("/api/spaces/{}/analytics", namespace), None).await?;
+    let data = extract_data(&resp);
+    print_output(data, config.format);
+    Ok(())
+}

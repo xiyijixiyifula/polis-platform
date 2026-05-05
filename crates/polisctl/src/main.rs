@@ -292,6 +292,11 @@ enum SpaceAction {
         /// Root slug
         slug: String,
     },
+    /// Get space analytics (engagement stats)
+    Analytics {
+        /// Space namespace
+        namespace: String,
+    },
 }
 
 // === Post Subcommands ===
@@ -820,6 +825,7 @@ async fn main() -> Result<(), anyhow::Error> {
             }
             SpaceAction::Root { slug } => commands::space::root(&config, &client, &slug).await,
             SpaceAction::Subspaces { slug } => commands::space::subspaces(&config, &client, &slug).await,
+            SpaceAction::Analytics { namespace } => commands::space::analytics(&config, &client, &namespace).await,
         },
 
         // === Post ===

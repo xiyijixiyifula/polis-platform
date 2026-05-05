@@ -269,6 +269,17 @@ else
     log_test FAIL SPACE "公共空间列表" "API异常"
 fi
 
+# Space analytics (v0.2.91)
+if [ -n "$SPACE_NS" ]; then
+    R=$(api GET "/api/spaces/$SPACE_NS/analytics")
+    if check_code "$R"; then
+        A_TOTAL_POSTS=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('total_posts','?'))" 2>/dev/null)
+        log_test PASS SPACE "空间分析" "total_posts=$A_TOTAL_POSTS ✅"
+    else
+        log_test FAIL SPACE "空间分析" "API异常"
+    fi
+fi
+
 # ==========================================================
 # 3. 回归测试: 中文命名空间 (关键!)
 # ==========================================================
