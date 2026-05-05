@@ -4,8 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.3', date: '2026-05-05', title: '🧪 E2E 测试增强 — 99 项全覆盖, USER + XSS 新测试',
+      ver: '0.3.4', date: '2026-05-05', title: '🧪 E2E 101 项 — @mention + 空间投票列表 全覆盖',
       isLatest: true,
+      items: [
+        '💬 **E2E**: 新增 TC-SOC-03 @mention 用户提及测试 — API 正确处理评论中的 @username',
+        '📊 **E2E**: 新增 TC-POLL-04 空间投票列表 — GET /api/spaces/{ns}/polls 验证',
+        '📋 **test-cases.md**: SOC-03 + POLL-04 覆盖标记更新',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.3', date: '2026-05-05', title: '🧪 E2E 测试增强 — 99 项全覆盖, USER + XSS 新测试',
       items: [
         '👤 **E2E**: 新增 5 项 USER 用户档案测试 — 公开档案/粉丝列表/关注列表/多用户对比',
         '🔒 **E2E**: 新增 SEC-01 XSS 帖子安全测试 — API 处理含 script 标签内容无异常',
