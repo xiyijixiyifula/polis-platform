@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, Suspense } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3 } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2 } from 'lucide-react';
 import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
 import { posts, Comment, Post } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
@@ -23,6 +23,7 @@ function getCurrentUserId(): string | null {
 function PostDetailContent() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const postId = params.id as string;
   const spaceFromUrl = searchParams.get('space') || '';
 
@@ -48,6 +49,7 @@ function PostDetailContent() {
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
   const [editTags, setEditTags] = useState('');
+  const [editVisibility, setEditVisibility] = useState('public');
 
   useEffect(() => {
     if (!postId) return;
@@ -147,6 +149,7 @@ function PostDetailContent() {
     setEditTitle(post.title);
     setEditBody(post.body || '');
     setEditTags(post.tags?.join(', ') || '');
+    setEditVisibility(post.visibility || 'public');
   };
 
   const handleCancelEdit = () => {
@@ -161,6 +164,7 @@ function PostDetailContent() {
         title: editTitle.trim(),
         body: editBody,
         tags: tagArray,
+        visibility: editVisibility !== post.visibility ? editVisibility : undefined,
       });
       if (res.data) {
         setPost(res.data);
@@ -168,6 +172,22 @@ function PostDetailContent() {
       }
     } catch {
       alert('编辑失败，请重试');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!post) return;
+    if (!confirm(`确定删除帖子「${post.title}」？此操作不可撤销。`)) return;
+    try {
+      await posts.delete(currentNs, post.id);
+      // Redirect to space page or home
+      if (spaceFromUrl) {
+        router.push(`/space/${spaceFromUrl}`);
+      } else {
+        router.push('/');
+      }
+    } catch {
+      alert('删除失败，请重试');
     }
   };
 
@@ -303,6 +323,18 @@ function PostDetailContent() {
               className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white"
               placeholder="标签 (用逗号分隔, 如: Rust, 教程)"
             />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500 dark:text-gray-400">可见性:</span>
+              <select
+                value={editVisibility}
+                onChange={(e) => setEditVisibility(e.target.value)}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white"
+              >
+                <option value="public">🌐 公开 — 所有人可见</option>
+                <option value="private">🔒 私密 — 仅自己可见</option>
+                <option value="space_member">👥 社区成员 — 仅社区成员可见</option>
+              </select>
+            </div>
             <textarea
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
@@ -360,10 +392,16 @@ function PostDetailContent() {
             <Share2 className="h-5 w-5" />
           </button>
           {isAuthor && (
-            <button onClick={handleEdit}
-              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary-600 transition-colors">
-              <Edit3 className="h-5 w-5" /> 编辑
-            </button>
+            <>
+              <button onClick={handleEdit}
+                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary-600 transition-colors">
+                <Edit3 className="h-5 w-5" /> 编辑
+              </button>
+              <button onClick={handleDelete}
+                className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-500 transition-colors">
+                <Trash2 className="h-5 w-5" /> 删除
+              </button>
+            </>
           )}
           <button onClick={() => setShowReport(!showReport)}
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-500 transition-colors ml-auto">
