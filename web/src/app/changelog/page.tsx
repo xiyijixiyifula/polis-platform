@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.93', date: '2026-05-05', title: '索引管理 — 空间创建者可隐藏他人帖子(移除索引,不删内容)',
+      items: [
+        '📂 **索引管理**: 空间创建者 POST /api/spaces/{ns}/posts/{id}/hide — 隐藏帖子(移除索引)',
+        '🔄 隐藏是 toggle: 再次请求恢复显示 (hidden⇄visible)',
+        '👤 **作者内容不变**: 隐藏帖通过直接 URL 仍可访问 (code=0, 内容保存)',
+        '🔒 仅空间创建者可 hid/unhide, 普通成员不能操作',
+        '🗄️ 隐藏过滤: 帖子列表/精选/Feed/系列/分析 全部过滤 hidden_by_owner',
+        '📋 新增 migration: 007_hidden_posts.sql + hidden_by_owner BOOLEAN 列',
+        '✅ 84/84 E2E 全量通过, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.92', date: '2026-05-05', title: '模块可见性强制执行 + 作者内容主权 — 权限架构重构',
       items: [
         '🏛️ **架构重构**: 按 OS→Disk→Folder→File 模型重构权限系统',
