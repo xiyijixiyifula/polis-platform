@@ -115,10 +115,10 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 
 | Command | Method | Endpoint | Auth |
 |---------|--------|----------|------|
-| `polisctl post create <ns> <title> <body> -g <tags> -m <module>` | POST | `/api/spaces/{ns}/posts` | Yes |
+| `polisctl post create <ns> <title> <body> -g <tags> -m <module> -v <visibility>` | POST | `/api/spaces/{ns}/posts` | Yes |
 | `polisctl post list <ns> [page] -s <size> -m <module>` | GET | `/api/spaces/{ns}/posts` | No |
 | `polisctl post get <post_id>` | GET | `/api/posts/{id}` | No |
-| `polisctl post update <ns> <post_id> <title> -b <body> -g <tags>` | PUT | `/api/spaces/{ns}/posts/{id}` | Yes |
+| `polisctl post update <ns> <post_id> <title> -b <body> -g <tags> -v <visibility>` | PUT | `/api/spaces/{ns}/posts/{id}` | Yes |
 | `polisctl post delete <ns> <post_id>` | DELETE | `/api/spaces/{ns}/posts/{id}` | Yes |
 | `polisctl post featured <ns>` | GET | `/api/spaces/{ns}/featured` | No |
 | `polisctl post search <query> [limit]` | GET | `/api/posts/search` | No |

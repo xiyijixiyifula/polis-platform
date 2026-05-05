@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.98', date: '2026-05-05', title: '帖子可见性控制 — 公开/私密/不公开 三级权限',
+      items: [
+        '🔒 **后端**: PostPublic 新增 visibility 字段 — 4个构造点同步更新 (列表/搜索/专栏/详情)',
+        '🎨 **发帖编辑器**: 可见性选择器 (🌐公开 / 🔒私密 / 🔗不公开) — 发布时传入 visibility 参数',
+        '🏷️ **PostCard**: 可见性徽章 — 私密红色/不公开黄色, 仅在非公开时显示',
+        '🖥️ **CLI**: polisctl post create --visibility private + post update --visibility public',
+        '📡 API: posts.create() 支持 visibility 参数, Post 接口新增 visibility 字段',
+        '✅ 84/84 E2E 全量通过, PERF 全部达标, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.97', date: '2026-05-05', title: '🟢 健康检查 — 系统全绿, 连续 3 轮 E2E 零失败',
       items: [
         '✅ 84/84 E2E 全量通过, PERF 全部达标 (搜索 1.63s/空间 2.0s/Feed 0.81s/投票 0.63s)',

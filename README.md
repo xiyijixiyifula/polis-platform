@@ -21,7 +21,7 @@
 
 ---
 
-## ✨ 当前功能 (v0.2.97)
+## ✨ 当前功能 (v0.2.98)
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -44,6 +44,7 @@
 | 📝 草稿箱 | ✅ | 未完成帖子自动保存 |
 | 🔍 全站搜索 | ✅ | PostgreSQL ILIKE 全文搜索（社区+帖子） |
 | 🌙 暗黑模式 | ✅ | Tailwind CSS 变量、偏好记忆 |
+| 🔒 帖子可见性 | ✅ | 公开/私密/不公开三级权限, 编辑器选择器 + PostCard徽章 |
 | 🛡️ 管理后台 | ✅ | 用户/社区/内容管理仪表盘 |
 | 📋 更新日志 | ✅ | `/changelog` 版本历史 |
 | 🤖 AI 研究 | ✅ | 自动社区调研 + `/research` 报告页 |
@@ -256,6 +257,9 @@ polisctl auth register mybot bot@test.com pass1234 "AI Bot"
 # 发帖
 polisctl post create "社区" "标题" "内容"
 
+# 私密发帖
+polisctl post create "社区" "标题" "内容" -v private
+
 # 搜索社区
 polisctl space search "Rust" 1 -s 10
 
@@ -273,7 +277,7 @@ polisctl --format table admin users list 1 10
 | `profile` | 个人资料查看/编辑/密码 |
 | `follow` | 关注用户/社区 |
 | `space` | 创建/搜索/热门/加入/子社区 |
-| `post` | 发帖/列表/详情/更新/删除/搜索/精选 |
+| `post` | 发帖/列表/详情/更新/删除/搜索/精选/可见性 |
 | `comment` | 评论列表/创建（支持回复） |
 | `like/vote/bookmark` | 点赞/投票/收藏 |
 | `poll` | 投票问卷 (创建/参与/列表/全局all) |
