@@ -218,12 +218,14 @@ impl ContentRepo {
         Ok(row.0)
     }
 
-    pub async fn increment_view_count(&self, id: Uuid) -> Result<(), AppError> {
-        sqlx::query("UPDATE posts SET view_count = view_count + 1 WHERE id = $1")
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
-        Ok(())
+    pub async fn increment_view_count(&self, id: Uuid) -> Result<i64, AppError> {
+        let row: (i64,) = sqlx::query_as(
+            "UPDATE posts SET view_count = view_count + 1 WHERE id = $1 RETURNING view_count",
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.0)
     }
 
     pub async fn find_featured_posts(

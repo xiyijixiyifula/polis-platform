@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.5', date: '2026-05-06', title: '🖥️ CLI like comment — 点赞评论命令行支持',
+      ver: '0.3.6', date: '2026-05-06', title: '👁️ 浏览量系统 — 帖子阅读计数 + CLI 命令',
       isLatest: true,
+      items: [
+        '👁️ **API**: POST /api/posts/{id}/view — 递增帖子浏览量 (公开接口, 无需认证)',
+        '📊 **后端**: increment_view_count 返回新计数值 (RETURNING view_count)',
+        '🖥️ **CLI**: polisctl post view <post_id> — 递增帖子浏览计数',
+        '📋 **文档**: CLI-GUIDE.md §3.5 更新 — post view 命令参考',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.5', date: '2026-05-06', title: '🖥️ CLI like comment — 点赞评论命令行支持',
       items: [
         '🖥️ **CLI**: polisctl like 升级为子命令模式 — post 和 comment 两个子命令',
         '❤️ **CLI**: polisctl like comment <comment_id> — 评论点赞/取消 (true/false toggle)',

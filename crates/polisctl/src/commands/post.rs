@@ -156,6 +156,16 @@ pub async fn featuring(
     Ok(())
 }
 
+pub async fn view(
+    config: &Config,
+    client: &HttpClient,
+    post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let resp = client.post(&format!("/api/posts/{}/view", post_id), None, &json!({})).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
 pub async fn hide(
     config: &Config,
     client: &HttpClient,

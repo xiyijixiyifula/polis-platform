@@ -398,6 +398,11 @@ enum PostAction {
         /// Post ID
         post_id: String,
     },
+    /// Increment view count on a post
+    View {
+        /// Post ID
+        post_id: String,
+    },
 }
 
 // === Comment Subcommands ===
@@ -899,6 +904,7 @@ async fn main() -> Result<(), anyhow::Error> {
             PostAction::Pin { namespace, post_id } => commands::post::pin(&config, &client, &namespace, &post_id).await,
             PostAction::Featuring { namespace, post_id } => commands::post::featuring(&config, &client, &namespace, &post_id).await,
             PostAction::Hide { namespace, post_id } => commands::post::hide(&config, &client, &namespace, &post_id).await,
+            PostAction::View { post_id } => commands::post::view(&config, &client, &post_id).await,
         },
 
         // === Comment ===

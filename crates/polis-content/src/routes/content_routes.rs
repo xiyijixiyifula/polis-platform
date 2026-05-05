@@ -131,6 +131,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     .route("/api/files/{id}", get(get_file_route))
     .route("/api/feed", get(feed_route))
         .route("/api/posts/{id}", get(get_post_by_id_route))
+        .route("/api/posts/{id}/view", post(increment_view_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route).post(create_comment_by_post_id))
         // 获取投票分数（赞同/反对）
         .route("/api/vote", get(get_vote_score_route))
@@ -522,6 +523,18 @@ async fn get_post_by_id_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let post = h.get_post_public(id).await?;
     Ok(json_ok(ApiResponse::success(post)))
+}
+
+/// 递增帖子浏览量（公开接口，v0.3.6）
+async fn increment_view_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let view_count = h.repo.increment_view_count(id).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({
+        "post_id": id,
+        "view_count": view_count,
+    }))))
 }
 
 

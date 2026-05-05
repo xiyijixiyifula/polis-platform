@@ -125,6 +125,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 | `polisctl post pin <ns> <post_id>` | POST | `/api/spaces/{ns}/posts/{id}/pin` | Yes |
 | `polisctl post featuring <ns> <post_id>` | POST | `/api/spaces/{ns}/posts/{id}/featured` | Yes |
 | `polisctl post hide <ns> <post_id>` | POST | `/api/spaces/{ns}/posts/{id}/hide` | Yes (owner) |
+| `polisctl post view <post_id>` | POST | `/api/posts/{id}/view` | No |
 
 ### 3.6 Comments
 
