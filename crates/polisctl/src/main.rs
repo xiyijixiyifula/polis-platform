@@ -55,6 +55,11 @@ enum Commands {
         #[command(subcommand)]
         action: CommentAction,
     },
+    /// Chat management: send, list
+    Chat {
+        #[command(subcommand)]
+        action: ChatAction,
+    },
     /// Like a post
     Like {
         /// Space namespace
@@ -414,6 +419,26 @@ enum CommentAction {
         /// Parent comment ID (for replies)
         #[arg(short, long)]
         parent_id: Option<String>,
+    },
+}
+
+// === Chat Subcommands ===
+#[derive(Subcommand)]
+enum ChatAction {
+    /// List recent chat messages in a space
+    List {
+        /// Space namespace
+        namespace: String,
+        /// Max messages to return
+        #[arg(short, long, default_value = "50")]
+        limit: u32,
+    },
+    /// Send a chat message to a space
+    Send {
+        /// Space namespace
+        namespace: String,
+        /// Message content
+        message: String,
     },
 }
 
@@ -866,6 +891,16 @@ async fn main() -> Result<(), anyhow::Error> {
             CommentAction::List { post_id } => commands::comment::list(&config, &client, &post_id).await,
             CommentAction::Create { post_id, body, parent_id } => {
                 commands::comment::create(&config, &client, &post_id, &body, parent_id.as_deref()).await
+            }
+        },
+
+        // === Chat ===
+        Commands::Chat { action } => match action {
+            ChatAction::List { namespace, limit } => {
+                commands::chat::list(&config, &client, &namespace, Some(limit)).await
+            }
+            ChatAction::Send { namespace, message } => {
+                commands::chat::send(&config, &client, &namespace, &message).await
             }
         },
 

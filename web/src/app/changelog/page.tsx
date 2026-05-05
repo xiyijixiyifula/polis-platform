@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.0', date: '2026-05-05', title: '🚀 社区实时聊天 — v0.3 里程碑启程',
+      ver: '0.3.1', date: '2026-05-05', title: '🖥️ CLI 聊天命令 — polisctl chat 上线',
       isLatest: true,
+      items: [
+        '🖥️ **CLI**: polisctl chat list <ns> — 查看空间聊天消息 (JSON/Table 输出)',
+        '💬 **CLI**: polisctl chat send <ns> "<message>" — 发送聊天消息 (需登录)',
+        '📋 **文档**: CLI-GUIDE.md 新增 §3.16 Chat 命令参考 — 完整的 API + 示例',
+        '✅ 全链路验证: 注册→发送→列表 (JSON + Table 双模式) 全部通过',
+        '✅ 90/90 E2E 全量通过, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.0', date: '2026-05-05', title: '🚀 社区实时聊天 — v0.3 里程碑启程',
       items: [
         '💬 **聊天 API**: POST /api/chat/spaces/{ns} 发送 + GET 读取 — chat_messages 表持久化',
         '🏛️ **Gateway**: /api/chat/{*path} → proxy_to_content 代理路由',

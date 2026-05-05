@@ -226,6 +226,28 @@ polisctl --format table health
 # Prints formatted table with ✅/⚠️/❌ status icons
 ```
 
+### 3.16 Chat (Space Chat Room)
+
+| Command | Method | Endpoint | Auth |
+|---------|--------|----------|------|
+| `polisctl chat list <ns> -l <limit>` | GET | `/api/chat/spaces/{ns}` | No |
+| `polisctl chat send <ns> <message>` | POST | `/api/chat/spaces/{ns}` | Yes |
+
+Chat messages include author info (username, display_name, avatar_letter) and timestamps. The `list` command returns recent messages (default 50, configurable with `-l`).
+
+**Example**:
+```bash
+# View recent chat messages in a space
+polisctl chat list "my-community" -l 20
+
+# Send a message (requires login)
+polisctl auth login user@email.com password
+polisctl chat send "my-community" "Hello everyone!"
+
+# Table output for readability
+polisctl --format table chat list "my-community" -l 10
+```
+
 ---
 
 ## 4. Admin Operations
