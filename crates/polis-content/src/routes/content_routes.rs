@@ -105,6 +105,14 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
         return Ok((ns.to_string(), None, Some("polls".to_string())));
     }
 
+    if remaining.contains("/analytics") {
+        let ns = remaining.strip_suffix("/analytics").unwrap_or(remaining.as_str());
+        if ns.is_empty() {
+            return Err(AppError::NotFound("Missing namespace".to_string()));
+        }
+        return Ok((ns.to_string(), None, Some("analytics".to_string())));
+    }
+
     Err(AppError::NotFound("Invalid content path".to_string()))
 }
 
