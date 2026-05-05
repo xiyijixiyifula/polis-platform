@@ -1034,6 +1034,7 @@ PAGES=(
     "/" "/changelog" "/explore" "/search" "/about" "/login" "/register"
     "/forgot-password" "/trending" "/hot" "/cli" "/research"
     "/drafts" "/notifications" "/saved" "/settings" "/polls" "/polls/new" "/create"
+    "/create-center"
     "/post/new" "/post/new?space=wangwu/indie-game"
     "/profile/wangwu" "/profile/wangwu/followers" "/profile/wangwu/following"
     "/space/wangwu/indie-game"
