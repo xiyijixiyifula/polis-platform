@@ -342,7 +342,8 @@ Detailed test cases organized by functional module. Each test case includes: obj
 - **Expected**: Follow relationship established
 
 ### TC-SOC-02: Like Comment
-- **Objective**: Verify comment like
+- **Objective**: Verify comment like (backend + E2E)
+- **Coverage**: ✅ Covered in E2E (v0.2.101) — POST /api/comments/{id}/like → toggle_like("comment") → liked=true
 - **Steps**:
   1. Navigate to post with comments
   2. Click like/heart on a comment

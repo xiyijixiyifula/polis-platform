@@ -4,6 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.101', date: '2026-05-05', title: '评论点赞 API + E2E — TC-SOC-02 全覆盖',
+      isLatest: true,
+      items: [
+        '👍 **后端**: 新增 POST /api/comments/{id}/like 路由 — 复用 toggle_like("comment") 点赞/取消',
+        '📡 **Gateway**: 添加 /api/comments/{*path} → proxy_to_content 代理路由',
+        '🧪 **E2E**: 新增 TC-SOC-02 评论点赞测试 — 创建评论→点赞→验证 liked=True',
+        '✅ 90/90 E2E 全量通过, PERF 全部达标, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.100', date: '2026-05-05', title: '可见性 E2E 覆盖 — 私密帖隔离验证',
       items: [
         '🧪 **E2E**: 新增 4 项帖子可见性测试 — 私密帖创建/可访问/不出现在列表/公开帖出现在列表',
@@ -1118,7 +1128,7 @@ export default function ChangelogPage() {
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {v.ver === '0.2.68' && (
+              {(v as any).isLatest && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
             </div>
