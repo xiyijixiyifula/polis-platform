@@ -121,6 +121,8 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 | `polisctl post delete <ns> <post_id>` | DELETE | `/api/spaces/{ns}/posts/{id}` | Yes |
 | `polisctl post featured <ns>` | GET | `/api/spaces/{ns}/featured` | No |
 | `polisctl post search <query> [limit]` | GET | `/api/posts/search` | No |
+| `polisctl post pin <ns> <post_id>` | POST | `/api/spaces/{ns}/posts/{id}/pin` | Yes |
+| `polisctl post featuring <ns> <post_id>` | POST | `/api/spaces/{ns}/posts/{id}/featured` | Yes |
 
 ### 3.6 Comments
 

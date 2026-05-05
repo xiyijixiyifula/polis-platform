@@ -4,6 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.90', date: '2026-05-05', title: '帖子置顶/精选 — 空间创建者可置顶和精选帖子',
+      items: [
+        '📌 后端: POST /api/spaces/{ns}/posts/{id}/pin — toggle 置顶帖子 (空间创建者或作者)',
+        '⭐ 后端: POST /api/spaces/{ns}/posts/{id}/featured — toggle 精选帖子 (空间创建者)',
+        '🎨 前端: PostCard 新增置顶按钮 (Pin 图标) — 空间创建者可见, 点击切换置顶状态',
+        '🖥️ CLI: polisctl post pin <ns> <id> — 置顶/取消置顶帖子',
+        '🖥️ CLI: polisctl post featuring <ns> <id> — 精选/取消精选帖子',
+        '🧪 E2E: PIN 测试 4 项 (置顶/验证/取消/精选) — 测试总量 76→80',
+        '✅ 80/80 E2E 全量测试通过，6 服务 active',
+      ],
+    },
+    {
       ver: '0.2.89', date: '2026-05-05', title: '健康检查 — 系统巡检 + 76/76 全通',
       items: [
         '🔍 健康检查: 6 服务全活、首页 200、76/76 E2E 全量通过',
