@@ -673,12 +673,13 @@ fi
 
 # TC-SOC-02: 点赞评论 (Comment Like)
 # 后端 toggle_like 支持 "comment" target type，通过 POST /api/comments/{id}/like
+# 返回 { code:0, data: true/false }，data 是布尔值非对象，用 python3 直接提取
 if [ -n "$COMMENT_ID" ]; then
     R=$(api POST "/api/comments/$COMMENT_ID/like" "" "$TOKEN")
     if check_code "$R"; then
-        LIKED=$(get_field "$R" "data")
-        if [ "$LIKED" = "true" ]; then
-            log_test PASS SOCIAL "点赞评论" "liked=true ✅"
+        LIKED=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data'))" 2>/dev/null)
+        if [ "$LIKED" = "True" ]; then
+            log_test PASS SOCIAL "点赞评论" "liked=True ✅"
         else
             log_test FAIL SOCIAL "点赞评论" "liked=$LIKED"
         fi
