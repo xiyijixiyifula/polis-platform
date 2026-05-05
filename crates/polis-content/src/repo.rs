@@ -941,19 +941,19 @@ impl ContentRepo {
             "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
-        // Total views across all posts
+        // Total views across all posts (CAST SUM result to BIGINT)
         let total_views: (Option<i64>,) = sqlx::query_as(
-            "SELECT SUM(view_count) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+            "SELECT SUM(view_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
         // Total likes across all posts
         let total_likes: (Option<i64>,) = sqlx::query_as(
-            "SELECT SUM(like_count) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+            "SELECT SUM(like_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
         // Total comments across all posts
         let total_comments: (Option<i64>,) = sqlx::query_as(
-            "SELECT SUM(comment_count) FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
+            "SELECT SUM(comment_count)::BIGINT FROM posts WHERE space_id = $1 AND is_deleted = FALSE"
         ).bind(space_id).fetch_one(&self.pool).await?;
 
         // Top 5 most viewed posts
