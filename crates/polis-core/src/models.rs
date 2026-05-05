@@ -210,6 +210,7 @@ pub struct PostPublic {
     pub content_type: ContentType,
     pub media_urls: Vec<String>,
     pub tags: Vec<String>,
+    pub visibility: Visibility,
     pub is_pinned: bool,
     pub is_featured: bool,
     pub view_count: i64,

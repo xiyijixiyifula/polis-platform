@@ -37,16 +37,20 @@ pub async fn create(
     body: &str,
     tags: Option<&str>,
     module: Option<&str>,
+    visibility: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     let token = config.require_auth()?;
     let tags_json: Vec<&str> = tags.map(|t| t.split(',').map(|s| s.trim()).collect()).unwrap_or_default();
-    let body_json = json!({
+    let mut body_json = json!({
         "title": title,
         "body": body,
         "tags": tags_json,
         "module_type": module.unwrap_or("forum"),
         "content_type": "text"
     });
+    if let Some(v) = visibility {
+        body_json["visibility"] = json!(v);
+    }
     let resp = client.post(&format!("/api/spaces/{}/posts", namespace), Some(&token), &body_json).await?;
     print_output(extract_data(&resp), config.format);
     Ok(())
@@ -59,6 +63,7 @@ pub async fn update(
     title: Option<&str>,
     body: Option<&str>,
     tags: Option<&str>,
+    visibility: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     let token = config.require_auth()?;
     let mut body_json = json!({});
@@ -67,6 +72,9 @@ pub async fn update(
     if let Some(t) = tags {
         let tags_json: Vec<&str> = t.split(',').map(|s| s.trim()).collect();
         body_json["tags"] = json!(tags_json);
+    }
+    if let Some(v) = visibility {
+        body_json["visibility"] = json!(v);
     }
     let resp = client.put(&format!("/api/spaces/_/posts/{}", post_id), Some(&token), &body_json).await?;
     print_output(extract_data(&resp), config.format);

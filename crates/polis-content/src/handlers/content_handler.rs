@@ -167,6 +167,7 @@ impl ContentHandler {
                     content_type: serde_json::from_str(&format!("\"{}\"", p.content_type)).unwrap_or_default(),
                     media_urls: serde_json::from_value(p.media_urls).unwrap_or_default(),
                     tags: serde_json::from_value(p.tags).unwrap_or_default(),
+                    visibility: serde_json::from_str(&format!("\"{}\"", p.visibility)).unwrap_or_default(),
                     is_pinned: p.is_pinned,
                     is_featured: p.is_featured,
                     view_count: p.view_count,
@@ -212,6 +213,7 @@ impl ContentHandler {
                 });
                 let mt = format!("\"{}\"", p.module_type);
                 let ct = format!("\"{}\"", p.content_type);
+                let vis = format!("\"{}\"", p.visibility);
                 PostPublic {
                     id: p.id,
                     space_id: p.space_id,
@@ -222,6 +224,7 @@ impl ContentHandler {
                     content_type: serde_json::from_str(&ct).unwrap_or_default(),
                     media_urls: serde_json::from_value(p.media_urls).unwrap_or_default(),
                     tags: serde_json::from_value(p.tags).unwrap_or_default(),
+                    visibility: serde_json::from_str(&vis).unwrap_or_default(),
                     is_pinned: p.is_pinned,
                     is_featured: p.is_featured,
                     view_count: p.view_count,
@@ -333,6 +336,7 @@ impl ContentHandler {
             });
             let mt = serde_json::json!(p.module_type).to_string();
             let ct = serde_json::json!(p.content_type).to_string();
+            let vis = serde_json::json!(p.visibility).to_string();
             PostPublic {
                 id: p.id, space_id: p.space_id,
                 module_type: serde_json::from_str(&mt).unwrap_or_default(),
@@ -340,6 +344,7 @@ impl ContentHandler {
                 content_type: serde_json::from_str(&ct).unwrap_or_default(),
                 media_urls: serde_json::from_value(p.media_urls).unwrap_or_default(),
                 tags: serde_json::from_value(p.tags).unwrap_or_default(),
+                visibility: serde_json::from_str(&vis).unwrap_or_default(),
                 is_pinned: p.is_pinned, is_featured: p.is_featured,
                 view_count: p.view_count, like_count: p.like_count,
                 comment_count: p.comment_count, created_at: p.created_at,
@@ -399,6 +404,7 @@ impl ContentHandler {
             content_type: serde_json::from_str(&format!("\"{}\"", post.content_type)).unwrap_or_default(),
             media_urls: serde_json::from_value(post.media_urls).unwrap_or_default(),
             tags: serde_json::from_value(post.tags).unwrap_or_default(),
+            visibility: serde_json::from_str(&format!("\"{}\"", post.visibility)).unwrap_or_default(),
             is_pinned: post.is_pinned,
             is_featured: post.is_featured,
             view_count: post.view_count,

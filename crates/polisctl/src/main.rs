@@ -335,6 +335,9 @@ enum PostAction {
         /// Module type
         #[arg(short = 'm', long, default_value = "forum")]
         module: String,
+        /// Visibility (public, private, unlisted)
+        #[arg(short = 'v', long, default_value = "public")]
+        visibility: String,
     },
     /// Update a post
     Update {
@@ -349,6 +352,9 @@ enum PostAction {
         /// New tags (comma-separated)
         #[arg(short = 'g', long)]
         tags: Option<String>,
+        /// New visibility (public, private, unlisted)
+        #[arg(short = 'v', long)]
+        visibility: Option<String>,
     },
     /// Delete a post
     Delete {
@@ -841,11 +847,11 @@ async fn main() -> Result<(), anyhow::Error> {
                 commands::post::list(&config, &client, &namespace, page, size, module.as_deref()).await
             }
             PostAction::Get { post_id } => commands::post::get(&config, &client, &post_id).await,
-            PostAction::Create { namespace, title, body, tags, module } => {
-                commands::post::create(&config, &client, &namespace, &title, &body, tags.as_deref(), Some(&module)).await
+            PostAction::Create { namespace, title, body, tags, module, visibility } => {
+                commands::post::create(&config, &client, &namespace, &title, &body, tags.as_deref(), Some(&module), Some(&visibility)).await
             }
-            PostAction::Update { post_id, title, body, tags } => {
-                commands::post::update(&config, &client, &post_id, title.as_deref(), body.as_deref(), tags.as_deref()).await
+            PostAction::Update { post_id, title, body, tags, visibility } => {
+                commands::post::update(&config, &client, &post_id, title.as_deref(), body.as_deref(), tags.as_deref(), visibility.as_deref()).await
             }
             PostAction::Delete { post_id } => commands::post::delete(&config, &client, &post_id).await,
             PostAction::Search { query, limit } => commands::post::search_posts(&config, &client, &query, limit).await,

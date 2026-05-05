@@ -21,6 +21,7 @@ interface PostCardProps {
     created_at: string;
     tags?: string[];
     is_pinned?: boolean;
+    visibility?: string;
   };
   canPin?: boolean;
   onTogglePin?: () => void;
@@ -39,6 +40,19 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: P
     <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="relative group card block transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
       {post.is_pinned && (
         <div className="mb-2 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
+      )}
+
+      {/* Visibility badge */}
+      {post.visibility && post.visibility !== 'public' && (
+        <div className="mb-2">
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            post.visibility === 'private'
+              ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+              : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+          }`}>
+            {post.visibility === 'private' ? '🔒 私密' : '🔗 不公开'}
+          </span>
+        </div>
       )}
 
       {/* Pin toggle button */}

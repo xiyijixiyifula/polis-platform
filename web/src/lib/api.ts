@@ -67,6 +67,7 @@ export interface Post {
   content_type: string;
   tags: string[];
   media_urls?: string[];
+  visibility?: string;
   is_pinned: boolean;
   is_featured: boolean;
   is_deleted?: boolean;
@@ -381,7 +382,7 @@ export const series = {
 };
 
 export const posts = {
-  create: (namespace: string, data: { title: string; body: string; module_type?: string; tags?: string[] }) =>
+  create: (namespace: string, data: { title: string; body: string; module_type?: string; tags?: string[]; visibility?: string }) =>
     request<Post>(`/spaces/${namespace}/posts`, {
       method: 'POST',
       body: JSON.stringify({ ...data, content_type: 'text', module_type: data.module_type || 'forum' }),

@@ -69,6 +69,7 @@ function NewPostForm() {
   }, [enabledModules]);
 
   const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'wiki' ? 'wiki' : urlModule === 'qa' ? 'qa' : urlModule === 'novel' ? 'novel' : urlModule === 'game' ? 'game' : urlModule === 'mini_app' ? 'mini_app' : urlModule === 'forum' ? 'article' : 'article');
+  const [visibility, setVisibility] = useState('public');
   useEffect(() => {
     if (
       availableModules.length > 0 &&
@@ -206,6 +207,7 @@ function NewPostForm() {
         body: body,
         module_type: moduleType,
         tags: tags.split(/[,，、\s]+/).filter(Boolean),
+        visibility,
       });
       if (res.code === 0 && res.data?.id) {
         const postId = res.data.id;
@@ -441,6 +443,21 @@ function NewPostForm() {
             发布帖子
           </p>
         )}
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            可见性:
+          </span>
+          <select
+            value={visibility}
+            onChange={(e) => setVisibility(e.target.value)}
+            className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value="public">🌐 公开 — 所有人可见</option>
+            <option value="private">🔒 私密 — 仅自己可见</option>
+            <option value="unlisted">🔗 不公开 — 有链接可见</option>
+          </select>
+        </div>
 
         {space && seriesList.length > 0 && (
           <div className="flex items-center gap-2">
