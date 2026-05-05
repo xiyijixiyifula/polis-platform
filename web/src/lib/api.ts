@@ -271,6 +271,12 @@ export const search = {
     if (pageSize) params.set('page_size', String(pageSize));
     return request<Post[]>('/posts/search?' + params.toString());
   },
+  /** 搜索用户 */
+  users: (q: string, limit?: number) => {
+    const params = new URLSearchParams({ q });
+    if (limit) params.set('limit', String(limit));
+    return request<User[]>('/users/search?' + params.toString());
+  },
 };
 
 

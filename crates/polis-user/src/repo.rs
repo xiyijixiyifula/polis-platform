@@ -98,6 +98,19 @@ impl UserRepo {
         Ok(user)
     }
 
+    /// 搜索用户 (模糊匹配 username 和 display_name)
+    pub async fn search_users(&self, query: &str, limit: u32) -> Result<Vec<User>, AppError> {
+        let pattern = format!("%{}%", query);
+        let users = sqlx::query_as::<_, User>(
+            "SELECT * FROM users WHERE username ILIKE $1 OR display_name ILIKE $1 ORDER BY created_at DESC LIMIT $2",
+        )
+        .bind(&pattern)
+        .bind(limit as i64)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(users)
+    }
+
     /// 获取用户的社区列表
     pub async fn find_user_spaces(&self, user_id: Uuid) -> Result<Vec<Uuid>, AppError> {
         let rows: Vec<(Uuid,)> = sqlx::query_as(

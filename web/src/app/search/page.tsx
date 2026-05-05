@@ -12,9 +12,10 @@ function SearchContent() {
   const router = useRouter();
   const q = searchParams.get('q') || '';
   const [query, setQuery] = useState(q);
-  const [activeTab, setActiveTab] = useState<'space' | 'post'>('space');
+  const [activeTab, setActiveTab] = useState<'space' | 'post' | 'user'>('space');
   const [filteredSpaces, setFilteredSpaces] = useState<any[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -26,15 +27,19 @@ function SearchContent() {
     const fetchResults = async () => {
       setLoading(true);
       try {
-        const [spaceRes, postRes] = await Promise.all([
+        const [spaceRes, postRes, userRes] = await Promise.all([
           searchApi.spaces(q),
           searchApi.posts(q).catch(() => ({ code: -1, data: [] })),
+          searchApi.users(q).catch(() => ({ code: -1, data: [] })),
         ]);
         if (spaceRes.code === 0 && spaceRes.data) {
           setFilteredSpaces(spaceRes.data);
         }
         if (postRes.code === 0 && postRes.data) {
           setFilteredPosts(postRes.data);
+        }
+        if (userRes.code === 0 && userRes.data) {
+          setFilteredUsers(userRes.data);
         }
       } catch {}
       setLoading(false);
@@ -57,7 +62,7 @@ function SearchContent() {
           <input
             type="text"
             className="w-full rounded-xl border border-gray-200 bg-white py-3.5 pl-12 pr-24 text-base shadow-sm placeholder-gray-400 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-            placeholder="搜索社区和帖子..."
+            placeholder="搜索社区、帖子和用户..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") handleSearch(e); }}
@@ -73,6 +78,7 @@ function SearchContent() {
             <span className="text-gray-300 dark:text-gray-600">|</span>
             <button onClick={() => setActiveTab('space')} className={`${activeTab === 'space' ? 'text-primary-600 font-medium' : 'text-gray-500 dark:text-gray-400'} hover:text-primary-600`}>社区 ({filteredSpaces.length})</button>
             <button onClick={() => setActiveTab('post')} className={`${activeTab === 'post' ? 'text-primary-600 font-medium' : 'text-gray-500 dark:text-gray-400'} hover:text-primary-600`}>帖子 ({filteredPosts.length})</button>
+            <button onClick={() => setActiveTab('user')} className={`${activeTab === 'user' ? 'text-primary-600 font-medium' : 'text-gray-500 dark:text-gray-400'} hover:text-primary-600`}>用户 ({filteredUsers.length})</button>
           </div>
 
           {activeTab === 'space' && (
@@ -110,13 +116,57 @@ function SearchContent() {
               )}
             </div>
           )}
+
+          {activeTab === 'user' && (
+            <div>
+              {filteredUsers.length > 0 ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {filteredUsers.map((user: any) => (
+                    <a
+                      key={user.id}
+                      href={`/profile/${user.username}`}
+                      className="card flex items-center gap-4 p-4 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600 transition-all group"
+                    >
+                      <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                        {(user.display_name || user.username).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-gray-900 dark:text-white truncate group-hover:text-primary-600 transition-colors">
+                            {user.display_name}
+                          </span>
+                          {user.verified && (
+                            <span className="text-blue-500 text-xs" title="已认证">✓</span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          @{user.username}
+                        </div>
+                        {user.bio && (
+                          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">
+                            {user.bio}
+                          </div>
+                        )}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <div className="card py-12 text-center">
+                  <div className="text-4xl mb-3">{loading ? '⏳' : '👤'}</div>
+                  <p className="text-gray-500 dark:text-gray-400">没有找到 &ldquo;{q}&rdquo; 的相关用户</p>
+                  <p className="text-sm text-gray-400 mt-1">试试其他关键词</p>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
       {!q && (
         <div className="card py-12 text-center">
           <div className="text-4xl mb-3">🔍</div>
-          <p className="text-gray-500 dark:text-gray-400">输入关键词搜索社区和帖子</p>
+          <p className="text-gray-500 dark:text-gray-400">输入关键词搜索社区、帖子和用户</p>
         </div>
       )}
     </div>

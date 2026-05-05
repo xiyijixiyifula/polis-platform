@@ -205,6 +205,12 @@ impl UserHandler {
         Ok(all_spaces)
     }
 
+    /// 搜索用户 (模糊匹配 username 和 display_name)
+    pub async fn search_users(&self, query: &str, limit: u32) -> Result<Vec<UserPublic>, AppError> {
+        let users = self.repo.search_users(query, limit).await?;
+        Ok(users.into_iter().map(|u| u.into()).collect())
+    }
+
     /// 获取当前用户资料（通过 JWT）
     pub async fn get_my_profile(&self, user_id: Uuid) -> Result<UserPublic, AppError> {
         let user = self.repo.find_by_id(user_id).await?

@@ -21,6 +21,7 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/auth/register", post(register))
         .route("/api/auth/login", post(login))
         .route("/api/auth/forgot-password", post(forgot_password))
+        .route("/api/users/search", get(search_users))
         .route("/api/users/{username}", get(get_user_profile))
         .route("/api/users/{username}/spaces", get(get_user_spaces))
         .route("/api/users/{username}/followers", get(get_followers))
@@ -74,6 +75,13 @@ async fn get_following(State(h): State<Arc<UserHandler>>, Path(u): Path<String>)
     Ok(Json(ApiResponse::success(h.get_following(&u).await?)))
 }
 
+#[derive(Deserialize)]
+struct SearchUsersQuery { q: String, #[serde(default = "default_limit")] limit: u32 }
+fn default_limit() -> u32 { 20 }
+
+async fn search_users(State(h): State<Arc<UserHandler>>, axum::extract::Query(q): axum::extract::Query<SearchUsersQuery>) -> Result<Json<ApiResponse<Vec<UserPublic>>>, AppError> {
+    Ok(Json(ApiResponse::success(h.search_users(&q.q, q.limit).await?)))
+}
 
 async fn health_check(State(h): State<Arc<UserHandler>>) -> Json<ApiResponse<serde_json::Value>> {
     let db_ok = sqlx::query("SELECT 1").fetch_one(&h.repo.pool).await.is_ok();
