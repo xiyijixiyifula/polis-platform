@@ -50,8 +50,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         // 代理路由 - 用户服务
         .route("/api/auth/{*path}", any(proxy_to_user))
-        .route("/api/users/{username}/contents", any(proxy_to_content))
-        .route("/api/users/{*path}", any(proxy_to_user))
+        .route("/api/users/{*path}", any(proxy_user_router))
         .route("/api/my/{*path}", any(proxy_to_content))
         .route("/api/follow", any(proxy_to_user))
         // 代理路由 - 社区 + 内容服务 (同一 catch-all, 按 path 分发)
@@ -226,6 +225,22 @@ async fn proxy_to_user(
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.user_service_url, path_and_query);
+    proxy_request(&state.client, &target_url, req).await
+}
+
+/// 用户路由分发：/contents → 内容服务, 其他 → 用户服务
+async fn proxy_user_router(
+    State(state): State<Arc<GatewayState>>,
+    req: Request,
+) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
+    let path = req.uri().path();
+    let base_url = if path.ends_with("/contents") {
+        &state.config.content_service_url
+    } else {
+        &state.config.user_service_url
+    };
+    let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
+    let target_url = format!("{}{}", base_url, path_and_query);
     proxy_request(&state.client, &target_url, req).await
 }
 
