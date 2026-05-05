@@ -4,6 +4,17 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.2.97', date: '2026-05-05', title: '🟢 健康检查 — 系统全绿, 连续 3 轮 E2E 零失败',
+      items: [
+        '✅ 84/84 E2E 全量通过, PERF 全部达标 (搜索 1.63s/空间 2.0s/Feed 0.81s/投票 0.63s)',
+        '✅ 28/28 前端页面全量 200',
+        '✅ 6 微服务全部 active, 零错误日志',
+        '✅ 公共空间列表 258 个, 系统持续增长',
+        '📊 调研: Lemmy (⭐28k) 领跑 Rust ActivityPub 联邦生态, Ibis (联邦百科), 去中心化趋势明确',
+        '🔮 Next.js v16.2.4 已发布 (我们 v14.2.35), 计划 v0.3.x 升级',
+      ],
+    },
+    {
       ver: '0.2.96', date: '2026-05-05', title: '空间分析仪表盘 — 社区运营数据可视化',
       items: [
         '📊 **前端**: SpaceAnalytics 组件 — 6 项指标卡片 (帖子/浏览/点赞/评论/投票/系列)',
