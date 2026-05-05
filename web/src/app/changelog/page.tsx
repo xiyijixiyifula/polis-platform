@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.3.0', date: '规划中', title: '🚀 v0.3 里程碑 — 实时聊天 / 视频 / 商城 / Git 仓库',
+      isUpcoming: true,
+      items: [
+        '💬 实时聊天 (polis-chat) — WebSocket 即时通讯',
+        '🎬 视频上传与播放 (polis-video)',
+        '🛍️ 社区商城 (polis-store)',
+        '💻 Git 代码仓库托管 (polis-code)',
+        '💰 打赏/支付系统 (polis-pay)',
+        '🔍 全文搜索增强 (Tantivy)',
+      ],
+    },
+    {
       ver: '0.2.102', date: '2026-05-05', title: '评论点赞前端 UI — 帖子详情页评论 Heart 按钮',
-      isLatest: true,
       items: [
         '❤️ **前端**: 帖子详情页评论列表每个评论增加 ♥ 点赞按钮 — 点击切换红心/空心, like_count 即时更新',
         '📡 **API**: posts.likeComment(commentId) 客户端方法 — 调用 POST /api/comments/{id}/like',
@@ -15,7 +26,6 @@ export default function ChangelogPage() {
     },
     {
       ver: '0.2.101', date: '2026-05-05', title: '评论点赞 API + E2E — TC-SOC-02 全覆盖',
-      isLatest: true,
       items: [
         '👍 **后端**: 新增 POST /api/comments/{id}/like 路由 — 复用 toggle_like("comment") 点赞/取消',
         '📡 **Gateway**: 添加 /api/comments/{*path} → proxy_to_content 代理路由',
@@ -1133,13 +1143,16 @@ export default function ChangelogPage() {
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">更新日志</h1>
       <div className="space-y-8">
         {versions.map((v) => (
-          <div key={v.ver} className="relative pl-8 border-l-2 border-primary-200 dark:border-primary-800">
-            <div className="absolute -left-2.5 top-0 h-5 w-5 rounded-full bg-primary-600 border-2 border-white dark:border-gray-900" />
+          <div key={v.ver} className={`relative pl-8 border-l-2 ${(v as any).isUpcoming ? 'border-dashed border-purple-300 dark:border-purple-700' : 'border-primary-200 dark:border-primary-800'}`}>
+            <div className={`absolute -left-2.5 top-0 h-5 w-5 rounded-full border-2 border-white dark:border-gray-900 ${(v as any).isUpcoming ? 'bg-purple-400' : 'bg-primary-600'}`} />
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
               {(v as any).isLatest && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
+              )}
+              {(v as any).isUpcoming && (
+                <span className="rounded-full bg-purple-100 dark:bg-purple-900/30 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-400">规划中</span>
               )}
             </div>
             <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{v.title}</h3>
