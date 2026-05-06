@@ -116,7 +116,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 | Command | Method | Endpoint | Auth |
 |---------|--------|----------|------|
 | `polisctl post create <ns> <title> <body> -g <tags> -m <module> -v <visibility>` | POST | `/api/spaces/{ns}/posts` | Yes |
-| `polisctl post list <ns> [page] -s <size> -m <module>` | GET | `/api/spaces/{ns}/posts` | No |
+| `polisctl post list <ns> [page] -s <size> -m <module> -o <sort>` | GET | `/api/spaces/{ns}/posts?sort=...` | No |
 | `polisctl post get <post_id>` | GET | `/api/posts/{id}` | No |
 | `polisctl post update <ns> <post_id> <title> -b <body> -g <tags> -v <visibility>` | PUT | `/api/spaces/{ns}/posts/{id}` | Yes |
 | `polisctl post delete <ns> <post_id>` | DELETE | `/api/spaces/{ns}/posts/{id}` | Yes |
@@ -127,6 +127,15 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE_URL/api/notifications/unread-co
 | `polisctl post hide <ns> <post_id>` | POST | `/api/spaces/{ns}/posts/{id}/hide` | Yes (owner) |
 | `polisctl post view <post_id>` | POST | `/api/posts/{id}/view` | No |
 | `polisctl post download <post_id> -o <path>` | GET | `/api/posts/{id}/download` | No |
+
+**Sort options** (`--sort` / `-o`): `newest` (default), `views` (most viewed), `likes` (most liked).
+
+Examples:
+```bash
+polisctl post list life 1 -s 10 --sort views    # Most viewed posts
+polisctl post list life 1 -s 10 --sort likes    # Most liked posts
+polisctl post list life 1 -s 10                 # Newest (default)
+```
 
 ### 3.6 Comments
 

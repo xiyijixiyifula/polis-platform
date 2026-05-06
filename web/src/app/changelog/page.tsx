@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.13', date: '2026-05-06', title: '💬 评论回复 — 嵌套回复前端集成',
+      ver: '0.3.14', date: '2026-05-06', title: '🔀 帖子排序 — 最新/最多浏览/最多点赞',
       isLatest: true,
+      items: [
+        '🔀 **后端排序**: ContentRepo 动态 ORDER BY — sort=views 按浏览量降序, sort=likes 按点赞数降序, 默认最新',
+        '📐 **SQL 安全**: 使用 format!() 拼接 ORDER BY 子句 (sqlx::query_as 动态查询, 非 query! 宏)',
+        '🖥️ **CLI**: polisctl post list --sort views|likes|newest — 命令行排序参数',
+        '🌐 **前端**: 空间帖子列表页新增排序下拉框 — 最新/最多浏览/最多点赞 三种排序',
+        '🔄 **API Client**: posts.list() 新增 sort 查询参数支持',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.13', date: '2026-05-06', title: '💬 评论回复 — 嵌套回复前端集成',
+      isLatest: false,
       items: [
         '💬 **回复按钮**: 每条评论新增回复按钮 (MessageCircle + 回复)',
         '📝 **内联回复框**: 点击回复后主评论框切换为回复模式, 显示回复上下文',

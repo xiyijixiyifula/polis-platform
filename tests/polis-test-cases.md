@@ -387,6 +387,16 @@ Detailed test cases organized by functional module. Each test case includes: obj
   5. Redirect to space page or home page
 - **Expected**: Delete button visible only to author; confirmation before delete; redirect after deletion
 
+### TC-POST-18: Sort Posts by Views/Likes
+- **Objective**: Verify post sorting API returns results ordered by view_count and like_count
+- **Coverage**: ✅ Backend implementation (v0.3.14) — dynamic ORDER BY in ContentRepo
+- **Preconditions**: Space with multiple posts having different view/like counts
+- **Steps**:
+  1. GET /api/spaces/{ns}/posts?sort=views → verify highest view_count first (after pinned)
+  2. GET /api/spaces/{ns}/posts?sort=likes → verify highest like_count first (after pinned)
+  3. GET /api/spaces/{ns}/posts (no sort) → verify newest first (default, after pinned)
+- **Expected**: Each sort mode returns posts in correct order; pinned posts always appear before non-pinned
+
 ---
 
 ## Social Interaction Tests
