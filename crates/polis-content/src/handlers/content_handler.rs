@@ -585,6 +585,21 @@ impl ContentHandler {
                 "target_id": target_id.to_string(),
                 "user_id": user_id.to_string(),
             })).await;
+
+            // Create notification for post author (if post is liked by someone else)
+            if target_type == "post" {
+                if let Ok(Some(post)) = self.repo.find_post_by_id(target_id).await {
+                    if post.author_id != user_id {
+                        let actor_name = self.find_user_name(user_id).await.unwrap_or_else(|| "有人".to_string());
+                        let content = format!("{} 赞了你的帖子", actor_name);
+                        self.create_notification(
+                            post.author_id, "like",
+                            Some(user_id), Some("post"), Some(target_id),
+                            &content,
+                        ).await;
+                    }
+                }
+            }
         }
 
         Ok(liked)
@@ -624,6 +639,19 @@ impl ContentHandler {
             "post_id": post_id.to_string(),
             "author_id": author_id.to_string(),
         })).await;
+
+        // Create notification for post author (if comment is by someone else)
+        if let Ok(Some(post)) = self.repo.find_post_by_id(post_id).await {
+            if post.author_id != author_id {
+                let actor_name = self.find_user_name(author_id).await.unwrap_or_else(|| "有人".to_string());
+                let content = format!("{} 评论了你的帖子", actor_name);
+                self.create_notification(
+                    post.author_id, "comment",
+                    Some(author_id), Some("post"), Some(post_id),
+                    &content,
+                ).await;
+            }
+        }
 
         // 获取作者信息并添加到响应中，防止前端显示"匿名"
         let users = self.repo.find_users_batch(&[author_id]).await?;
@@ -749,6 +777,36 @@ impl ContentHandler {
                 let _ = nats.publish(subject.to_string(), data.into()).await;
             }
         }
+    }
+
+    /// 创建通知记录（供事件消费者使用）
+    pub async fn create_notification(
+        &self, user_id: Uuid, notif_type: &str,
+        actor_id: Option<Uuid>, target_type: Option<&str>,
+        target_id: Option<Uuid>, content: &str,
+    ) {
+        let result = sqlx::query(
+            r#"INSERT INTO notifications (user_id, type, actor_id, target_type, target_id, content)
+               VALUES ($1, $2, $3, $4, $5, $6)"#
+        )
+        .bind(user_id).bind(notif_type).bind(actor_id)
+        .bind(target_type).bind(target_id).bind(content)
+        .execute(&self.pool).await;
+        if let Err(e) = result {
+            tracing::warn!("Failed to create notification: {}", e);
+        }
+    }
+
+    /// 获取用户显示名称
+    async fn find_user_name(&self, user_id: Uuid) -> Option<String> {
+        sqlx::query_scalar::<_, String>(
+            "SELECT COALESCE(display_name, username) FROM users WHERE id = $1"
+        )
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()
+        .flatten()
     }
 
 

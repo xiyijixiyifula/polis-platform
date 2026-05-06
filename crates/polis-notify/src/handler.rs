@@ -1,6 +1,7 @@
 use polis_core::error::AppError;
 use sqlx::PgPool;
 use uuid::Uuid;
+use tracing;
 
 pub struct NotifyHandler {
     pool: PgPool,
@@ -9,6 +10,156 @@ pub struct NotifyHandler {
 impl NotifyHandler {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
+    }
+
+    pub fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
+    /// 根据帖子ID获取作者ID
+    pub async fn find_post_author(&self, post_id: Uuid) -> Option<Uuid> {
+        sqlx::query_scalar::<_, Uuid>(
+            "SELECT author_id FROM posts WHERE id = $1 AND is_deleted = FALSE"
+        )
+        .bind(post_id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()
+        .flatten()
+    }
+
+    /// 处理 NATS 事件并创建通知
+    pub async fn handle_event(&self, subject: &str, payload: &serde_json::Value) {
+        match subject {
+            // 帖子被点赞 → 通知帖子作者
+            polis_core::events::subjects::CONTENT_POST_LIKED => {
+                let target_type = payload.get("target_type").and_then(|v| v.as_str()).unwrap_or("");
+                let target_id_str = payload.get("target_id").and_then(|v| v.as_str()).unwrap_or("");
+                let user_id_str = payload.get("user_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                // Only handle post likes (not comment likes for now)
+                if target_type == "post" {
+                    if let Ok(target_id) = Uuid::parse_str(target_id_str) {
+                        if let Ok(actor_id) = Uuid::parse_str(user_id_str) {
+                            if let Some(post_author_id) = self.find_post_author(target_id).await {
+                                // Don't notify if user liked their own post
+                                if post_author_id != actor_id {
+                                    let actor_name = self.find_user_display_name(actor_id).await.unwrap_or_else(|| "有人".to_string());
+                                    let content = format!("{} 赞了你的帖子", actor_name);
+                                    if let Err(e) = self.create_notification(
+                                        post_author_id, "like",
+                                        Some(actor_id), Some("post"), Some(target_id),
+                                        &content,
+                                    ).await {
+                                        tracing::warn!("Failed to create like notification: {}", e);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // 新评论 → 通知帖子作者
+            polis_core::events::subjects::CONTENT_COMMENT_CREATED => {
+                let post_id_str = payload.get("post_id").and_then(|v| v.as_str()).unwrap_or("");
+                let author_id_str = payload.get("author_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                if let Ok(post_id) = Uuid::parse_str(post_id_str) {
+                    if let Ok(comment_author_id) = Uuid::parse_str(author_id_str) {
+                        if let Some(post_author_id) = self.find_post_author(post_id).await {
+                            // Don't notify if author commented on their own post
+                            if post_author_id != comment_author_id {
+                                let actor_name = self.find_user_display_name(comment_author_id).await.unwrap_or_else(|| "有人".to_string());
+                                let content = format!("{} 评论了你的帖子", actor_name);
+                                if let Err(e) = self.create_notification(
+                                    post_author_id, "comment",
+                                    Some(comment_author_id), Some("post"), Some(post_id),
+                                    &content,
+                                ).await {
+                                    tracing::warn!("Failed to create comment notification: {}", e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // 新帖子创建 → 通知社区成员（简化：仅通知社区创建者）
+            polis_core::events::subjects::CONTENT_POST_CREATED => {
+                let author_id_str = payload.get("author_id").and_then(|v| v.as_str()).unwrap_or("");
+                let space_id_str = payload.get("space_id").and_then(|v| v.as_str()).unwrap_or("");
+                let title = payload.get("title").and_then(|v| v.as_str()).unwrap_or("新帖子");
+
+                if let Ok(author_id) = Uuid::parse_str(author_id_str) {
+                    if let Ok(space_id) = Uuid::parse_str(space_id_str) {
+                        let actor_name = self.find_user_display_name(author_id).await.unwrap_or_else(|| "有人".to_string());
+                        let content = format!("{} 在社区发布了「{}」", actor_name, title);
+
+                        // Notify space members (excluding author)
+                        if let Ok(members) = self.find_space_members(space_id).await {
+                            for member_id in members {
+                                if member_id != author_id {
+                                    let _ = self.create_notification(
+                                        member_id, "post_created",
+                                        Some(author_id), Some("post"), None,
+                                        &content,
+                                    ).await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // 用户被关注 → 通知被关注的用户
+            polis_core::events::subjects::USER_FOLLOWED => {
+                // Structure depends on who publishes this event
+                let followed_id_str = payload.get("followed_id").and_then(|v| v.as_str())
+                    .or_else(|| payload.get("target_user_id").and_then(|v| v.as_str()))
+                    .unwrap_or("");
+                let follower_id_str = payload.get("follower_id").and_then(|v| v.as_str())
+                    .or_else(|| payload.get("user_id").and_then(|v| v.as_str()))
+                    .unwrap_or("");
+
+                if let Ok(followed_id) = Uuid::parse_str(followed_id_str) {
+                    if let Ok(follower_id) = Uuid::parse_str(follower_id_str) {
+                        let follower_name = self.find_user_display_name(follower_id).await.unwrap_or_else(|| "有人".to_string());
+                        let content = format!("{} 关注了你", follower_name);
+                        if let Err(e) = self.create_notification(
+                            followed_id, "follow",
+                            Some(follower_id), Some("user"), Some(follower_id),
+                            &content,
+                        ).await {
+                            tracing::warn!("Failed to create follow notification: {}", e);
+                        }
+                    }
+                }
+            }
+            _ => {
+                tracing::debug!("Unhandled NATS subject: {}", subject);
+            }
+        }
+    }
+
+    /// 查找用户显示名称
+    pub async fn find_user_display_name(&self, user_id: Uuid) -> Option<String> {
+        sqlx::query_scalar::<_, String>(
+            "SELECT COALESCE(display_name, username) FROM users WHERE id = $1"
+        )
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
+        .ok()
+        .flatten()
+    }
+
+    /// 获取社区成员列表
+    pub async fn find_space_members(&self, space_id: Uuid) -> Result<Vec<Uuid>, AppError> {
+        let rows: Vec<(Uuid,)> = sqlx::query_as(
+            "SELECT user_id FROM space_members WHERE space_id = $1"
+        )
+        .bind(space_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
     }
 
     /// 创建通知
