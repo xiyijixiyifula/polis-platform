@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 
 interface PollOption {
@@ -23,31 +23,16 @@ interface PollProps {
 
 export function PollCard({ poll }: PollProps) {
   const [voted, setVoted] = useState(false);
+  // Initialize with poll prop data — no useEffect re-fetch that would
+  // overwrite id/title with incomplete API response
   const [results, setResults] = useState<PollData>(poll);
-  const [fetching, setFetching] = useState(false);
-
-  // Re-fetch poll results from server on mount to ensure data consistency
-  useEffect(() => {
-    let cancelled = false;
-    async function refresh() {
-      setFetching(true);
-      try {
-        const res = await fetch(`/api/polls/${poll.id}`);
-        const json = await res.json();
-        if (json.code === 0 && json.data && !cancelled) {
-          setResults(json.data);
-        }
-      } catch {} finally {
-        if (!cancelled) setFetching(false);
-      }
-    }
-    refresh();
-    return () => { cancelled = true; };
-  }, [poll.id]);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleVote = async (optionId: string) => {
     const token = localStorage.getItem('polis_access_token');
-    if (!token || voted) return;
+    if (!token || voted || submitting) return;
+
+    setSubmitting(true);
 
     try {
       const res = await fetch(`/api/polls/${poll.id}/vote`, {
@@ -58,23 +43,51 @@ export function PollCard({ poll }: PollProps) {
       const data = await res.json();
 
       if (data.code === 0) {
+        // Optimistically update local state for instant visual feedback
         setVoted(true);
-        // Re-fetch from server to get accurate counts
-        const refreshRes = await fetch(`/api/polls/${poll.id}`);
-        const refreshJson = await refreshRes.json();
-        if (refreshJson.code === 0 && refreshJson.data) {
-          setResults(refreshJson.data);
-        }
+        setResults((prev) => ({
+          ...prev,
+          options: prev.options.map((o) =>
+            o.id === optionId ? { ...o, vote_count: o.vote_count + 1 } : o
+          ),
+          total_votes: prev.total_votes + 1,
+        }));
+
+        // Re-fetch from server in background to ensure accuracy
+        fetch(`/api/polls/${poll.id}`)
+          .then((r) => r.json())
+          .then((json) => {
+            if (json.code === 0 && json.data) {
+              // Preserve id/title from the current results if server response lacks them
+              const serverData = json.data;
+              setResults((prev) => ({
+                ...prev,
+                options: serverData.options || prev.options,
+                total_votes: serverData.total_votes ?? prev.total_votes,
+              }));
+            }
+          })
+          .catch(() => {});
       } else if (data.message && data.message.includes('已经投过票')) {
-        // Already voted — mark as voted and re-fetch
+        // Already voted — re-fetch server data
         setVoted(true);
-        const refreshRes = await fetch(`/api/polls/${poll.id}`);
-        const refreshJson = await refreshRes.json();
-        if (refreshJson.code === 0 && refreshJson.data) {
-          setResults(refreshJson.data);
-        }
+        fetch(`/api/polls/${poll.id}`)
+          .then((r) => r.json())
+          .then((json) => {
+            if (json.code === 0 && json.data) {
+              const serverData = json.data;
+              setResults((prev) => ({
+                ...prev,
+                options: serverData.options || prev.options,
+                total_votes: serverData.total_votes ?? prev.total_votes,
+              }));
+            }
+          })
+          .catch(() => {});
       }
-    } catch {}
+    } catch {} finally {
+      setSubmitting(false);
+    }
   };
 
   const maxVotes = Math.max(...results.options.map((o) => o.vote_count), 1);
@@ -84,9 +97,6 @@ export function PollCard({ poll }: PollProps) {
       <div className="flex items-center gap-2 mb-3">
         <BarChart3 className="h-4 w-4 text-primary-600" />
         <h3 className="font-medium text-gray-900 dark:text-gray-100">{results.title}</h3>
-        {fetching && (
-          <span className="text-[10px] text-gray-400 animate-pulse">加载中...</span>
-        )}
       </div>
       <div className="space-y-2">
         {results.options.map((opt) => {
@@ -97,7 +107,7 @@ export function PollCard({ poll }: PollProps) {
             : 0;
           return (
             <button key={opt.id} onClick={() => handleVote(opt.id)}
-              disabled={voted}
+              disabled={voted || submitting}
               className="relative w-full rounded-lg border border-gray-200 dark:border-gray-600 p-3 text-left transition-all hover:border-primary-300 dark:hover:border-primary-500 disabled:cursor-default overflow-hidden">
               {/* Progress bar */}
               <div className="absolute inset-0 bg-primary-50 dark:bg-primary-900/20 transition-all duration-300" style={{ width: voted ? `${pct}%` : '0%' }} />

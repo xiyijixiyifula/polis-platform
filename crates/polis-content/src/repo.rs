@@ -630,13 +630,23 @@ impl ContentRepo {
     }
 
     pub async fn get_poll_results(&self, poll_id: Uuid) -> Result<serde_json::Value, AppError> {
-        let rows = sqlx::query_as::<_, (serde_json::Value,)>(
-            "SELECT json_build_object('id', id, 'label', label, 'vote_count', vote_count)
-             FROM poll_options WHERE poll_id = $1 ORDER BY sort_order"
-        ).bind(poll_id).fetch_all(&self.pool).await?;
-        let options: Vec<serde_json::Value> = rows.into_iter().map(|r| r.0).collect();
-        let total_votes: i64 = options.iter().map(|o| o["vote_count"].as_i64().unwrap_or(0)).sum();
-        Ok(serde_json::json!({ "options": options, "total_votes": total_votes }))
+        // Get poll info (id, title) with options in single query
+        let row: Option<(serde_json::Value,)> = sqlx::query_as(
+            r#"SELECT json_build_object(
+                'id', p.id, 'title', p.title, 'description', p.description,
+                'options', COALESCE((
+                    SELECT json_agg(json_build_object('id', po.id, 'label', po.label, 'vote_count', po.vote_count) ORDER BY po.sort_order)
+                    FROM poll_options po WHERE po.poll_id = p.id
+                ), '[]'::json),
+                'total_votes', COALESCE((
+                    SELECT SUM(po2.vote_count) FROM poll_options po2 WHERE po2.poll_id = p.id
+                ), 0)
+            ) FROM polls p WHERE p.id = $1"#
+        ).bind(poll_id).fetch_optional(&self.pool).await?;
+
+        Ok(row.map(|r| r.0).unwrap_or(serde_json::json!({
+            "id": poll_id.to_string(), "title": "", "options": [], "total_votes": 0
+        })))
     }
 
     // ===== 草稿 =====
