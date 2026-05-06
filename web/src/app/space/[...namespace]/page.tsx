@@ -97,6 +97,9 @@ export default function SpacePage() {
   const [subSpaces, setSubSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
   const [postLoading, setPostLoading] = useState(true);
+  const [postPage, setPostPage] = useState(1);
+  const [postTotalPages, setPostTotalPages] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [ownerName, setOwnerName] = useState<string | null>(null);
   const [postSort, setPostSort] = useState<string>('newest');
 
@@ -175,6 +178,34 @@ export default function SpacePage() {
     } catch {}
   }, [namespace]);
 
+  const loadMorePosts = useCallback(async () => {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = postPage + 1;
+      const res = await fetch(`/api/spaces/${namespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}`);
+      const data = await res.json();
+      if (data.code === 0 && Array.isArray(data.data)) {
+        const morePosts = data.data;
+        const mtFilter = new Set(['forum', 'article', '']);
+        if (modules.share) mtFilter.add('share');
+        if (modules.wiki) mtFilter.add('wiki');
+        if (modules.qa) mtFilter.add('qa');
+        if (modules.novel) mtFilter.add('novel');
+        if (modules.game) mtFilter.add('game');
+        if (modules.mini_app) mtFilter.add('mini_app');
+        const filtered = morePosts.filter((p: any) => mtFilter.has(p.module_type || ''));
+        setPosts(prev => [...prev, ...filtered]);
+        setPostPage(nextPage);
+        if (data.pagination) {
+          setPostTotalPages(data.pagination.total_pages);
+        }
+      }
+    } catch {} finally {
+      setLoadingMore(false);
+    }
+  }, [namespace, postPage, postSort, loadingMore, modules]);
+
   // Parse namespace for GitHub-style display: username/community-name
   const ghParts = namespace.split('/');
   const hasOwnerPrefix = nsParts.length >= 2;
@@ -232,9 +263,10 @@ export default function SpacePage() {
   useEffect(() => {
     if (!namespace) return;
     setPostLoading(true);
+    setPostPage(1); // Reset pagination on namespace/sort change
 
     const fetchers: Promise<any>[] = [
-      fetch(`/api/spaces/${namespace}/posts?page_size=20&sort=${postSort}`).then(r => r.json()),
+      fetch(`/api/spaces/${namespace}/posts?page=1&page_size=10&sort=${postSort}`).then(r => r.json()),
       fetch(`/api/spaces/${namespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
     ];
 
@@ -254,6 +286,9 @@ export default function SpacePage() {
 
         if (postsData.code === 0) {
 	          const allPosts = postsData.data || [];
+	          if (postsData.pagination) {
+	            setPostTotalPages(postsData.pagination.total_pages);
+	          }
 	          // Filter posts by enabled module types (consistent with tab bar)
 	          const mtFilter = new Set(['forum', 'article', '']);
 	          if (modules.share) mtFilter.add('share');
@@ -667,6 +702,19 @@ export default function SpacePage() {
                   <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无帖子</p>
                   <p className="text-sm mt-1">成为第一个发帖的人吧！</p>
+                </div>
+              )}
+
+              {/* Load More button */}
+              {posts.length > 0 && postPage < postTotalPages && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={loadMorePosts}
+                    disabled={loadingMore}
+                    className="btn-secondary px-6 py-2 text-sm dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    {loadingMore ? '加载中...' : '加载更多'}
+                  </button>
                 </div>
               )}
             </>
