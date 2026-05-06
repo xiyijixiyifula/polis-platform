@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.12', date: '2026-05-06', title: '🗑️ 帖子删除 + 可见性编辑 — 作者前端能力完善',
+      ver: '0.3.13', date: '2026-05-06', title: '💬 评论回复 — 嵌套回复前端集成',
       isLatest: true,
+      items: [
+        '💬 **回复按钮**: 每条评论新增回复按钮 (MessageCircle + 回复)',
+        '📝 **内联回复框**: 点击回复后主评论框切换为回复模式, 显示回复上下文',
+        '🔄 **API**: createComment 支持可选 parent_id 参数实现嵌套回复',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.12', date: '2026-05-06', title: '🗑️ 帖子删除 + 可见性编辑 — 作者前端能力完善',
+      isLatest: false,
       items: [
         '🗑️ **删除按钮**: 帖子详情页删除按钮 (Trash2) — 仅作者可见, 确认后删除并跳转',
         '🔄 **可见性编辑**: 编辑模式下可切换公开/私密/社区成员 三级可见性',

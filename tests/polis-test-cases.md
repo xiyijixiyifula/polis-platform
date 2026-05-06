@@ -270,13 +270,14 @@ Detailed test cases organized by functional module. Each test case includes: obj
 
 ### TC-POST-06: Nested Reply
 - **Objective**: Verify nested comment replies
+- **Coverage**: ✅ Frontend integration (v0.3.13) — reply button + inline reply form + parent_id API
 - **Preconditions**: Logged in, post has existing comments
 - **Steps**:
   1. Navigate to post with comments
   2. Click 回复 on a comment
-  3. Enter reply text
+  3. Enter reply text in inline reply form
   4. Submit
-- **Expected**: Reply indented under parent comment, threading visible
+- **Expected**: Reply sent with parent_id, comment appears in list, reply context shown
 
 ### TC-POST-07: Bookmark Post
 - **Objective**: Verify bookmark/favorite functionality
