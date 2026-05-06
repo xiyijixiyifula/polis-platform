@@ -447,6 +447,16 @@ Detailed test cases organized by functional module. Each test case includes: obj
   3. Submit
 - **Expected**: Mention rendered as link to user profile, notification sent to mentioned user
 
+### TC-SOC-04: Remove Bookmark from Saved Page (v0.3.18)
+- **Objective**: Verify unbookmark button works on /saved page
+- **Steps**:
+  1. Navigate to `/saved` (requires login)
+  2. Hover over a bookmarked item → Trash2 icon appears (opacity-0 group-hover:opacity-100)
+  3. Click Trash2 → POST /api/spaces/{ns}/posts/{id}/bookmark toggles bookmark
+  4. Item removed from list after successful API call
+- **Expected**: Bookmark removed, item disappears from list
+- **Coverage**: ✅ Frontend verified (v0.3.18)
+
 ---
 
 ## Poll Tests
@@ -635,6 +645,25 @@ Detailed test cases organized by functional module. Each test case includes: obj
 - **Expected**: User A receives notification: "{User B} 评论了你的帖子"
 - **Fix**: Content handler now calls `create_notification()` after `create_comment()` when commenter != post author
 - **Coverage**: ✅ Verified in E2E (v0.3.17)
+
+### TC-NOTIF-07: Clickable Notification Navigation (v0.3.18)
+- **Objective**: Verify clicking notification navigates to target content
+- **Steps**:
+  1. User receives a "like" notification (target_type=post)
+  2. Click the notification item
+  3. Verify browser navigates to `/post/{target_id}`
+- **Expected**: Click navigates to correct page based on target_type (post→/post/{id}, user→/profile/{username}, space→/space/{id})
+- **Coverage**: ✅ Frontend verified (v0.3.18)
+
+### TC-NOTIF-08: Individual Mark As Read (v0.3.18)
+- **Objective**: Verify `POST /api/notifications/read` marks single notification as read
+- **Backend**: Content service route `POST /api/notifications/read` with body `{notification_id: uuid}`
+- **Steps**:
+  1. POST /api/notifications/read with valid notification_id (requires auth)
+  2. Verify response code=0
+  3. GET /api/notifications — verify that notification shows is_read=true
+- **Expected**: Single notification marked read; other notifications unaffected
+- **Coverage**: ✅ API verified (v0.3.18)
 
 ---
 

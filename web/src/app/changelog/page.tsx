@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.17', date: '2026-05-06', title: '🐛 Bug 修复 — 通知生成 + 聊天认证 + 投票持久化',
+      ver: '0.3.18', date: '2026-05-06', title: '🔗 通知可操作化 — 点击跳转 + 单独已读 + 收藏取消',
       isLatest: true,
+      items: [
+        '🔗 **通知点击跳转**: 点赞/评论通知点击可跳转到对应帖子, 关注通知跳转到用户主页',
+        '✅ **单独标记已读**: POST /api/notifications/read 端点 + 点击通知自动标记已读',
+        '🗑️ **取消收藏**: 收藏页每个项目添加取消收藏按钮 (悬停显示, 点击即取消)',
+        '🌉 **网关代理**: 新增 /api/notifications/read 代理到内容服务',
+        '🌙 **暗黑模式**: 通知页和收藏页 full dark: 主题适配',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.17', date: '2026-05-06', title: '🐛 Bug 修复 — 通知生成 + 聊天认证 + 投票持久化',
+      isLatest: false,
       items: [
         '🔔 **通知生成修复**: 内容服务现在在点赞和评论时直接创建通知记录 — 不再依赖未部署的 NATS 消费者',
         '💬 **聊天认证修复**: SpaceChat.tsx 令牌键从 "token" 改为 "polis_access_token" — 已登录用户可正常发送消息',
