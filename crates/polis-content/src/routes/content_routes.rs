@@ -154,6 +154,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         // 投票/问卷管理
         .route("/api/polls", post(create_poll_route))
         .route("/api/polls/{id}/vote", post(vote_poll_route))
+        .route("/api/polls/{id}/my-vote", get(get_my_vote_route))
         // 草稿
         .route("/api/drafts", get(list_drafts_route).post(save_draft_route))
         // 通知
@@ -445,6 +446,31 @@ async fn vote_poll_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     h.vote_poll(id, req.option_id, uid).await?;
     Ok(json_ok(ApiResponse::success(())))
+}
+
+/// 获取当前用户是否已投票及投的选项
+async fn get_my_vote_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT po.id::text FROM poll_votes pv JOIN poll_options po ON po.id = pv.option_id WHERE pv.poll_id = $1 AND pv.user_id = $2"
+    )
+    .bind(id).bind(uid)
+    .fetch_optional(&h.pool).await?;
+
+    if let Some((option_id,)) = row {
+        Ok(json_ok(ApiResponse::success(serde_json::json!({
+            "voted": true,
+            "option_id": option_id,
+        }))))
+    } else {
+        Ok(json_ok(ApiResponse::success(serde_json::json!({
+            "voted": false,
+            "option_id": null,
+        }))))
+    }
 }
 
 // ===== 草稿 =====

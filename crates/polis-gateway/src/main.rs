@@ -69,6 +69,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/vote", any(proxy_to_content))
         .route("/api/polls", any(proxy_to_content))
         .route("/api/polls/{*path}", any(proxy_to_content))
+        .route("/api/polls/{id}/my-vote", any(proxy_to_content))
         .route("/api/drafts", any(proxy_to_content))
         .route("/api/notifications", any(proxy_to_content))
         .route("/api/notifications/unread-count", any(proxy_to_content))

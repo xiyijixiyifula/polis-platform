@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart3 } from 'lucide-react';
 
 interface PollOption {
@@ -23,10 +23,42 @@ interface PollProps {
 
 export function PollCard({ poll }: PollProps) {
   const [voted, setVoted] = useState(false);
-  // Initialize with poll prop data — no useEffect re-fetch that would
-  // overwrite id/title with incomplete API response
   const [results, setResults] = useState<PollData>(poll);
   const [submitting, setSubmitting] = useState(false);
+  const [checkingVote, setCheckingVote] = useState(true);
+
+  // On mount, check if current user already voted (refresh persistence)
+  useEffect(() => {
+    const token = localStorage.getItem('polis_access_token');
+    if (!token) {
+      setCheckingVote(false);
+      return;
+    }
+
+    fetch(`/api/polls/${poll.id}/my-vote`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.code === 0 && json.data?.voted === true) {
+          setVoted(true);
+          // Re-fetch server data for accurate counts
+          return fetch(`/api/polls/${poll.id}`).then((r) => r.json());
+        }
+        return null;
+      })
+      .then((refreshData) => {
+        if (refreshData && refreshData.code === 0 && refreshData.data) {
+          setResults((prev) => ({
+            ...prev,
+            options: refreshData.data.options || prev.options,
+            total_votes: refreshData.data.total_votes ?? prev.total_votes,
+          }));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingVote(false));
+  }, [poll.id]);
 
   const handleVote = async (optionId: string) => {
     const token = localStorage.getItem('polis_access_token');
@@ -58,7 +90,6 @@ export function PollCard({ poll }: PollProps) {
           .then((r) => r.json())
           .then((json) => {
             if (json.code === 0 && json.data) {
-              // Preserve id/title from the current results if server response lacks them
               const serverData = json.data;
               setResults((prev) => ({
                 ...prev,
@@ -69,7 +100,7 @@ export function PollCard({ poll }: PollProps) {
           })
           .catch(() => {});
       } else if (data.message && data.message.includes('已经投过票')) {
-        // Already voted — re-fetch server data
+        // Already voted — mark as voted and re-fetch
         setVoted(true);
         fetch(`/api/polls/${poll.id}`)
           .then((r) => r.json())
@@ -97,6 +128,9 @@ export function PollCard({ poll }: PollProps) {
       <div className="flex items-center gap-2 mb-3">
         <BarChart3 className="h-4 w-4 text-primary-600" />
         <h3 className="font-medium text-gray-900 dark:text-gray-100">{results.title}</h3>
+        {checkingVote && (
+          <span className="text-[10px] text-gray-400 animate-pulse ml-auto">检查投票状态...</span>
+        )}
       </div>
       <div className="space-y-2">
         {results.options.map((opt) => {
@@ -107,7 +141,7 @@ export function PollCard({ poll }: PollProps) {
             : 0;
           return (
             <button key={opt.id} onClick={() => handleVote(opt.id)}
-              disabled={voted || submitting}
+              disabled={voted || submitting || checkingVote}
               className="relative w-full rounded-lg border border-gray-200 dark:border-gray-600 p-3 text-left transition-all hover:border-primary-300 dark:hover:border-primary-500 disabled:cursor-default overflow-hidden">
               {/* Progress bar */}
               <div className="absolute inset-0 bg-primary-50 dark:bg-primary-900/20 transition-all duration-300" style={{ width: voted ? `${pct}%` : '0%' }} />
