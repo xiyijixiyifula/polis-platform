@@ -11,10 +11,11 @@ Detailed test cases organized by functional module. Each test case includes: obj
 6. [Poll Tests](#poll-tests)
 7. [File Sharing Tests](#file-tests)
 8. [Search Tests](#search-tests)
-9. [Notification Tests](#notification-tests)
-10. [UI/UX Tests](#ui-tests)
-11. [Performance Tests](#perf-tests)
-12. [Security Tests](#security-tests)
+9. [Notification Tests](#notification-tests) (✅ v0.3.17 点赞/评论自动生成通知)
+10. [Chat Tests](#chat-tests) (✅ v0.3.17 令牌键修复)
+11. [UI/UX Tests](#ui-tests)
+12. [Performance Tests](#perf-tests)
+13. [Security Tests](#security-tests)
 
 ---
 
@@ -483,6 +484,19 @@ Detailed test cases organized by functional module. Each test case includes: obj
   2. Click 投票 tab
 - **Expected**: Poll cards displayed with questions and vote counts
 
+### TC-POLL-05: Poll Vote Persistence on Refresh (Bug Fix v0.3.17)
+- **Objective**: Verify voted state and results persist after page refresh
+- **Bug**: PollCard used local `useState(false)` for `voted` — refreshed page reset to unvoted state, results lost
+- **Steps**:
+  1. Navigate to a poll
+  2. Vote on an option
+  3. Refresh the page (or navigate away and back)
+  4. Verify the poll still shows results (not the voting buttons)
+  5. Verify vote counts are accurate (from server, not locally incremented)
+- **Expected**: After refresh, poll displays results with accurate vote counts from server
+- **Fix**: Added `useEffect` to re-fetch poll data from server on mount; vote now re-fetches server data; detects "已经投过票" error to mark voted state
+- **Coverage**: ✅ Verified in E2E (v0.3.17)
+
 ---
 
 ## File Sharing Tests
@@ -599,6 +613,28 @@ Detailed test cases organized by functional module. Each test case includes: obj
 - **Steps**:
   1. Navigate to `/notifications` for user with no notifications
 - **Expected**: Bell icon centered in card, "暂无通知" text
+
+### TC-NOTIF-05: Like Notification Generation (Bug Fix v0.3.17)
+- **Objective**: Verify notification is created when someone likes your post
+- **Bug**: NATS events were published but never consumed — notification records never created
+- **Steps**:
+  1. User A creates a post
+  2. User B likes User A's post
+  3. User A checks notifications
+- **Expected**: User A receives notification: "{User B} 赞了你的帖子"
+- **Fix**: Content handler now calls `create_notification()` directly after `toggle_like()` when target_type=post and liker != post author
+- **Coverage**: ✅ Verified in E2E (v0.3.17)
+
+### TC-NOTIF-06: Comment Notification Generation (Bug Fix v0.3.17)
+- **Objective**: Verify notification is created when someone comments on your post
+- **Bug**: Same as TC-NOTIF-05 — notification records never created for comments
+- **Steps**:
+  1. User A creates a post
+  2. User B comments on User A's post
+  3. User A checks notifications
+- **Expected**: User A receives notification: "{User B} 评论了你的帖子"
+- **Fix**: Content handler now calls `create_notification()` after `create_comment()` when commenter != post author
+- **Coverage**: ✅ Verified in E2E (v0.3.17)
 
 ---
 
@@ -747,6 +783,18 @@ Detailed test cases organized by functional module. Each test case includes: obj
   2. Check each message has username, display_name, avatar_letter fields
 - **Expected**: All author fields present and non-null
 - **Coverage**: ✅ Covered in E2E (v0.3.1)
+
+### TC-CHAT-04: Chat Auth Token Key (Bug Fix v0.3.17)
+- **Objective**: Verify chat input shows for logged-in users (uses `polis_access_token`)
+- **Bug**: SpaceChat.tsx used `localStorage.getItem('token')` instead of `polis_access_token` — logged-in users saw "请登录"
+- **Steps**:
+  1. Log in with valid credentials (token stored as `polis_access_token`)
+  2. Navigate to any space with chat tab
+  3. Verify chat input is visible (not "登录后参与聊天" prompt)
+  4. Send a chat message
+- **Expected**: Chat input visible, message sends successfully
+- **Fix**: Changed `localStorage.getItem('token')` → `localStorage.getItem('polis_access_token')` in SpaceChat.tsx (2 occurrences)
+- **Coverage**: ✅ Covered in E2E (v0.3.17)
 
 ---
 
