@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.14', date: '2026-05-06', title: '🔀 帖子排序 — 最新/最多浏览/最多点赞',
+      ver: '0.3.15', date: '2026-05-06', title: '📄 加载更多 — 空间帖子分页翻页',
       isLatest: true,
+      items: [
+        '📄 **分页加载**: 空间交流Tab 新增"加载更多"按钮 — 初始加载 10 篇, 点击翻页追加',
+        '📊 **分页状态**: 追踪 postPage/postTotalPages/loadingMore 状态, 无更多时自动隐藏按钮',
+        '🔄 **API 分页**: 从固定 page_size=20 改为 page=1&page_size=10, 支持 full pagination',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.14', date: '2026-05-06', title: '🔀 帖子排序 — 最新/最多浏览/最多点赞',
+      isLatest: false,
       items: [
         '🔀 **后端排序**: ContentRepo 动态 ORDER BY — sort=views 按浏览量降序, sort=likes 按点赞数降序, 默认最新',
         '📐 **SQL 安全**: 使用 format!() 拼接 ORDER BY 子句 (sqlx::query_as 动态查询, 非 query! 宏)',

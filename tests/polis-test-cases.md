@@ -397,6 +397,15 @@ Detailed test cases organized by functional module. Each test case includes: obj
   3. GET /api/spaces/{ns}/posts (no sort) → verify newest first (default, after pinned)
 - **Expected**: Each sort mode returns posts in correct order; pinned posts always appear before non-pinned
 
+### TC-POST-19: Post Pagination (Load More)
+- **Objective**: Verify post listing API returns paginated results with correct pagination metadata
+- **Coverage**: ✅ API + Frontend integration (v0.3.15) — pagination state + load more button
+- **Steps**:
+  1. GET /api/spaces/{ns}/posts?page=1&page_size=5 → verify 5 posts, pagination.page=1
+  2. GET /api/spaces/{ns}/posts?page=2&page_size=5 → verify different posts (if total > 5)
+  3. Verify pagination.total_pages is consistent with pagination.total / page_size
+- **Expected**: Different pages return different post sets; pagination metadata is consistent
+
 ---
 
 ## Social Interaction Tests
