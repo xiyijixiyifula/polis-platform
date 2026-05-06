@@ -488,6 +488,7 @@ export default function SpacePage() {
           })}
         </div>
         {/* Settings button - outside overflow scroll area */}
+        {isOwner && (
         <div className="relative shrink-0">
           <button
             onClick={() => setShowSettings(!showSettings)}
@@ -510,6 +511,7 @@ export default function SpacePage() {
             />
           )}
         </div>
+        )}
       </div>
 
       <div className="flex gap-6">
