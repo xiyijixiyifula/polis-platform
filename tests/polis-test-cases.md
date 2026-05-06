@@ -215,6 +215,19 @@ Detailed test cases organized by functional module. Each test case includes: obj
   2. Navigate to `/space/wangwu/indie-game` (user community)
 - **Expected**: Root shows "根社区" badge, user shows `@owner/name` namespace
 
+### TC-SPACE-09: Settings Button Owner Only (Bug Fix v0.3.18)
+- **Objective**: Verify settings button only appears for space owner
+- **Bug**: Settings button in space page (render at line ~493) had no `isOwner` guard — any visitor could see and open the module settings panel on other people's communities
+- **Steps**:
+  1. Navigate to a community you do NOT own
+  2. Observe the tab bar area
+  3. Navigate to a community you own
+  4. Observe the tab bar area
+- **Expected**: Non-owners do NOT see the ⚙️设置 button; owners see it and can toggle modules
+- **Defense in depth**: Backend `PUT /api/spaces/{ns}` already returns 403 for non-owners/admins; this fix is UX-level only
+- **Fix**: Wrapped settings button div with `{isOwner && (...)}` — same pattern as analytics tab, pin, hide features
+- **Coverage**: ✅ Verified in E2E (v0.3.18) — REGRESSION test "设置按钮CSS修复" passes
+
 ---
 
 ## Post & Content Tests
