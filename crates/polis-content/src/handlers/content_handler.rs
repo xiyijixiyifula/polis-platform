@@ -125,6 +125,7 @@ impl ContentHandler {
         space_id: Uuid,
         params: PaginationParams,
         module_type: Option<String>,
+        sort: Option<String>,
         enabled_modules: Vec<String>,
     ) -> Result<(Vec<PostPublic>, Pagination), AppError> {
         let page = params.page.unwrap_or(1);
@@ -132,7 +133,7 @@ impl ContentHandler {
 
         let (posts, pagination) = self
             .repo
-            .find_posts_by_space(space_id, page, page_size, module_type.as_deref())
+            .find_posts_by_space(space_id, page, page_size, module_type.as_deref(), sort.as_deref())
             .await?;
 
         // 按 enabled_modules 过滤：模块关闭 = 内容隐藏（用户Ⓚ OS: 关闭文件夹 = 隐藏所有文件）

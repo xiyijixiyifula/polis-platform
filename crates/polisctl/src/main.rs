@@ -318,6 +318,9 @@ enum PostAction {
         /// Module type filter
         #[arg(short, long)]
         module: Option<String>,
+        /// Sort order: newest (default), views, likes
+        #[arg(short = 'o', long)]
+        sort: Option<String>,
     },
     /// Get post details
     Get {
@@ -899,8 +902,8 @@ async fn main() -> Result<(), anyhow::Error> {
 
         // === Post ===
         Commands::Post { action } => match action {
-            PostAction::List { namespace, page, size, module } => {
-                commands::post::list(&config, &client, &namespace, page, size, module.as_deref()).await
+            PostAction::List { namespace, page, size, module, sort } => {
+                commands::post::list(&config, &client, &namespace, page, size, module.as_deref(), sort.as_deref()).await
             }
             PostAction::Get { post_id } => commands::post::get(&config, &client, &post_id).await,
             PostAction::Create { namespace, title, body, tags, module, visibility } => {

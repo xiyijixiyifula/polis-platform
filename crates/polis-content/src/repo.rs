@@ -88,9 +88,17 @@ impl ContentRepo {
         page: u32,
         page_size: u32,
         module_type: Option<&str>,
+        sort: Option<&str>,
     ) -> Result<(Vec<Post>, Pagination), AppError> {
         let offset = ((page - 1) * page_size) as i64;
         let limit = page_size as i64;
+
+        // Determine ORDER BY clause: default newest, supports 'views' and 'likes'
+        let order_clause = match sort {
+            Some("views") => "ORDER BY is_pinned DESC, view_count DESC, created_at DESC",
+            Some("likes") => "ORDER BY is_pinned DESC, like_count DESC, created_at DESC",
+            _ => "ORDER BY is_pinned DESC, created_at DESC",
+        };
 
         let (posts, total) = if let Some(mt) = module_type {
             let total: (i64,) = sqlx::query_as(
@@ -101,9 +109,11 @@ impl ContentRepo {
             .fetch_one(&self.pool)
             .await?;
 
-            let posts = sqlx::query_as::<_, Post>(
-                "SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4",
-            )
+            let query_str = format!(
+                "SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' {} LIMIT $3 OFFSET $4",
+                order_clause
+            );
+            let posts = sqlx::query_as::<_, Post>(&query_str)
             .bind(space_id)
             .bind(mt)
             .bind(limit)
@@ -120,9 +130,11 @@ impl ContentRepo {
             .fetch_one(&self.pool)
             .await?;
 
-            let posts = sqlx::query_as::<_, Post>(
-                "SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3",
-            )
+            let query_str = format!(
+                "SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' {} LIMIT $2 OFFSET $3",
+                order_clause
+            );
+            let posts = sqlx::query_as::<_, Post>(&query_str)
             .bind(space_id)
             .bind(limit)
             .bind(offset)

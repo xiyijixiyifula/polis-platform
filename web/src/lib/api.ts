@@ -396,11 +396,12 @@ export const posts = {
       body: JSON.stringify({ ...data, content_type: 'text', module_type: data.module_type || 'forum' }),
     }),
 
-  list: (namespace: string, params?: { page?: number; page_size?: number; module?: string }) => {
+  list: (namespace: string, params?: { page?: number; page_size?: number; module?: string; sort?: string }) => {
     const search = new URLSearchParams();
     if (params?.page) search.set('page', String(params.page));
     if (params?.page_size) search.set('page_size', String(params.page_size));
     if (params?.module) search.set('module', params.module);
+    if (params?.sort) search.set('sort', params.sort);
     const qs = search.toString();
     return request<Post[]>(`/spaces/${namespace}/posts${qs ? `?${qs}` : ''}`);
   },

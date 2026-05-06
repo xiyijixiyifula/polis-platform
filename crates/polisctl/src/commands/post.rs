@@ -10,9 +10,11 @@ pub async fn list(
     page: u32,
     size: u32,
     module: Option<&str>,
+    sort: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     let mut url = format!("/api/spaces/{}/posts?page={}&page_size={}", namespace, page, size);
     if let Some(m) = module { url.push_str(&format!("&module={}", m)); }
+    if let Some(s) = sort { url.push_str(&format!("&sort={}", s)); }
     let resp = client.get(&url, None).await?;
     let items: Vec<_> = extract_data_array(&resp).into_iter().cloned().collect();
     print_output(&json!(items), config.format);

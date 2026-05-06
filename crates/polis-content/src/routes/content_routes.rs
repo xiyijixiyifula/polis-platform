@@ -24,6 +24,7 @@ fn json_ok<T: serde::Serialize>(value: T) -> Json<serde_json::Value> {
 pub struct ListPostsQuery {
     #[serde(flatten)] pub pagination: PaginationParams,
     pub module: Option<String>,
+    pub sort: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -202,9 +203,10 @@ async fn handle_public_content(
             let q = query.unwrap_or(ListPostsQuery {
                 pagination: PaginationParams { page: Some(1), page_size: Some(20) },
                 module: None,
+                sort: None,
             });
             let enabled = resolve_space_enabled_modules(&h.pool, space_id).await.unwrap_or_default();
-            let (posts, pagination) = h.get_posts(space_id, q.pagination, q.module, enabled).await?;
+            let (posts, pagination) = h.get_posts(space_id, q.pagination, q.module, q.sort, enabled).await?;
             Ok(json_ok(ApiResponse::success_with_pagination(posts, pagination)))
         }
         (Some(id), None) => {

@@ -98,6 +98,7 @@ export default function SpacePage() {
   const [loading, setLoading] = useState(true);
   const [postLoading, setPostLoading] = useState(true);
   const [ownerName, setOwnerName] = useState<string | null>(null);
+  const [postSort, setPostSort] = useState<string>('newest');
 
   // Series state
   const [seriesList, setSeriesList] = useState<Series[]>([]);
@@ -233,7 +234,7 @@ export default function SpacePage() {
     setPostLoading(true);
 
     const fetchers: Promise<any>[] = [
-      fetch(`/api/spaces/${namespace}/posts?page_size=20`).then(r => r.json()),
+      fetch(`/api/spaces/${namespace}/posts?page_size=20&sort=${postSort}`).then(r => r.json()),
       fetch(`/api/spaces/${namespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
     ];
 
@@ -269,7 +270,7 @@ export default function SpacePage() {
       })
       .catch(() => {})
       .finally(() => setPostLoading(false));
-  }, [namespace, modules.polls]);
+  }, [namespace, modules.polls, postSort]);
 
   // Fetch series list when series tab is active or module is enabled
   useEffect(() => {
@@ -609,6 +610,20 @@ export default function SpacePage() {
                   <Plus className="h-3.5 w-3.5" /> 发布
                 </div>
               </Link>
+
+              {/* Sort selector */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-xs text-gray-500 dark:text-gray-400">排序:</span>
+                <select
+                  value={postSort}
+                  onChange={(e) => setPostSort(e.target.value)}
+                  className="text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="newest">最新</option>
+                  <option value="views">最多浏览</option>
+                  <option value="likes">最多点赞</option>
+                </select>
+              </div>
 
               {/* Normal announcements in posts feed */}
               {announcements.filter(a => a.importance === 'normal').length > 0 && (
