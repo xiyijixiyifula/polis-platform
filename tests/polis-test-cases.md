@@ -504,8 +504,26 @@ Detailed test cases organized by functional module. Each test case includes: obj
   4. Verify the poll still shows results (not the voting buttons)
   5. Verify vote counts are accurate (from server, not locally incremented)
 - **Expected**: After refresh, poll displays results with accurate vote counts from server
-- **Fix**: Added `useEffect` to re-fetch poll data from server on mount; vote now re-fetches server data; detects "已经投过票" error to mark voted state
+- **Fix**: Added API call on mount to re-fetch results; "已经投过票" error detection
 - **Coverage**: ✅ Verified in E2E (v0.3.17)
+
+### TC-POLL-06: Poll Vote Instant Visual Feedback (Bug Fix v0.3.18)
+- **Objective**: Verify voting shows results immediately without needing another click
+- **Bug**: `get_poll_results` returned only `{options, total_votes}` without `id`/`title` → PollCard `useEffect` re-fetch on mount overwrote results with incomplete data → no title shown after re-render → user needed to click again
+- **Root Cause**:
+  1. Backend: `get_poll_results` SQL only selected from `poll_options`, missing `polls.id`, `polls.title`
+  2. Frontend: `useEffect` on mount replaced complete `poll` prop data with incomplete API response
+  3. `handleVote` optimistically incremented vote_count but on next render the results object was missing `id`/`title`
+- **Steps**:
+  1. Navigate to a space polls tab
+  2. Click an option to vote
+  3. Verify progress bar + vote count + percentage appear immediately
+- **Expected**: Vote count and progress bar appear on first click; no need to click again
+- **Fix**:
+  1. Backend: `get_poll_results` now returns full `{id, title, description, options, total_votes}` via a single JOIN query (like `list_polls_by_space`)
+  2. Frontend: Removed the `useEffect` mount re-fetch (root cause of data loss)
+  3. Frontend: `handleVote` now does optimistic local increment for instant feedback, then re-fetches in background for accuracy
+- **Coverage**: ✅ Verified in E2E (v0.3.18)
 
 ---
 
