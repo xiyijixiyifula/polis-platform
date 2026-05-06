@@ -159,6 +159,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         // 通知
         .route("/api/notifications", get(list_notifications_route))
         .route("/api/notifications/unread-count", get(unread_count_route))
+        .route("/api/notifications/read", post(mark_read_route))
         .route("/api/notifications/read-all", post(mark_all_read_route))
         // 系列（专栏）管理接口
         .route("/api/series/space/{*ns}", post(create_series_route))
@@ -498,6 +499,19 @@ async fn mark_all_read_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     sqlx::query("UPDATE notifications SET is_read = TRUE WHERE user_id = $1 AND is_read = FALSE")
         .bind(uid).execute(&h.pool).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+#[derive(Deserialize)]
+struct MarkReadBody { notification_id: Uuid }
+
+async fn mark_read_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Json(body): Json<MarkReadBody>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    sqlx::query("UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2 AND is_read = FALSE")
+        .bind(body.notification_id).bind(uid).execute(&h.pool).await?;
     Ok(json_ok(ApiResponse::success(())))
 }
 

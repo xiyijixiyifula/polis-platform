@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heart, MessageCircle, UserPlus, Bell, CheckCheck } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, ChevronRight } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 export default function NotificationsPage() {
   const [notifs, setNotifs] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [markingIds, setMarkingIds] = useState<Set<string>>(new Set());
+  const router = useRouter();
 
   useEffect(() => { fetchNotifs(); fetchUnread(); }, []);
 
@@ -32,6 +35,43 @@ export default function NotificationsPage() {
     setUnreadCount(0);
   };
 
+  const markOneRead = async (notifId: string) => {
+    if (markingIds.has(notifId)) return;
+    setMarkingIds((prev) => new Set(prev).add(notifId));
+    try {
+      await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ notification_id: notifId }),
+      });
+      setNotifs((prev) => prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)));
+      fetchUnread();
+    } catch {} 
+    finally {
+      setMarkingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(notifId);
+        return next;
+      });
+    }
+  };
+
+  /** Navigate to the target content based on notification type */
+  const handleClick = (n: any) => {
+    if (!n.is_read) markOneRead(n.id);
+
+    const targetType = n.target_type;
+    const targetId = n.target_id;
+
+    if (targetType === 'post' && targetId) {
+      router.push(`/post/${targetId}`);
+    } else if (targetType === 'user' && targetId) {
+      router.push(`/profile/${n.actor?.username || ''}`);
+    } else if (targetType === 'space' && targetId) {
+      router.push(`/space/${targetId}`);
+    }
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'like': return <Heart className="h-4 w-4 text-red-500" />;
@@ -45,7 +85,7 @@ export default function NotificationsPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">通知</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">通知</h1>
           {unreadCount > 0 && <p className="text-sm text-gray-500 mt-1">{unreadCount} 条未读</p>}
         </div>
         {unreadCount > 0 && (
@@ -57,22 +97,29 @@ export default function NotificationsPage() {
 
       {notifs.length === 0 ? (
         <div className="card py-16 text-center">
-          <Bell className="h-10 w-10 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">暂无通知</p>
+          <Bell className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+          <p className="text-gray-500 dark:text-gray-400">暂无通知</p>
         </div>
       ) : (
         <div className="space-y-2">
           {notifs.map((n: any) => (
-            <div key={n.id} className={`card flex items-start gap-3 py-3 px-4 ${!n.is_read ? 'bg-primary-50/50 border-primary-200' : ''}`}>
-              <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+            <button
+              key={n.id}
+              onClick={() => handleClick(n)}
+              className={`w-full text-left card flex items-start gap-3 py-3 px-4 transition-colors hover:border-primary-300 dark:hover:border-primary-500 ${!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-800' : ''}`}
+            >
+              <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
                 {getIcon(n.type)}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700">{n.content}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{formatDate(n.created_at)}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-200">{n.content}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatDate(n.created_at)}</p>
               </div>
-              {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary-500 shrink-0 mt-1.5" />}
-            </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary-500" />}
+                <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+              </div>
+            </button>
           ))}
         </div>
       )}
