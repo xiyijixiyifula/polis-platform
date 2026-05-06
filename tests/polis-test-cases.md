@@ -406,6 +406,17 @@ Detailed test cases organized by functional module. Each test case includes: obj
   3. Verify pagination.total_pages is consistent with pagination.total / page_size
 - **Expected**: Different pages return different post sets; pagination metadata is consistent
 
+### TC-POST-20: Add Post to Series from Post Detail
+- **Objective**: Post author can add their post to a series from the post detail page
+- **Coverage**: ✅ Frontend integration (v0.3.16) — series management dropdown on post detail
+- **Preconditions**: Logged in as post author, space has at least one published series
+- **Steps**:
+  1. Navigate to `/post/{id}?space={ns}` as the post author
+  2. Verify BookOpen icon button appears in the action bar (next to Edit/Delete)
+  3. Click BookOpen → dropdown shows all published series in the space
+  4. Select a series → POST /api/series/{id}/posts adds post to series
+- **Expected**: Series dropdown appears only for post author; selecting a series adds the post
+
 ---
 
 ## Social Interaction Tests

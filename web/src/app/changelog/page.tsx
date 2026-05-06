@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.15', date: '2026-05-06', title: '📄 加载更多 — 空间帖子分页翻页',
+      ver: '0.3.16', date: '2026-05-06', title: '📚 系列管理 — 帖子详情页添加到系列',
       isLatest: true,
+      items: [
+        '📚 **添加到系列**: 帖子详情页新增系列管理下拉菜单 — 作者可将帖子添加到空间系列',
+        '📋 **系列列表**: 加载空间所有已发布系列, 显示标题 + 收录文章数',
+        '🔄 **API 复用**: 利用现有 series.addPost() API, 无后端改动',
+        '🎨 **UI**: BookOpen 图标按钮, 悬停弹出下拉菜单, 选中即添加',
+        '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.15', date: '2026-05-06', title: '📄 加载更多 — 空间帖子分页翻页',
+      isLatest: false,
       items: [
         '📄 **分页加载**: 空间交流Tab 新增"加载更多"按钮 — 初始加载 10 篇, 点击翻页追加',
         '📊 **分页状态**: 追踪 postPage/postTotalPages/loadingMore 状态, 无更多时自动隐藏按钮',
