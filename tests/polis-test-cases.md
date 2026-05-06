@@ -538,6 +538,23 @@ Detailed test cases organized by functional module. Each test case includes: obj
   3. Frontend: `handleVote` now does optimistic local increment for instant feedback, then re-fetches in background for accuracy
 - **Coverage**: ✅ Verified in E2E (v0.3.18)
 
+### TC-POLL-07: Poll Vote Persistence — User Vote Check on Mount (Bug Fix v0.3.18)
+- **Objective**: Verify voted state persists after page refresh via GET /api/polls/{id}/my-vote
+- **Bug**: After page refresh, PollCard's `useState(false)` reset voted to false, and there was no way to check if the user already voted on the server
+- **Root Cause**: Missing API to check if current user has voted. PollCard had to rely on "already voted" error from second POST attempt
+- **Backend**: Added `GET /api/polls/{id}/my-vote` (auth required) returning `{voted: bool, option_id: string|null}`
+- **Steps**:
+  1. Log in and navigate to a poll
+  2. Vote on an option
+  3. Refresh the page
+  4. Verify poll immediately shows results (not voting buttons)
+- **Expected**: After refresh, PollCard calls my-vote API on mount, sets voted=true, re-fetches server data
+- **Fix**: 
+  1. Backend: New `GET /api/polls/{id}/my-vote` route in content service checks `poll_votes` table
+  2. Frontend: `useEffect` on mount calls `/api/polls/{id}/my-vote` and sets voted state accordingly
+  3. If voted, re-fetches poll results for accurate counts
+- **Coverage**: ✅ Verified in E2E (v0.3.18)
+
 ---
 
 ## File Sharing Tests

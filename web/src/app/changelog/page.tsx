@@ -4,13 +4,15 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.18', date: '2026-05-06', title: '🔗 通知可操作化 — 点击跳转 + 单独已读 + 收藏取消',
+      ver: '0.3.18', date: '2026-05-06', title: '🔗 通知可操作化 + 🗳️ 投票刷新持久化 + ⚙️ 设置权限',
       isLatest: true,
       items: [
         '🔗 **通知点击跳转**: 点赞/评论通知点击可跳转到对应帖子, 关注通知跳转到用户主页',
         '✅ **单独标记已读**: POST /api/notifications/read 端点 + 点击通知自动标记已读',
         '🗑️ **取消收藏**: 收藏页每个项目添加取消收藏按钮 (悬停显示, 点击即取消)',
-        '🌉 **网关代理**: 新增 /api/notifications/read 代理到内容服务',
+        '🗳️ **投票刷新持久化**: 新增 GET /api/polls/{id}/my-vote API (检查当前用户是否已投票)',
+        '🔄 **投票一次即见结果**: 挂载时调用 my-vote API 自动标记已投票状态 + 后台重取服务器数据',
+        '⚙️ **设置按钮权限**: 空间页设置按钮仅所有者可见 (isOwner 守卫), 后端已有 403 防护',
         '🌙 **暗黑模式**: 通知页和收藏页 full dark: 主题适配',
         '✅ 101/101 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
       ],
