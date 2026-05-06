@@ -3,9 +3,9 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen } from 'lucide-react';
 import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
-import { posts, Comment, Post } from '@/lib/api';
+import { posts, series, Comment, Post, type Series } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
 
@@ -52,6 +52,11 @@ function PostDetailContent() {
   const [editBody, setEditBody] = useState('');
   const [editTags, setEditTags] = useState('');
   const [editVisibility, setEditVisibility] = useState('public');
+
+  // Series management
+  const [spaceSeries, setSpaceSeries] = useState<Series[]>([]);
+  const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false);
+  const [seriesAdding, setSeriesAdding] = useState(false);
 
   useEffect(() => {
     if (!postId) return;
@@ -144,6 +149,31 @@ function PostDetailContent() {
       setIsAuthor(true);
     }
   }, [post]);
+
+  // Load space series when author is identified and space is known
+  useEffect(() => {
+    if (!isAuthor || !spaceNs) return;
+    series.list(spaceNs).then(res => {
+      if (res.code === 0 && Array.isArray(res.data)) {
+        setSpaceSeries(res.data);
+      }
+    }).catch(() => {});
+  }, [isAuthor, spaceNs]);
+
+  // Handle adding post to series
+  const handleAddToSeries = async (seriesId: string) => {
+    if (!postId || seriesAdding) return;
+    setSeriesAdding(true);
+    try {
+      await series.addPost(seriesId, postId);
+      setSeriesDropdownOpen(false);
+      alert('已添加到系列');
+    } catch (e: any) {
+      alert(e?.message || '添加失败');
+    } finally {
+      setSeriesAdding(false);
+    }
+  };
 
   const handleEdit = () => {
     if (!post) return;
@@ -410,6 +440,44 @@ function PostDetailContent() {
                 className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-500 transition-colors">
                 <Trash2 className="h-5 w-5" /> 删除
               </button>
+              {/* Series management dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setSeriesDropdownOpen(!seriesDropdownOpen)}
+                  className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  title="管理系列"
+                >
+                  <BookOpen className="h-5 w-5" />
+                  {spaceSeries.length > 0 && (
+                    <span className="hidden sm:inline">系列</span>
+                  )}
+                </button>
+                {seriesDropdownOpen && (
+                  <div className="absolute bottom-full left-0 mb-2 w-56 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-50">
+                    <div className="p-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1">添加到系列</p>
+                      {spaceSeries.length === 0 ? (
+                        <p className="text-xs text-gray-400 px-2 py-2">此空间暂无系列</p>
+                      ) : (
+                        spaceSeries.map((s) => (
+                          <button
+                            key={s.id}
+                            onClick={() => handleAddToSeries(s.id)}
+                            disabled={seriesAdding}
+                            className="w-full text-left px-2 py-1.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors disabled:opacity-50"
+                          >
+                            <span className="flex items-center gap-2">
+                              <BookOpen className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                              <span className="truncate">{s.title}</span>
+                              <span className="text-xs text-gray-400 ml-auto">{s.post_count}篇</span>
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           )}
           <button onClick={() => setShowReport(!showReport)}
