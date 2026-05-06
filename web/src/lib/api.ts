@@ -425,10 +425,10 @@ export const posts = {
   getCommentsById: (postId: string) =>
     request<Comment[]>(`/posts/${postId}/comments`),
 
-  createComment: (namespace: string, postId: string, body: string) =>
+  createComment: (namespace: string, postId: string, body: string, parentId?: string) =>
     request<Comment>(`/spaces/${namespace}/posts/${postId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ body }),
+      body: JSON.stringify({ body, ...(parentId ? { parent_id: parentId } : {}) }),
     }),
 
   likeComment: (commentId: string) =>

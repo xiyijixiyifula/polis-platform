@@ -37,6 +37,8 @@ function PostDetailContent() {
   const [bookmarked, setBookmarked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [commentText, setCommentText] = useState('');
+  const [replyToId, setReplyToId] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
   const [showReport, setShowReport] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
@@ -222,13 +224,20 @@ function PostDetailContent() {
     }
   };
 
-  const handleComment = async () => {
-    if (!post || !commentText.trim()) return;
+  const handleComment = async (parentId?: string) => {
+    if (!post) return;
+    const text = parentId ? replyText.trim() : commentText.trim();
+    if (!text) return;
     try {
-      const res = await posts.createComment(currentNs, post.id, commentText.trim());
+      const res = await posts.createComment(currentNs, post.id, text, parentId);
       if (res.data) {
         setComments((prev) => [res.data!, ...prev]);
-        setCommentText('');
+        if (parentId) {
+          setReplyToId(null);
+          setReplyText('');
+        } else {
+          setCommentText('');
+        }
       }
     } catch {
       alert('评论失败，请重试');
@@ -428,22 +437,41 @@ function PostDetailContent() {
 
       <div className="mt-6 card">
         <h3 className="font-semibold text-gray-900 mb-4">评论 ({comments.length})</h3>
-        <div className="flex gap-3">
-          <textarea
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="发表评论"
-            className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-sm dark:bg-gray-800 dark:text-white resize-none"
-            rows={3}
-          />
-        </div>
-        <button
-          onClick={handleComment}
-          disabled={!commentText.trim()}
-          className="mt-2 btn btn-primary text-sm disabled:opacity-50"
-        >
-          发表评论
-        </button>
+        {replyToId ? (
+          <div className="mb-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-500">回复评论</span>
+              <button onClick={() => { setReplyToId(null); setReplyText(''); }} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+            </div>
+            <textarea
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              placeholder="输入回复..."
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white resize-none"
+              rows={2}
+            />
+            <button onClick={() => handleComment(replyToId!)} disabled={!replyText.trim()} className="mt-2 btn btn-primary text-xs disabled:opacity-50">发表回复</button>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-3">
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="发表评论"
+                className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-sm dark:bg-gray-800 dark:text-white resize-none"
+                rows={3}
+              />
+            </div>
+            <button
+              onClick={() => handleComment()}
+              disabled={!commentText.trim()}
+              className="mt-2 btn btn-primary text-sm disabled:opacity-50"
+            >
+              发表评论
+            </button>
+          </>
+        )}
 
         {comments.length === 0 ? (
           <p className="text-center text-gray-400 text-sm mt-6">暂无评论，来发表第一条评论吧</p>
@@ -462,13 +490,21 @@ function PostDetailContent() {
                     <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{comment.body}</p>
-                  <button
-                    onClick={() => handleCommentLike(comment.id)}
-                    className={`mt-1.5 flex items-center gap-1 text-xs transition-colors ${isCommentLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                  >
-                    <Heart className={`h-3.5 w-3.5 ${isCommentLiked ? 'fill-current' : ''}`} />
-                    {comment.like_count > 0 ? formatCount(comment.like_count) : ''}
-                  </button>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <button
+                      onClick={() => handleCommentLike(comment.id)}
+                      className={`flex items-center gap-1 text-xs transition-colors ${isCommentLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                    >
+                      <Heart className={`h-3.5 w-3.5 ${isCommentLiked ? 'fill-current' : ''}`} />
+                      {comment.like_count > 0 ? formatCount(comment.like_count) : ''}
+                    </button>
+                    <button
+                      onClick={() => { setReplyToId(comment.id); setReplyText(''); }}
+                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600 transition-colors"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" /> 回复
+                    </button>
+                  </div>
                 </div>
               </div>
               );
