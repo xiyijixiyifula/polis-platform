@@ -11,6 +11,7 @@ use polis_core::resolver::resolve::{resolve_space_id, resolve_space_enabled_modu
 use crate::handlers::content_handler::ContentHandler;
 use crate::handlers::chat_handler::ChatHandler;
 use crate::handlers::message_handler::MessageHandler;
+use sqlx::PgPool;
 use crate::middleware::auth::auth_middleware;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::Deserialize as SerdeDeserialize;
@@ -222,6 +223,32 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     public.merge(auth).merge(share_routes).with_state(handler)
 }
 
+/// 私有空间公开访问检查：返回 true 表示应拒绝访问
+async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, headers: &HeaderMap) -> Result<(), AppError> {
+    let visibility: (String,) = sqlx::query_as("SELECT visibility FROM spaces WHERE id = $1")
+        .bind(space_id)
+        .fetch_one(pool)
+        .await
+        .map_err(|_| AppError::NotFound("Space not found".to_string()))?;
+    if visibility.0 != "private" {
+        return Ok(());
+    }
+    // 私有空间：检查是否为成员
+    let uid = maybe_extract_user_id(headers)?
+        .ok_or_else(|| AppError::Forbidden("This space is private".to_string()))?;
+    let is_member = sqlx::query_scalar::<_, Option<i32>>(
+        "SELECT 1 FROM memberships WHERE space_id = $1 AND user_id = $2"
+    )
+    .bind(space_id).bind(uid)
+    .fetch_optional(pool).await
+    .map_err(|e| AppError::Database(e))?
+    .is_some();
+    if !is_member {
+        return Err(AppError::Forbidden("This space is private".to_string()));
+    }
+    Ok(())
+}
+
 /// 公共 GET 请求处理器
 async fn handle_public_content(
     State(h): State<Arc<ContentHandler>>,
@@ -233,6 +260,8 @@ async fn handle_public_content(
 
     match (post_id, sub_action.as_deref()) {
         (None, None) | (None, Some("posts")) => {
+            // 私有空间：仅成员可查看列表
+            block_private_space_public_listing(&h.pool, space_id, req.headers()).await?;
             // GET /api/spaces/{ns}/posts - list posts
             let query = parse_query_params::<ListPostsQuery>(req.uri().query());
             let q = query.unwrap_or(ListPostsQuery {
@@ -256,22 +285,27 @@ async fn handle_public_content(
             Ok(json_ok(ApiResponse::success(comments)))
         }
         (None, Some("files")) => {
+            block_private_space_public_listing(&h.pool, space_id, req.headers()).await?;
             let files = h.list_files(space_id).await?;
             Ok(json_ok(ApiResponse::success(files)))
         }
         (None, Some("featured")) => {
+            block_private_space_public_listing(&h.pool, space_id, req.headers()).await?;
             let posts = h.get_featured_posts(space_id, 20).await?;
             Ok(json_ok(ApiResponse::success(posts)))
         }
         (None, Some("announcements")) => {
+            block_private_space_public_listing(&h.pool, space_id, req.headers()).await?;
             let announcements = h.list_announcements(space_id).await?;
             Ok(json_ok(ApiResponse::success(announcements)))
         }
         (None, Some("polls")) => {
+            block_private_space_public_listing(&h.pool, space_id, req.headers()).await?;
             let polls = h.list_polls_by_space(space_id).await?;
             Ok(json_ok(ApiResponse::success(polls)))
         }
         (None, Some("analytics")) => {
+            block_private_space_public_listing(&h.pool, space_id, req.headers()).await?;
             let analytics = h.get_space_analytics(space_id).await?;
             Ok(json_ok(ApiResponse::success(analytics)))
         }
