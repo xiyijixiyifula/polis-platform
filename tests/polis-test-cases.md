@@ -13,6 +13,7 @@ Detailed test cases organized by functional module. Each test case includes: obj
 8. [Search Tests](#search-tests)
 9. [Notification Tests](#notification-tests) (✅ v0.3.17 点赞/评论自动生成通知)
 10. [Chat Tests](#chat-tests) (✅ v0.3.17 令牌键修复)
+10.5 [Direct Message Tests](#direct-message-tests) (✅ v0.3.23+ 私信系统)
 11. [UI/UX Tests](#ui-tests)
 12. [Performance Tests](#perf-tests)
 13. [Security Tests](#security-tests)
@@ -1000,6 +1001,51 @@ Detailed test cases organized by functional module. Each test case includes: obj
 - **Expected**: Chat input visible, message sends successfully
 - **Fix**: Changed `localStorage.getItem('token')` → `localStorage.getItem('polis_access_token')` in SpaceChat.tsx (2 occurrences)
 - **Coverage**: ✅ Covered in E2E (v0.3.17)
+
+---
+
+## Direct Message Tests (v0.3.23+)
+
+### TC-DM-01: Send Direct Message
+- **Objective**: Verify sending private messages between users
+- **Preconditions**: Two authenticated users (A and B)
+- **Steps**:
+  1. User A sends POST /api/messages with {"to_user_id":"B's UUID","content":"Hello!"}
+  2. Check response code=0, has id, content equals sent text
+- **Expected**: Message persisted, returns id + content + sender/receiver info
+- **Coverage**: ✅ Covered in E2E (v0.3.25)
+
+### TC-DM-02: Get Conversation List
+- **Objective**: Verify listing all DM conversations for the current user
+- **Steps**:
+  1. User B queries GET /api/messages/conversations
+  2. Check response has conversation with user A, unread_count >= 1
+- **Expected**: Conversation list shows last message, other user info, unread count
+- **Coverage**: ✅ Covered in E2E (v0.3.25)
+
+### TC-DM-03: Get Unread DM Count
+- **Objective**: Verify unread message count for a user
+- **Steps**:
+  1. User B queries GET /api/messages/unread-count
+  2. Verify count > 0 (user A sent a message)
+- **Expected**: Unread count reflects newly received messages
+- **Coverage**: ✅ Covered in E2E (v0.3.25)
+
+### TC-DM-04: Mark Messages as Read
+- **Objective**: Verify marking all messages from a specific user as read
+- **Steps**:
+  1. User B sends POST /api/messages/read with {"from_user_id":"A's UUID"}
+  2. Check marked_read >= 1 in response
+- **Expected**: Messages marked as read, count returned
+- **Coverage**: ✅ Covered in E2E (v0.3.25)
+
+### TC-DM-05: Get Conversation Messages
+- **Objective**: Verify retrieving paginated conversation between two users
+- **Steps**:
+  1. User A queries GET /api/messages/{B's UUID}?page=1&page_size=10
+  2. Check response contains the sent message (found by DM ID)
+- **Expected**: Messages returned in chronological order with sender/receiver info
+- **Coverage**: ✅ Covered in E2E (v0.3.25)
 
 ---
 
