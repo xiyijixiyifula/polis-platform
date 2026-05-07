@@ -4,20 +4,16 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.23', date: '2026-05-07', title: '💬 私信系统 — 用户间即时通讯',
+      ver: '0.3.24', date: '2026-05-07', title: '💬 私信系统 + ⚡ 帖子详情优化 + 🔒 私有空间加固',
       isLatest: true,
       items: [
-        '💬 **私信发送**: POST /api/messages — 用户间发送私信 (含 self-messaging 校验)',
-        '📋 **会话列表**: GET /api/messages/conversations — 返回所有对话摘要 (对方信息 + 最后消息 + 未读数)',
-        '💬 **对话查看**: GET /api/messages/{user_id} — 分页获取两人之间的完整对话历史',
-        '✅ **标记已读**: POST /api/messages/read — 标记来自某用户的消息为已读',
-        '🔢 **未读计数**: GET /api/messages/unread-count — 获取未读私信数量',
-        '📊 **数据库**: direct_messages 表 (含 LEAST/GREATEST 复合索引 + self-messaging 约束)',
-        '🎨 **前端会话页**: /messages — 会话列表 (头像 + 最后消息 + 未读角标 + 时间戳)',
-        '💬 **前端对话页**: /messages/[userId] — 聊天式 UI (气泡样式 + 自动刷新 + Enter 发送)',
-        '🔔 **Header 私信图标**: 未读私信红色角标 (30s 轮询 + focus 刷新)',
-        '👤 **个人主页私信按钮**: profile/[username] 添加"私信"按钮 (快捷跳转到对话页)',
-        '✅ 核心 API 5/5 通过, 6 服务 active, 28 页面全 200',
+        '💬 **私信系统**: 5 个 REST API (发送/会话列表/对话历史/标记已读/未读计数) + 2 个前端页面',
+        '⚡ **帖子详情优化**: GET /api/posts/{id} 现在返回 is_liked/is_bookmarked 字段 — 减少 67% 请求',
+        '🔒 **私有空间加固**: private 空间的列表端点 (posts/featured/files/polls/announcements/analytics) 仅成员可访问, 非成员 403',
+        '🎨 **私信 UI**: /messages 会话列表 (头像+未读角标) + /messages/[userId] 气泡对话页 (5s 自动刷新)',
+        '🔔 **Header 私信图标**: 未读私信红色角标 (30s 轮询 + focus 刷新) + 个人主页"私信"按钮',
+        '🔒 **SEC-002 持续有效**: private 帖子详情严格 403, 信息流过滤 private 帖子',
+        '✅ 8 用户生态测试通过, 16/16 页面全 200, 6 服务 active, 综合评分 4.0/5',
       ],
     },
     {
