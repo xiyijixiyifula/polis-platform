@@ -228,6 +228,25 @@ Detailed test cases organized by functional module. Each test case includes: obj
 - **Fix**: Wrapped settings button div with `{isOwner && (...)}` — same pattern as analytics tab, pin, hide features
 - **Coverage**: ✅ Verified in E2E (v0.3.18) — REGRESSION test "设置按钮CSS修复" passes
 
+### TC-SPACE-10: Module Settings Persistence — Backend Save (Bug Fix v0.3.19)
+- **Objective**: Verify module settings toggle is persisted to server via PUT API
+- **Bug**: `CreateSpaceRequest.enabled_modules` and `UpdateSpaceRequest.enabled_modules` used `Vec<ModuleType>` which rejected frontend values like "polls", "series", "announcements", "membership", "video" with deserialization error → "保存失败"
+- **Root Cause**: Backend ModuleType enum had only `forum`, `article`, `short_video`, `long_video`, `code_repo`, `qa`, `chat`, `novel`, `store`, `course`, `game`, `mini_app`, `wiki`, `paid_content`, `share` — frontend sent keys like `polls`, `series`, `announcements`, `membership`, `video` that weren't in the enum
+- **Steps**:
+  1. Log in as space owner
+  2. Open module settings (gear icon)
+  3. Toggle 投票, 系列, 公告, 会员, 视频 modules on
+  4. Verify no "保存失败" error appears
+  5. Close settings and reopen
+  6. Verify toggles are persisted
+- **Expected**: Settings save without error; modules remain toggled after reopen
+- **Fix**:
+  1. Changed `CreateSpaceRequest.enabled_modules` from `Option<Vec<ModuleType>>` to `Option<Vec<String>>`
+  2. Changed `UpdateSpaceRequest.enabled_modules` from `Option<Vec<ModuleType>>` to `Option<Vec<String>>`
+  3. Added `enabled_modules: Option<Vec<String>>` to `SpacePublic` struct → GET API now returns current module state
+  4. Updated `From<Space> for SpacePublic` impl to map `enabled_modules`
+- **Coverage**: ✅ API verified — `PUT /api/spaces/{ns}` with `["forum","polls","chat","wiki","series","announcements","membership"]` now returns code=0 and GET returns the saved modules
+
 ---
 
 ## Post & Content Tests

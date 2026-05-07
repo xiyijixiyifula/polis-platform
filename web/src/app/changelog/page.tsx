@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.18', date: '2026-05-06', title: '🔗 通知可操作化 + 🗳️ 投票刷新持久化 + ⚙️ 设置权限',
+      ver: '0.3.19', date: '2026-05-07', title: '🔧 模块设置持久化修复 — Vec<String> 兼容 + SpacePublic 暴露',
       isLatest: true,
+      items: [
+        '🔧 **模块保存修复**: CreateSpaceRequest/UpdateSpaceRequest 的 enabled_modules 从 Vec<ModuleType> 改为 Vec<String> — 前端值 "polls"、"series"、"announcements" 等不再被 serde 反序列化拒绝',
+        '📋 **SpacePublic 暴露 enabled_modules**: GET /api/spaces/{ns} 现在返回 enabled_modules 字段 — 前端可获取服务端模块状态',
+        '🐛 **根因**: ModuleType 枚举不包含 polls/series/announcements/membership/video 等前端模块键 → serde 反序列化失败 → "保存失败" 错误',
+        '✅ **测试验证**: PUT {forum,polls,chat,wiki,series,announcements,membership} 成功 (code=0), GET 返回保存值',
+        '✅ 101/101 E2E 全量通过, 6 服务 active, changelog 缓存修复',
+      ],
+    },
+    {
+      ver: '0.3.18', date: '2026-05-06', title: '🔗 通知可操作化 + 🗳️ 投票刷新持久化 + ⚙️ 设置权限',
+      isLatest: false,
       items: [
         '🔗 **通知点击跳转**: 点赞/评论通知点击可跳转到对应帖子, 关注通知跳转到用户主页',
         '✅ **单独标记已读**: POST /api/notifications/read 端点 + 点击通知自动标记已读',
