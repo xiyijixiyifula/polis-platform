@@ -19,6 +19,17 @@ export default function ChangelogPage() {
     {
       ver: '0.3.20', date: '2026-05-07', title: '🔔 通知偏好设置 + 🐛 设置页资料加载修复',
       isLatest: false,
+      items: [
+        '🔔 **通知偏好持久化**: 新增 notification_prefs JSONB 字段 — 用户可控制点赞/评论/关注/邀请/系统通知开关',
+        '📦 **迁移 009**: ALTER TABLE users ADD notification_prefs JSONB',
+        '🔧 **User 模型更新**: User/UserPublic/UpdateUserRequest 新增 notification_prefs 字段',
+        '🔄 **PUT /api/users/me**: 现在支持保存通知偏好 (notification_prefs 可选参数)',
+        '🐛 **修复设置页**: 页面挂载时通过 GET /api/users/me 加载当前用户资料 — 防止空字段保存覆盖 display_name/bio',
+        '🔲 **通知偏好 UI**: /settings 通知偏好 Tab 的复选框现已连线到后端 API (点击保存即可持久化)',
+        '🌙 **暗黑模式**: 设置页全量 dark: 主题适配 + 加载骨架屏 + 成功/错误消息颜色区分',
+        '✅ 135/135 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
     {
       ver: '0.3.19', date: '2026-05-07', title: '🔧 模块设置持久化修复 — Vec<String> 兼容 + SpacePublic 暴露',
       isLatest: false,
