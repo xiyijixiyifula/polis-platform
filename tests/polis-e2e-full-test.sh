@@ -644,18 +644,27 @@ if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
         log_test FAIL POST "可见性-创建私密帖" "msg=$(get_msg "$R")"
     fi
 
-    # TC-VIS-02: Verify private post accessible by direct ID
+    # TC-VIS-02: Verify private post only accessible by author (SEC-002 fix v0.3.21)
     if [ -n "$PRIV_POST_ID" ]; then
-        R=$(api GET "/api/posts/$PRIV_POST_ID")
-        if check_code "$R"; then
-            POST_VISIBILITY=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('visibility',''))" 2>/dev/null)
+        # Author should be able to access (using $TOKEN = User A)
+        R_AUTH=$(api GET "/api/posts/$PRIV_POST_ID" "" "$TOKEN")
+        if check_code "$R_AUTH"; then
+            POST_VISIBILITY=$(echo "$R_AUTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('visibility',''))" 2>/dev/null)
             if [ "$POST_VISIBILITY" = "private" ]; then
-                log_test PASS POST "可见性-私密帖可访问" "direct lookup OK, visibility=$POST_VISIBILITY ✅"
+                log_test PASS POST "可见性-私密帖可访问" "author access OK, visibility=$POST_VISIBILITY ✅"
             else
-                log_test PASS POST "可见性-私密帖可访问" "OK (visibility=$POST_VISIBILITY)"
+                log_test PASS POST "可见性-私密帖可访问" "author OK (visibility=$POST_VISIBILITY)"
             fi
         else
-            log_test FAIL POST "可见性-私密帖可访问" "msg=$(get_msg "$R")"
+            log_test FAIL POST "可见性-私密帖可访问" "author should be able to access! msg=$(get_msg "$R_AUTH")"
+        fi
+
+        # Verify security: unauthenticated user CANNOT access private post (SEC-002)
+        R_UNAUTH=$(api GET "/api/posts/$PRIV_POST_ID" "")
+        if check_code "$R_UNAUTH" 1003; then
+            log_test PASS POST "可见性-私密帖拒绝非作者" "unauthenticated blocked with 1003 ✅"
+        else
+            log_test FAIL POST "可见性-私密帖拒绝非作者" "unauthenticated should be blocked! code=$(echo "$R_UNAUTH" | python3 -c "import sys,json; print(json.load(sys.stdin).get('code','?'))" 2>/dev/null)"
         fi
 
         # TC-VIS-03: Verify private post NOT in public listing

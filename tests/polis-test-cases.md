@@ -537,6 +537,28 @@ Detailed test cases organized by functional module. Each test case includes: obj
   4. Select a series → POST /api/series/{id}/posts adds post to series
 - **Expected**: Series dropdown appears only for post author; selecting a series adds the post
 
+### TC-POST-21: Private Post Access Control — Author Only (Security Fix v0.3.21)
+- **Objective**: Verify private posts are only accessible by the author via direct URL
+- **Vulnerability SEC-002**: Previously any user (including unauthenticated) could access private posts via direct URL — critical privilege escalation
+- **Steps**:
+  1. User A creates a private post (visibility=private)
+  2. User A accesses the post via `GET /api/posts/{id}` with auth — should return 200
+  3. User B (different user) accesses the post via `GET /api/posts/{id}` with auth — should return 403 Forbidden
+  4. Unauthenticated user accesses the post via `GET /api/posts/{id}` — should return 403 Forbidden
+  5. User B downloads the post via `GET /api/posts/{id}/download` — should return 403 Forbidden
+- **Expected**: Only the post author can view/download their private posts; other users and unauthenticated visitors get Forbidden (code=1003)
+- **Fix**: Added visibility check in `get_post_public()` — if visibility=private, only author_id match allowed; added `maybe_extract_user_id()` helper for optional auth on public GET routes; same check applied to `/api/posts/{id}/download` route
+- **Coverage**: ✅ E2E — "可见性-私密帖可访问" (author OK) + "可见性-私密帖拒绝非作者" (unauth blocked with 1003)
+
+### TC-POST-22: Public Post Still Accessible by Everyone (Security Regression)
+- **Objective**: Verify public posts remain accessible after SEC-002 fix
+- **Steps**:
+  1. User A creates a public post
+  2. User B accesses the post — should return 200
+  3. Unauthenticated user accesses the post — should return 200
+- **Expected**: Public posts are unaffected by the security fix
+- **Coverage**: ✅ E2E — "可见性-公开帖出现在列表"
+
 ---
 
 ## Social Interaction Tests

@@ -4,19 +4,21 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.20', date: '2026-05-07', title: '🔔 通知偏好设置 + 🐛 设置页资料加载修复',
+      ver: '0.3.21', date: '2026-05-07', title: '🔒 SEC-002 私密帖权限强制实施 — 关键安全修复',
       isLatest: true,
       items: [
-        '🔔 **通知偏好持久化**: 新增 notification_prefs JSONB 字段 — 用户可控制点赞/评论/关注/邀请/系统通知开关',
-        '📦 **迁移 009**: ALTER TABLE users ADD notification_prefs JSONB',
-        '🔧 **User 模型更新**: User/UserPublic/UpdateUserRequest 新增 notification_prefs 字段',
-        '🔄 **PUT /api/users/me**: 现在支持保存通知偏好 (notification_prefs 可选参数)',
-        '🐛 **修复设置页**: 页面挂载时通过 GET /api/users/me 加载当前用户资料 — 防止空字段保存覆盖 display_name/bio',
-        '🔲 **通知偏好 UI**: /settings 通知偏好 Tab 的复选框现已连线到后端 API (点击保存即可持久化)',
-        '🌙 **暗黑模式**: 设置页全量 dark: 主题适配 + 加载骨架屏 + 成功/错误消息颜色区分',
-        '✅ 135/135 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+        '🔒 **SEC-002 修复**: 私密帖子 (visibility=private) 现在只允许作者本人通过直接 URL 访问 — 其他用户和未登录用户返回 403 Forbidden',
+        '🛡️ **get_post_public()**: 新增 visibility 校验 — 如果 visibility=private, 仅 author_id 匹配才返回内容',
+        '👤 **maybe_extract_user_id()**: 新增可选认证辅助函数 — 公开路由上的 GET 请求可提取 JWT 用户身份',
+        '📥 **下载路由修复**: GET /api/posts/{id}/download 同样增加了私密帖权限检查',
+        '🐛 **之前的行为**: 任何知道帖子 ID 的用户（包括未登录）都可读取/下载私密帖内容 — 严重权限提升漏洞',
+        '✅ **回归测试**: 公开帖仍然对所有用户可访问 (回归测试 ✅)',
+        '✅ 136/136 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
       ],
     },
+    {
+      ver: '0.3.20', date: '2026-05-07', title: '🔔 通知偏好设置 + 🐛 设置页资料加载修复',
+      isLatest: false,
     {
       ver: '0.3.19', date: '2026-05-07', title: '🔧 模块设置持久化修复 — Vec<String> 兼容 + SpacePublic 暴露',
       isLatest: false,
