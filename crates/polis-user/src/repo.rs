@@ -77,6 +77,7 @@ impl UserRepo {
         display_name: Option<&str>,
         avatar_url: Option<&str>,
         bio: Option<&str>,
+        notification_prefs: Option<&serde_json::Value>,
     ) -> Result<User, AppError> {
         let user = sqlx::query_as::<_, User>(
             r#"
@@ -84,6 +85,7 @@ impl UserRepo {
             SET display_name = COALESCE($2, display_name),
                 avatar_url = COALESCE($3, avatar_url),
                 bio = COALESCE($4, bio),
+                notification_prefs = COALESCE($5, notification_prefs),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -93,6 +95,7 @@ impl UserRepo {
         .bind(display_name)
         .bind(avatar_url)
         .bind(bio)
+        .bind(notification_prefs)
         .fetch_one(&self.pool)
         .await?;
         Ok(user)

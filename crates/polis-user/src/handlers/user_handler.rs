@@ -231,6 +231,7 @@ impl UserHandler {
                 req.display_name.as_deref(),
                 req.avatar_url.as_deref(),
                 req.bio.as_deref(),
+                req.notification_prefs.as_ref(),
             )
             .await?;
         Ok(user.into())

@@ -18,6 +18,7 @@ pub struct User {
     pub bio: String,
     pub verified: bool,
     pub verified_type: Option<String>,
+    pub notification_prefs: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -31,6 +32,7 @@ pub struct UserPublic {
     pub avatar_url: Option<String>,
     pub bio: String,
     pub verified: bool,
+    pub notification_prefs: serde_json::Value,
     pub created_at: DateTime<Utc>,
 }
 
@@ -43,6 +45,7 @@ impl From<User> for UserPublic {
             avatar_url: u.avatar_url,
             bio: u.bio,
             verified: u.verified,
+            notification_prefs: u.notification_prefs,
             created_at: u.created_at,
         }
     }
@@ -79,6 +82,7 @@ pub struct UpdateUserRequest {
     pub display_name: Option<String>,
     pub avatar_url: Option<String>,
     pub bio: Option<String>,
+    pub notification_prefs: Option<serde_json::Value>,
 }
 
 // ==================== 社区 ====================

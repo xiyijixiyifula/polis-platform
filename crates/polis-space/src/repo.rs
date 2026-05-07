@@ -240,6 +240,7 @@ impl SpaceRepo {
                 u.avatar_url,
                 u.bio,
                 u.verified,
+                COALESCE(u.notification_prefs, '{}'::jsonb) as notification_prefs,
                 u.created_at,
                 m.role,
                 m.joined_at
@@ -269,6 +270,7 @@ impl SpaceRepo {
                     avatar_url: r.get("avatar_url"),
                     bio: r.get("bio"),
                     verified: r.get("verified"),
+                    notification_prefs: r.get("notification_prefs"),
                     created_at: r.get("created_at"),
                 },
                 role: serde_json::from_value(serde_json::Value::String(role_str)).unwrap_or_default(),

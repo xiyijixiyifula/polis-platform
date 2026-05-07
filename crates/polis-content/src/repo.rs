@@ -729,14 +729,14 @@ impl ContentRepo {
         }
         // sqlx doesn't support arrays directly for all PostgreSQL versions
         // Use a recursive query approach
-        let rows = sqlx::query_as::<_, (Uuid, String, String, Option<String>, String, bool, chrono::DateTime<chrono::Utc>)>(
-            r#"SELECT id, username, display_name, avatar_url, COALESCE(bio, ''), verified, created_at FROM users WHERE id = ANY($1)"#
+        let rows = sqlx::query_as::<_, (Uuid, String, String, Option<String>, String, bool, serde_json::Value, chrono::DateTime<chrono::Utc>)>(
+            r#"SELECT id, username, display_name, avatar_url, COALESCE(bio, ''), verified, COALESCE(notification_prefs, '{}'::jsonb), created_at FROM users WHERE id = ANY($1)"#
         )
         .bind(user_ids)
         .fetch_all(&self.pool)
         .await?;
         let mut map = HashMap::new();
-        for (id, username, display_name, avatar_url, bio, verified, created_at) in rows {
+        for (id, username, display_name, avatar_url, bio, verified, notification_prefs, created_at) in rows {
             map.insert(id, UserPublic {
                 id,
                 username,
@@ -744,6 +744,7 @@ impl ContentRepo {
                 avatar_url,
                 bio,
                 verified,
+                notification_prefs,
                 created_at,
             });
         }

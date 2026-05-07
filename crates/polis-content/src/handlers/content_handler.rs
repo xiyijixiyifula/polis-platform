@@ -156,6 +156,7 @@ impl ContentHandler {
                     avatar_url: None,
                     bio: String::new(),
                     verified: false,
+                    notification_prefs: serde_json::json!({}),
                     created_at: p.created_at,
                 });
                 PostPublic {
@@ -210,6 +211,7 @@ impl ContentHandler {
                     avatar_url: None,
                     bio: String::new(),
                     verified: false,
+                    notification_prefs: serde_json::json!({}),
                     created_at: p.created_at,
                 });
                 let mt = format!("\"{}\"", p.module_type);
@@ -298,7 +300,7 @@ impl ContentHandler {
         let result = series_list.into_iter().map(|s| {
             let author = authors.get(&s.author_id).cloned().unwrap_or(UserPublic {
                 id: s.author_id, username: String::new(), display_name: String::new(),
-                avatar_url: None, bio: String::new(), verified: false, created_at: s.created_at,
+                avatar_url: None, bio: String::new(), verified: false, notification_prefs: serde_json::json!({}), created_at: s.created_at,
             });
             SeriesPublic {
                 id: s.id, space_id: s.space_id, author, title: s.title,
@@ -321,7 +323,7 @@ impl ContentHandler {
         let authors = self.repo.find_users_batch(&author_ids).await?;
         let series_author = authors.get(&series.author_id).cloned().unwrap_or(UserPublic {
             id: series.author_id, username: String::new(), display_name: String::new(),
-            avatar_url: None, bio: String::new(), verified: false, created_at: series.created_at,
+            avatar_url: None, bio: String::new(), verified: false, notification_prefs: serde_json::json!({}), created_at: series.created_at,
         });
         let series_public = SeriesPublic {
             id: series.id, space_id: series.space_id, author: series_author,
@@ -333,7 +335,7 @@ impl ContentHandler {
         let post_publics: Vec<PostPublic> = posts.into_iter().map(|p| {
             let author = authors.get(&p.author_id).cloned().unwrap_or(UserPublic {
                 id: p.author_id, username: String::new(), display_name: String::new(),
-                avatar_url: None, bio: String::new(), verified: false, created_at: p.created_at,
+                avatar_url: None, bio: String::new(), verified: false, notification_prefs: serde_json::json!({}), created_at: p.created_at,
             });
             let mt = serde_json::json!(p.module_type).to_string();
             let ct = serde_json::json!(p.content_type).to_string();
@@ -392,6 +394,7 @@ impl ContentHandler {
             avatar_url: None,
             bio: String::new(),
             verified: false,
+            notification_prefs: serde_json::json!({}),
             created_at: post.created_at,
         });
 
