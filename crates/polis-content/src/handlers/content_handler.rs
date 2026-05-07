@@ -376,12 +376,20 @@ impl ContentHandler {
     /// 获取帖子公开信息（含作者详情）
 
 
-    pub async fn get_post_public(&self, post_id: Uuid) -> Result<PostPublic, AppError> {
+    pub async fn get_post_public(&self, post_id: Uuid, current_user_id: Option<Uuid>) -> Result<PostPublic, AppError> {
         let post = self
             .repo
             .find_post_by_id(post_id)
             .await?
             .ok_or(AppError::NotFound("Post not found".to_string()))?;
+
+        // SEC-002: Private posts are only accessible by the author
+        if post.visibility == "private" {
+            match current_user_id {
+                Some(uid) if uid == post.author_id => {} // OK — author can view own private post
+                _ => return Err(AppError::Forbidden("This post is private".to_string())),
+            }
+        }
 
         self.repo.increment_view_count(post_id).await.ok();
 

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use axum::{
-    response::{IntoResponse, Response},extract::{Path, Query, Request, State, Extension}, middleware, routing::{delete, get, post, put}, Json, Router};
+    response::{IntoResponse, Response},extract::{Path, Query, Request, State, Extension}, http::HeaderMap, middleware, routing::{delete, get, post, put}, Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
 use percent_encoding::percent_decode_str;
@@ -18,6 +18,29 @@ use sqlx::PgPool;
 /// Helper to wrap a value in Json response
 fn json_ok<T: serde::Serialize>(value: T) -> Json<serde_json::Value> {
     Json(serde_json::to_value(value).unwrap())
+}
+
+/// Try to extract user_id from Authorization header (optional — returns None for unauthenticated requests)
+fn maybe_extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
+    let auth_header = match headers.get("Authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return Ok(None),
+    };
+    let token = match auth_header.strip_prefix("Bearer ") {
+        Some(t) => t,
+        None => return Ok(None),
+    };
+    let secret = std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+    match decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default()) {
+        Ok(data) => {
+            match Uuid::parse_str(&data.claims.sub) {
+                Ok(uid) => Ok(Some(uid)),
+                Err(_) => Ok(None),
+            }
+        }
+        Err(_) => Ok(None), // Invalid token — treat as unauthenticated
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -213,7 +236,8 @@ async fn handle_public_content(
         }
         (Some(id), None) => {
             // GET /api/spaces/{ns}/posts/{id}
-            let post = h.get_post_public(id).await?;
+            let current_user = maybe_extract_user_id(req.headers())?;
+            let post = h.get_post_public(id, current_user).await?;
             Ok(json_ok(ApiResponse::success(post)))
         }
         (Some(id), Some("comments")) => {
@@ -563,9 +587,11 @@ async fn search_posts_route(
 /// 通过帖子 ID 直接获取帖子详情（公开接口）
 async fn get_post_by_id_route(
     State(h): State<Arc<ContentHandler>>,
+    headers: HeaderMap,
     Path(id): Path<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let post = h.get_post_public(id).await?;
+    let current_user = maybe_extract_user_id(&headers)?;
+    let post = h.get_post_public(id, current_user).await?;
     Ok(json_ok(ApiResponse::success(post)))
 }
 
@@ -584,10 +610,21 @@ async fn increment_view_route(
 /// 下载帖子为 Markdown 文件（公开接口，v0.3.9）
 async fn download_post_route(
     State(h): State<Arc<ContentHandler>>,
+    headers: HeaderMap,
     Path(id): Path<Uuid>,
 ) -> Result<Response, AppError> {
     let post = h.repo.find_post_by_id(id).await?
         .ok_or(AppError::NotFound("Post not found".to_string()))?;
+
+    // SEC-002: Private posts are only downloadable by the author
+    if post.visibility == "private" {
+        let current_user = maybe_extract_user_id(&headers)?;
+        match current_user {
+            Some(uid) if uid == post.author_id => {}
+            _ => return Err(AppError::Forbidden("This post is private".to_string())),
+        }
+    }
+
     let filename = sanitize_filename(&post.title);
     let tags_str = if let Some(arr) = post.tags.as_array() {
         arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(", ")
