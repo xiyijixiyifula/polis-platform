@@ -5,6 +5,7 @@ pub mod space;
 pub mod post;
 pub mod comment;
 pub mod chat;
+pub mod message;
 pub mod interaction;
 pub mod content;
 pub mod notify;

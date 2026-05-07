@@ -262,6 +262,39 @@ polisctl --format table chat list "my-community" -l 10
 
 ---
 
+### 3.17 Direct Messages (DM)
+
+| Command | Method | Endpoint | Auth |
+|---------|--------|----------|------|
+| `polisctl message send <to_user_id> <content>` | POST | `/api/messages` | Yes |
+| `polisctl message conversations` | GET | `/api/messages/conversations` | Yes |
+| `polisctl message list <user_id>` | GET | `/api/messages/{user_id}` | Yes |
+| `polisctl message read <from_user_id>` | POST | `/api/messages/read` | Yes |
+| `polisctl message unread-count` | GET | `/api/messages/unread-count` | Yes |
+
+Private messaging between users. Conversations are ordered by last message time with unread counts. The pagination parameters for `list` are `-p` (page, default 1) and `-s` (page size, default 50).
+
+**Example**:
+```bash
+# Send a DM (requires login)
+polisctl auth login user@email.com password
+polisctl message send "uuid-of-recipient" "Hey, how are you?"
+
+# List all conversations
+polisctl --format table message conversations
+
+# Read conversation with a specific user
+polisctl message list "uuid-of-user" -p 1 -s 20
+
+# Check unread DM count
+polisctl message unread-count
+
+# Mark messages from a user as read
+polisctl message read "uuid-of-sender"
+```
+
+---
+
 ## 4. Admin Operations
 
 ```bash

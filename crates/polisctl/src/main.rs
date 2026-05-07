@@ -60,6 +60,11 @@ enum Commands {
         #[command(subcommand)]
         action: ChatAction,
     },
+    /// Direct messages: send, conversations, list, read, unread-count
+    Message {
+        #[command(subcommand)]
+        action: MessageAction,
+    },
     /// Like content: post, comment
     Like {
         #[command(subcommand)]
@@ -474,6 +479,38 @@ enum ChatAction {
         /// Message content
         message: String,
     },
+}
+
+// === Message Subcommands ===
+#[derive(Subcommand)]
+enum MessageAction {
+    /// Send a direct message to another user
+    Send {
+        /// Recipient user ID
+        to_user_id: String,
+        /// Message content
+        content: String,
+    },
+    /// List all conversations
+    Conversations,
+    /// Get conversation messages with a specific user
+    List {
+        /// Other user ID
+        user_id: String,
+        /// Page number
+        #[arg(short, long, default_value = "1")]
+        page: u32,
+        /// Page size
+        #[arg(short = 's', long, default_value = "50")]
+        page_size: u32,
+    },
+    /// Mark messages from a user as read
+    Read {
+        /// Sender user ID
+        from_user_id: String,
+    },
+    /// Get unread message count
+    UnreadCount,
 }
 
 // === Vote Subcommands ===
@@ -937,6 +974,25 @@ async fn main() -> Result<(), anyhow::Error> {
             }
             ChatAction::Send { namespace, message } => {
                 commands::chat::send(&config, &client, &namespace, &message).await
+            }
+        },
+
+        // === Message ===
+        Commands::Message { action } => match action {
+            MessageAction::Send { to_user_id, content } => {
+                commands::message::send(&config, &client, &to_user_id, &content).await
+            }
+            MessageAction::Conversations => {
+                commands::message::conversations(&config, &client).await
+            }
+            MessageAction::List { user_id, page, page_size } => {
+                commands::message::list(&config, &client, &user_id, Some(page), Some(page_size)).await
+            }
+            MessageAction::Read { from_user_id } => {
+                commands::message::read(&config, &client, &from_user_id).await
+            }
+            MessageAction::UnreadCount => {
+                commands::message::unread_count(&config, &client).await
             }
         },
 

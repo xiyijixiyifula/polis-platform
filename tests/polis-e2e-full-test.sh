@@ -890,6 +890,108 @@ else
 fi
 
 # ==========================================================
+# 6.6. MESSAGE 私信系统 (v0.3.23+)
+# ==========================================================
+echo ""
+echo "--- 6.6. MESSAGE 私信系统 ---"
+
+if [ -n "$TOKEN" ] && [ -n "$TOKEN_B" ]; then
+    # Get user B's ID
+    B_INFO=$(api GET "/api/users/$TEST_USER_B")
+    B_ID=$(get_field "$B_INFO" "id")
+    if [ -z "$B_ID" ]; then
+        B_ID=$(echo "$TOKEN_B" | python3 -c "import sys,base64,json; t=sys.stdin.read().strip(); p=t.split('.')[1]; p+='='*(4-len(p)%4); print(json.loads(base64.urlsafe_b64decode(p)).get('sub',''))" 2>/dev/null)
+    fi
+
+    if [ -n "$B_ID" ]; then
+        # TC-DM-01: Send a direct message
+        DM_BODY="你好！这是E2E私信测试 $(date +%s)"
+        R=$(api POST "/api/messages" "{\"to_user_id\":\"$B_ID\",\"content\":\"$DM_BODY\"}" "$TOKEN")
+        if check_code "$R"; then
+            DM_ID=$(get_field "$R" "id")
+            if [ -n "$DM_ID" ]; then
+                log_test PASS MESSAGE "发送私信" "id=$DM_ID ✅"
+            else
+                log_test FAIL MESSAGE "发送私信" "no message id returned"
+            fi
+        else
+            log_test FAIL MESSAGE "发送私信" "msg=$(get_msg "$R")"
+        fi
+
+        # TC-DM-02: Get conversations list (user B's perspective)
+        R=$(api GET "/api/messages/conversations" "" "$TOKEN_B")
+        if check_code "$R"; then
+            CONV_CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+            if [ "$CONV_CNT" -gt 0 ] 2>/dev/null; then
+                log_test PASS MESSAGE "会话列表" "count=$CONV_CNT ✅"
+            else
+                log_test FAIL MESSAGE "会话列表" "count=0 (私信未持久化？)"
+            fi
+        else
+            log_test FAIL MESSAGE "会话列表" "msg=$(get_msg "$R")"
+        fi
+
+        # TC-DM-03: Get unread count (user B should have unread)
+        R=$(api GET "/api/messages/unread-count" "" "$TOKEN_B")
+        if check_code "$R"; then
+            UNREAD_DM=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',0))" 2>/dev/null)
+            if [ "$UNREAD_DM" -gt 0 ] 2>/dev/null; then
+                log_test PASS MESSAGE "未读私信数" "count=$UNREAD_DM ✅"
+            elif [ "$UNREAD_DM" = "0" ]; then
+                log_test FAIL MESSAGE "未读私信数" "count=0 (should be >0 after DM)"
+            else
+                log_test FAIL MESSAGE "未读私信数" "unexpected=$UNREAD_DM"
+            fi
+        else
+            log_test FAIL MESSAGE "未读私信数" "msg=$(get_msg "$R")"
+        fi
+
+        # TC-DM-04: Mark messages as read
+        A_ID=$(echo "$TOKEN" | python3 -c "import sys,base64,json; t=sys.stdin.read().strip(); p=t.split('.')[1]; p+='='*(4-len(p)%4); print(json.loads(base64.urlsafe_b64decode(p)).get('sub',''))" 2>/dev/null)
+        if [ -n "$A_ID" ]; then
+            R=$(api POST "/api/messages/read" "{\"from_user_id\":\"$A_ID\"}" "$TOKEN_B")
+            if check_code "$R"; then
+                MARKED=$(echo "$R" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('marked_read',0))" 2>/dev/null)
+                if [ "$MARKED" -gt 0 ] 2>/dev/null; then
+                    log_test PASS MESSAGE "标记已读" "marked=$MARKED ✅"
+                else
+                    log_test FAIL MESSAGE "标记已读" "marked=$MARKED"
+                fi
+            else
+                log_test FAIL MESSAGE "标记已读" "msg=$(get_msg "$R")"
+            fi
+        else
+            log_test SKIP MESSAGE "标记已读" "无法获取A的user_id"
+        fi
+
+        # TC-DM-05: Get conversation messages
+        R=$(api GET "/api/messages/$B_ID?page=1&page_size=10" "" "$TOKEN")
+        if check_code "$R"; then
+            MSG_CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
+            FOUND_MSG=$(echo "$R" | python3 -c "
+import sys,json
+data = json.load(sys.stdin).get('data',[])
+found = [m for m in data if '$DM_ID' == str(m.get('id',''))]
+print('found' if found else 'not_found')
+" 2>/dev/null)
+            if [ "$MSG_CNT" -gt 0 ] 2>/dev/null && [ "$FOUND_MSG" = "found" ]; then
+                log_test PASS MESSAGE "对话消息列表" "count=$MSG_CNT, msg found ✅"
+            elif [ "$MSG_CNT" -gt 0 ] 2>/dev/null; then
+                log_test PASS MESSAGE "对话消息列表" "count=$MSG_CNT (msg via API)"
+            else
+                log_test FAIL MESSAGE "对话消息列表" "count=$MSG_CNT"
+            fi
+        else
+            log_test FAIL MESSAGE "对话消息列表" "msg=$(get_msg "$R")"
+        fi
+    else
+        log_test SKIP MESSAGE "私信系统" "无法获取用户B的ID"
+    fi
+else
+    log_test SKIP MESSAGE "私信系统" "需要两个认证用户"
+fi
+
+# ==========================================================
 # 6. 投票测试
 # ==========================================================
 echo ""

@@ -287,6 +287,7 @@ polisctl --format table admin users list 1 10
 | `post` | 发帖/列表/详情/更新/删除/搜索/标签/精选/浏览量/可见性 |
 | `comment` | 评论列表/创建（支持回复） |
 | `chat` | 聊天消息 (查看/发送，需登录) |
+| `message` | 私信 (发送/对话列表/标记已读/未读数) |
 | `like` | 点赞帖子/评论 (post/comment 子命令) |
 | `vote/bookmark` | 投票/收藏 |
 | `poll` | 投票问卷 (创建/参与/列表/全局all) |
