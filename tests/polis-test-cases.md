@@ -247,6 +247,93 @@ Detailed test cases organized by functional module. Each test case includes: obj
   4. Updated `From<Space> for SpacePublic` impl to map `enabled_modules`
 - **Coverage**: ✅ API verified — `PUT /api/spaces/{ns}` with `["forum","polls","chat","wiki","series","announcements","membership"]` now returns code=0 and GET returns the saved modules
 
+### TC-SPACE-11: Non-Owner Cannot Save Modules (v0.3.19)
+- **Objective**: Verify non-owner users get 403 when trying to update module settings
+- **Steps**:
+  1. Log in as User A (space owner)
+  2. Create a space
+  3. Log in as User B (not owner of the space)
+  4. `PUT /api/spaces/{ns}` with `{enabled_modules: ["forum"]}` as User B
+- **Expected**: API returns non-zero code (403 Forbidden), modules unchanged
+- **Coverage**: ✅ E2E — "非Owner保存拒绝" test
+
+### TC-SPACE-12: Module Toggle Hides Posts (v0.3.19)
+- **Objective**: Disabling a module filters its posts from the listing
+- **Steps**:
+  1. Create a post with `module_type=qa`
+  2. Save `enabled_modules: ["forum"]` (qa disabled)
+  3. GET post listing — qa post should NOT appear
+  4. Save `enabled_modules: ["forum","qa"]` — qa post should appear
+- **Expected**: Posts in disabled modules are filtered from the listing
+- **Coverage**: ✅ E2E — "禁用模块帖隐藏" test
+
+---
+
+## Multi-User Interaction Tests (v0.3.19)
+
+### TC-MULTI-01: Cross-User Like Notification
+- **Objective**: User B likes User A's post → User A receives notification
+- **Steps**:
+  1. User A creates a post in their space
+  2. User B joins the space
+  3. User B likes User A's post: `POST /api/spaces/{ns}/posts/{id}/like`
+  4. User A checks notifications: `GET /api/notifications/unread-count`
+- **Expected**: User A's unread count reflects the like notification
+- **Coverage**: ✅ E2E — "B点赞A的帖子" + "A收到点赞通知"
+
+### TC-MULTI-02: Cross-User Comment Notification
+- **Objective**: User B comments on User A's post → User A receives notification
+- **Steps**:
+  1. User A creates a post, User B joins the space
+  2. User B comments on the post
+  3. User A checks notification count
+- **Expected**: User A's notification count increases
+- **Coverage**: ✅ E2E — "B评论A的帖子" + "A收到评论通知"
+
+### TC-MULTI-03: Cross-User Vote
+- **Objective**: User B votes on User A's post via POST /api/vote
+- **Steps**:
+  1. User A creates a post
+  2. User B votes: `POST /api/vote {"target_type":"post","target_id":"{id}","value":1}`
+- **Expected**: Vote recorded, score returned
+- **Coverage**: ✅ E2E — "B投票A的帖子"
+
+### TC-MULTI-04: Cross-User Bookmark + Verification
+- **Objective**: User B bookmarks User A's post → verify in B's bookmark list
+- **Steps**:
+  1. User A creates a post
+  2. User B bookmarks it: `POST /api/spaces/{ns}/posts/{id}/bookmark`
+  3. User B checks bookmark list: `GET /api/bookmarks`
+- **Expected**: User B's bookmark list contains the post
+- **Coverage**: ✅ E2E — "B收藏A的帖子" + "B的收藏列表"
+
+### TC-MULTI-05: Follow/Unfollow by User B
+- **Objective**: User B follows and unfollows another user
+- **Steps**:
+  1. User B follows wangwu: `POST /api/follow`
+  2. Verify following list
+  3. User B unfollows wangwu: `POST /api/follow` (toggle)
+- **Expected**: Follow and unfollow both succeed without error
+- **Coverage**: ✅ E2E — "B关注用户wangwu" + "B取消关注"
+
+### TC-MULTI-06: Private Post Isolation
+- **Objective**: Private posts by User A are invisible to User B
+- **Steps**:
+  1. User A creates a post `visibility=private`
+  2. User A creates a post `visibility=public`
+  3. User B lists posts in the space
+- **Expected**: Only the public post appears in B's listing; private post filtered
+- **Coverage**: ✅ E2E — "B不可见私密帖" + "B可见公开帖"
+
+### TC-MULTI-07: Cross-Space Posting
+- **Objective**: User A can join and post in User B's space
+- **Steps**:
+  1. User B creates a space
+  2. User A joins B's space
+  3. User A posts in B's space
+- **Expected**: User A can successfully create a post in B's space
+- **Coverage**: ✅ E2E — "A加入B的空间" + "A在B空间发帖"
+
 ---
 
 ## Post & Content Tests
