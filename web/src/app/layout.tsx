@@ -43,7 +43,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           })
         }} />
       </head>
-      <body className="min-h-screen bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] antialiased">
+      <body
+        className="min-h-screen bg-[rgb(var(--bg-primary))] text-[rgb(var(--text-primary))] antialiased"
+        style={{
+          background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16, 185, 129, 0.06), transparent), linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)'
+        }}
+      >
         <Header />
         {children}
       </body>

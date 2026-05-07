@@ -70,24 +70,24 @@ export function VoteButton({ targetType, targetId }: VoteButtonProps) {
       <button
         onClick={() => handleVote(1)}
         title="赞同"
-        className={`rounded p-1 transition-colors ${
-          myVote === 1 ? 'text-orange-500' : 'text-gray-300 hover:text-orange-500'
+        className={`rounded p-1 transition-all duration-150 active:scale-90 ${
+          myVote === 1 ? 'text-primary-600 scale-110' : 'text-gray-300 hover:text-primary-500'
         }`}
       >
         <ChevronUp className="h-5 w-5" />
       </button>
       <span
-        className={`text-sm font-semibold tabular-nums ${
-          score > 0 ? 'text-orange-500' : score < 0 ? 'text-blue-500' : 'text-gray-500 dark:text-gray-400'
+        className={`text-sm font-bold tabular-nums ${
+          score > 0 ? 'text-primary-600' : score < 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'
         }`}
       >
-        {score}
+        {score > 0 ? '+' : ''}{score}
       </span>
       <button
         onClick={() => handleVote(-1)}
         title="反对"
-        className={`rounded p-1 transition-colors ${
-          myVote === -1 ? 'text-blue-500' : 'text-gray-300 hover:text-blue-500'
+        className={`rounded p-1 transition-all duration-150 active:scale-90 ${
+          myVote === -1 ? 'text-red-500 scale-110' : 'text-gray-300 hover:text-red-400'
         }`}
       >
         <ChevronDown className="h-5 w-5" />

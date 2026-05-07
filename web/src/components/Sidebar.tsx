@@ -1,9 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Home, Flame, Compass, Plus, TrendingUp, Gamepad2, ShoppingBag, BookOpen, PenLine } from 'lucide-react';
 
 export function Sidebar() {
+  const pathname = usePathname();
+
   const navItems = [
     { icon: Home, label: '首页', href: '/' },
     { icon: Flame, label: '热门', href: '/trending' },
@@ -17,18 +20,31 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-56 shrink-0 hidden lg:block">
-      <nav className="sticky top-20 space-y-1">
+    <aside className="w-56 shrink-0 hidden lg:block sidebar-dark rounded-r-2xl mr-4 my-4">
+      <nav className="sticky top-24 space-y-1 p-3">
+        {/* Logo 区域 */}
+        <div className="mb-4 px-3 py-2">
+          <Link href="/" className="flex items-center gap-2 text-white font-bold text-lg">
+            <div className="w-8 h-8 rounded-lg bg-primary-500 flex items-center justify-center">
+              <span className="text-white text-sm">P</span>
+            </div>
+            <span>Polis</span>
+          </Link>
+        </div>
+
         {navItems.map((item, i) => {
           if ('separator' in item) {
-            return <div key={i} className="my-2 border-t border-gray-100" />;
+            return <div key={i} className="my-2 border-t border-slate-700/50" />;
           }
           const Icon = item.icon!;
+          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Link
               key={item.label}
               href={item.href!}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+              className={`nav-item flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all ${
+                isActive ? 'active' : ''
+              }`}
             >
               <Icon className="h-4 w-4" />
               {item.label}
@@ -37,7 +53,10 @@ export function Sidebar() {
         })}
 
         <div className="mt-4 px-3">
-          <Link href="/create" className="btn-primary w-full gap-2 text-xs py-2">
+          <Link
+            href="/create"
+            className="btn-ripple flex items-center justify-center gap-2 w-full rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-xs py-2.5 transition-all hover:shadow-glow"
+          >
             <Plus className="h-4 w-4" />
             创建社区
           </Link>

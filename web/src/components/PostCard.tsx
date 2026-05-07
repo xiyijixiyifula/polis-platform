@@ -23,6 +23,8 @@ interface PostCardProps {
     tags?: string[];
     is_pinned?: boolean;
     visibility?: string;
+    is_liked?: boolean;
+    is_bookmarked?: boolean;
   };
   canPin?: boolean;
   onTogglePin?: () => void;
@@ -38,7 +40,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: P
   const authorUsername = author?.username || '';
 
   return (
-    <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="relative group card block transition-all hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+    <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="relative group glass-card block rounded-2xl p-4">
       {post.is_pinned && (
         <div className="mb-2 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
       )}
@@ -140,8 +142,8 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: P
           )}
 
           <div className="mt-3 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
-            <button className="flex items-center gap-1 hover:text-red-500 dark:hover:text-red-400 transition-colors">
-              <Heart className="h-3.5 w-3.5" />
+            <button className={`like-btn flex items-center gap-1 hover:text-red-500 dark:hover:text-red-400 transition-colors ${post.is_liked ? 'liked text-red-500' : ''}`}>
+              <Heart className={`h-3.5 w-3.5 ${post.is_liked ? 'fill-current' : ''}`} />
               <span>{formatCount(post.like_count || 0)}</span>
             </button>
             <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
