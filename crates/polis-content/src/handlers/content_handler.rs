@@ -175,6 +175,8 @@ impl ContentHandler {
                     view_count: p.view_count,
                     like_count: p.like_count,
                     comment_count: p.comment_count,
+                    is_liked: false,
+                    is_bookmarked: false,
                     created_at: p.created_at,
                     updated_at: p.updated_at,
                 }
@@ -233,6 +235,8 @@ impl ContentHandler {
                     view_count: p.view_count,
                     like_count: p.like_count,
                     comment_count: p.comment_count,
+                    is_liked: false,
+                    is_bookmarked: false,
                     created_at: p.created_at,
                     updated_at: p.updated_at,
                 }
@@ -350,8 +354,9 @@ impl ContentHandler {
                 visibility: serde_json::from_str(&vis).unwrap_or_default(),
                 is_pinned: p.is_pinned, is_featured: p.is_featured,
                 view_count: p.view_count, like_count: p.like_count,
-                comment_count: p.comment_count, created_at: p.created_at,
-                updated_at: p.updated_at,
+                comment_count: p.comment_count,
+                is_liked: false, is_bookmarked: false,
+                created_at: p.created_at, updated_at: p.updated_at,
             }
         }).collect();
         Ok((series_public, post_publics))
@@ -406,6 +411,15 @@ impl ContentHandler {
             created_at: post.created_at,
         });
 
+        // 查询当前用户的点赞/收藏状态（避免前端额外请求）
+        let (is_liked, is_bookmarked) = if let Some(uid) = current_user_id {
+            let liked = self.repo.has_liked("post", post_id, uid).await.unwrap_or(false);
+            let bookmarked = self.repo.has_bookmarked("post", post_id, uid).await.unwrap_or(false);
+            (liked, bookmarked)
+        } else {
+            (false, false)
+        };
+
         Ok(PostPublic {
             id: post.id,
             space_id: post.space_id,
@@ -422,6 +436,8 @@ impl ContentHandler {
             view_count: post.view_count,
             like_count: post.like_count,
             comment_count: post.comment_count,
+            is_liked,
+            is_bookmarked,
             created_at: post.created_at,
             updated_at: post.updated_at,
         })

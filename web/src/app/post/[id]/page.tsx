@@ -73,6 +73,8 @@ function PostDetailContent() {
           if (result) {
             setPost(result.post);
             setLikeCount(result.post.like_count || 0);
+            setLiked(result.post.is_liked || false);
+            setBookmarked(result.post.is_bookmarked || false);
             setSpaceNs(result.spaceNs);
             try {
               const commentsData = await posts.getCommentsById(postId);
@@ -91,6 +93,8 @@ function PostDetailContent() {
         if (res.code === 0 && res.data) {
           setPost(res.data);
           setLikeCount(res.data.like_count || 0);
+          setLiked(res.data.is_liked || false);
+          setBookmarked(res.data.is_bookmarked || false);
           if (!spaceNs && spaceFromUrl) {
             setSpaceNs(spaceFromUrl);
           }

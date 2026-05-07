@@ -407,6 +407,23 @@ impl ContentRepo {
         Ok(result.is_some())
     }
 
+    pub async fn has_bookmarked(
+        &self,
+        target_type: &str,
+        target_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let result = sqlx::query_scalar::<_, Option<i32>>(
+            "SELECT 1 FROM bookmarks WHERE user_id = $1 AND target_type = $2 AND target_id = $3",
+        )
+        .bind(user_id)
+        .bind(target_type)
+        .bind(target_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(result.is_some())
+    }
+
     // ===== 书签 =====
 
     pub async fn toggle_bookmark(&self, user_id: Uuid, target_type: &str, target_id: Uuid) -> Result<bool, AppError> {
