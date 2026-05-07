@@ -230,7 +230,7 @@ fn test_create_space_request_defaults() {
         title: "测试社区".to_string(),
         description: Some("描述".to_string()),
         visibility: None,
-        enabled_modules: Some(vec![ModuleType::Forum, ModuleType::Article]),
+        enabled_modules: Some(vec!["forum".to_string(), "article".to_string()]),
     };
     assert_eq!(req.slug, "test-community");
     assert!(req.enabled_modules.is_some());

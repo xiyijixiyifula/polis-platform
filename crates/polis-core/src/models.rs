@@ -122,6 +122,7 @@ pub struct SpacePublic {
     pub banner_url: Option<String>,
     pub visibility: Visibility,
     pub status: SpaceStatus,
+    pub enabled_modules: Option<Vec<String>>,
     pub member_count: i64,
     pub post_count: i64,
     pub created_at: DateTime<Utc>,
@@ -142,6 +143,7 @@ impl From<Space> for SpacePublic {
             banner_url: s.banner_url,
             visibility: serde_json::from_str(&format!("\"{}\"", s.visibility)).unwrap_or_default(),
             status: serde_json::from_str(&format!("\"{}\"", s.status)).unwrap_or_default(),
+            enabled_modules: serde_json::from_value(s.enabled_modules.clone()).ok(),
             member_count: s.member_count,
             post_count: s.post_count,
             created_at: s.created_at,
@@ -156,7 +158,7 @@ pub struct CreateSpaceRequest {
     pub title: String,
     pub description: Option<String>,
     pub visibility: Option<Visibility>,
-    pub enabled_modules: Option<Vec<ModuleType>>,
+    pub enabled_modules: Option<Vec<String>>,
 }
 
 /// 更新社区请求
@@ -168,7 +170,7 @@ pub struct UpdateSpaceRequest {
     pub banner_url: Option<String>,
     pub visibility: Option<Visibility>,
     pub custom_rules: Option<serde_json::Value>,
-    pub enabled_modules: Option<Vec<ModuleType>>,
+    pub enabled_modules: Option<Vec<String>>,
 }
 
 // ==================== 内容 ====================
