@@ -199,6 +199,10 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/import/markdown", post(import_markdown_route))
         // 评论点赞（仅认证用户）
         .route("/api/comments/{id}/like", post(like_comment_route))
+        // RESTful 风格 API 别名 — v0.3.22
+        .route("/api/posts/{id}/like", post(like_post_by_id_route))
+        .route("/api/posts/{id}/bookmark", post(bookmark_post_by_id_route))
+        .route("/api/posts/{id}/report", post(report_post_by_id_route))
         // 通过 ID 更新/删除帖子（需认证）
         .route("/api/posts/{id}", put(update_post_by_id_route).delete(delete_post_by_id_route))
         // 创作中心：作者查看所有自己的内容（用户Ⓚ OS: /home/user/ 目录）
@@ -754,6 +758,43 @@ async fn list_bookmarks(State(h): State<Arc<ContentHandler>>, axum::Extension(ui
 async fn list_liked_posts_route(State(h): State<Arc<ContentHandler>>, axum::Extension(uid): axum::Extension<Uuid>,
     Query(p): Query<PaginationParams>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
     Ok(Json(ApiResponse::success(h.repo.list_liked_posts(uid, p.page.unwrap_or(1), p.page_size.unwrap_or(20)).await?)))
+}
+
+// ===== RESTful 风格 API 别名 (v0.3.22) =====
+
+/// POST /api/posts/{id}/like — RESTful 别名: 点赞帖子
+async fn like_post_by_id_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let liked = h.toggle_like("post", id, uid).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"liked": liked, "post_id": id.to_string()}))))
+}
+
+/// POST /api/posts/{id}/bookmark — RESTful 别名: 收藏帖子
+async fn bookmark_post_by_id_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let bookmarked = h.repo.toggle_bookmark(uid, "post", id).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"bookmarked": bookmarked, "post_id": id.to_string()}))))
+}
+
+/// POST /api/posts/{id}/report — 举报帖子
+async fn report_post_by_id_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<ReportRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    // Verify post exists
+    h.repo.find_post_by_id(id).await?
+        .ok_or(AppError::NotFound("Post not found".to_string()))?;
+    // Create report entry (simplified — stores in notifications-like format)
+    let report_id = h.repo.create_report(uid, "post", id, &req.reason).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"report_id": report_id.to_string(), "message": "举报已提交"}))))
 }
 
 

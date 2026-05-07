@@ -31,6 +31,9 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/users/me/password", put(change_password))
         .route("/api/users/me/settings", put(update_settings))
         .route("/api/follow", post(toggle_follow))
+        // RESTful 风格 API 别名 (v0.3.22)
+        .route("/api/users/{username}/follow", post(follow_by_username).delete(unfollow_by_username))
+        .route("/api/auth/logout", post(logout))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
     public.merge(auth).with_state(handler)
 }
@@ -91,4 +94,38 @@ async fn health_check(State(h): State<Arc<UserHandler>>) -> Json<ApiResponse<ser
         "database": db_ok,
         "version": env!("CARGO_PKG_VERSION"),
     })))
+}
+
+// ===== RESTful 风格 API 别名 (v0.3.22) =====
+
+/// POST /api/users/{username}/follow — RESTful 关注用户
+async fn follow_by_username(
+    State(h): State<Arc<UserHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(username): Path<String>,
+) -> Result<Json<ApiResponse<bool>>, AppError> {
+    let target = h.repo.find_by_username(&username).await?
+        .ok_or(AppError::NotFound("User not found".to_string()))?;
+    if target.id == uid {
+        return Err(AppError::Validation("Cannot follow yourself".to_string()));
+    }
+    let followed = h.toggle_follow(uid, "user", target.id).await?;
+    Ok(Json(ApiResponse::success(followed)))
+}
+
+/// DELETE /api/users/{username}/follow — RESTful 取消关注用户
+async fn unfollow_by_username(
+    State(h): State<Arc<UserHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(username): Path<String>,
+) -> Result<Json<ApiResponse<bool>>, AppError> {
+    let target = h.repo.find_by_username(&username).await?
+        .ok_or(AppError::NotFound("User not found".to_string()))?;
+    let followed = h.toggle_follow(uid, "user", target.id).await?;
+    Ok(Json(ApiResponse::success(followed)))
+}
+
+/// POST /api/auth/logout — 登出
+async fn logout() -> Json<ApiResponse<String>> {
+    Json(ApiResponse::success("logged_out".to_string()))
 }

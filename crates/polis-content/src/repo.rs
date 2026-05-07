@@ -521,11 +521,13 @@ impl ContentRepo {
 
     // ===== 举报 =====
 
-    pub async fn create_report(&self, reporter_id: Uuid, target_type: &str, target_id: Uuid, reason: &str) -> Result<(), AppError> {
-        sqlx::query("INSERT INTO reports (reporter_id, target_type, target_id, reason) VALUES ($1, $2, $3, $4)")
+    pub async fn create_report(&self, reporter_id: Uuid, target_type: &str, target_id: Uuid, reason: &str) -> Result<Uuid, AppError> {
+        let (id,): (Uuid,) = sqlx::query_as(
+            "INSERT INTO reports (reporter_id, target_type, target_id, reason) VALUES ($1, $2, $3, $4) RETURNING id"
+        )
             .bind(reporter_id).bind(target_type).bind(target_id).bind(reason)
-            .execute(&self.pool).await?;
-        Ok(())
+            .fetch_one(&self.pool).await?;
+        Ok(id)
     }
 
     // ===== 投票 (赞同/反对) =====
