@@ -83,6 +83,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/upload", any(proxy_to_content))
         .route("/api/import/markdown", any(proxy_to_content))
         .route("/api/feed", any(proxy_to_content))
+        // 代理路由 - 私信
+        .route("/api/messages", any(proxy_to_content))
+        .route("/api/messages/{*path}", any(proxy_to_content))
         // 代理路由 - 管理后台服务
         .route("/api/admin/{*path}", any(proxy_to_admin))
         .route("/api/admin", any(proxy_to_admin))

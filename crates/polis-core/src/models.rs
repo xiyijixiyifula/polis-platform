@@ -480,6 +480,43 @@ pub struct Pagination {
     pub total_pages: u32,
 }
 
+// ==================== 私信 (Direct Messages) ====================
+
+/// 发送私信请求
+#[derive(Debug, Deserialize)]
+pub struct SendMessageRequest {
+    pub to_user_id: Uuid,
+    pub content: String,
+}
+
+/// 私信消息
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct DirectMessage {
+    pub id: Uuid,
+    pub sender_id: Uuid,
+    pub receiver_id: Uuid,
+    pub content: String,
+    pub is_read: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 私信会话摘要 — 每个会话显示对方用户和最后一条消息
+#[derive(Debug, Clone, Serialize)]
+pub struct ConversationSummary {
+    pub other_user: UserPublic,
+    pub last_message: String,
+    pub last_message_at: DateTime<Utc>,
+    pub unread_count: i64,
+}
+
+/// 标记已读请求
+#[derive(Debug, Deserialize)]
+pub struct MarkMessagesReadRequest {
+    pub from_user_id: Uuid,
+}
+
+// ==================== 通用 ====================
+
 /// 统一 API 响应
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiResponse<T: Serialize> {

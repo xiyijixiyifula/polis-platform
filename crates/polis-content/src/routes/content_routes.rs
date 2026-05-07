@@ -6,14 +6,14 @@ use serde::Deserialize;
 use uuid::Uuid;
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, Comment, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, Post, PostPublic, UpdatePostRequest, PaginationParams, CreateTierRequest, UpdateTierRequest};
+use polis_core::models::{ApiResponse, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, UpdatePostRequest, PaginationParams, SendMessageRequest, MarkMessagesReadRequest, CreateTierRequest, UpdateTierRequest};
 use polis_core::resolver::resolve::{resolve_space_id, resolve_space_enabled_modules};
 use crate::handlers::content_handler::ContentHandler;
 use crate::handlers::chat_handler::ChatHandler;
+use crate::handlers::message_handler::MessageHandler;
 use crate::middleware::auth::auth_middleware;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::Deserialize as SerdeDeserialize;
-use sqlx::PgPool;
 
 /// Helper to wrap a value in Json response
 fn json_ok<T: serde::Serialize>(value: T) -> Json<serde_json::Value> {
@@ -207,6 +207,12 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/posts/{id}", put(update_post_by_id_route).delete(delete_post_by_id_route))
         // 创作中心：作者查看所有自己的内容（用户Ⓚ OS: /home/user/ 目录）
         .route("/api/my/contents", get(get_my_contents_route))
+        // 私信 (Direct Messages)
+        .route("/api/messages/conversations", get(get_conversations_route))
+        .route("/api/messages/unread-count", get(get_unread_dm_count_route))
+        .route("/api/messages/read", post(mark_messages_read_route))
+        .route("/api/messages/{user_id}", get(get_conversation_messages_route))
+        .route("/api/messages", post(send_message_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
     let share_routes = Router::new()
@@ -1124,4 +1130,65 @@ async fn post_chat_message(
     let chat = ChatHandler::new(h.pool.clone());
     let msg = chat.send_message(space_id, uid, &body.content).await?;
     Ok(json_ok(ApiResponse::success(msg)))
+}
+
+// ===== 私信 (Direct Messages) =====
+
+/// POST /api/messages — 发送私信（需认证）
+async fn send_message_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Json(req): Json<SendMessageRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let dm = MessageHandler::new(h.pool.clone());
+    let msg = dm.send_message(uid, req).await?;
+    Ok(json_ok(ApiResponse::success(msg)))
+}
+
+/// GET /api/messages/conversations — 获取会话列表（需认证）
+async fn get_conversations_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let dm = MessageHandler::new(h.pool.clone());
+    let conversations = dm.get_conversations(uid).await?;
+    Ok(json_ok(ApiResponse::success(conversations)))
+}
+
+/// GET /api/messages/{user_id} — 获取与某用户的对话消息（需认证）
+#[derive(Deserialize)]
+struct ConversationQuery { page: Option<u32>, page_size: Option<u32> }
+
+async fn get_conversation_messages_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(other_user_id): Path<Uuid>,
+    Query(q): Query<ConversationQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let limit = q.page_size.unwrap_or(50).min(100);
+    let page = q.page.unwrap_or(1);
+    let dm = MessageHandler::new(h.pool.clone());
+    let msgs = dm.get_conversation_messages(uid, other_user_id, limit, page).await?;
+    Ok(json_ok(ApiResponse::success(msgs)))
+}
+
+/// POST /api/messages/read — 标记来自某用户的消息为已读（需认证）
+async fn mark_messages_read_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Json(req): Json<MarkMessagesReadRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let dm = MessageHandler::new(h.pool.clone());
+    let count = dm.mark_messages_read(uid, req).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"marked_read": count}))))
+}
+
+/// GET /api/messages/unread-count — 获取未读私信数量（需认证）
+async fn get_unread_dm_count_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let dm = MessageHandler::new(h.pool.clone());
+    let count = dm.get_unread_count(uid).await?;
+    Ok(json_ok(ApiResponse::success(count)))
 }

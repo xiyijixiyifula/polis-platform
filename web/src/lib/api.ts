@@ -516,3 +516,49 @@ export const feed = {
   getFeed: (page: number = 1, pageSize: number = 20) =>
     request<FeedItem[]>(`/feed?page=${page}&page_size=${pageSize}`),
 };
+
+// ===== 私信 (Direct Messages) =====
+
+export interface DirectMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  content: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ConversationSummary {
+  other_user: User;
+  last_message: string;
+  last_message_at: string;
+  unread_count: number;
+}
+
+export const messages = {
+  /** 发送私信 */
+  send: (toUserId: string, content: string) =>
+    request<DirectMessage>('/messages', {
+      method: 'POST',
+      body: JSON.stringify({ to_user_id: toUserId, content }),
+    }),
+
+  /** 获取会话列表 */
+  getConversations: () =>
+    request<ConversationSummary[]>('/messages/conversations'),
+
+  /** 获取与某用户的对话 */
+  getConversation: (userId: string, page: number = 1, pageSize: number = 50) =>
+    request<DirectMessage[]>(`/messages/${userId}?page=${page}&page_size=${pageSize}`),
+
+  /** 标记来自某用户的消息为已读 */
+  markRead: (fromUserId: string) =>
+    request<{ marked_read: number }>('/messages/read', {
+      method: 'POST',
+      body: JSON.stringify({ from_user_id: fromUserId }),
+    }),
+
+  /** 获取未读私信数量 */
+  getUnreadCount: () =>
+    request<number>('/messages/unread-count'),
+};

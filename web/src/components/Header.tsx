@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { Search, Bell, User, Plus, Menu, X, Info, FileText, Shield as ShieldIcon } from 'lucide-react';
+import { Search, Bell, User, Plus, Menu, X, Info, FileText, MessageSquare, Shield as ShieldIcon } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 
 export function Header() {
@@ -10,12 +10,13 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadDmCount, setUnreadDmCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
     const loggedIn = !!localStorage.getItem('polis_access_token');
     setIsLoggedIn(loggedIn);
-    if (loggedIn) fetchUnread();
+    if (loggedIn) { fetchUnread(); fetchUnreadDm(); }
   }, []);
 
   const fetchUnread = async () => {
@@ -29,10 +30,21 @@ export function Header() {
     } catch {}
   };
 
+  const fetchUnreadDm = async () => {
+    try {
+      const token = localStorage.getItem('polis_access_token');
+      const res = await fetch('/api/messages/unread-count', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.code === 0) setUnreadDmCount(data.data);
+    } catch {}
+  };
+
   useEffect(() => {
     if (!isLoggedIn) return;
-    const interval = setInterval(fetchUnread, 30000);
-    const onFocus = () => fetchUnread();
+    const interval = setInterval(() => { fetchUnread(); fetchUnreadDm(); }, 30000);
+    const onFocus = () => { fetchUnread(); fetchUnreadDm(); };
     window.addEventListener('focus', onFocus);
     return () => {
       clearInterval(interval);
@@ -99,6 +111,14 @@ export function Header() {
               <Link href="/create" className="hidden sm:inline-flex btn-primary gap-1 text-xs px-3 py-1.5">
                 <Plus className="h-3.5 w-3.5" />
                 创建社区
+              </Link>
+              <Link href="/messages" className="relative rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                <MessageSquare className="h-5 w-5" />
+                {unreadDmCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1">
+                    {unreadDmCount > 99 ? '99+' : unreadDmCount}
+                  </span>
+                )}
               </Link>
               <Link href="/notifications" className="relative rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
                 <Bell className="h-5 w-5" />

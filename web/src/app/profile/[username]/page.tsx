@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, UserPlus, Users, UserCheck } from 'lucide-react';
+import { Calendar, UserPlus, Users, UserCheck, MessageSquare } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { users, follow, type User, type FollowUser } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
@@ -186,23 +186,31 @@ export default function UserProfilePage() {
                 <p className="text-sm text-gray-500 dark:text-gray-400">@{user.username}</p>
               </div>
               {!isSelf && (
-                <button
-                  onClick={handleFollow}
-                  disabled={followLoading}
-                  className={`inline-flex items-center gap-1.5 text-sm px-5 py-2 rounded-lg font-medium transition-all ${
-                    isFollowing
-                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400'
-                      : 'btn-primary'
-                  }`}
-                >
-                  {followLoading ? (
-                    <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : isFollowing ? (
-                    <><UserCheck className="h-4 w-4" /> 已关注</>
-                  ) : (
-                    <><UserPlus className="h-4 w-4" /> 关注</>
-                  )}
-                </button>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/messages/${user.id}`}
+                    className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-all bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400"
+                  >
+                    <MessageSquare className="h-4 w-4" /> 私信
+                  </Link>
+                  <button
+                    onClick={handleFollow}
+                    disabled={followLoading}
+                    className={`inline-flex items-center gap-1.5 text-sm px-5 py-2 rounded-lg font-medium transition-all ${
+                      isFollowing
+                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400'
+                        : 'btn-primary'
+                    }`}
+                  >
+                    {followLoading ? (
+                      <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : isFollowing ? (
+                      <><UserCheck className="h-4 w-4" /> 已关注</>
+                    ) : (
+                      <><UserPlus className="h-4 w-4" /> 关注</>
+                    )}
+                  </button>
+                </div>
               )}
             </div>
             {user.bio && (

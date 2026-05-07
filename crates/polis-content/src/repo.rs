@@ -1,5 +1,5 @@
 use polis_core::error::AppError;
-use polis_core::models::{Post, Comment, Pagination, UserPublic, Series, SpaceTier, Subscription};
+use polis_core::models::{Post, Comment, Pagination, UserPublic, Series, SpaceTier, Subscription, DirectMessage};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -1015,6 +1015,109 @@ impl ContentRepo {
         sqlx::query("UPDATE file_shares SET download_count = download_count + 1 WHERE id = $1")
             .bind(file_id).execute(&self.pool).await?;
         Ok(())
+    }
+
+    // ===== 私信 (Direct Messages) =====
+
+    pub async fn send_direct_message(&self, sender_id: Uuid, receiver_id: Uuid, content: &str) -> Result<DirectMessage, AppError> {
+        let msg = sqlx::query_as::<_, DirectMessage>(
+            "INSERT INTO direct_messages (sender_id, receiver_id, content) VALUES ($1, $2, $3) RETURNING *"
+        )
+        .bind(sender_id)
+        .bind(receiver_id)
+        .bind(content)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(msg)
+    }
+
+    pub async fn get_conversations(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows = sqlx::query_as::<_, (Uuid, String, String, Option<String>, String, bool, serde_json::Value, chrono::DateTime<chrono::Utc>, String, chrono::DateTime<chrono::Utc>, i64)>(
+            r#"SELECT
+                u.id, u.username, u.display_name, u.avatar_url, COALESCE(u.bio, ''),
+                u.verified, COALESCE(u.notification_prefs, '{}'::jsonb), u.created_at,
+                dm.content, dm.created_at as last_msg_at,
+                COALESCE(unread.cnt, 0) as unread
+            FROM (
+                SELECT DISTINCT ON (
+                    CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END
+                )
+                    CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END as other_id,
+                    content,
+                    created_at
+                FROM direct_messages
+                WHERE sender_id = $1 OR receiver_id = $1
+                ORDER BY
+                    CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END,
+                    created_at DESC
+            ) dm
+            JOIN users u ON u.id = dm.other_id
+            LEFT JOIN LATERAL (
+                SELECT COUNT(*) as cnt
+                FROM direct_messages dm2
+                WHERE dm2.sender_id = dm.other_id
+                  AND dm2.receiver_id = $1
+                  AND dm2.is_read = false
+            ) unread ON true
+            ORDER BY dm.created_at DESC
+            "#,
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Internal(format!("Failed to get conversations: {}", e)))?;
+
+        Ok(rows.into_iter().map(|(id, username, display_name, avatar_url, bio, verified, notification_prefs, created_at, last_message, last_message_at, unread_count)| {
+            serde_json::json!({
+                "other_user": {
+                    "id": id,
+                    "username": username,
+                    "display_name": display_name,
+                    "avatar_url": avatar_url,
+                    "bio": bio,
+                    "verified": verified,
+                    "notification_prefs": notification_prefs,
+                    "created_at": created_at,
+                },
+                "last_message": last_message,
+                "last_message_at": last_message_at,
+                "unread_count": unread_count,
+            })
+        }).collect())
+    }
+
+    pub async fn get_conversation_messages(&self, user_id: Uuid, other_user_id: Uuid, limit: i64, offset: i64) -> Result<Vec<DirectMessage>, AppError> {
+        let msgs = sqlx::query_as::<_, DirectMessage>(
+            "SELECT * FROM direct_messages WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1) ORDER BY created_at DESC LIMIT $3 OFFSET $4"
+        )
+        .bind(user_id)
+        .bind(other_user_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(msgs)
+    }
+
+    pub async fn mark_messages_read(&self, user_id: Uuid, from_user_id: Uuid) -> Result<i64, AppError> {
+        let result = sqlx::query_as::<_, (i64,)>(
+            "WITH updated AS (UPDATE direct_messages SET is_read = true WHERE receiver_id = $1 AND sender_id = $2 AND is_read = false RETURNING 1) SELECT COUNT(*)::BIGINT FROM updated"
+        )
+        .bind(user_id)
+        .bind(from_user_id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(result.0)
+    }
+
+    pub async fn get_unread_dm_count(&self, user_id: Uuid) -> Result<i64, AppError> {
+        let count: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM direct_messages WHERE receiver_id = $1 AND is_read = false"
+        )
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count.0)
     }
 
     pub async fn get_space_analytics(&self, space_id: Uuid) -> Result<serde_json::Value, AppError> {
