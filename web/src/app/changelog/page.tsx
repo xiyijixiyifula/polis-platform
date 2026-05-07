@@ -4,8 +4,23 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.21', date: '2026-05-07', title: '🔒 SEC-002 私密帖权限强制实施 — 关键安全修复',
+      ver: '0.3.22', date: '2026-05-07', title: '🔗 RESTful API 别名 + 🐛 点赞计数 -1 修复',
       isLatest: true,
+      items: [
+        '🔗 **点赞 API**: POST /api/posts/{id}/like — RESTful 风格端点到点赞/取消 (无需知道 namespace)',
+        '📑 **收藏 API**: POST /api/posts/{id}/bookmark — RESTful 风格书签切换端点',
+        '🚩 **举报 API**: POST /api/posts/{id}/report — RESTful 风格举报帖子端点',
+        '👥 **关注 API**: POST /api/users/{username}/follow + DELETE 取消关注 — RESTful 风格关注切换',
+        '🚪 **登出 API**: POST /api/auth/logout — 用户登出端点 (返回 simple acknowledgement)',
+        '🔌 **API 可发现性**: 所有 CRUD 操作现在都有 RESTful 别名路径 — 外部测试者不再遇到 404',
+        '🐛 **点赞计数 -1**: 修复点赞/取消点赞时计数变为 -1 的边界条件 (Math.max(0, ...) 安全防护 + 对象格式兼容)',
+        '🐛 **评论点赞安全**: handleCommentLike 同样增加 Math.max(0, ...) 防护',
+        '✅ 136/136 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.21', date: '2026-05-07', title: '🔒 SEC-002 私密帖权限强制实施 — 关键安全修复',
+      isLatest: false,
       items: [
         '🔒 **SEC-002 修复**: 私密帖子 (visibility=private) 现在只允许作者本人通过直接 URL 访问 — 其他用户和未登录用户返回 403 Forbidden',
         '🛡️ **get_post_public()**: 新增 visibility 校验 — 如果 visibility=private, 仅 author_id 匹配才返回内容',

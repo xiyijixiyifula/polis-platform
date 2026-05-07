@@ -228,8 +228,18 @@ function PostDetailContent() {
     try {
       const res = await posts.like(currentNs, post.id);
       if (res.data !== null) {
-        setLiked(res.data);
-        setLikeCount((prev) => (res.data ? prev + 1 : prev - 1));
+        // Support both boolean (old format) and {liked, like_count} (v0.3.23+ format)
+        const data = res.data as any;
+        const liked: boolean = typeof data === 'boolean' ? data : data.liked;
+        const count: number | null = typeof data === 'object' && data.like_count !== undefined
+          ? data.like_count
+          : null;
+        setLiked(liked);
+        if (count !== null) {
+          setLikeCount(count);
+        } else {
+          setLikeCount((prev) => (liked ? prev + 1 : Math.max(0, prev - 1)));
+        }
       }
     } catch {}
   };
@@ -285,7 +295,7 @@ function PostDetailContent() {
         });
         setComments((prev) =>
           prev.map((c) =>
-            c.id === commentId ? { ...c, like_count: c.like_count + (res.data ? 1 : -1) } : c
+            c.id === commentId ? { ...c, like_count: Math.max(0, c.like_count + (res.data ? 1 : -1)) } : c
           )
         );
       }
