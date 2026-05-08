@@ -144,7 +144,7 @@ function FeedLayout() {
             <div className="px-3 pt-2 pb-2">
               <Link
                 href="/post/new"
-                className="btn-ripple flex items-center justify-center gap-2 w-full py-3 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-bold text-lg shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-95"
+                className="publish-btn glass-btn w-full flex items-center justify-center gap-2 py-3 font-bold text-lg transition-all active:scale-95"
               >
                 <Plus className="h-5 w-5" />
                 发布
@@ -184,7 +184,7 @@ function FeedLayout() {
                 <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 animate-breathe" />
                 <span className="text-xs font-medium text-secondary">Polis 社区平台</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-primary tracking-tight mb-3">
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3" style={{ color: '#1d1d1f' }}>
                 连接思想，共创未来
               </h1>
               <p className="text-base text-secondary max-w-md mx-auto mb-6 leading-relaxed">
