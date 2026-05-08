@@ -14,6 +14,7 @@ import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
 import { tiers, subscribe } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
 import { SpaceChat } from '@/components/SpaceChat';
+import { SpaceParticles } from '@/components/SpaceParticles';
 
 interface Announcement {
   id: string; title: string; body: string;
@@ -385,9 +386,10 @@ export default function SpacePage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
-      {/* Community Header - GitHub Style */}
-      <div className="card mb-6">
-        <div className="flex items-start gap-4">
+      {/* Community Header - GitHub Style with Particles */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-50 to-white dark:from-slate-900 dark:to-slate-800 p-6 mb-6">
+        <SpaceParticles color="16, 185, 129" />
+        <div className="relative z-10 flex items-start gap-4">
           <div className="h-16 w-16 shrink-0 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl">
             {space.title.charAt(0)}
           </div>

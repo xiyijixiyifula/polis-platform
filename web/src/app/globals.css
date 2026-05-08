@@ -670,6 +670,19 @@
   background: rgba(16, 185, 129, 0.4);
 }
 
+/* ---------- 粒子背景（社区头部）---------- */
+.particles-bg {
+  position: relative;
+  overflow: hidden;
+}
+
+.particles-bg canvas {
+  position: absolute;
+  inset: 0;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 /* ---------- 暗色背景渐变（layout.tsx 配合）---------- */
 .dark body {
   background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(16, 185, 129, 0.04), transparent),

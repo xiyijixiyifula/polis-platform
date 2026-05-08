@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.27', date: '2026-05-08', title: '🛡️ 代码质量 — 消除 unwrap() 潜在 panic + 维护轮次',
+      ver: '0.3.28', date: '2026-05-08', title: '🎨 视觉升级 — 社区粒子背景动画 + 视觉指南全面对照实施',
       isLatest: true,
+      items: [
+        '✨ **粒子背景**: SpaceParticles 组件 — Canvas 粒子动画 + 连线效果 + ResizeObserver 响应式',
+        '🏛️ **社区头部**: Space 详情页头部集成粒子背景 (from-primary-50梯度 + SpaceParticles overlay)',
+        '🎨 **CSS 增强**: globals.css 新增 .particles-bg 样式 (overflow hidden + canvas 定位)',
+        '✅ 141/141 E2E 全量通过, 33/33 页面构建成功, 6/6 服务 active',
+        '✅ 零新增 npm 依赖 — 纯 Canvas API + ResizeObserver 实现',
+      ],
+    },
+    {
+      ver: '0.3.27', date: '2026-05-08', title: '🛡️ 代码质量 — 消除 unwrap() 潜在 panic + 维护轮次',
+      isLatest: false,
       items: [
         '🛡️ **消除 unwrap()**: content_handler.rs 中 ls 命令失败时不再 panic，改用 ? 错误传播 (高危修复)',
         '🛡️ **HeaderValue 安全**: content_routes.rs 中 3 处文件下载响应头解析增加 fallback，避免无效字符导致 panic',
