@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 import { Header } from '@/components/Header';
+import { ClientLayoutWrapper } from '@/components/ClientLayoutWrapper';
 
 export const metadata: Metadata = {
   title: { default: 'Polis - 未来社区平台', template: '%s | Polis' },
@@ -120,7 +121,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* 主内容层 — z-index 提升到装饰层之上 */}
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Header />
-          {children}
+          <ClientLayoutWrapper>
+            {children}
+          </ClientLayoutWrapper>
         </div>
       </body>
     </html>
