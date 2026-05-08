@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { formatDate, formatCount } from '@/lib/utils';
 import {
   Home, Compass, Bell, Mail, Bookmark, User, Settings,
-  Plus, Search, TrendingUp, MessageCircle, Heart, Eye,
+  Search, TrendingUp, MessageCircle, Heart, Eye,
   Share2, Repeat2, Sparkles, Users, FlaskConical
 } from 'lucide-react';
 import { getSpaceVisual } from '@/components/SpaceCard';
@@ -139,17 +139,6 @@ function FeedLayout() {
                 </Link>
               ))}
             </nav>
-
-            {/* Publish Button */}
-            <div className="px-3 pt-2 pb-2">
-              <Link
-                href="/post/new"
-                className="publish-btn glass-btn w-full flex items-center justify-center gap-2 py-3 font-bold text-lg transition-all active:scale-95"
-              >
-                <Plus className="h-5 w-5" />
-                发布
-              </Link>
-            </div>
 
             {/* User Info */}
             <div className="px-3 pb-3">
