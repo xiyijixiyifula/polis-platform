@@ -131,7 +131,11 @@ export function SpaceCard({ space }: SpaceCardProps) {
 
   return (
     <Link href={`/space/${space.namespace}`}>
-      <div className="glass-card group cursor-pointer rounded-2xl p-4">
+      <div className="glass-card-lg group cursor-pointer">
+	        <div className="liquid-effect" aria-hidden="true" />
+	        <div className="liquid-tint" aria-hidden="true" />
+	        <div className="liquid-shine" aria-hidden="true" />
+	        <div className="liquid-content p-4">
         <div className="flex items-start gap-3">
           {/* ========== 升级：几何SVG图标 ========== */}
           <div
@@ -189,6 +193,7 @@ export function SpaceCard({ space }: SpaceCardProps) {
             </div>
           </div>
         </div>
+        </div>{/* end liquid-content */}
       </div>
     </Link>
   );

@@ -4,8 +4,22 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.31', date: '2026-05-08', title: '🎨 视觉微调 — 玻璃卡片阴影增强 + 首页社区几何图标',
+      ver: '0.3.32', date: '2026-05-08', title: '💎 Liquid Glass 液体玻璃重设计 — SVG feTurbulence 动态折射 + 渐变背景',
       isLatest: true,
+      items: [
+        '💎 **Liquid Glass 系统**: SVG feTurbulence + feDisplacementMap 实现动态像素级折射 (Apple Liquid Glass 级效果)',
+        '🌈 **渐变背景**: 紫粉橙五色渐变 + 流动动画 (20s cycle) + 暗色模式深紫渐变',
+        '🫧 **四层玻璃架构**: liquid-effect (SVG扭曲) + liquid-tint (模糊着色) + liquid-shine (镜面高光) + liquid-content (内容层)',
+        '🧩 **LiquidGlass 组件**: 可复用包装组件 (card/button/primary-btn/icon 四种 variant)',
+        '🎴 **PostCard 玻璃化**: glass-card-lg + 四层结构 + hover 上浮增强',
+        '🔷 **SpaceCard 玻璃化**: 几何 SVG 图标 + 液态玻璃卡片双效果叠加',
+        '📋 **Feed 透明化**: 首页侧边栏/Feed区/右侧栏全面玻璃化',
+        '✅ 33/33 页面构建成功, 80KB CSS 全量玻璃系统',
+      ],
+    },
+    {
+      ver: '0.3.31', date: '2026-05-08', title: '🎨 视觉微调 — 玻璃卡片阴影增强 + 首页社区几何图标',
+      isLatest: false,
       items: [
         '🎴 **玻璃卡片增强**: glass-card 阴影加深 (glow: 0.18), 边框更可见 (0.08), 背景不透明度 72%→85%',
         '🔷 **首页图标几何化**: 推荐社区列表字母图标 → 8种 SVG 几何图标 (六边形/齿轮/花朵等)',

@@ -40,7 +40,12 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: P
   const authorUsername = author?.username || '';
 
   return (
-    <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="relative group glass-card block rounded-2xl p-4">
+    <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="relative group glass-card-lg block">
+      {/* Liquid Glass 四层架构 */}
+      <div className="liquid-effect" aria-hidden="true" />
+      <div className="liquid-tint" aria-hidden="true" />
+      <div className="liquid-shine" aria-hidden="true" />
+      <div className="liquid-content p-4">
       {post.is_pinned && (
         <div className="mb-2 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
       )}
@@ -166,6 +171,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: P
           </div>
         </div>
       </div>
+      </div>{/* end liquid-content */}
     </Link>
   );
 }

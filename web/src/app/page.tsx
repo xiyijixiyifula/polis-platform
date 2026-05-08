@@ -107,11 +107,13 @@ function FeedLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen">
       <div className="mx-auto max-w-7xl flex justify-center">
         {/* ===== Left Sidebar ===== */}
-        <aside className="w-[275px] shrink-0 hidden lg:block border-r border-gray-200 dark:border-gray-800 sidebar-dark">
-          <div className="sticky top-0 h-screen flex flex-col py-3 px-3">
+        <aside className="w-[275px] shrink-0 hidden lg:block border-r border-white/10 relative overflow-hidden">
+          <div className="liquid-tint" aria-hidden="true" style={{borderRadius:0,border:'none',boxShadow:'none'}} />
+          <div className="liquid-shine" aria-hidden="true" />
+          <div className="liquid-content sticky top-0 h-screen flex flex-col py-3 px-3">
             {/* Logo */}
             <div className="px-3 pb-3 mb-2">
               <Link href="/" className="text-2xl font-bold text-primary-600 dark:text-primary-400 tracking-tight">
@@ -177,7 +179,7 @@ function FeedLayout() {
         </aside>
 
         {/* ===== Center Feed ===== */}
-        <main className="w-[600px] min-w-0 border-r border-gray-200 dark:border-gray-800">
+        <main className="w-[600px] min-w-0 border-r border-white/10 feed-area">
           {/* Hero Banner */}
           <div className="relative overflow-hidden rounded-b-2xl bg-gradient-to-br from-gray-900 via-slate-800 to-purple-900 p-8">
             <SpaceParticles color="139, 92, 246" />
