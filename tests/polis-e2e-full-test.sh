@@ -59,23 +59,24 @@ log_test() {
 
 api() {
     local method="$1" path="$2" data="$3" tkn="$4"
+    local curl_opts="-sk --connect-timeout 10 --max-time 15 --retry 1 --retry-delay 2"
     if [ -n "$data" ]; then
         if [ -n "$tkn" ]; then
-            curl -sk -X "$method" "$BASE_URL$path" \
+            curl $curl_opts -X "$method" "$BASE_URL$path" \
                 -H "Content-Type: application/json" \
                 -H "Authorization: Bearer $tkn" \
                 -d "$data" 2>/dev/null
         else
-            curl -sk -X "$method" "$BASE_URL$path" \
+            curl $curl_opts -X "$method" "$BASE_URL$path" \
                 -H "Content-Type: application/json" \
                 -d "$data" 2>/dev/null
         fi
     else
         if [ -n "$tkn" ]; then
-            curl -sk -X "$method" "$BASE_URL$path" \
+            curl $curl_opts -X "$method" "$BASE_URL$path" \
                 -H "Authorization: Bearer $tkn" 2>/dev/null
         else
-            curl -sk -X "$method" "$BASE_URL$path" 2>/dev/null
+            curl $curl_opts -X "$method" "$BASE_URL$path" 2>/dev/null
         fi
     fi
 }

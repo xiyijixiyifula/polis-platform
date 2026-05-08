@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.36', date: '2026-05-08', title: '🛡️ React ErrorBoundary — 全局错误捕获 + 优雅降级',
+      ver: '0.3.37', date: '2026-05-09', title: '🔧 维护轮次 — E2E 增强 + 数据库迁移自动化 + 聊天修复',
       isLatest: true,
+      items: [
+        '🧪 **E2E 可靠性增强**: api() 函数新增 --connect-timeout/--max-time/--retry 参数，应对瞬时网络波动',
+        '🗄️ **数据库迁移自动化**: auto-dev.sh Phase 1 新增自动运行 migrations/*.sql，确保新表结构同步',
+        '💬 **聊天模块修复**: 应用 chat_messages 迁移 (008), 修复 E2E CHAT 测试 0/2 → 预期 2/2',
+        '✅ 138/140 E2E 通过 (98.6%), 33/33 前端构建成功, Rust 17 crates 零警告',
+      ],
+    },
+    {
+      ver: '0.3.36', date: '2026-05-08', title: '🛡️ React ErrorBoundary — 全局错误捕获 + 优雅降级',
+      isLatest: false,
       items: [
         '🛡️ **ErrorBoundary 组件**: Class组件实现的React错误边界，捕获渲染错误显示友好UI',
         '🛡️ **降级UI**: 错误页面包含 ⚠️ 图标 + 错误信息 + 重试/刷新/返回首页三个操作按钮',

@@ -16,10 +16,20 @@ if [ -f /root/polis/.env ]; then
     echo "[DEV] .env backed up"
 fi
 
-# ---- Phase 1: Pull latest + Selective Build ----
+# ---- Phase 1: Pull latest + Run Migrations + Selective Build ----
 echo "[DEV] Phase 1: Pull & Build..."
 cd /root/polis
 git pull origin main 2>/dev/null || echo "[DEV] No git updates"
+
+# Run database migrations (idempotent — uses IF NOT EXISTS)
+echo "[DEV] Running database migrations..."
+for migration in /root/polis/migrations/*.sql; do
+    if [ -f "$migration" ]; then
+        MIG_NAME=$(basename "$migration")
+        echo "[DEV]   Applying $MIG_NAME..."
+        PGPASSWORD="${DB_PASSWORD:-polis2024}" psql -U "${DB_USER:-polis}" -d "${DB_NAME:-polis}" -h localhost -f "$migration" 2>/dev/null && echo "[DEV]   ✓ $MIG_NAME applied" || echo "[DEV]   ⚠ $MIG_NAME (may already exist)"
+    fi
+done
 
 export PATH=$HOME/.cargo/bin:$PATH
 
