@@ -860,7 +860,9 @@ impl ContentHandler {
                 .map_err(|e| AppError::External(format!("Failed to find README: {}", e)))?;
             let readme_path = String::from_utf8_lossy(&find_output.stdout).trim().to_string();
             if readme_path.is_empty() {
-                let ls = Command::new("ls").arg("-R").arg(&tmp_dir).output().map_err(|_| AppError::External("".to_string())).unwrap().stdout;
+                let ls_output = Command::new("ls").arg("-R").arg(&tmp_dir).output()
+                    .map_err(|e| AppError::External(format!("Failed to list files: {}", e)))?;
+                let ls = ls_output.stdout;
                 let listing = String::from_utf8_lossy(&ls);
                 return Err(AppError::NotFound(format!("No README.md found in zip. Files: {}", listing)));
             }

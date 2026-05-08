@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.26', date: '2026-05-08', title: '📋 文档同步 — DM 测试用例 + 版本号更新',
+      ver: '0.3.27', date: '2026-05-08', title: '🛡️ 代码质量 — 消除 unwrap() 潜在 panic + 维护轮次',
       isLatest: true,
+      items: [
+        '🛡️ **消除 unwrap()**: content_handler.rs 中 ls 命令失败时不再 panic，改用 ? 错误传播 (高危修复)',
+        '🛡️ **HeaderValue 安全**: content_routes.rs 中 3 处文件下载响应头解析增加 fallback，避免无效字符导致 panic',
+        '🛡️ **json_ok 优化**: unwrap() → expect() 增加错误上下文信息',
+        '🛡️ **Response builder**: unwrap() → expect() 语义明确化',
+        '✅ 141/141 E2E 全量通过, 28/28 页面全 200, 6/6 服务 active',
+        '✅ 符合编码规范: "关键逻辑必须有错误处理，不能 unwrap()"',
+      ],
+    },
+    {
+      ver: '0.3.26', date: '2026-05-08', title: '📋 文档同步 — DM 测试用例 + 版本号更新',
+      isLatest: false,
       items: [
         '📋 **测试文档**: test-cases.md 新增 DM 私信测试 (TC-DM-01~05) — 发送/列表/已读/未读数/对话历史全覆盖',
         '📝 **文档同步**: README + 定时任务 + CLI-GUIDE 版本号统一更新至 v0.3.26',

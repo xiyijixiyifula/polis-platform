@@ -18,7 +18,7 @@ use serde::Deserialize as SerdeDeserialize;
 
 /// Helper to wrap a value in Json response
 fn json_ok<T: serde::Serialize>(value: T) -> Json<serde_json::Value> {
-    Json(serde_json::to_value(value).unwrap())
+    Json(serde_json::to_value(value).expect("json_ok: serialization should not fail for known types"))
 }
 
 /// Try to extract user_id from Authorization header (optional — returns None for unauthenticated requests)
@@ -682,7 +682,8 @@ async fn download_post_route(
     let disp = format!("attachment; filename=\"{}.md\"", filename);
     let mut resp = Response::new(axum::body::Body::from(markdown));
     resp.headers_mut().insert("content-type", axum::http::HeaderValue::from_static("text/markdown; charset=utf-8"));
-    resp.headers_mut().insert("content-disposition", axum::http::HeaderValue::from_str(&disp).unwrap());
+    resp.headers_mut().insert("content-disposition", axum::http::HeaderValue::from_str(&disp)
+        .unwrap_or_else(|_| axum::http::HeaderValue::from_static("attachment")));
     Ok(resp)
 }
 
@@ -962,8 +963,10 @@ async fn download_share_route(
     let (data, filename, mime_type) = h.download_shared_file(&code, q.password.as_deref()).await?;
     let disp = format!("attachment; filename={}", filename);
     let mut resp = Response::new(axum::body::Body::from(data));
-    resp.headers_mut().insert("content-type", axum::http::HeaderValue::from_str(&mime_type).unwrap());
-    resp.headers_mut().insert("content-disposition", axum::http::HeaderValue::from_str(&disp).unwrap());
+    resp.headers_mut().insert("content-type", axum::http::HeaderValue::from_str(&mime_type)
+        .unwrap_or_else(|_| axum::http::HeaderValue::from_static("application/octet-stream")));
+    resp.headers_mut().insert("content-disposition", axum::http::HeaderValue::from_str(&disp)
+        .unwrap_or_else(|_| axum::http::HeaderValue::from_static("attachment")));
     Ok(resp)
 }
 
@@ -977,7 +980,7 @@ async fn get_file_route(
     Ok(Response::builder()
         .header(axum::http::header::CONTENT_TYPE, content_type)
         .body(axum::body::Body::from(data))
-        .unwrap())
+        .expect("get_file_route: response build should not fail"))
 }
 // ===== 付费社区（会员等级）路由处理函数 =====
 
