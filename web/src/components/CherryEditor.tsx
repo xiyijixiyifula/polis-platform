@@ -35,6 +35,9 @@ interface CherryEditorProps {
   onAutoSave?: (markdown: string) => void;
 }
 
+// ─── Cherry Engine (module-level eager preload) ──────
+const CherryImport = import('cherry-markdown');
+
 // ─── Inner Component ─────────────────────────────────────
 const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
   (
@@ -159,9 +162,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
 
       const init = async () => {
         try {
-          const [{ default: Cherry }] = await Promise.all([
-            import('cherry-markdown'),
-          ]);
+          const [{ default: Cherry }] = await Promise.all([CherryImport]);
 
           if (!mounted || !containerRef.current) return;
 

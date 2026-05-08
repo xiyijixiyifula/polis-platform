@@ -24,6 +24,9 @@ function fallbackRender(md: string): string {
   return '<p>' + html + '</p>';
 }
 
+// ── Eager module-level preload ──
+const engineImport = import('cherry-markdown/dist/cherry-markdown.engine.core.esm.js');
+
 // ── Cached engine singleton ──
 let engineCache: any = null;
 let enginePromise: Promise<any> | null = null;
@@ -33,8 +36,7 @@ async function getEngine() {
   if (enginePromise) return enginePromise;
 
   enginePromise = (async () => {
-    // Dynamically import the Cherry Engine Core — code‑split, browser‑only
-    const mod = await import('cherry-markdown/dist/cherry-markdown.engine.core.esm.js');
+    const mod = await engineImport;
     const CherryEngine = mod.default;
     engineCache = new CherryEngine({
       engine: {
