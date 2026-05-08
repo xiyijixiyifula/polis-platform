@@ -21,7 +21,7 @@
 
 ---
 
-## ✨ 当前功能 (v0.3.31)
+## ✨ 当前功能 (v0.3.32)
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -79,6 +79,7 @@
 | ✨ 粒子背景动画 | ✅ | SpaceParticles Canvas 组件 — 粒子连线 + 响应式缩放 |
 | 🏠 Hero Banner | ✅ | 首页 Feed 顶部 — "连接思想，共创未来" + 粒子背景 + CTA |
 | ❤️ 点赞心跳动画 | ✅ | heartPulse 动画 + like-btn 样式 + btn-ripple 水波纹 |
+| 💎 Liquid Glass 液体玻璃 | ✅ | SVG feTurbulence 动态折射 + 四层架构 + 渐变流动背景 |
 
 ---
 
