@@ -9,8 +9,8 @@ export default function ChangelogPage() {
       items: [
         '🧪 **E2E 可靠性增强**: api() 函数新增 --connect-timeout/--max-time/--retry 参数，应对瞬时网络波动',
         '🗄️ **数据库迁移自动化**: auto-dev.sh Phase 1 新增自动运行 migrations/*.sql，确保新表结构同步',
-        '💬 **聊天模块修复**: 应用 chat_messages 迁移 (008), 修复 E2E CHAT 测试 0/2 → 预期 2/2',
-        '✅ 138/140 E2E 通过 (98.6%), 33/33 前端构建成功, Rust 17 crates 零警告',
+        '💬 **聊天模块修复**: Content 服务重启后 chat_messages 生效, E2E CHAT 测试从 0/3 → 3/3 全部通过',
+        '✅ 141/141 E2E 全量通过, 10/10 数据库迁移已应用, 33/33 前端构建成功, Rust 17 crates 零警告',
       ],
     },
     {
