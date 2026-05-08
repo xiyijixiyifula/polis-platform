@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.35', date: '2026-05-08', title: '🧹 代码质量 — Rust 零警告编译 + 🔐 401 自动过期登录',
+      ver: '0.3.36', date: '2026-05-08', title: '🛡️ React ErrorBoundary — 全局错误捕获 + 优雅降级',
       isLatest: true,
+      items: [
+        '🛡️ **ErrorBoundary 组件**: Class组件实现的React错误边界，捕获渲染错误显示友好UI',
+        '🛡️ **降级UI**: 错误页面包含 ⚠️ 图标 + 错误信息 + 重试/刷新/返回首页三个操作按钮',
+        '🛡️ **SilentErrorBoundary**: 轻量级静默降级变体，适合卡片/小部件场景',
+        '🛡️ **全局集成**: layout.tsx 集成 ClientLayoutWrapper，所有页面受 ErrorBoundary 保护',
+        '✅ 33/33 前端页面构建成功, Rust 17 crates 零警告',
+      ],
+    },
+    {
+      ver: '0.3.35', date: '2026-05-08', title: '🧹 代码质量 — Rust 零警告编译 + 🔐 401 自动过期登录',
+      isLatest: false,
       items: [
         '🧹 **Rust 零警告**: 17 crates 编译零警告 — 清理 7 项 dead_code/unused_import 警告',
         '🧹 **Workspace 优化**: polisctl [profile.release] 移至 workspace 根 Cargo.toml 统一管理',
