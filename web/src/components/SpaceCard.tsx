@@ -109,7 +109,7 @@ const GRADIENTS = [
   ['#f97316', '#ea580c'],  // orange
 ];
 
-function getSpaceVisual(namespace: string) {
+export function getSpaceVisual(namespace: string) {
   let hash = 0;
   for (let i = 0; i < namespace.length; i++) {
     hash = ((hash << 5) - hash) + namespace.charCodeAt(i);

@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.30', date: '2026-05-08', title: '🎨 视觉修复 — 部署链路修复 + Hero Banner + 深色侧边栏全量生效',
+      ver: '0.3.31', date: '2026-05-08', title: '🎨 视觉微调 — 玻璃卡片阴影增强 + 首页社区几何图标',
       isLatest: true,
+      items: [
+        '🎴 **玻璃卡片增强**: glass-card 阴影加深 (glow: 0.18), 边框更可见 (0.08), 背景不透明度 72%→85%',
+        '🔷 **首页图标几何化**: 推荐社区列表字母图标 → 8种 SVG 几何图标 (六边形/齿轮/花朵等)',
+        '📤 **SpaceCard 导出**: getSpaceVisual 改为 export，首页复用几何图标生成逻辑',
+        '✅ 构建通过, 28/28 页面 200, 6/6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.30', date: '2026-05-08', title: '🎨 视觉修复 — 部署链路修复 + Hero Banner + 深色侧边栏全量生效',
+      isLatest: false,
       items: [
         '🔧 **部署修复**: 源码已改但 /opt/polis-web/.next/ 仍是5月1日旧产物 → 重新构建部署，所有视觉 CSS 全量上线',
         '🏠 **Hero Banner**: 首页 Feed 顶部新增粒子背景 Hero 区域 — "连接思想，共创未来" + 探索/加入 CTA',

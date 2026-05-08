@@ -9,6 +9,7 @@ import {
   Share2, Repeat2, Sparkles, Users, FlaskConical
 } from 'lucide-react';
 import { SpaceParticles } from '@/components/SpaceParticles';
+import { getSpaceVisual } from '@/components/SpaceCard';
 
 // ===== Main Component =====
 export default function HomePage() {
@@ -333,17 +334,23 @@ function FeedLayout() {
               </h3>
               <div className="divide-y divide-gray-200/50 dark:divide-gray-800/50">
                 {trendingSpaces.length > 0 ? (
-                  trendingSpaces.map((space: any) => (
+                  trendingSpaces.map((space: any) => {
+                    const vis = getSpaceVisual(space.namespace || '');
+                    return (
                     <Link key={space.id} href={'/space/' + space.namespace} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                      <div className="h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-sm">
-                        {(space.title || '?').charAt(0)}
+                      <div className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center overflow-hidden" style={{ background: vis.gradient }}>
+                        {space.icon_url ? (
+                          <img src={space.icon_url} alt="" className="h-full w-full rounded-xl object-cover" />
+                        ) : (
+                          <div className="w-5 h-5">{vis.shape('white')}</div>
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{space.title}</p>
                         <p className="text-xs text-gray-500 truncate">{space.description || ''}</p>
                       </div>
                     </Link>
-                  ))
+                    )})
                 ) : (
                   [...Array(3)].map((_, i) => (
                     <div key={i} className="px-4 py-3 animate-pulse">
