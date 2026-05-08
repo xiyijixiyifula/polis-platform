@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.28', date: '2026-05-08', title: '🎨 视觉升级 — 社区粒子背景动画 + 视觉指南全面对照实施',
+      ver: '0.3.29', date: '2026-05-08', title: '🧹 维护轮次 — 代码质量优化 + 编译警告清理',
       isLatest: true,
+      items: [
+        '🧹 **编译警告**: cargo fix 自动清理 47 个 unused import/variable 警告 (17 crates)',
+        '🧹 **警告统计**: 63 → 16 (消除 74.6%), 仅剩余桩代码预留字段',
+        '🧹 **修复范围**: polis-core/user/space/content/admin/video/notify/search/aggregate/code/plugin-engine/chat/polisctl/gateway',
+        '✅ 141/141 E2E 全量通过, 28/28 页面全 200, 6/6 服务 active',
+        '✅ 全量 cargo check 仅剩 16 条预留桩代码警告（非活跃功能）',
+      ],
+    },
+    {
+      ver: '0.3.28', date: '2026-05-08', title: '🎨 视觉升级 — 社区粒子背景动画 + 视觉指南全面对照实施',
+      isLatest: false,
       items: [
         '✨ **粒子背景**: SpaceParticles 组件 — Canvas 粒子动画 + 连线效果 + ResizeObserver 响应式',
         '🏛️ **社区头部**: Space 详情页头部集成粒子背景 (from-primary-50梯度 + SpaceParticles overlay)',

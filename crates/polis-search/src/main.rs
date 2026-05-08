@@ -49,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Meilisearch indexes ready");
 
     // 连接 NATS 并订阅事件
-    let nats = match async_nats::connect(&config.nats_url).await {
+    let _nats = match async_nats::connect(&config.nats_url).await {
         Ok(client) => {
             tracing::info!("Connected to NATS for event indexing");
 

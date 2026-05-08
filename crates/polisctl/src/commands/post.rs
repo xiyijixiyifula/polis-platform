@@ -163,7 +163,7 @@ pub async fn featuring(
 }
 
 pub async fn download(
-    config: &Config,
+    _config: &Config,
     client: &HttpClient,
     post_id: &str,
     output: Option<&str>,

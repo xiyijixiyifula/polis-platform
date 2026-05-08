@@ -3,7 +3,6 @@ use axum::{extract::{Path, State}, middleware, routing::{get, post, put}, Json, 
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
-use sqlx::PgPool;
 use polis_core::models::{ApiResponse, LoginRequest, LoginResponse, RegisterRequest, UpdateUserRequest, UserPublic};
 use crate::handlers::user_handler::UserHandler;
 use crate::middleware::auth::auth_middleware;
@@ -64,7 +63,7 @@ async fn forgot_password(State(h): State<Arc<UserHandler>>, Json(r): Json<Forgot
     let token = h.generate_reset_token(&r.email).await?;
     Ok(Json(ApiResponse::success(token)))
 }
-async fn update_settings(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<serde_json::Value>) -> Result<Json<ApiResponse<()>>, AppError> {
+async fn update_settings(State(_h): State<Arc<UserHandler>>, axum::Extension(_uid): axum::Extension<Uuid>, Json(_r): Json<serde_json::Value>) -> Result<Json<ApiResponse<()>>, AppError> {
     // Settings stored as JSON in user metadata (for future)
     Ok(Json(ApiResponse::success(())))
 }

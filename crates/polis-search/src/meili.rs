@@ -1,6 +1,5 @@
 use polis_core::error::AppError;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 /// Meilisearch 客户端封装
 #[derive(Clone)]

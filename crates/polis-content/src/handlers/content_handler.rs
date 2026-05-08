@@ -1,10 +1,7 @@
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
-use polis_core::models::{CreateTierRequest, UpdateTierRequest, JoinPaidSpaceRequest, SpaceTier, Subscription,
-    Comment, ContentType, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest,
-    ModuleType, Pagination, Post, PostPublic, Series, SeriesPublic, UpdatePostRequest, UserPublic, PaginationParams,
+use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscription, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, Pagination, Post, PostPublic, SeriesPublic, UpdatePostRequest, UserPublic, PaginationParams,
 };
-use polis_core::resolver::resolve::resolve_space_enabled_modules;
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -870,7 +867,7 @@ impl ContentHandler {
                 .map_err(|e| AppError::External(format!("Failed to read README: {}", e)))?;
             // Find and upload referenced images
             let base_dir = std::path::Path::new(&readme_path).parent().unwrap_or(std::path::Path::new(&tmp_dir));
-            let mut processed = content.clone();
+            let _processed = content.clone();
             // Match ![alt](path) and <img src="path">
             // Simple string-based image reference replacement
             let mut remaining = content.as_str();
@@ -967,7 +964,7 @@ impl ContentHandler {
         let (fid, _filename, _fs, _mt, _sp) = self.repo.get_file_by_id(file_id).await?;
         let code: String = Uuid::new_v4().to_string().chars().take(8).collect();
         let expires_at = expires_hours.map(|h| chrono::Utc::now() + chrono::Duration::hours(h));
-        let share = self.repo.create_share_link(fid, &code, password.as_deref(), expires_at, None).await?;
+        let _share = self.repo.create_share_link(fid, &code, password.as_deref(), expires_at, None).await?;
         Ok(serde_json::json!({ "code": code, "file_id": fid.to_string(), "expires_at": expires_at.map(|t| t.to_rfc3339()), "password": password }))
     }
 

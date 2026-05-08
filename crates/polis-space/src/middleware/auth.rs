@@ -23,7 +23,7 @@ struct Claims {
 
 /// JWT 认证中间件
 pub async fn auth_middleware(
-    State(handler): State<Arc<SpaceHandler>>,
+    State(_handler): State<Arc<SpaceHandler>>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {

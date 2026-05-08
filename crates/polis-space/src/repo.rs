@@ -1,5 +1,5 @@
 use polis_core::error::AppError;
-use polis_core::models::{CreateSpaceRequest, Space, SpacePublic, Membership, UpdateSpaceRequest};
+use polis_core::models::{Space, Membership, UpdateSpaceRequest};
 use sqlx::PgPool;
 use uuid::Uuid;
 

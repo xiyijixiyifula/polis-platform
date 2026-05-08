@@ -1,7 +1,6 @@
 use crate::config::Config;
 use crate::http::HttpClient;
-use crate::output::{extract_data, print_output};
-use serde_json::json;
+use crate::output::print_output;
 
 /// Check health of gateway and all microservices
 pub async fn check(config: &Config, client: &HttpClient) -> Result<(), anyhow::Error> {

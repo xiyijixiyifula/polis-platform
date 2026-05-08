@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use polis_core::error::AppError;
 use polis_core::types::PluginPermission;
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use wasmtime::{Engine, Linker, Module, Store, TypedFunc};
+use wasmtime::{Engine, Linker, Module, Store};
 
 /// WASM 插件实例
 pub struct PluginInstance {
@@ -71,7 +70,7 @@ impl PluginEngine {
         let context = PluginContext::new(id, space_id);
         let mut store = Store::new(&self.engine, context);
 
-        let instance = linker
+        let _instance = linker
             .instantiate(&mut store, &module)
             .map_err(|e| AppError::Internal(format!("Failed to instantiate plugin: {}", e)))?;
 

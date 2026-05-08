@@ -10,7 +10,7 @@ use crate::handler::NotifyHandler;
 struct Claims { sub: String, token_type: String, exp: usize }
 
 pub async fn auth_middleware(
-    State(handler): State<Arc<NotifyHandler>>,
+    State(_handler): State<Arc<NotifyHandler>>,
     mut req: Request, next: Next,
 ) -> Result<Response, AppError> {
     let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());

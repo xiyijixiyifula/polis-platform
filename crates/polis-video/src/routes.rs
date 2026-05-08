@@ -25,10 +25,10 @@ pub fn video_routes(handler: Arc<VideoHandler>) -> Router {
 
 /// POST /api/spaces/:namespace/videos/upload - 上传视频
 async fn upload_video(
-    State(handler): State<Arc<VideoHandler>>,
+    State(_handler): State<Arc<VideoHandler>>,
     Path(namespace): Path<String>,
     // In production, use multipart form data
-    body: String,
+    _body: String,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
     // TODO: parse multipart form data with actual file bytes
     // For now, return a stub structure
@@ -40,9 +40,9 @@ async fn upload_video(
 
 /// GET /api/spaces/:namespace/videos - 视频列表
 async fn list_videos(
-    State(handler): State<Arc<VideoHandler>>,
-    Path(namespace): Path<String>,
-    Query(params): Query<PaginationParams>,
+    State(_handler): State<Arc<VideoHandler>>,
+    Path(_namespace): Path<String>,
+    Query(_params): Query<PaginationParams>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
     // TODO: resolve namespace to space_id, then query videos
     Ok(Json(ApiResponse::success(Vec::new())))

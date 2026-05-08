@@ -2,7 +2,6 @@ use std::path::PathBuf;
 use std::process::Stdio;
 
 use polis_core::error::AppError;
-use polis_core::events::{subjects, Event};
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 
@@ -119,7 +118,7 @@ impl VideoHandler {
 async fn transcode_video(
     input: &PathBuf,
     output_dir: &PathBuf,
-    config: &VideoServiceConfig,
+    _config: &VideoServiceConfig,
 ) -> Result<(), AppError> {
     tokio::fs::create_dir_all(output_dir).await
         .map_err(|e| AppError::Internal(format!("Failed to create HLS dir: {}", e)))?;

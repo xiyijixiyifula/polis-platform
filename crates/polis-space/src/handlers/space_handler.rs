@@ -1,7 +1,7 @@
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
 use polis_core::models::{
-    CreateSpaceRequest, Space, SpacePublic, Membership, UpdateSpaceRequest, ApiResponse,
+    CreateSpaceRequest, SpacePublic, UpdateSpaceRequest,
 };
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;

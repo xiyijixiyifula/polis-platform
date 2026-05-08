@@ -1,5 +1,5 @@
 use polis_core::error::AppError;
-use polis_core::models::{User, UserPublic};
+use polis_core::models::User;
 use sqlx::PgPool;
 use uuid::Uuid;
 

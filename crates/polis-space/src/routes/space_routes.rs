@@ -3,14 +3,13 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, Query, Request, State},
     middleware,
-    routing::{delete, get, post, put},
+    routing::{get, post},
     Json, Router,
 };
 use uuid::Uuid;
 
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
-use sqlx::PgPool;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]

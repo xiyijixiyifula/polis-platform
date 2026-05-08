@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use axum::{extract::{Path, Query, State}, middleware, routing::{get, post}, Json, Router};
+use axum::{extract::{Query, State}, middleware, routing::{get, post}, Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;

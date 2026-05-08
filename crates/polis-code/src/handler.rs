@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 
 use polis_core::error::AppError;
 use sqlx::PgPool;

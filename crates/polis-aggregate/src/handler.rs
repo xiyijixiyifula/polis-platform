@@ -1,5 +1,4 @@
 use polis_core::error::AppError;
-use polis_core::models::ApiResponse;
 
 use crate::aggregator::Aggregator;
 

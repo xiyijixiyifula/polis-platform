@@ -988,7 +988,7 @@ impl ContentRepo {
         let users = self.find_users_batch(&user_ids).await?;
         let spaces = self.find_spaces_batch(&space_ids).await?;
         let mut items: Vec<serde_json::Value> = Vec::new();
-        for (id, space_id, module_type, author_id, title, body_preview, content_type, comment_count, like_count, view_count, created_at) in &posts {
+        for (id, space_id, module_type, author_id, title, body_preview, _content_type, comment_count, like_count, view_count, created_at) in &posts {
             let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));
             let space_info = spaces.get(space_id);
             items.push(serde_json::json!({"id": id, "type": "post", "module_type": module_type, "title": title, "preview": body_preview, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "author": author, "space": space_info}));

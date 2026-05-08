@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Path, Request, State},
+    extract::{Request, State},
     http::{Method, StatusCode},
-    response::{IntoResponse, Response},
+    response::Response,
     routing::{any, get, Router},
     Json,
 };
