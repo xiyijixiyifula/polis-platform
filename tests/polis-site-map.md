@@ -18,16 +18,21 @@ Complete inventory of all known pages and routes in the Polis platform for syste
 
 | Route | Page Name | Key Elements | Auth Required |
 |-------|-----------|--------------|---------------|
-| `/` | Home / Landing | Hero section, CTA buttons, feature cards (一键创建/模块化/数据主权), footer | No |
-| `/about` | About Polis | Mission statement, feature grid (用户主权/模块化/数据自有/高性能), tech stack badges | No |
-| `/changelog` | Changelog | Version timeline (v0.2.12 to v0.2.0+), feature bullets with icons, dates | No |
+| `/` | Feed / Timeline | 3-column layout (sidebar + feed + trending), Hero Banner "连接思想，共创未来", infinite scroll feed, tabs (全部/关注/热门) | No |
+| `/about` | About Polis | Mission statement "让创建社区像创建 GitHub 仓库一样简单", feature grid (用户主权/模块化/数据自有/高性能), tech stack badges, CTA buttons | No |
+| `/changelog` | Changelog | Version timeline (v0.3.31 to v0.2.0+), feature bullets with icons, dates, current version green badge | No |
 | `/research` | AI Research | Product roadmap (v0.3.0-v0.6.0), GitHub trending list, auto-generated report | No |
+| `/explore` | Explore | Community discovery, trending spaces | No |
+| `/trending` | Trending | Popular content and communities | No |
+| `/privacy` | Privacy Policy | Privacy policy content | No |
+| `/cli` | CLI Reference | polisctl command reference page | No |
 
-### Home Page (`/`)
-- **Hero**: "让创建社区像创建 GitHub 仓库一样简单"
-- **CTA**: "免费创建你的社区" (primary button), "探索社区" (secondary button)
-- **Features**: 3 cards — 一键创建 / 模块化 / 数据主权
-- **Footer**: "Polis (πόλις) — 人人都是城主 · Built with Rust + Next.js"
+### Home / Feed Page (`/`)
+- **Layout**: 3-column — Left Sidebar (275px, dark console style), Center Feed (600px), Right Sidebar (350px)
+- **Hero Banner**: "连接思想，共创未来" + SpaceParticles particle background + CTA buttons (探索社区/立即加入)
+- **Feed Tabs**: 全部动态 / 关注的人 / 热门
+- **Infinite Scroll**: IntersectionObserver-based load more
+- **Right Sidebar**: Search, 热门趋势 (hardcoded topics), 推荐社区 (geometric SVG icons)
 
 ### About Page (`/about`)
 - **Mission**: "让创建社区像创建 GitHub 仓库一样简单"
@@ -37,7 +42,7 @@ Complete inventory of all known pages and routes in the Polis platform for syste
 ### Changelog Page (`/changelog`)
 - **Format**: Timeline with version nodes (blue dots)
 - **Current Version Badge**: "当前版本" green badge
-- **Latest**: v0.2.12 — 文件分享系统 (2026-04-30)
+- **Latest**: v0.3.31 — 视觉微调 (2026-05-08)
 
 ### Research Page (`/research`)
 - **Roadmap**: 4 phases (v0.3.0 to v0.6.0) with feature lists and checkmarks
