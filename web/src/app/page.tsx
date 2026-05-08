@@ -8,7 +8,6 @@ import {
   Plus, Search, TrendingUp, MessageCircle, Heart, Eye,
   Share2, Repeat2, Sparkles, Users, FlaskConical
 } from 'lucide-react';
-import { SpaceParticles } from '@/components/SpaceParticles';
 import { getSpaceVisual } from '@/components/SpaceCard';
 
 // ===== Main Component =====
@@ -110,10 +109,8 @@ function FeedLayout() {
     <div className="min-h-screen">
       <div className="mx-auto max-w-7xl flex justify-center">
         {/* ===== Left Sidebar ===== */}
-        <aside className="w-[275px] shrink-0 hidden lg:block border-r border-white/10 relative overflow-hidden">
-          <div className="liquid-tint" aria-hidden="true" style={{borderRadius:0,border:'none',boxShadow:'none'}} />
-          <div className="liquid-shine" aria-hidden="true" />
-          <div className="liquid-content sticky top-0 h-screen flex flex-col py-3 px-3">
+        <aside className="w-[275px] shrink-0 hidden lg:block glass-sidebar">
+          <div className="sticky top-0 h-screen flex flex-col py-3 px-3">
             {/* Logo */}
             <div className="px-3 pb-3 mb-2">
               <Link href="/" className="text-2xl font-bold text-primary-600 dark:text-primary-400 tracking-tight">
@@ -179,27 +176,26 @@ function FeedLayout() {
         </aside>
 
         {/* ===== Center Feed ===== */}
-        <main className="w-[600px] min-w-0 border-r border-white/10 feed-area">
-          {/* Hero Banner */}
-          <div className="relative overflow-hidden rounded-b-2xl bg-gradient-to-br from-gray-900 via-slate-800 to-purple-900 p-8">
-            <SpaceParticles color="139, 92, 246" />
-            <div className="relative z-10 text-center">
-              <div className="inline-flex items-center gap-2 mb-3 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur border border-white/10">
-                <Sparkles className="h-4 w-4 text-purple-300" />
-                <span className="text-xs font-medium text-purple-200">Polis 社区平台</span>
+        <main className="w-[600px] min-w-0 border-r border-gray-100 dark:border-gray-800">
+          {/* Hero Banner — iOS 26 Liquid Glass */}
+          <div className="hero-glass gpu-layer animate-glow-pulse mb-4 mx-4 mt-4">
+            <div className="px-6 py-8 text-center sm:px-10 sm:py-12">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-badge mb-5">
+                <span className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 animate-breathe" />
+                <span className="text-xs font-medium text-secondary">Polis 社区平台</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2 tracking-tight">
+              <h1 className="text-3xl sm:text-4xl font-bold text-primary tracking-tight mb-3">
                 连接思想，共创未来
               </h1>
-              <p className="text-sm text-gray-300 max-w-md mx-auto mb-5">
+              <p className="text-base text-secondary max-w-md mx-auto mb-6 leading-relaxed">
                 创建你的社区，分享知识，与世界连接。每一个想法都值得被看见。
               </p>
-              <div className="flex items-center justify-center gap-3">
-                <Link href="/explore" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-gray-900 text-sm font-medium hover:bg-gray-100 transition-colors shadow-lg">
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <Link href="/explore" className="glass-btn glass-btn-primary">
                   <Compass className="h-4 w-4" />
-                  探索社区
+                  <span>探索社区</span>
                 </Link>
-                <Link href="/register" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-medium hover:bg-white/20 transition-colors">
+                <Link href="/register" className="glass-btn">
                   立即加入
                 </Link>
               </div>

@@ -4,8 +4,23 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.32', date: '2026-05-08', title: '💎 Liquid Glass 液体玻璃重设计 — SVG feTurbulence 动态折射 + 渐变背景',
+      ver: '0.3.33', date: '2026-05-08', title: '🍎 iOS 26 Liquid Glass 白底透明方案 — 纯白背景 + 液体玻璃 + 动态光效',
       isLatest: true,
+      items: [
+        '🍎 **白底透明**: 背景从紫粉渐变 → iOS 风格纯白 #f5f5f7, 文字深色 #1d1d1f',
+        '🫧 **液体玻璃卡片**: backdrop-filter blur(24px) + ::before 镜面高光 + inset 内发光边框 + 多层厚度阴影',
+        '✨ **Hero 玻璃化**: hero-glass — blur(32px) + 强镜面高光 + glow-pulse 脉冲动画',
+        '🧹 **代码简化**: 移除 SVG feTurbulence 滤镜 + 移除四层 HTML 结构 → CSS 伪元素方案',
+        '🎛️ **暗色模式**: 完整 Dark Mode 支持 (#1c1c1e 背景 + 对应玻璃变体)',
+        '🔘 **玻璃按钮**: glass-btn / glass-btn-primary — hover 缩放 + ::before 高光',
+        '🔧 **修复 CSS 变量冲突**: 移除 @layer base 中重复的 :root/.dark 变量定义，统一为 hex 格式',
+        '🖥️ **系统服务修复**: systemd 工作目录从 /root/polis/web → /opt/polis-web，修复 606 次重启崩溃循环',
+        '✅ 33/33 页面构建成功, 全量部署到 www.mzgw.com',
+      ],
+    },
+    {
+      ver: '0.3.32', date: '2026-05-08', title: '💎 Liquid Glass 液体玻璃重设计 — SVG feTurbulence 动态折射 + 渐变背景',
+      isLatest: false,
       items: [
         '💎 **Liquid Glass 系统**: SVG feTurbulence + feDisplacementMap 实现动态像素级折射 (Apple Liquid Glass 级效果)',
         '🌈 **渐变背景**: 紫粉橙五色渐变 + 流动动画 (20s cycle) + 暗色模式深紫渐变',
