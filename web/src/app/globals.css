@@ -498,27 +498,28 @@
 
 .glass-card {
   position: relative;
+  z-index: 1;
   border-radius: 20px;
   overflow: hidden;
   transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-  /* 核心：backdrop-filter 模糊背景 */
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  /* 更强的模糊 */
+  backdrop-filter: blur(32px) saturate(160%);
+  -webkit-backdrop-filter: blur(32px) saturate(160%);
 
-  /* 核心：几乎完全透明的底色 */
+  /* 更透明的底色 */
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.25) 0%,
-    rgba(255, 255, 255, 0.1) 100%
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.15) 100%
   );
 
-  /* 核心：内发光边框 + 厚度阴影 */
+  /* 内发光边框 */
   box-shadow:
     0 4px 24px rgba(0, 0, 0, 0.04),
     0 1px 2px rgba(0, 0, 0, 0.02),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-    inset 0 1px 1px rgba(255, 255, 255, 0.7);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8);
 }
 
 .dark .glass-card {
@@ -919,6 +920,25 @@
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
 .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
 .dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+/* ============================================
+   背景装饰色块浮动动画
+   ============================================ */
+
+@keyframes float-orb {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(20px, -30px) scale(1.05);
+  }
+  50% {
+    transform: translate(-10px, 20px) scale(0.95);
+  }
+  75% {
+    transform: translate(15px, 10px) scale(1.02);
+  }
+}
 
 /* 减少动画偏好 */
 @media (prefers-reduced-motion: reduce) {
