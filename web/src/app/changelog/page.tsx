@@ -4,8 +4,34 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.24', date: '2026-05-07', title: '💬 私信系统 + ⚡ 帖子详情优化 + 🔒 私有空间加固',
+      ver: '0.3.26', date: '2026-05-08', title: '📋 文档同步 — DM 测试用例 + 版本号更新',
       isLatest: true,
+      items: [
+        '📋 **测试文档**: test-cases.md 新增 DM 私信测试 (TC-DM-01~05) — 发送/列表/已读/未读数/对话历史全覆盖',
+        '📝 **文档同步**: README + 定时任务 + CLI-GUIDE 版本号统一更新至 v0.3.26',
+        '✅ 141/141 E2E 全量通过, 28/28 页面全 200, 6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.25', date: '2026-05-08', title: '🎨 视觉升级 — 玻璃拟态卡片 + 几何SVG社区图标 + 深色控制台侧边栏',
+      isLatest: false,
+      items: [
+        '🎨 **玻璃拟态卡片**: .glass-card 类 — 毛玻璃背景 (backdrop-filter: blur(12px)) + 悬停上浮动画 + 绿色辉光阴影',
+        '🔷 **几何SVG社区图标**: 8 种独特几何形状 (六边形/齿轮/花朵/立方/调色盘/灯泡/盾牌/闪电) + 8 种配色, 基于命名空间哈希确定性选择',
+        '🖥️ **深色控制台侧边栏**: .sidebar-dark — 渐变背景 (slate-900→slate-800) + 绿色左边框激活态 + 品牌 Logo',
+        '💚 **品牌色升级**: primary emerald-500 → 紫色品牌色, 全局统一视觉风格',
+        '✨ **动画系统**: 5 种 CSS 动画 (heartPulse/float/shimmer/glowPulse/fadeInUp) + tailwindcss-animate 插件',
+        '🎴 **PostCard 升级**: glass-card 玻璃卡片 + like-btn 心跳动画 + btn-ripple 水波纹效果',
+        '🗳️ **VoteButton**: active:scale-90 点击缩放 + 颜色优化 (赞同 primary-600, 反对 red-500)',
+        '🔝 **Header**: nav-glass 磨砂导航栏 (sticky+blur) — 滚动时半透明效果',
+        '🌐 **全局背景**: radial-gradient 径向渐变 + linear-gradient 线性渐变, 暗黑模式深色背景',
+        '🎨 **滚动条美化**: 暗色主题自定义滚动条 (slate-600 thumb + slate-800 track)',
+        '✅ 141/141 E2E 全量通过, 33/33 页面构建成功, 6 服务 active, 零功能回归',
+      ],
+    },
+    {
+      ver: '0.3.24', date: '2026-05-07', title: '💬 私信系统 + ⚡ 帖子详情优化 + 🔒 私有空间加固',
+      isLatest: false,
       items: [
         '💬 **私信系统**: 5 个 REST API (发送/会话列表/对话历史/标记已读/未读计数) + 2 个前端页面',
         '⚡ **帖子详情优化**: GET /api/posts/{id} 现在返回 is_liked/is_bookmarked 字段 — 减少 67% 请求',
