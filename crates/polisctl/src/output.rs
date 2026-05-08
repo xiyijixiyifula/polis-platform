@@ -140,6 +140,7 @@ pub fn print_success(msg: &str) {
 }
 
 /// Print an info message
+#[allow(dead_code)]
 pub fn print_info(msg: &str) {
     eprintln!("\x1b[34mℹ {}\x1b[0m", msg);
 }

@@ -1,6 +1,5 @@
 
 use thiserror::Error;
-use axum::response::IntoResponse;
 
 /// 统一的错误类型
 #[derive(Debug, Error)]

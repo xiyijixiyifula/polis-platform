@@ -97,3 +97,9 @@ futures-util = "0.3"
 # Testing
 rstest = "0.22"
 testcontainers = "0.23"
+
+[profile.release]
+opt-level = "z"
+lto = true
+strip = true
+codegen-units = 1

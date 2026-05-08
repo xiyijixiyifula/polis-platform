@@ -5,7 +5,6 @@ use std::path::PathBuf;
 pub struct Config {
     pub base_url: String,
     pub format: OutputFormat,
-    pub config_dir: PathBuf,
     pub token_file: PathBuf,
     pub user_file: PathBuf,
     pub admin_token_file: PathBuf,
@@ -39,7 +38,7 @@ impl Config {
         let user_file = config_dir.join("user");
         let admin_token_file = config_dir.join("admin_token");
 
-        Config { base_url, format, config_dir, token_file, user_file, admin_token_file }
+        Config { base_url, format, token_file, user_file, admin_token_file }
     }
 
     pub fn get_token(&self) -> Option<String> {

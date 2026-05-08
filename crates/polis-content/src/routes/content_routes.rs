@@ -988,9 +988,11 @@ async fn get_file_route(
 struct TierNsPath { ns: String }
 
 #[derive(serde::Deserialize)]
+#[allow(dead_code)]
 struct UpdateTierBody { space_ns: Option<String>, name: Option<String>, price_cents: Option<i64>, description: Option<String>, benefits: Option<Vec<String>>, sort_order: Option<i32>, is_active: Option<bool> }
 
 #[derive(serde::Deserialize)]
+#[allow(dead_code)]
 struct DeleteTierBody { space_ns: Option<String> }
 
 #[derive(serde::Deserialize)]

@@ -5,7 +5,7 @@ use axum::{
     routing::get,
     Router,
 };
-use futures_util::{SinkExt, StreamExt};
+use futures_util::StreamExt;
 
 use crate::handler::ChatHandler;
 

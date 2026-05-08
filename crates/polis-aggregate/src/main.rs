@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use futures_util::StreamExt;
 use polis_core::events::Event;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;

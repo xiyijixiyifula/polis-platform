@@ -25,8 +25,3 @@ base64 = "0.22"
 mime_guess = "2"
 urlencoding = "2"
 
-[profile.release]
-opt-level = "z"
-lto = true
-strip = true
-codegen-units = 1

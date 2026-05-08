@@ -26,6 +26,7 @@ use crate::handlers::space_handler::SpaceHandler;
 use crate::middleware::auth::auth_middleware;
 
 /// 从路径中提取 namespace（支持多段，如 zhangsan/rust-lab）
+#[allow(dead_code)]
 fn extract_namespace(path: &str, prefix: &str) -> Option<String> {
     let remaining = path.strip_prefix(prefix)?;
     let actions = ["/posts", "/members", "/join", "/leave", "/featured", "/bookmarks"];
