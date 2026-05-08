@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.34', date: '2026-05-08', title: '🧪 快速补丁 + 🫧 玻璃显形 + ⚡ 性能优化 — 编辑器预加载 + 浮动光球背景',
+      ver: '0.3.35', date: '2026-05-08', title: '🧹 代码质量 — Rust 零警告编译 + 🔐 401 自动过期登录',
       isLatest: true,
+      items: [
+        '🧹 **Rust 零警告**: 17 crates 编译零警告 — 清理 7 项 dead_code/unused_import 警告',
+        '🧹 **Workspace 优化**: polisctl [profile.release] 移至 workspace 根 Cargo.toml 统一管理',
+        '🔐 **Token 自动过期**: API 客户端 401 响应自动清除 Token 并跳转登录页（保留返回路径）',
+        '🔐 **登录跳回**: 登录页 redirect 参数 + API 401 拦截器形成完整的登录态过期处理闭环',
+        '✅ 33/33 前端页面构建成功, Rust 17 crates 零警告',
+      ],
+    },
+    {
+      ver: '0.3.34', date: '2026-05-08', title: '🧪 快速补丁 + 🫧 玻璃显形 + ⚡ 性能优化 — 编辑器预加载 + 浮动光球背景',
+      isLatest: false,
       items: [
         '🧪 **Liquid Glass 快速补丁**: 玻璃卡片透明度 0.08→0.25, 硬编码 hex 颜色替代 CSS var(), Hero 标题颜色绿色→#1d1d1f',
         '🫧 **玻璃显形方案**: 4 个浮动彩色光球 (blur 80px) + SVG 噪点纹理 overlay 作为 backdrop-filter 内容源',
