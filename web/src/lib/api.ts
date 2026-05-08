@@ -168,6 +168,17 @@ async function request<T>(
     headers,
   });
 
+  // Auto-logout on expired/invalid token (401 Unauthorized)
+  if (response.status === 401) {
+    setToken(null);
+    // Redirect to login, preserving current URL for return after login
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?redirect=${redirect}`;
+    }
+    throw new Error('登录已过期，请重新登录');
+  }
+
   const data = await response.json();
 
   if (!response.ok) {
