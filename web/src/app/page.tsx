@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { formatDate, formatCount } from '@/lib/utils';
-import { 
-  Home, Compass, Bell, Mail, Bookmark, User, Settings, 
-  Plus, Search, TrendingUp, MessageCircle, Heart, Eye, 
+import {
+  Home, Compass, Bell, Mail, Bookmark, User, Settings,
+  Plus, Search, TrendingUp, MessageCircle, Heart, Eye,
   Share2, Repeat2, Sparkles, Users, FlaskConical
 } from 'lucide-react';
+import { SpaceParticles } from '@/components/SpaceParticles';
 
 // ===== Main Component =====
 export default function HomePage() {
@@ -108,7 +109,7 @@ function FeedLayout() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="mx-auto max-w-7xl flex justify-center">
         {/* ===== Left Sidebar ===== */}
-        <aside className="w-[275px] shrink-0 hidden lg:block border-r border-gray-200 dark:border-gray-800">
+        <aside className="w-[275px] shrink-0 hidden lg:block border-r border-gray-200 dark:border-gray-800 sidebar-dark">
           <div className="sticky top-0 h-screen flex flex-col py-3 px-3">
             {/* Logo */}
             <div className="px-3 pb-3 mb-2">
@@ -123,7 +124,7 @@ function FeedLayout() {
                 { icon: Home, label: '首页', href: '/', active: true },
                 { icon: Compass, label: '探索', href: '/explore' },
                 { icon: Bell, label: '通知', href: '/notifications' },
-                { icon: Mail, label: '消息', href: '#' },
+                { icon: Mail, label: '消息', href: '/messages' },
                 { icon: Bookmark, label: '收藏', href: '/saved' },
                 { icon: User, label: '个人', href: '/profile' },
                 { icon: Settings, label: '设置', href: '/settings' },
@@ -131,7 +132,7 @@ function FeedLayout() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="flex items-center gap-4 px-3 py-3 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-lg"
+                  className={'nav-item flex items-center gap-4 px-3 py-3 rounded-full transition-colors text-lg ' + (item.active ? 'active' : '')}
                 >
                   <item.icon className="h-6 w-6 shrink-0" />
                   <span className="font-medium">{item.label}</span>
@@ -140,6 +141,15 @@ function FeedLayout() {
             </nav>
 
             {/* Publish Button */}
+            <div className="px-3 pt-2 pb-2">
+              <Link
+                href="/post/new"
+                className="btn-ripple flex items-center justify-center gap-2 w-full py-3 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-bold text-lg shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40 transition-all active:scale-95"
+              >
+                <Plus className="h-5 w-5" />
+                发布
+              </Link>
+            </div>
 
             {/* User Info */}
             <div className="px-3 pb-3">
@@ -167,6 +177,32 @@ function FeedLayout() {
 
         {/* ===== Center Feed ===== */}
         <main className="w-[600px] min-w-0 border-r border-gray-200 dark:border-gray-800">
+          {/* Hero Banner */}
+          <div className="relative overflow-hidden rounded-b-2xl bg-gradient-to-br from-gray-900 via-slate-800 to-purple-900 p-8">
+            <SpaceParticles color="139, 92, 246" />
+            <div className="relative z-10 text-center">
+              <div className="inline-flex items-center gap-2 mb-3 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur border border-white/10">
+                <Sparkles className="h-4 w-4 text-purple-300" />
+                <span className="text-xs font-medium text-purple-200">Polis 社区平台</span>
+              </div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-2 tracking-tight">
+                连接思想，共创未来
+              </h1>
+              <p className="text-sm text-gray-300 max-w-md mx-auto mb-5">
+                创建你的社区，分享知识，与世界连接。每一个想法都值得被看见。
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link href="/explore" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-gray-900 text-sm font-medium hover:bg-gray-100 transition-colors shadow-lg">
+                  <Compass className="h-4 w-4" />
+                  探索社区
+                </Link>
+                <Link href="/register" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 backdrop-blur border border-white/20 text-white text-sm font-medium hover:bg-white/20 transition-colors">
+                  立即加入
+                </Link>
+              </div>
+            </div>
+          </div>
+
           {/* Tabs */}
           <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
             <div className="flex">

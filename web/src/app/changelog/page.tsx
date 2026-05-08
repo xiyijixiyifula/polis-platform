@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.29', date: '2026-05-08', title: '🧹 维护轮次 — 代码质量优化 + 编译警告清理',
+      ver: '0.3.30', date: '2026-05-08', title: '🎨 视觉修复 — 部署链路修复 + Hero Banner + 深色侧边栏全量生效',
       isLatest: true,
+      items: [
+        '🔧 **部署修复**: 源码已改但 /opt/polis-web/.next/ 仍是5月1日旧产物 → 重新构建部署，所有视觉 CSS 全量上线',
+        '🏠 **Hero Banner**: 首页 Feed 顶部新增粒子背景 Hero 区域 — "连接思想，共创未来" + 探索/加入 CTA',
+        '🖥️ **深色侧边栏**: 首页侧边栏添加 sidebar-dark 类 + nav-item active 态 + 发布按钮 (btn-ripple)',
+        '🎴 **玻璃卡片**: glass-card / like-btn / nav-glass 全部 CSS 已在线确认 (75KB CSS, count=1)',
+        '🔷 **几何图标**: SpaceCard 8种SVG几何图标 + sidebar-dark 深色控制台风格 + 视觉指南全面对照',
+        '✅ 141/141 E2E 全量通过, 28/28 页面全 200, 6/6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.29', date: '2026-05-08', title: '🧹 维护轮次 — 代码质量优化 + 编译警告清理',
+      isLatest: false,
       items: [
         '🧹 **编译警告**: cargo fix 自动清理 47 个 unused import/variable 警告 (17 crates)',
         '🧹 **警告统计**: 63 → 16 (消除 74.6%), 仅剩余桩代码预留字段',
