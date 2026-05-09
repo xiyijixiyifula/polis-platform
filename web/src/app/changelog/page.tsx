@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.49', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续第7轮满分',
+      ver: '0.3.50', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续第8轮满分',
       isLatest: true,
+      items: [
+        '🧪 **E2E 141/141 满分**: 连续8轮满分 (v0.3.43→v0.3.50)，系统持续零故障运行',
+        '🛡️ **系统健康**: 6服务active, load 0.02/0.01/0.41, 健康聚合 ALL_HEALTHY',
+        '📊 **性能基线**: 空间API 0.79s, Feed 0.79s, 搜索 0.63s, 投票API 0.80s',
+        '📄 **页面覆盖**: 28/28 全部200 OK, 无任何页面错误',
+        '🔄 **维护轮次**: 无代码变更 — 健康巡检 + E2E验证 + 文档版本同步',
+      ],
+    },
+    {
+      ver: '0.3.49', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续第7轮满分',
+      isLatest: false,
       items: [
         '🧪 **E2E 141/141 满分**: 连续7轮满分 (v0.3.43→v0.3.49)，系统持续零故障运行',
         '🛡️ **系统健康**: 6服务active, load 0.00/0.49/20.76 (宕机恢复后平稳), 健康聚合 ALL_HEALTHY',
