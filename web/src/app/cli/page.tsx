@@ -125,7 +125,7 @@ polisctl vote up post "<post_id>"`}
         <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
           <pre className="text-sm text-green-400">
 {`# 管理员登录
-polisctl admin login admin@polis.app polis2024
+polisctl admin login admin@polis.app mzGW2026!PolisHub
 
 # 平台概览
 polisctl admin dashboard
@@ -300,7 +300,7 @@ PYEOF`}
           <FaqItem q="Token 保存在哪里？"
             a="~/.polis/ 目录（0600 权限）：token、user、admin_token。auth logout 清除。" />
           <FaqItem q="Admin 登录参数？"
-            a="仅需 email + admin_code：polisctl admin login admin@polis.app polis2024。不需要 password。" />
+            a="仅需 email + admin_code：polisctl admin login admin@polis.app mzGW2026!PolisHub。不需要 password。" />
           <FaqItem q="如何更新？"
             a="Rust 版：git pull && cargo build --release -p polisctl && sudo cp target/release/polisctl /usr/local/bin/。Bash 版：git pull && sudo cp polisctl.sh /usr/local/bin/polisctl。" />
           <FaqItem q="Windows 支持？"

@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.42', date: '2026-05-09', title: '🔐 登录记住我 + Bug 修复 + 空间分页',
+      ver: '0.3.43', date: '2026-05-09', title: '🔄 维护确认 — E2E 全量通过 + profile 闪空修复',
       isLatest: true,
+      items: [
+        '✅ **E2E 141/141 全量通过**: 26大类测试零失败，6服务active，load 0.08',
+        '🐛 **个人主页闪空修复**: profile 页切换时清空旧 state — 不再闪现"没有社区"',
+        '🔗 **Sidebar 防误触**: 路由切换后「创建社区」按钮 500ms 锁定，防 layout shift 误触',
+        '📊 **系统健康**: CPU负载0.08, 内存584MB/1613MB, 磁盘76%, 主页/changelog/API全200',
+      ],
+    },
+    {
+      ver: '0.3.42', date: '2026-05-09', title: '🔐 登录记住我 + Bug 修复 + 空间分页',
+      isLatest: false,
       items: [
         '🔐 **登录记住我**: 新增「记住我（保持登录30天）」复选框 — 勾选后 JWT token 过期时间从1天延长至30天',
         '🔙 **后端 remember_me**: LoginRequest 新增 remember_me 字段，handler 根据字段选择 30天 或默认过期',

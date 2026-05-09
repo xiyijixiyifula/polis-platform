@@ -74,7 +74,7 @@ services:
     build: { context: ., dockerfile: Dockerfile, args: { SERVICE: polis-admin } }
     restart: unless-stopped
     ports: ["3050:3050"]
-    environment: { DATABASE_URL: postgres://polis:polis_dev@postgres:5432/polis, JWT_SECRET: polis-dev-jwt-secret-do-not-use-in-prod, RUST_LOG: info, ADMIN_HOST: 0.0.0.0, ADMIN_PORT: 3050, ADMIN_CODE: polis-admin-2026 }
+    environment: { DATABASE_URL: postgres://polis:polis_dev@postgres:5432/polis, JWT_SECRET: polis-dev-jwt-secret-do-not-use-in-prod, RUST_LOG: info, ADMIN_HOST: 0.0.0.0, ADMIN_PORT: 3050, ADMIN_CODE: mzGW2026!PolisHub }
     depends_on: [postgres]
 
 volumes:

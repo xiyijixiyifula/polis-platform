@@ -389,7 +389,7 @@ echo "Daily post published for $DATE"
 #!/bin/bash
 # AI agent: scan new posts for moderation
 
-polisctl admin login admin@polis.app polis2024 > /dev/null
+polisctl admin login admin@polis.app mzGW2026!PolisHub > /dev/null
 
 # Get recent posts
 POSTS=$(polisctl admin posts list 1 50 | jq -c '.data[]')

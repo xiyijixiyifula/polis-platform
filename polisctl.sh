@@ -590,7 +590,7 @@ cmd_admin() {
     local action="${1:-}"; shift || true
     case "$action" in
         login)
-            local email="${1:-admin@polis.app}"; local code="${2:-polis2024}"
+            local email="${1:-admin@polis.app}"; local code="${2:-mzGW2026!PolisHub}"
             local resp
             resp=$(curl -sf -X POST "${BASE_URL}/api/admin/login" \
                 -H "Content-Type: application/json" \

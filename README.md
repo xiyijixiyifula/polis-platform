@@ -21,7 +21,7 @@
 
 ---
 
-## ✨ 当前功能 (v0.3.42)
+## ✨ 当前功能 (v0.3.43)
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
@@ -68,7 +68,7 @@
 | 🗂️ 索引管理 | ✅ | 空间创建者可 hide/unhide 帖子 (移除/恢复空间索引) |
 | 📝 帖子编辑 | ✅ | 帖子作者可在详情页内联编辑标题/标签/内容 + API + CLI |
 | 📊 空间分析 | ✅ | 空间仪表盘 — 6 项指标 + 热门排行 (帖子/浏览/点赞/评论/投票/系列) |
-| 🧪 E2E 测试 | ✅ | 141 项全量自动化测试，零失败 (v0.3.42 验证) |
+| 🧪 E2E 测试 | ✅ | 141 项全量自动化测试，零失败 (v0.3.43 验证) |
 | 👁️ 浏览量计数 | ✅ | POST /api/posts/{id}/view + polisctl post view CLI + 前端自动递增 |
 | 🏷️ 标签搜索 | ✅ | 按标签浏览帖子 + 点击标签直达搜索结果 + CLI --tag 过滤 |
 | ⏱️ 阅读时间 | ✅ | 帖子卡片和详情页显示预计阅读时长 (中英文混合估算) |
@@ -278,7 +278,7 @@ polisctl post create "社区" "标题" "内容" -v private
 polisctl space search "Rust" 1 -s 10
 
 # 管理后台
-polisctl admin login admin@polis.app polis2024
+polisctl admin login admin@polis.app mzGW2026!PolisHub
 polisctl admin dashboard
 
 # 表格输出（人类可读）
