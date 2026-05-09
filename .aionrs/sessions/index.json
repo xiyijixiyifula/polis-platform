@@ -1,0 +1,12 @@
+{
+  "sessions": [
+    {
+      "id": "30d2e928",
+      "created_at": "2026-05-09T02:01:21.607122Z",
+      "updated_at": "2026-05-09T02:55:09.576739Z",
+      "model": "deepseek-v4-pro",
+      "summary": "[Scheduled Task Execution]\nTask:  Polis AI 自驱动开发者指令\nSchedule: 每小时执行\n\nThis mes...",
+      "message_count": 164
+    }
+  ]
+}

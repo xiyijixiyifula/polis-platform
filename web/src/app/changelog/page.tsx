@@ -4,6 +4,23 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
+      ver: '0.3.38', date: '2026-05-09', title: '🌙 夜间模式全面修复 — 全局暗色覆盖 + 玻璃效果暗色适配',
+      isLatest: true,
+      items: [
+        '🌙 **全套暗色覆盖**: globals.css 新增 120+ 行的 `.dark` 全局暗色覆盖块 — 覆盖导航栏/卡片/按钮/输入框/标签/分割线/模态框/代码块/表格/背景装饰等所有组件',
+        '🧭 **nav-glass 修复**: Header 使用的 nav-glass 类新增亮色基础样式 + 暗色变体 — 导航栏磨砂玻璃效果在两种模式下完美呈现',
+        '🖥️ **sidebar-dark 新增**: 侧边栏 CSS 类从无到完整实现 — 亮色半透明白色渐变 + 暗色深色渐变，配合 `.dark` 选择器自动切换',
+        '🎴 **glass-card 暗色**: 卡片暗色背景 rgba(30,41,59,0.65) + ::before 镜面高光降低至 2.5% 不透明度 — 暗色下不会刺眼',
+        '📝 **硬编码 body 颜色修复**: layout.tsx 从 inline style → Tailwind `bg-[#f5f5f7] dark:bg-[#0f172a]` — body 背景文字自动跟随主题',
+        '🎨 **自定义文字暗色**: .text-primary → #f1f5f9, .text-secondary → #94a3b8, .text-tertiary → #64748b — 暗色下全部可读',
+        '🔘 **action-btn/glass-btn 暗色**: hover 背景 + 文字颜色在暗色模式下正确切换',
+        '📦 **input/textarea/select 全局暗色**: 所有表单元素暗色背景 rgba(30,41,59,0.6) + 文字 #e2e8f0 — 输入体验一致',
+        '🔗 **链接暗色**: 暗色下链接颜色变更为 #5eead4 teal 色系 — 与暗色背景高对比度',
+        '🌐 **背景装饰暗色**: .bg-orb-* 光球在暗色下降低不透明度 (0.12/0.08/0.06) — 保持氛围但不喧宾夺主',
+        '✅ E2E 141/141 全量通过, 前端 39 路由构建成功, 6 服务 active',
+      ],
+    },
+    {
       ver: '0.3.37', date: '2026-05-09', title: '🔧 维护轮次 — E2E 增强 + 数据库迁移自动化 + 聊天修复',
       isLatest: true,
       items: [

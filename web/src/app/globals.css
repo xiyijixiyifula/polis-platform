@@ -935,3 +935,154 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ============================================
+   夜间模式 全局玻璃效果覆盖
+   v0.3.38 — 2026-05-09
+   ============================================ */
+
+.dark {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+/* ---- nav-glass (Header 使用，与 glass-nav 并行的别名) ---- */
+.nav-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.dark .nav-glass {
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* ---- sidebar-dark ---- */
+.sidebar-dark {
+  background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.3) 100%);
+  border-right: 1px solid rgba(0,0,0,0.04);
+}
+.dark .sidebar-dark {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.85) 100%) !important;
+  border-right: 1px solid rgba(148, 163, 184, 0.08) !important;
+}
+
+/* ---- 导航项 ---- */
+.dark .nav-item {
+  color: #94a3b8 !important;
+}
+.dark .nav-item:hover {
+  color: #e2e8f0 !important;
+  background: rgba(148, 163, 184, 0.1) !important;
+}
+
+/* ---- 玻璃卡片 ---- */
+.dark .glass-card {
+  background: rgba(30, 41, 59, 0.65) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(148, 163, 184, 0.08) !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25) !important;
+}
+.dark .glass-card:hover {
+  background: rgba(51, 65, 85, 0.7) !important;
+  border-color: rgba(148, 163, 184, 0.15) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
+}
+.dark .glass-card::before {
+  background: linear-gradient(135deg, rgba(255,255,255,0.025) 0%, transparent 50%) !important;
+}
+
+/* ---- 自定义文字 ---- */
+.dark .text-primary { color: #f1f5f9 !important; }
+.dark .text-secondary { color: #94a3b8 !important; }
+.dark .text-tertiary { color: #64748b !important; }
+
+/* ---- 操作按钮 ---- */
+.dark .action-btn {
+  color: #94a3b8 !important;
+}
+.dark .action-btn:hover {
+  background: rgba(148, 163, 184, 0.1) !important;
+  color: #e2e8f0 !important;
+}
+
+/* ---- 输入框 ---- */
+.dark .glass-input {
+  background: rgba(30, 41, 59, 0.6) !important;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  color: #e2e8f0 !important;
+}
+.dark .glass-input:focus {
+  border-color: rgba(52, 211, 153, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.12) !important;
+}
+.dark .glass-input::placeholder { color: #475569 !important; }
+
+/* ---- 全局 input/textarea/select 暗色 ---- */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: rgba(30, 41, 59, 0.6) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #64748b !important; }
+
+/* ---- 标签 ---- */
+.dark .glass-badge {
+  background: rgba(52, 211, 153, 0.12) !important;
+  color: #6ee7b7 !important;
+  border: 1px solid rgba(52, 211, 153, 0.2) !important;
+}
+
+/* ---- 分割线 ---- */
+.dark .glass-divider {
+  border-color: rgba(148, 163, 184, 0.08) !important;
+}
+
+/* ---- 链接 ---- */
+.dark a:not(.glass-btn):not(.nav-item):not(.btn-ripple) {
+  color: #5eead4;
+}
+.dark a:not(.glass-btn):not(.nav-item):not(.btn-ripple):hover {
+  color: #6ee7b7;
+}
+
+/* ---- 弹窗/模态框 ---- */
+.dark [class*="modal"] [class*="content"],
+.dark [class*="dialog"] [class*="content"] {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+}
+
+/* ---- 背景装饰色块 ---- */
+.dark .bg-orb-purple { opacity: 0.12 !important; }
+.dark .bg-orb-teal { opacity: 0.08 !important; }
+.dark .bg-orb-cyan { opacity: 0.06 !important; }
+
+/* ---- 页面容器 ---- */
+.dark .page-container { background: #0f172a !important; }
+
+/* ---- 代码块 ---- */
+.dark code,
+.dark pre {
+  background: rgba(15, 23, 42, 0.8) !important;
+  color: #e2e8f0 !important;
+}
+
+/* ---- 表格 ---- */
+.dark table { border-color: rgba(148, 163, 184, 0.12) !important; }
+.dark th { background: rgba(30, 41, 59, 0.7) !important; color: #e2e8f0 !important; }
+.dark td { border-color: rgba(148, 163, 184, 0.08) !important; color: #cbd5e1 !important; }
+
+/* ---- Cherry 编辑器额外暗色覆盖 ---- */
+.dark .cherry-editor-wrapper {
+  border-color: rgba(148, 163, 184, 0.12) !important;
+}
