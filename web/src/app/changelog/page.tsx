@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.48', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续满分 + 系统健康巡检',
+      ver: '0.3.49', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续第7轮满分',
       isLatest: true,
+      items: [
+        '🧪 **E2E 141/141 满分**: 连续7轮满分 (v0.3.43→v0.3.49)，系统持续零故障运行',
+        '🛡️ **系统健康**: 6服务active, load 0.00/0.49/20.76 (宕机恢复后平稳), 健康聚合 ALL_HEALTHY',
+        '📊 **性能基线**: 空间API 0.80s, Feed 0.79s, 搜索 0.63s, 投票API 0.63s',
+        '📄 **页面覆盖**: 28/28 全部200 OK, 无任何页面错误',
+        '🔍 **社区调研**: Lemmy(14.3K⭐去中心化讨论) + Nutomic Ibis(联邦百科) — ActivityPub 生态活跃',
+        '🔄 **维护轮次**: 无代码变更 — 调研 + E2E验证 + 文档版本同步',
+      ],
+    },
+    {
+      ver: '0.3.48', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续满分 + 系统健康巡检',
+      isLatest: false,
       items: [
         '🧪 **E2E 141/141 满分**: 26大类测试零失败 — 连续6轮满分 (v0.3.43→v0.3.48)，系统高度稳定',
         '🛡️ **系统健康**: 6服务active, CPU负载0.49/0.13/0.04, 综合健康检查 ALL_HEALTHY',
