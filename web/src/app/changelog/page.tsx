@@ -4,8 +4,21 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.40', date: '2026-05-09', title: '🔄 维护轮次 — 系统健康确认 + E2E 全量验证',
+      ver: '0.3.41', date: '2026-05-09', title: '📄 信息流分页导航 + 维护确认',
       isLatest: true,
+      items: [
+        '📄 **分页导航**: 信息流底部新增智能页码 — ←上一页 [1] … [5] … [42] 下一页→ + 共834条动态',
+        '🔙 **后端 total 计数**: get_feed API 新增 COUNT(posts+polls+announcements) 三表合计，pagination.total 字段',
+        '🎯 **goToPage 跳转**: 点击页码直接跳转，自动 scrollTo top，当前页蓝色圆形高亮',
+        '🔄 **无限滚动保留**: IntersectionObserver 下拉加载更多仍然有效，与手动分页共存',
+        '🎨 **导航栏 blur 优化**: backdrop-filter blur(20px) → blur(10px)，磨砂更自然；清理旧 .dark .glass-nav 死代码',
+        '🔧 **交叉编译修复**: Mac ARM → Linux x86_64 编译改用 cargo-zigbuild 静态链接',
+        '✅ **E2E 141/141 全量通过**: 26大类测试零失败，6服务active，主页/changelog/API 全部200',
+      ],
+    },
+    {
+      ver: '0.3.40', date: '2026-05-09', title: '🔄 维护轮次 — 系统健康确认 + E2E 全量验证',
+      isLatest: false,
       items: [
         '✅ **E2E 141/141 全量通过**: 26 大类测试全部 PASS，覆盖 API/前端/安全/性能/服务全维度',
         '🛡️ **安全扫描无色**: 零错误日志，无异常登录，无蜜罐触达',
