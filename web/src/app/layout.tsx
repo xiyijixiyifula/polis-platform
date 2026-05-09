@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           })
         }} />
       </head>
-      <body className="min-h-screen antialiased bg-[#f5f5f7] dark:bg-[#0f172a] text-[#1d1d1f] dark:text-slate-100">
+      <body className="min-h-screen antialiased bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-white">
         {/* === 背景装饰层：浮动模糊色块 === */}
         <div
           aria-hidden="true"

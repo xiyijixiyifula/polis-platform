@@ -937,16 +937,390 @@
 }
 
 /* ============================================
-   夜间模式 全局玻璃效果覆盖
-   v0.3.38 — 2026-05-09
+   Apple iOS 层级系统 - 深色模式 v2.0
+   设计原则：纯黑背景、层级分明、无玻璃效果、无阴影
+   参考：Apple Human Interface Guidelines - Dark Mode
+   最后更新：2026-05-09
    ============================================ */
 
 .dark {
-  background-color: #0f172a;
-  color: #e2e8f0;
+  color-scheme: dark;
 }
 
-/* ---- nav-glass (Header 使用，与 glass-nav 并行的别名) ---- */
+/* 全局背景 */
+.dark body {
+  background: #000000 !important;
+  color: #FFFFFF;
+}
+
+/* ============================================
+   层级 0: 页面级背景
+   ============================================ */
+
+.dark .page-bg,
+.dark [class*="page-bg"] {
+  background: #000000 !important;
+}
+
+/* ============================================
+   层级 1: 基础卡片（帖子卡片、社区卡片）
+   ============================================ */
+
+.dark .glass-card,
+.dark [class*="glass-card"] {
+  background: #1C1C1E !important;
+  border-radius: 16px;
+  border: 1px solid #2C2C2E;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.dark .glass-card::before,
+.dark [class*="glass-card"]::before {
+  display: none !important;
+}
+
+.dark .glass-card:hover {
+  background: #232325 !important;
+}
+
+/* ============================================
+   层级 1: 侧边栏
+   ============================================ */
+
+.dark .sidebar-dark,
+.dark [class*="sidebar"] {
+  background: #000000 !important;
+  border-right: 1px solid #1C1C1E !important;
+}
+
+/* ============================================
+   层级 1: 导航栏
+   ============================================ */
+
+.dark .glass-nav,
+.dark .nav-glass,
+.dark nav {
+  background: rgba(28, 28, 30, 0.85) !important;
+  backdrop-filter: blur(20px) saturate(100%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(100%) !important;
+  border-bottom: 1px solid #2C2C2E !important;
+  box-shadow: none !important;
+}
+
+/* ============================================
+   层级 2: 右侧信息卡片（热门趋势、推荐社区）
+   ============================================ */
+
+.dark [class*="trending"],
+.dark [class*="recommended"],
+.dark .sidebar-card {
+  background: #1C1C1E !important;
+  border-radius: 16px;
+  border: 1px solid #2C2C2E;
+}
+
+/* ============================================
+   层级 2: Hero 区域
+   ============================================ */
+
+.dark .hero-glass,
+.dark [class*="hero"] {
+  background: #1C1C1E !important;
+  border-radius: 20px;
+  border: 1px solid #2C2C2E;
+  box-shadow: none !important;
+}
+
+.dark .hero-glass::before {
+  display: none !important;
+}
+
+.dark .hero-glass h1,
+.dark [class*="hero"] h1 {
+  color: #FFFFFF !important;
+}
+
+.dark .hero-glass p,
+.dark [class*="hero"] p {
+  color: rgba(235, 235, 245, 0.6) !important;
+}
+
+/* ============================================
+   按钮
+   ============================================ */
+
+.dark .glass-btn-primary,
+.dark [class*="btn-primary"] {
+  background: #0A84FF !important;
+  color: #FFFFFF !important;
+  border-radius: 12px;
+  box-shadow: none !important;
+}
+
+.dark .glass-btn-primary:hover {
+  background: #1A8EFF !important;
+}
+
+.dark .glass-btn,
+.dark [class*="glass-btn"] {
+  background: #2C2C2E !important;
+  color: #FFFFFF !important;
+  border-radius: 12px;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.dark .glass-btn:hover {
+  background: #3A3A3C !important;
+}
+
+.dark .publish-btn,
+.dark [class*="publish"] {
+  background: #0A84FF !important;
+  color: #FFFFFF !important;
+}
+
+/* ============================================
+   文字颜色
+   ============================================ */
+
+.dark .text-primary,
+.dark [class*="text-primary"] {
+  color: #FFFFFF !important;
+}
+
+.dark .text-secondary,
+.dark [class*="text-secondary"] {
+  color: rgba(235, 235, 245, 0.6) !important;
+}
+
+.dark .text-tertiary,
+.dark [class*="text-tertiary"] {
+  color: rgba(235, 235, 245, 0.3) !important;
+}
+
+.dark a {
+  color: #0A84FF;
+}
+
+.dark a:hover {
+  color: #1A8EFF;
+}
+
+/* ============================================
+   操作按钮（点赞/收藏/评论）
+   ============================================ */
+
+.dark .action-btn,
+.dark [class*="action-btn"] {
+  color: rgba(235, 235, 245, 0.4) !important;
+  background: transparent !important;
+}
+
+.dark .action-btn:hover {
+  color: #FFFFFF !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.dark .action-btn.active {
+  color: #FF453A !important;
+  background: rgba(255, 69, 58, 0.1) !important;
+}
+
+/* ============================================
+   标签/徽章
+   ============================================ */
+
+.dark .glass-badge,
+.dark [class*="badge"] {
+  background: #2C2C2E !important;
+  color: rgba(235, 235, 245, 0.6) !important;
+  border: none !important;
+}
+
+.dark .glass-badge-blue,
+.dark [class*="badge-blue"] {
+  background: rgba(10, 132, 255, 0.15) !important;
+  color: #0A84FF !important;
+}
+
+/* ============================================
+   输入框
+   ============================================ */
+
+.dark .glass-input,
+.dark input[type="text"],
+.dark input[type="search"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark textarea,
+.dark select {
+  background: #1C1C1E !important;
+  color: #FFFFFF !important;
+  border: 1px solid #38383A !important;
+  border-radius: 12px;
+}
+
+.dark .glass-input::placeholder,
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: rgba(235, 235, 245, 0.3) !important;
+}
+
+.dark .glass-input:focus-within,
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: #0A84FF !important;
+  outline: none !important;
+}
+
+/* 导航栏搜索框特殊处理 */
+.dark nav input,
+.dark [class*="nav"] input {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: none !important;
+  color: #FFFFFF !important;
+}
+
+/* ============================================
+   分割线
+   ============================================ */
+
+.dark .glass-divider,
+.dark [class*="divider"] {
+  background: #38383A !important;
+  border-color: #38383A !important;
+}
+
+/* ============================================
+   社区图标
+   ============================================ */
+
+.dark .community-icon,
+.dark [class*="community-icon"] {
+  box-shadow: none !important;
+}
+
+/* ============================================
+   标签栏（全部动态/关注的人/热门）
+   ============================================ */
+
+.dark [role="tablist"],
+.dark [class*="tab"] {
+  background: transparent !important;
+  border-bottom: 1px solid #38383A !important;
+}
+
+.dark [role="tab"][aria-selected="true"],
+.dark [class*="tab-active"] {
+  color: #FFFFFF !important;
+  border-bottom-color: #0A84FF !important;
+}
+
+.dark [role="tab"]:not([aria-selected="true"]),
+.dark [class*="tab"]:not([class*="active"]) {
+  color: rgba(235, 235, 245, 0.4) !important;
+}
+
+/* ============================================
+   Logo 修复
+   ============================================ */
+
+.dark [class*="logo"] {
+  color: #FFFFFF !important;
+}
+
+/* ============================================
+   滚动条
+   ============================================ */
+
+.dark ::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #38383A;
+  border-radius: 10px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #48484A;
+}
+
+/* ============================================
+   Loading/Skeleton
+   ============================================ */
+
+.dark .glass-skeleton,
+.dark [class*="skeleton"] {
+  background: #2C2C2E !important;
+}
+
+.dark .glass-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent) !important;
+}
+
+/* ============================================
+   下拉菜单/弹窗
+   ============================================ */
+
+.dark [class*="dropdown"],
+.dark [class*="popover"],
+.dark [class*="modal"] [class*="content"],
+.dark [class*="dialog"] [class*="content"] {
+  background: #2C2C2E !important;
+  border: 1px solid #38383A !important;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* ============================================
+   通知角标
+   ============================================ */
+
+.dark [class*="notification-badge"] {
+  background: #FF453A !important;
+  color: #FFFFFF !important;
+}
+
+/* ============================================
+   底部 Footer
+   ============================================ */
+
+.dark footer,
+.dark [class*="footer"] {
+  background: #000000 !important;
+  color: rgba(235, 235, 245, 0.3) !important;
+  border-top: 1px solid #1C1C1E !important;
+}
+
+/* ============================================
+   页面容器
+   ============================================ */
+
+.dark .page-container {
+  background: #000000 !important;
+}
+
+/* ============================================
+   背景装饰色块 - 深色下极度降低不透明度
+   ============================================ */
+
+.dark .bg-orb-purple { opacity: 0.06 !important; }
+.dark .bg-orb-teal { opacity: 0.04 !important; }
+.dark .bg-orb-cyan { opacity: 0.03 !important; }
+
+/* ============================================
+   亮色：nav-glass 基类（深色覆盖在上面 .dark nav 中）
+   ============================================ */
+
 .nav-glass {
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(20px) saturate(180%);
@@ -954,135 +1328,8 @@
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
-.dark .nav-glass {
-  background: rgba(15, 23, 42, 0.8) !important;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.08) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
-}
 
-/* ---- sidebar-dark ---- */
 .sidebar-dark {
   background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.3) 100%);
   border-right: 1px solid rgba(0,0,0,0.04);
-}
-.dark .sidebar-dark {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.85) 100%) !important;
-  border-right: 1px solid rgba(148, 163, 184, 0.08) !important;
-}
-
-/* ---- 导航项 ---- */
-.dark .nav-item {
-  color: #94a3b8 !important;
-}
-.dark .nav-item:hover {
-  color: #e2e8f0 !important;
-  background: rgba(148, 163, 184, 0.1) !important;
-}
-
-/* ---- 玻璃卡片 ---- */
-.dark .glass-card {
-  background: rgba(30, 41, 59, 0.65) !important;
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(148, 163, 184, 0.08) !important;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25) !important;
-}
-.dark .glass-card:hover {
-  background: rgba(51, 65, 85, 0.7) !important;
-  border-color: rgba(148, 163, 184, 0.15) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35) !important;
-}
-.dark .glass-card::before {
-  background: linear-gradient(135deg, rgba(255,255,255,0.025) 0%, transparent 50%) !important;
-}
-
-/* ---- 自定义文字 ---- */
-.dark .text-primary { color: #f1f5f9 !important; }
-.dark .text-secondary { color: #94a3b8 !important; }
-.dark .text-tertiary { color: #64748b !important; }
-
-/* ---- 操作按钮 ---- */
-.dark .action-btn {
-  color: #94a3b8 !important;
-}
-.dark .action-btn:hover {
-  background: rgba(148, 163, 184, 0.1) !important;
-  color: #e2e8f0 !important;
-}
-
-/* ---- 输入框 ---- */
-.dark .glass-input {
-  background: rgba(30, 41, 59, 0.6) !important;
-  border: 1px solid rgba(148, 163, 184, 0.12) !important;
-  color: #e2e8f0 !important;
-}
-.dark .glass-input:focus {
-  border-color: rgba(52, 211, 153, 0.45) !important;
-  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.12) !important;
-}
-.dark .glass-input::placeholder { color: #475569 !important; }
-
-/* ---- 全局 input/textarea/select 暗色 ---- */
-.dark input,
-.dark textarea,
-.dark select {
-  background-color: rgba(30, 41, 59, 0.6) !important;
-  color: #e2e8f0 !important;
-  border-color: rgba(148, 163, 184, 0.12) !important;
-}
-.dark input::placeholder,
-.dark textarea::placeholder { color: #64748b !important; }
-
-/* ---- 标签 ---- */
-.dark .glass-badge {
-  background: rgba(52, 211, 153, 0.12) !important;
-  color: #6ee7b7 !important;
-  border: 1px solid rgba(52, 211, 153, 0.2) !important;
-}
-
-/* ---- 分割线 ---- */
-.dark .glass-divider {
-  border-color: rgba(148, 163, 184, 0.08) !important;
-}
-
-/* ---- 链接 ---- */
-.dark a:not(.glass-btn):not(.nav-item):not(.btn-ripple) {
-  color: #5eead4;
-}
-.dark a:not(.glass-btn):not(.nav-item):not(.btn-ripple):hover {
-  color: #6ee7b7;
-}
-
-/* ---- 弹窗/模态框 ---- */
-.dark [class*="modal"] [class*="content"],
-.dark [class*="dialog"] [class*="content"] {
-  background: rgba(30, 41, 59, 0.95) !important;
-  border: 1px solid rgba(148, 163, 184, 0.12) !important;
-}
-
-/* ---- 背景装饰色块 ---- */
-.dark .bg-orb-purple { opacity: 0.12 !important; }
-.dark .bg-orb-teal { opacity: 0.08 !important; }
-.dark .bg-orb-cyan { opacity: 0.06 !important; }
-
-/* ---- 页面容器 ---- */
-.dark .page-container { background: #0f172a !important; }
-
-/* ---- 代码块 ---- */
-.dark code,
-.dark pre {
-  background: rgba(15, 23, 42, 0.8) !important;
-  color: #e2e8f0 !important;
-}
-
-/* ---- 表格 ---- */
-.dark table { border-color: rgba(148, 163, 184, 0.12) !important; }
-.dark th { background: rgba(30, 41, 59, 0.7) !important; color: #e2e8f0 !important; }
-.dark td { border-color: rgba(148, 163, 184, 0.08) !important; color: #cbd5e1 !important; }
-
-/* ---- Cherry 编辑器额外暗色覆盖 ---- */
-.dark .cherry-editor-wrapper {
-  border-color: rgba(148, 163, 184, 0.12) !important;
 }

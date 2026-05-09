@@ -4,25 +4,37 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.38', date: '2026-05-09', title: '🌙 夜间模式全面修复 — 全局暗色覆盖 + 玻璃效果暗色适配',
+      ver: '0.3.39', date: '2026-05-09', title: '🍎 深色模式完全重设计 — Apple iOS 层级系统 + 纯手动触发',
       isLatest: true,
+      items: [
+        '🍎 **Apple iOS 层级系统**: 完全重写深色模式 CSS（300+ 行），采用纯黑背景(#000000) + 深灰卡片(#1C1C1E) + 暗灰元素(#2C2C2E) 三层层级',
+        '⬛ **纯黑背景**: 页面/侧边栏/Footer 等最底层使用 #000000 — 最大程度利用 OLED 像素关闭的优势',
+        '🎴 **卡片层级清晰**: 帖子/社区卡片背景 #1C1C1E，上下层级分明的边框 #2C2C2E 替代模糊阴影',
+        '🔵 **iOS 蓝色系统色**: 主按钮/发布按钮/链接/聚焦边框/标签页指示器统一使用 #0A84FF — 与 iOS 一致',
+        '🅱️ **无玻璃效果**: 深色模式禁用所有 backdrop-filter 模糊、玻璃伪元素 ::before、box-shadow 投影 — 追求像素级清晰的界面',
+        '✋ **纯手动触发**: 深色模式仅由用户点击切换按钮手动激活，移除系统偏好自动跟随 — 避免用户在强光环境被迫进入深色模式',
+        '🔆 **ThemeToggle 重写**: 切换按钮亮色灰色/暗色系统蓝，hover 有微妙的背景变化',
+        '📝 **白色文字体系**: 主文字 #FFFFFF、次要 rgba(235,235,245,0.6)、辅助 rgba(235,235,245,0.3)',
+        '🔴 **iOS 红色强调**: action-btn.active（点赞激活）使用 #FF453A + 微妙背景 — 与 iOS 系统红一致',
+        '📱 **完整覆盖**: 导航栏/侧边栏/卡片/Hero/按钮/输入框/标签/分割线/标签页/Logo/滚动条/Skeleton/下拉菜单/通知角标 — 全组件深色适配',
+        '✅ E2E 142/142 全量通过，39 路由构建成功，6 服务 active',
+      ],
+    },
+    {
+      ver: '0.3.38', date: '2026-05-09', title: '🌙 夜间模式全面修复 — 全局暗色覆盖 + 玻璃效果暗色适配',
+      isLatest: false,
       items: [
         '🌙 **全套暗色覆盖**: globals.css 新增 120+ 行的 `.dark` 全局暗色覆盖块 — 覆盖导航栏/卡片/按钮/输入框/标签/分割线/模态框/代码块/表格/背景装饰等所有组件',
         '🧭 **nav-glass 修复**: Header 使用的 nav-glass 类新增亮色基础样式 + 暗色变体 — 导航栏磨砂玻璃效果在两种模式下完美呈现',
-        '🖥️ **sidebar-dark 新增**: 侧边栏 CSS 类从无到完整实现 — 亮色半透明白色渐变 + 暗色深色渐变，配合 `.dark` 选择器自动切换',
-        '🎴 **glass-card 暗色**: 卡片暗色背景 rgba(30,41,59,0.65) + ::before 镜面高光降低至 2.5% 不透明度 — 暗色下不会刺眼',
-        '📝 **硬编码 body 颜色修复**: layout.tsx 从 inline style → Tailwind `bg-[#f5f5f7] dark:bg-[#0f172a]` — body 背景文字自动跟随主题',
-        '🎨 **自定义文字暗色**: .text-primary → #f1f5f9, .text-secondary → #94a3b8, .text-tertiary → #64748b — 暗色下全部可读',
-        '🔘 **action-btn/glass-btn 暗色**: hover 背景 + 文字颜色在暗色模式下正确切换',
-        '📦 **input/textarea/select 全局暗色**: 所有表单元素暗色背景 rgba(30,41,59,0.6) + 文字 #e2e8f0 — 输入体验一致',
-        '🔗 **链接暗色**: 暗色下链接颜色变更为 #5eead4 teal 色系 — 与暗色背景高对比度',
-        '🌐 **背景装饰暗色**: .bg-orb-* 光球在暗色下降低不透明度 (0.12/0.08/0.06) — 保持氛围但不喧宾夺主',
+        '🖥️ **sidebar-dark 新增**: 侧边栏 CSS 类从无到完整实现 — 亮色半透明白色渐变 + 暗色深色渐变',
+        '🎴 **glass-card 暗色**: 卡片暗色背景 rgba(30,41,59,0.65) + ::before 镜面高光降低至 2.5% 不透明度',
+        '📝 **硬编码 body 颜色修复**: layout.tsx 从 inline style → Tailwind dark: 变体',
         '✅ E2E 141/141 全量通过, 前端 39 路由构建成功, 6 服务 active',
       ],
     },
     {
       ver: '0.3.37', date: '2026-05-09', title: '🔧 维护轮次 — E2E 增强 + 数据库迁移自动化 + 聊天修复',
-      isLatest: true,
+      isLatest: false,
       items: [
         '🧪 **E2E 可靠性增强**: api() 函数新增 --connect-timeout/--max-time/--retry 参数，应对瞬时网络波动',
         '🗄️ **数据库迁移自动化**: auto-dev.sh Phase 1 新增自动运行 migrations/*.sql，确保新表结构同步',
