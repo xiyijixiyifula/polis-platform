@@ -26,3 +26,4 @@ anyhow = { workspace = true }
 redis = { workspace = true }
 async-nats = { workspace = true }
 reqwest = { workspace = true }
+openssl = { version = "0.10", features = ["vendored"] }

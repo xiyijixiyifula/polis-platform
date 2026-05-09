@@ -120,12 +120,17 @@ impl UserHandler {
             return Err(AppError::Unauthorized);
         }
 
+        let access_expiry = if req.remember_me.unwrap_or(false) {
+            30 * 24 * 3600  // 30天
+        } else {
+            self.config.jwt_access_expiry
+        };
         let access_token = auth::generate_access_token(
             user.id,
             &user.username,
             &user.display_name,
             &self.config.jwt_secret,
-            self.config.jwt_access_expiry,
+            access_expiry,
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 

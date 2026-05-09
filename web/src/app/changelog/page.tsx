@@ -4,8 +4,22 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.41', date: '2026-05-09', title: '📄 信息流分页导航 + 维护确认',
+      ver: '0.3.42', date: '2026-05-09', title: '🔐 登录记住我 + Bug 修复 + 空间分页',
       isLatest: true,
+      items: [
+        '🔐 **登录记住我**: 新增「记住我（保持登录30天）」复选框 — 勾选后 JWT token 过期时间从1天延长至30天',
+        '🔙 **后端 remember_me**: LoginRequest 新增 remember_me 字段，handler 根据字段选择 30天 或默认过期',
+        '📄 **空间页分页导航**: 交流模块新增智能页码 — ←上一页 [1]…[5]…下一页→ + 第X/Y页',
+        '🐛 **登录页暗色修复**: login/register 页暗色模式背景从白色 → 纯黑 dark:bg-black',
+        '🌙 **深色切换防闪烁**: layout.tsx head 内联脚本预加载 dark class → ThemeToggle 不再操作 DOM',
+        '📝 **登录页标题**: "登录 Polis" → "登录 Polis — 连接思想，共创未来"',
+        '🔧 **交叉编译修复**: polis-user 添加 openssl vendored 特性，zigbuild 静态编译成功',
+        '✅ **E2E 全量通过**: 持续零失败确认',
+      ],
+    },
+    {
+      ver: '0.3.41', date: '2026-05-09', title: '📄 信息流分页导航 + 维护确认',
+      isLatest: false,
       items: [
         '📄 **分页导航**: 信息流底部新增智能页码 — ←上一页 [1] … [5] … [42] 下一页→ + 共834条动态',
         '🔙 **后端 total 计数**: get_feed API 新增 COUNT(posts+polls+announcements) 三表合计，pagination.total 字段',

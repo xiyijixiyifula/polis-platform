@@ -65,6 +65,7 @@ pub struct RegisterRequest {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+    pub remember_me: Option<bool>,
 }
 
 /// 登录响应

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 export default function LoginPage() {
   const [redirect, setRedirect] = useState('/');
   const [form, setForm] = useState({ email: '', password: '' });
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +24,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, remember_me: rememberMe }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -46,7 +47,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-black px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">登录 Polis</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">登录 Polis — 连接思想，共创未来</h1>
           <p className="mt-2 text-sm text-gray-600">欢迎回来</p>
         </div>
 
@@ -78,6 +79,16 @@ export default function LoginPage() {
               required
             />
           </div>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            />
+            <span className="text-sm text-gray-600 dark:text-gray-400">记住我（保持登录 30 天）</span>
+          </label>
 
           <button type="submit" className="btn-primary w-full" disabled={loading}>
             {loading ? '登录中...' : '登录'}
