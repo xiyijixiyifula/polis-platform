@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.39', date: '2026-05-09', title: '🍎 深色模式完全重设计 — Apple iOS 层级系统 + 纯手动触发',
+      ver: '0.3.40', date: '2026-05-09', title: '🔄 维护轮次 — 系统健康确认 + E2E 全量验证',
       isLatest: true,
+      items: [
+        '✅ **E2E 141/141 全量通过**: 26 大类测试全部 PASS，覆盖 API/前端/安全/性能/服务全维度',
+        '🛡️ **安全扫描无色**: 零错误日志，无异常登录，无蜜罐触达',
+        '📊 **系统健康**: 6 服务 active，CPU 负载 0.04，内存 595MB/1613MB，磁盘 76% (9.3G 可用)',
+        '🌐 **全页面可达**: 主页/about/explore/cli/search/changelog/research 全部 200',
+        '🔍 **Rust 生态调研**: Rust 1.95.0 稳定版发布，GSoC 2026 正式启动',
+        '📝 **README 同步更新**: 版本号 + 状态描述更新',
+      ],
+    },
+    {
+      ver: '0.3.39', date: '2026-05-09', title: '🍎 深色模式完全重设计 — Apple iOS 层级系统 + 纯手动触发',
+      isLatest: false,
       items: [
         '🍎 **Apple iOS 层级系统**: 完全重写深色模式 CSS（300+ 行），采用纯黑背景(#000000) + 深灰卡片(#1C1C1E) + 暗灰元素(#2C2C2E) 三层层级',
         '⬛ **纯黑背景**: 页面/侧边栏/Footer 等最底层使用 #000000 — 最大程度利用 OLED 像素关闭的优势',
