@@ -31,6 +31,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head>
+        {/* 深色模式防闪烁：在页面渲染前从 localStorage 读取偏好并设置 dark class */}
+        <script dangerouslySetInnerHTML={{
+          __html: `(function(){try{var t=localStorage.getItem('polis_theme');if(t==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})();`
+        }} />
         {/* SEO结构化数据 */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{
           __html: JSON.stringify({

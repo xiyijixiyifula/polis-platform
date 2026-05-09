@@ -14,14 +14,12 @@ export function ThemeToggle() {
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    // 仅从 localStorage 读取用户明确保存的偏好
-    // 不再自动检测 prefers-color-scheme，用户必须手动点击才能进入深色模式
+    // Head 脚本已提前设置 dark class，这里只同步 React 状态
+    // 不再操作 DOM 以避免闪烁
     const saved = localStorage.getItem('polis_theme');
     if (saved === 'dark') {
-      document.documentElement.classList.add('dark');
       setDark(true);
     }
-    // 如果 saved === 'light' 或不存在任何记录 → 默认亮色模式
   }, []);
 
   const toggle = () => {

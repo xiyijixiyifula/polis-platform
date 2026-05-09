@@ -207,6 +207,12 @@ export default function SpacePage() {
     }
   }, [namespace, postPage, postSort, loadingMore, modules]);
 
+  const goToPostPage = (p: number) => {
+    if (p < 1 || p > postTotalPages) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setPostPage(p);
+  };
+
   // Parse namespace for GitHub-style display: username/community-name
   const ghParts = namespace.split('/');
   const hasOwnerPrefix = nsParts.length >= 2;
@@ -264,10 +270,9 @@ export default function SpacePage() {
   useEffect(() => {
     if (!namespace) return;
     setPostLoading(true);
-    setPostPage(1); // Reset pagination on namespace/sort change
 
     const fetchers: Promise<any>[] = [
-      fetch(`/api/spaces/${namespace}/posts?page=1&page_size=10&sort=${postSort}`).then(r => r.json()),
+      fetch(`/api/spaces/${namespace}/posts?page=${postPage}&page_size=10&sort=${postSort}`).then(r => r.json()),
       fetch(`/api/spaces/${namespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
     ];
 
@@ -306,7 +311,7 @@ export default function SpacePage() {
       })
       .catch(() => {})
       .finally(() => setPostLoading(false));
-  }, [namespace, modules.polls, postSort]);
+  }, [namespace, modules.polls, postSort, postPage]);
 
   // Fetch series list when series tab is active or module is enabled
   useEffect(() => {
@@ -709,16 +714,65 @@ export default function SpacePage() {
                 </div>
               )}
 
-              {/* Load More button */}
-              {posts.length > 0 && postPage < postTotalPages && (
-                <div className="mt-4 text-center">
+              {/* 分页导航 */}
+              {postTotalPages > 1 && (
+                <div className="mt-4 flex items-center justify-center gap-2">
                   <button
-                    onClick={loadMorePosts}
-                    disabled={loadingMore}
-                    className="btn-secondary px-6 py-2 text-sm dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 disabled:opacity-50"
+                    onClick={() => goToPostPage(postPage - 1)}
+                    disabled={postPage <= 1}
+                    className="px-3 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
                   >
-                    {loadingMore ? '加载中...' : '加载更多'}
+                    ← 上一页
                   </button>
+
+                  {(() => {
+                    const pages: (number | string)[] = [];
+                    const maxShow = 7;
+                    const p = postPage;
+                    const t = postTotalPages;
+                    if (t <= maxShow) {
+                      for (let i = 1; i <= t; i++) pages.push(i);
+                    } else {
+                      pages.push(1);
+                      if (p > 3) pages.push('...');
+                      const start = Math.max(2, p - 1);
+                      const end = Math.min(t - 1, p + 1);
+                      for (let i = start; i <= end; i++) pages.push(i);
+                      if (p < t - 2) pages.push('...');
+                      pages.push(t);
+                    }
+                    return pages.map((pg, i) =>
+                      typeof pg === 'number' ? (
+                        <button
+                          key={i}
+                          onClick={() => goToPostPage(pg)}
+                          className={'w-9 h-9 rounded-full text-sm font-medium transition-colors ' +
+                            (pg === postPage
+                              ? 'bg-primary-500 text-white shadow-sm'
+                              : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800')
+                          }
+                        >
+                          {pg}
+                        </button>
+                      ) : (
+                        <span key={i} className="px-1 text-gray-400 select-none">…</span>
+                      )
+                    );
+                  })()}
+
+                  <button
+                    onClick={() => goToPostPage(postPage + 1)}
+                    disabled={postPage >= postTotalPages}
+                    className="px-3 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                  >
+                    下一页 →
+                  </button>
+                </div>
+              )}
+
+              {postTotalPages > 0 && posts.length > 0 && (
+                <div className="mt-2 pb-8 text-center text-xs text-gray-400">
+                  第 {postPage}/{postTotalPages} 页
                 </div>
               )}
             </>
