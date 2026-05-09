@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.44', date: '2026-05-09', title: '✨ 后台在线改密码 — /admin/settings 页面 + 运行时 ADMIN_CODE 热更新',
+      ver: '0.3.45', date: '2026-05-09', title: '🧪 全栈 E2E 测试 — 26/27 通过 + 管理后台全覆盖',
       isLatest: true,
+      items: [
+        '🧪 **E2E 综合测试 26/27 (96%)**: 6大类全覆盖 — 认证(5) · 空间(3) · 内容(4) · 社交(4) · 管理后台(9) · 搜索(2)',
+        '🛡️ **管理后台全覆盖**: 管理员登录/仪表盘/用户列表/空间管理/帖子管理/数据分析/系统设置/空间状态修改/健康检查 9/9',
+        '👥 **多用户互动**: 跨用户评论 + 点赞 + 投票 + 关注 4项社交测试全部通过',
+        '🔍 **搜索确认**: 用户搜索 + Feed 信息流 API 正常',
+        '🛡️ **系统健康**: 6服务active, load 0.30, 综合健康检查 healthy, 所有公开页面 200 OK',
+        '⏭️  **已知**: 收藏API路径需用 POST /api/posts/{id}/bookmark (非 POST /api/bookmarks)，测试脚本路径可优化',
+      ],
+    },
+    {
+      ver: '0.3.44', date: '2026-05-09', title: '✨ 后台在线改密码 — /admin/settings 页面 + 运行时 ADMIN_CODE 热更新',
+      isLatest: false,
       items: [
         '🔑 **后台在线改密码**: 新增 /admin/settings 系统设置页面，表单修改管理验证码，即时生效无需重启',
         '🔙 **后端热更新**: AdminHandler 增加 RwLock<String> 运行时可变 admin_code + PUT /api/admin/settings/code API',
