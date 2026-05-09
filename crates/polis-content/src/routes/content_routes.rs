@@ -1113,8 +1113,8 @@ async fn feed_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let page = q.page.unwrap_or(1);
     let page_size = q.page_size.unwrap_or(20).min(50);
-    let items = h.get_feed(page, page_size).await?;
-    Ok(Json(serde_json::json!({"code": 0, "data": items, "pagination": {"page": page, "page_size": page_size}})))
+    let (items, total) = h.get_feed(page, page_size).await?;
+    Ok(Json(serde_json::json!({"code": 0, "data": items, "pagination": {"page": page, "page_size": page_size, "total": total}})))
 }
 
 async fn get_subscription_route(

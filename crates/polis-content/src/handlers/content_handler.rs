@@ -981,7 +981,7 @@ impl ContentHandler {
     }
 
     /// 获取全站信息流
-    pub async fn get_feed(&self, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
+    pub async fn get_feed(&self, page: u32, page_size: u32) -> Result<(Vec<serde_json::Value>, u64), AppError> {
         self.repo.get_feed(page, page_size).await
     }
 

@@ -22,6 +22,7 @@ function FeedLayout() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [totalItems, setTotalItems] = useState(0);
   const [activeTab, setActiveTab] = useState('all');
   const [trendingSpaces, setTrendingSpaces] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -64,6 +65,9 @@ function FeedLayout() {
         } else {
           setItems(data.data);
         }
+        if (data.pagination && typeof data.pagination.total === 'number') {
+          setTotalItems(data.pagination.total);
+        }
         if (data.data.length < 20) setHasMore(false);
       } else {
         setHasMore(false);
@@ -103,6 +107,18 @@ function FeedLayout() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(totalItems / 20));
+
+  const goToPage = (p: number) => {
+    if (p < 1 || p > totalPages) return;
+    setLoading(true);
+    setItems([]);
+    setPage(p);
+    setHasMore(true);
+    fetchFeed(p, false, activeTab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -244,7 +260,7 @@ function FeedLayout() {
                   <FeedItemCard key={item.type + '-' + item.id} item={item} />
                 ))}
 
-                {/* Load more trigger */}
+                {/* Load more trigger (auto-scroll) */}
                 {hasMore && (
                   <div ref={loadMoreRef} className="py-6 text-center">
                     {loadingMore ? (
@@ -259,6 +275,66 @@ function FeedLayout() {
                 )}
                 {!hasMore && (
                   <div className="py-8 text-center text-sm text-gray-400">— 已经到底了 —</div>
+                )}
+
+                {/* ===== 分页导航 ===== */}
+                {totalItems > 20 && (
+                  <div className="py-6 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => goToPage(page - 1)}
+                      disabled={page <= 1}
+                      className="px-3 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                    >
+                      ← 上一页
+                    </button>
+
+                    {(() => {
+                      const pages: (number | string)[] = [];
+                      const maxShow = 7;
+                      if (totalPages <= maxShow) {
+                        for (let i = 1; i <= totalPages; i++) pages.push(i);
+                      } else {
+                        pages.push(1);
+                        if (page > 3) pages.push('...');
+                        const start = Math.max(2, page - 1);
+                        const end = Math.min(totalPages - 1, page + 1);
+                        for (let i = start; i <= end; i++) pages.push(i);
+                        if (page < totalPages - 2) pages.push('...');
+                        pages.push(totalPages);
+                      }
+                      return pages.map((p, i) =>
+                        typeof p === 'number' ? (
+                          <button
+                            key={i}
+                            onClick={() => goToPage(p)}
+                            className={'w-9 h-9 rounded-full text-sm font-medium transition-colors ' +
+                              (p === page
+                                ? 'bg-primary-500 text-white shadow-sm'
+                                : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800')
+                            }
+                          >
+                            {p}
+                          </button>
+                        ) : (
+                          <span key={i} className="px-1 text-gray-400 select-none">…</span>
+                        )
+                      );
+                    })()}
+
+                    <button
+                      onClick={() => goToPage(page + 1)}
+                      disabled={page >= totalPages}
+                      className="px-3 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+                    >
+                      下一页 →
+                    </button>
+                  </div>
+                )}
+
+                {totalItems > 0 && (
+                  <div className="pb-8 text-center text-xs text-gray-400">
+                    共 {totalItems} 条动态 · 第 {page}/{totalPages} 页
+                  </div>
                 )}
               </div>
             ) : (

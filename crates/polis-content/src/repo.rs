@@ -968,7 +968,19 @@ impl ContentRepo {
 
 
     /// Get unified feed across all spaces (posts + polls + announcements)
-    pub async fn get_feed(&self, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
+    pub async fn get_feed(&self, page: u32, page_size: u32) -> Result<(Vec<serde_json::Value>, u64), AppError> {
+        // 先获取总数
+        let post_total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM posts WHERE is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'"
+        ).fetch_one(&self.pool).await?;
+        let poll_total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM polls WHERE status = 'active'"
+        ).fetch_one(&self.pool).await?;
+        let ann_total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM announcements"
+        ).fetch_one(&self.pool).await?;
+        let total = (post_total + poll_total + ann_total) as u64;
+
         let offset = ((page.saturating_sub(1)) * page_size) as i64;
         let limit = page_size as i64;
         let posts = sqlx::query_as::<_, (Uuid, Uuid, String, Uuid, String, String, String, i64, i64, i64, chrono::DateTime<chrono::Utc>,)>(
@@ -1009,7 +1021,7 @@ impl ContentRepo {
             tb.cmp(ta)
         });
         let paged: Vec<serde_json::Value> = items.into_iter().take(page_size as usize).collect();
-        Ok(paged)
+        Ok((paged, total))
     }
 
     /// Batch query space info by IDs
