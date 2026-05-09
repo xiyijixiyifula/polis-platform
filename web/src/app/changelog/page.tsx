@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.46', date: '2026-05-09', title: '🧪 E2E 27/27 全通 — 收藏测试修复 + 满分覆盖',
+      ver: '0.3.47', date: '2026-05-10', title: '🔄 维护轮次 — 种子数据恢复 + E2E 141/141 满分',
       isLatest: true,
+      items: [
+        '🗄️ **种子数据恢复**: 数据库清空后重新导入 002_seed_data.sql — 8位种子用户 + 10个种子社区全部恢复',
+        '🐛 **回归修复**: 中文路由 API (112233/新的世界, 112233/创新) 恢复 — 之前因数据库清空404',
+        '👤 **用户档案恢复**: wangwu/zhangsan/lisi 等种子用户档案 API 正常返回',
+        '🧪 **E2E 141/141 满分**: 26大类测试零失败，连续5轮满分（含本轮恢复验证）',
+        '🛡️ **系统健康**: 6服务active, load 0.00, 综合健康检查 healthy, 所有公开页面 200 OK',
+      ],
+    },
+    {
+      ver: '0.3.46', date: '2026-05-09', title: '🧪 E2E 27/27 全通 — 收藏测试修复 + 满分覆盖',
+      isLatest: false,
       items: [
         '🏆 **E2E 27/27 (100%)**: 认证(5) · 空间(3) · 内容(4) · 社交含收藏(5) · 管理后台(9) · 搜索(2) — 全部通过',
         '🔖 **收藏测试修复**: 使用 POST /api/posts/{id}/bookmark 正确路径，收藏toggle测试并入社交类',
