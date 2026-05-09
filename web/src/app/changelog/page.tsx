@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.43', date: '2026-05-09', title: '🔄 维护确认 — E2E 全量通过 + profile 闪空修复',
+      ver: '0.3.44', date: '2026-05-09', title: '✨ 后台在线改密码 — /admin/settings 页面 + 运行时 ADMIN_CODE 热更新',
       isLatest: true,
+      items: [
+        '🔑 **后台在线改密码**: 新增 /admin/settings 系统设置页面，表单修改管理验证码，即时生效无需重启',
+        '🔙 **后端热更新**: AdminHandler 增加 RwLock<String> 运行时可变 admin_code + PUT /api/admin/settings/code API',
+        '💾 **持久化存储**: admin_code 写入 /root/polis/admin_code.txt，服务重启后自动加载，env fallback 机制',
+        '🔐 **安全验证**: 修改需验证当前密码 + JWT 认证，新旧密码不一致检查，最少8位长度限制',
+        '🧪 **E2E 测试**: 核心流程测试 9/9 通过（注册/登录/创建空间/发帖/搜索/管理后台全API）',
+        '🛡️ **系统健康**: 6服务active, 健康聚合检查 healthy, 所有公开页面 200 OK',
+      ],
+    },
+    {
+      ver: '0.3.43', date: '2026-05-09', title: '🔄 维护确认 — E2E 全量通过 + profile 闪空修复',
+      isLatest: false,
       items: [
         '✅ **E2E 141/141 全量通过**: 26大类测试零失败，6服务active，load 0.08',
         '🐛 **个人主页闪空修复**: profile 页切换时清空旧 state — 不再闪现"没有社区"',
