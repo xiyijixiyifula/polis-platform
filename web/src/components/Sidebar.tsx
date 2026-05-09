@@ -3,9 +3,18 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Flame, Compass, Plus, TrendingUp, Gamepad2, ShoppingBag, BookOpen, PenLine } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [createLocked, setCreateLocked] = useState(false);
+
+  // 路由切换时短暂锁定「创建社区」按钮，防止 layout shift 导致误触
+  useEffect(() => {
+    setCreateLocked(true);
+    const t = setTimeout(() => setCreateLocked(false), 500);
+    return () => clearTimeout(t);
+  }, [pathname]);
 
   const navItems = [
     { icon: Home, label: '首页', href: '/' },
@@ -54,8 +63,11 @@ export function Sidebar() {
 
         <div className="mt-4 px-3">
           <Link
-            href="/create"
-            className="btn-ripple flex items-center justify-center gap-2 w-full rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-xs py-2.5 transition-all hover:shadow-glow"
+            href={createLocked ? '#' : '/create'}
+            onClick={createLocked ? (e) => e.preventDefault() : undefined}
+            className={`btn-ripple flex items-center justify-center gap-2 w-full rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-xs py-2.5 transition-all hover:shadow-glow ${
+              createLocked ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
             <Plus className="h-4 w-4" />
             创建社区

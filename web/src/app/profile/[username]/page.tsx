@@ -55,6 +55,9 @@ export default function UserProfilePage() {
   useEffect(() => {
     if (!username) return;
     setLoading(true);
+    setUser(null);
+    setUserSpaces([]);
+    setError('');
     (async () => {
       try {
         const res = await users.getProfile(username);
