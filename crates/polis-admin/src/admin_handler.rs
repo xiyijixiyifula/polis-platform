@@ -2,19 +2,55 @@
 use polis_core::admin::*;
 use polis_core::error::AppError;
 use sqlx::PgPool;
+use std::fs;
+use std::sync::RwLock;
 use uuid::Uuid;
 
 use crate::config::AdminConfig;
 use crate::stats;
 
+const ADMIN_CODE_FILE: &str = "/root/polis/admin_code.txt";
+
+/// 启动时从文件读取 admin_code，文件不存在则用环境变量
+fn load_admin_code(env_code: &str) -> String {
+    fs::read_to_string(ADMIN_CODE_FILE)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| env_code.to_string())
+}
+
 pub struct AdminHandler {
     pub pool: PgPool,
     pub config: AdminConfig,
+    pub admin_code: RwLock<String>,
 }
 
 impl AdminHandler {
     pub fn new(pool: PgPool, config: AdminConfig) -> Self {
-        Self { pool, config }
+        let admin_code = load_admin_code(&config.admin_code);
+        // 确保文件存在
+        let _ = fs::write(ADMIN_CODE_FILE, &admin_code);
+        Self { pool, config, admin_code: RwLock::new(admin_code) }
+    }
+
+    /// 获取当前 admin_code
+    pub fn get_admin_code(&self) -> String {
+        self.admin_code.read().unwrap().clone()
+    }
+
+    /// 更新 admin_code 并持久化到文件
+    pub fn update_admin_code(&self, new_code: &str) -> Result<(), AppError> {
+        if new_code.len() < 8 {
+            return Err(AppError::Validation("Admin code must be at least 8 characters".to_string()));
+        }
+        // 写入文件持久化
+        fs::write(ADMIN_CODE_FILE, new_code)
+            .map_err(|e| AppError::Internal(format!("Failed to save admin code: {}", e)))?;
+        // 更新内存
+        *self.admin_code.write().unwrap() = new_code.to_string();
+        tracing::info!("Admin code updated and persisted");
+        Ok(())
     }
 
     /// 获取平台统计

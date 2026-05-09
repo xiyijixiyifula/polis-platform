@@ -32,6 +32,8 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
         .route("/api/admin/login", post(admin_login));
 
     let auth = Router::new()
+        .route("/api/admin/settings", get(get_settings))
+        .route("/api/admin/settings/code", put(update_admin_code_handler))
         .route("/api/admin/stats", get(get_stats))
         .route("/api/admin/users", get(get_users))
         .route("/api/admin/users/{id}/ban", post(ban_user))
@@ -69,9 +71,9 @@ async fn admin_login(
     State(handler): State<Arc<AdminHandler>>,
     Json(req): Json<AdminLoginRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    // 验证 admin_code
+    // 验证 admin_code（运行时可变）
     if let Some(ref code) = req.admin_code {
-        if code != &handler.config.admin_code {
+        if code != &handler.get_admin_code() {
             return Err(AppError::Unauthorized);
         }
     } else {
@@ -345,6 +347,39 @@ async fn get_post_analytics(
 }
 
 
+
+// ============================================================
+// Settings endpoints
+// ============================================================
+
+/// GET /api/admin/settings - 获取当前设置
+async fn get_settings() -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    Ok(Json(ApiResponse::success(serde_json::json!({
+        "admin_email": "admin@polis.app",
+        "admin_code_set": true,
+    }))))
+}
+
+/// PUT /api/admin/settings/code - 更新管理验证码
+#[derive(Deserialize)]
+pub struct UpdateAdminCodeRequest {
+    pub current_code: String,
+    pub new_code: String,
+}
+
+async fn update_admin_code_handler(
+    State(handler): State<Arc<AdminHandler>>,
+    Json(req): Json<UpdateAdminCodeRequest>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    // 验证当前密码
+    if req.current_code != handler.get_admin_code() {
+        return Err(AppError::Unauthorized);
+    }
+    // 更新
+    handler.update_admin_code(&req.new_code)?;
+    tracing::info!("Admin code updated via API");
+    Ok(Json(ApiResponse::success(())))
+}
 
 async fn health_check(State(h): State<Arc<AdminHandler>>) -> Json<ApiResponse<serde_json::Value>> {
     let db_ok = sqlx::query("SELECT 1").fetch_one(&h.pool).await.is_ok();
