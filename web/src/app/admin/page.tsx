@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Building2, FileText, Activity, TrendingUp, DollarSign, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Users, Building2, FileText, Activity, TrendingUp, DollarSign, MessageSquare, AlertTriangle, Server, CheckCircle, XCircle } from 'lucide-react';
 
 interface Stats {
   total_users: number; total_spaces: number; total_posts: number;
@@ -10,12 +10,32 @@ interface Stats {
   reported_content: number;
 }
 
+interface ServiceStatus {
+  service: string;
+  status: string;
+  database: boolean;
+  version: string;
+}
+
+interface HealthData {
+  all_healthy: boolean;
+  gateway: string;
+  services: {
+    admin: ServiceStatus;
+    content: ServiceStatus;
+    space: ServiceStatus;
+    user: ServiceStatus;
+  };
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [health, setHealth] = useState<HealthData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
+    fetchHealth();
   }, []);
 
   const fetchStats = async () => {
@@ -28,6 +48,14 @@ export default function AdminDashboard() {
       if (data.code === 0) setStats(data.data);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+
+  const fetchHealth = async () => {
+    try {
+      const res = await fetch('/api/health/all');
+      const data = await res.json();
+      if (data.code === 0) setHealth(data.data);
+    } catch (e) { console.error(e); }
   };
 
   const statCards = stats ? [
@@ -93,6 +121,50 @@ export default function AdminDashboard() {
               </a>
             );
           })}
+        </div>
+      </div>
+
+      {/* System Health */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Server className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">系统状态</h2>
+          {health && (
+            <span className={`ml-auto inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              health.all_healthy
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+            }`}>
+              {health.all_healthy ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+              {health.all_healthy ? '全部正常' : '部分异常'}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {health ? [
+            { name: '网关', key: 'gateway', status: health.gateway },
+            { name: '用户服务', key: 'user', status: health.services?.user?.status },
+            { name: '空间服务', key: 'space', status: health.services?.space?.status },
+            { name: '内容服务', key: 'content', status: health.services?.content?.status },
+            { name: '管理后台', key: 'admin', status: health.services?.admin?.status },
+          ].map((svc) => (
+            <div key={svc.key}
+              className={`flex items-center gap-3 rounded-lg p-3 border ${
+                svc.status === 'healthy'
+                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/10'
+                  : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/10'
+              }`}>
+              <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+                svc.status === 'healthy' ? 'bg-green-500' : 'bg-red-500'
+              }`} />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{svc.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{svc.status}</p>
+              </div>
+            </div>
+          )) : (
+            <div className="col-span-full text-sm text-gray-400 dark:text-gray-500 py-2">加载中...</div>
+          )}
         </div>
       </div>
 
