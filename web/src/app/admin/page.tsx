@@ -29,18 +29,22 @@ interface HealthData {
 }
 
 interface GrowthItem { date: string; count: number; }
+interface RecentUser { id: string; username: string; display_name?: string; email?: string; created_at: string; }
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [health, setHealth] = useState<HealthData | null>(null);
   const [userGrowth, setUserGrowth] = useState<GrowthItem[]>([]);
   const [postGrowth, setPostGrowth] = useState<GrowthItem[]>([]);
+  const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+  const [recentSpaces, setRecentSpaces] = useState<{id:string;title:string;namespace:string;created_at:string;owner_username?:string}[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
     fetchHealth();
     fetchGrowth();
+    fetchRecent();
   }, []);
 
   const fetchStats = async () => {
@@ -102,6 +106,37 @@ export default function AdminDashboard() {
         })}
       </svg>
     );
+  };
+
+  const fetchRecent = async () => {
+    const token = localStorage.getItem('polis_admin_token');
+    try {
+      const [usersRes, spacesRes] = await Promise.all([
+        fetch('/api/admin/users?page=1&page_size=5', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/spaces?page=1&page_size=5', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const usersData = await usersRes.json();
+      const spacesData = await spacesRes.json();
+      if (usersData.code === 0) {
+        const items = usersData.data?.items || usersData.data || [];
+        setRecentUsers(items.slice(0, 5));
+      }
+      if (spacesData.code === 0) {
+        const items = spacesData.data?.items || spacesData.data || [];
+        setRecentSpaces(items.slice(0, 5));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const formatTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return '刚刚';
+    if (mins < 60) return `${mins}分钟前`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}小时前`;
+    const days = Math.floor(hours / 24);
+    return `${days}天前`;
   };
 
   const user7dTotal = userGrowth.reduce((s, d) => s + d.count, 0);
@@ -246,6 +281,60 @@ export default function AdminDashboard() {
                 <span className="text-lg font-bold text-green-600 dark:text-green-400">{post7dTotal}</span>
               </div>
               <Sparkline data={postGrowth} color="#22c55e" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Activity Feed */}
+      {(recentUsers.length > 0 || recentSpaces.length > 0) && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">最近动态</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">最新注册用户</h3>
+              {recentUsers.length > 0 ? (
+                <div className="space-y-2">
+                  {recentUsers.map((u, i) => (
+                    <div key={u.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-900/30 hover:bg-gray-100 dark:hover:bg-gray-900/50 transition-colors">
+                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                          {u.username?.[0]?.toUpperCase() || '?'}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">@{u.username}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{formatTimeAgo(u.created_at)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 dark:text-gray-500 py-2">暂无数据</p>
+              )}
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">最新创建社区</h3>
+              {recentSpaces.length > 0 ? (
+                <div className="space-y-2">
+                  {recentSpaces.map((s, i) => (
+                    <div key={s.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-900/30 hover:bg-gray-100 dark:hover:bg-gray-900/50 transition-colors">
+                      <div className="h-8 w-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
+                        <Building2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{s.title || s.namespace}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">@{s.namespace} · {formatTimeAgo(s.created_at)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 dark:text-gray-500 py-2">暂无数据</p>
+              )}
             </div>
           </div>
         </div>
