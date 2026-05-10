@@ -28,10 +28,10 @@ const TX_TYPE_LABELS: Record<string, string> = {
 };
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  completed: { label: '已完成', color: 'bg-green-100 text-green-700' },
-  pending: { label: '处理中', color: 'bg-yellow-100 text-yellow-700' },
-  failed: { label: '失败', color: 'bg-red-100 text-red-600' },
-  refunded: { label: '已退款', color: 'bg-purple-100 text-purple-600' },
+  completed: { label: '已完成', color: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' },
+  pending: { label: '处理中', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' },
+  failed: { label: '失败', color: 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' },
+  refunded: { label: '已退款', color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' },
 };
 
 export default function AdminTransactionsPage() {
@@ -74,15 +74,15 @@ export default function AdminTransactionsPage() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   if (loading && transactions.length === 0) {
-    return <div className="flex items-center justify-center h-64 text-gray-400">加载中...</div>;
+    return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">加载中...</div>;
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">交易管理</h1>
-          <p className="text-sm text-gray-500 mt-1">平台交易流水记录</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">交易管理</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">平台交易流水记录</p>
         </div>
         <button onClick={fetchTransactions} className="btn-secondary text-sm px-3 py-1.5 inline-flex items-center gap-1.5">
           <RefreshCw className="h-3.5 w-3.5" />
@@ -93,14 +93,14 @@ export default function AdminTransactionsPage() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
-          { label: '交易总数', value: total, icon: Receipt, color: 'text-blue-600 bg-blue-50' },
-          { label: '已成交金额', value: formatAmount(totalAmount), icon: DollarSign, color: 'text-green-600 bg-green-50' },
-          { label: '已完成笔数', value: completedCount, icon: TrendingUp, color: 'text-purple-600 bg-purple-50' },
-          { label: '当前页', value: transactions.length, icon: Receipt, color: 'text-orange-600 bg-orange-50' },
+          { label: '交易总数', value: total, icon: Receipt, color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' },
+          { label: '已成交金额', value: formatAmount(totalAmount), icon: DollarSign, color: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400' },
+          { label: '已完成笔数', value: completedCount, icon: TrendingUp, color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400' },
+          { label: '当前页', value: transactions.length, icon: Receipt, color: 'text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400' },
         ].map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className={`rounded-xl border border-gray-200 p-4 ${card.color}`}>
+            <div key={card.label} className={`rounded-xl border border-gray-200 dark:border-gray-700 p-4 ${card.color}`}>
               <div className="flex items-center gap-2">
                 <Icon className="h-4 w-4" />
                 <p className="text-sm">{card.label}</p>
@@ -112,23 +112,23 @@ export default function AdminTransactionsPage() {
       </div>
 
       {/* Transactions table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">付款方</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">收款方</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">类型</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">金额</th>
-              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase">状态</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">支付方式</th>
-              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">时间</th>
+            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">付款方</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">收款方</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">类型</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">金额</th>
+              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">状态</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">支付方式</th>
+              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">时间</th>
             </tr>
           </thead>
           <tbody>
             {transactions.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={7} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">
                   <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   暂无交易记录
                 </td>
@@ -137,26 +137,26 @@ export default function AdminTransactionsPage() {
               transactions.map((tx) => {
                 const statusInfo = STATUS_MAP[tx.status] || STATUS_MAP.pending;
                 return (
-                  <tr key={tx.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={tx.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-4 py-3 text-sm">
-                      <span className="font-medium text-gray-900">{tx.from_username || '—'}</span>
+                      <span className="font-medium text-gray-900 dark:text-gray-100">{tx.from_username || '—'}</span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
+                    <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                       <div>
                         {tx.to_username ? (
-                          <span className="font-medium text-gray-900">{tx.to_username}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{tx.to_username}</span>
                         ) : tx.space_title ? (
-                          <span className="font-medium text-gray-900">{tx.space_title}</span>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{tx.space_title}</span>
                         ) : '—'}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-sm">
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600">
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400">
                         {tx.tx_type === 'subscription' ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                         {TX_TYPE_LABELS[tx.tx_type] || tx.tx_type}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-mono font-medium text-gray-900">
+                    <td className="px-4 py-3 text-sm text-right font-mono font-medium text-gray-900 dark:text-gray-100">
                       {formatAmount(tx.amount_cents || 0)}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -164,10 +164,10 @@ export default function AdminTransactionsPage() {
                         {statusInfo.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       {tx.provider || '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                       {formatDate(tx.created_at)}
                     </td>
                   </tr>
@@ -179,7 +179,7 @@ export default function AdminTransactionsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="mt-4 flex justify-between items-center text-sm text-gray-500">
+      <div className="mt-4 flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
         <span>共 {total} 条记录</span>
         <div className="flex gap-2">
           <button onClick={() => setPage(Math.max(1, page - 1))}

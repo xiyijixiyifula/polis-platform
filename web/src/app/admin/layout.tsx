@@ -50,12 +50,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
       {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-white border-r border-gray-200 flex flex-col">
-        <div className="flex items-center gap-2 px-5 h-14 border-b border-gray-200">
+      <aside className="w-56 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+        <div className="flex items-center gap-2 px-5 h-14 border-b border-gray-200 dark:border-gray-700">
           <div className="h-7 w-7 rounded-lg bg-primary-600 flex items-center justify-center text-white text-xs font-bold">P</div>
-          <span className="font-semibold text-gray-900">Polis 管理</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100">Polis 管理</span>
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => {
@@ -64,7 +64,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             return (
               <Link key={item.href} href={item.href}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive ? 'bg-primary-50 text-primary-700 font-medium' : 'text-gray-600 hover:bg-gray-100'
+                  isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}>
                 <Icon className="h-4 w-4" />
                 {item.label}
@@ -72,8 +72,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             );
           })}
         </nav>
-        <div className="p-3 border-t border-gray-200">
-          <button onClick={handleLogout} className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100">
+        <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+          <button onClick={handleLogout} className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
             <LogOut className="h-4 w-4" />
             退出登录
           </button>

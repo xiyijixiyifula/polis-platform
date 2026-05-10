@@ -48,11 +48,11 @@ export default function AdminSpacesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">社区管理</h1>
-          <p className="text-sm text-gray-500 mt-1">管理平台所有社区</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">社区管理</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">管理平台所有社区</p>
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input type="text" placeholder="搜索社区..." className="input-field pl-10 w-64"
             value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
@@ -60,24 +60,24 @@ export default function AdminSpacesPage() {
 
       <div className="space-y-3">
         {filtered.map((space) => (
-          <div key={space.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center justify-between">
+          <div key={space.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold">
                 {space.title?.charAt(0) || '?'}
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-gray-900">{space.title}</h3>
-                  {space.is_root && <span className="text-[10px] bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded">根社区</span>}
+                  <h3 className="font-medium text-gray-900 dark:text-gray-100">{space.title}</h3>
+                  {space.is_root && <span className="text-[10px] bg-primary-100 dark:bg-primary-800 text-primary-700 dark:text-primary-300 px-1.5 py-0.5 rounded">根社区</span>}
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                    space.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                    space.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                   }`}>{space.status}</span>
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                    space.visibility === 'public' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+                    space.visibility === 'public' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
                   }`}>{space.visibility}</span>
                 </div>
-                <p className="text-sm text-gray-500 mt-0.5">/{space.namespace}</p>
-                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">/{space.namespace}</p>
+                <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 dark:text-gray-500">
                   <span>👥 {formatCount(space.member_count)}</span>
                   <span>📝 {formatCount(space.post_count)}</span>
                   <span>📅 {formatDate(space.created_at)}</span>
@@ -89,7 +89,7 @@ export default function AdminSpacesPage() {
                 className="btn-secondary text-xs px-3 py-1.5"><Eye className="h-3 w-3 inline" /> 查看</a>
               {space.status === 'active' && (
                 <button onClick={() => archiveSpace(space.id)}
-                  className="text-xs px-3 py-1.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-50">
+                  className="text-xs px-3 py-1.5 rounded-lg border border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20">
                   <Archive className="h-3 w-3 inline" /> 归档
                 </button>
               )}

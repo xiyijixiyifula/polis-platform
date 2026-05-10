@@ -61,44 +61,44 @@ export default function AdminSettingsPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <div className="h-10 w-10 rounded-xl bg-primary-100 flex items-center justify-center">
-          <Settings className="h-5 w-5 text-primary-600" />
+        <div className="h-10 w-10 rounded-xl bg-primary-100 dark:bg-primary-800 flex items-center justify-center">
+          <Settings className="h-5 w-5 text-primary-600 dark:text-primary-300" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">系统设置</h1>
-          <p className="text-sm text-gray-500">管理后台配置与安全</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">系统设置</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">管理后台配置与安全</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {configItems.map((item) => (
-          <div key={item.label} className="bg-white rounded-xl p-4 border border-gray-200">
+          <div key={item.label} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
             <div className="flex items-start gap-3">
-              <div className="h-9 w-9 rounded-lg bg-primary-50 flex items-center justify-center shrink-0">
-                <item.icon className="h-4 w-4 text-primary-600" />
+              <div className="h-9 w-9 rounded-lg bg-primary-50 dark:bg-primary-900/30 flex items-center justify-center shrink-0">
+                <item.icon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
               </div>
               <div>
-                <p className="text-sm text-gray-500">{item.label}</p>
-                <p className="font-medium text-gray-900">{item.value}</p>
-                <p className="text-xs text-gray-400 mt-1">{item.desc}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
+                <p className="font-medium text-gray-900 dark:text-gray-100">{item.value}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{item.desc}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Key className="h-5 w-5 text-primary-600" />
-          <h2 className="text-lg font-semibold text-gray-900">修改管理验证码</h2>
+          <Key className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">修改管理验证码</h2>
         </div>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           修改后即时生效，无需重启服务。新验证码将写入服务器持久化存储。
         </p>
 
         {message && (
           <div className={`flex items-center gap-2 p-3 rounded-lg mb-4 text-sm ${
-            message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'
+            message.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
           }`}>
             {message.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
             {message.text}
@@ -107,10 +107,10 @@ export default function AdminSettingsPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">当前验证码</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">当前验证码</label>
             <input
               type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
               placeholder="输入当前管理验证码"
               value={currentCode}
               onChange={(e) => setCurrentCode(e.target.value)}
@@ -118,10 +118,10 @@ export default function AdminSettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">新验证码</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">新验证码</label>
             <input
               type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
               placeholder="至少 8 个字符"
               value={newCode}
               onChange={(e) => setNewCode(e.target.value)}
@@ -130,10 +130,10 @@ export default function AdminSettingsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">确认新验证码</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">确认新验证码</label>
             <input
               type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
               placeholder="再次输入新验证码"
               value={confirmCode}
               onChange={(e) => setConfirmCode(e.target.value)}
@@ -155,12 +155,12 @@ export default function AdminSettingsPage() {
         </form>
       </div>
 
-      <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
         <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5" />
-          <div className="text-sm text-blue-700">
+          <AlertCircle className="h-5 w-5 text-blue-500 dark:text-blue-400 mt-0.5" />
+          <div className="text-sm text-blue-700 dark:text-blue-300">
             <p className="font-medium mb-1">提示</p>
-            <ul className="list-disc list-inside space-y-1 text-blue-600">
+            <ul className="list-disc list-inside space-y-1 text-blue-600 dark:text-blue-400">
               <li>修改验证码后即时生效，无需重启服务</li>
               <li>当前已登录的 token 不受影响</li>
               <li>新的登录必须使用新验证码</li>

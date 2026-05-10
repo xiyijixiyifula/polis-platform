@@ -41,15 +41,15 @@ export default function AdminLoginPage() {
           <h1 className="text-2xl font-bold text-white">Polis 管理后台</h1>
           <p className="text-sm text-gray-400 mt-1">输入管理员凭证登录</p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl p-6 space-y-4 shadow-xl">
-          {error && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg">{error}</div>}
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 shadow-xl">
+          {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg">{error}</div>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">邮箱</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">邮箱</label>
             <input type="email" className="input-field" placeholder="admin@polis.app" required
               value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">管理员验证码</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">管理员验证码</label>
             <input type="text" className="input-field" placeholder="请输入管理员验证码"
               value={form.admin_code} onChange={(e) => setForm({ ...form, admin_code: e.target.value })} required />
           </div>

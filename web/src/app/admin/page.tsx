@@ -41,13 +41,13 @@ export default function AdminDashboard() {
     { icon: DollarSign, label: '交易笔数', value: stats.total_transactions, color: 'bg-yellow-500' },
   ] : [];
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">加载中...</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">加载中...</div>;
 
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">仪表盘</h1>
-        <p className="text-sm text-gray-500 mt-1">平台运营数据概览</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">仪表盘</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">平台运营数据概览</p>
       </div>
 
       {/* Stats grid */}
@@ -55,11 +55,11 @@ export default function AdminDashboard() {
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
-            <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-5">
+            <div key={card.label} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">{card.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{card.value.toLocaleString()}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{card.value.toLocaleString()}</p>
                 </div>
                 <div className={`h-10 w-10 rounded-lg ${card.color} flex items-center justify-center`}>
                   <Icon className="h-5 w-5 text-white" />
@@ -71,8 +71,8 @@ export default function AdminDashboard() {
       </div>
 
       {/* Quick actions */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">快捷操作</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">快捷操作</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: '用户管理', href: '/admin/users', icon: Users, color: 'text-blue-600 bg-blue-50' },
@@ -94,8 +94,8 @@ export default function AdminDashboard() {
 
       {/* Recent activity */}
       {stats && stats.reported_content > 0 && (
-        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-          <p className="text-sm text-yellow-800">
+        <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200">
             📋 近 7 天有 <strong>{stats.reported_content}</strong> 条新内容需要关注
           </p>
         </div>
