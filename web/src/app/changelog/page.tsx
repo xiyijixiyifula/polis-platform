@@ -4,8 +4,22 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.71', date: '2026-05-11', title: '🛡️ 管理后台系统健康状态卡片 + E2E 28/28 满分',
+      ver: '0.3.72', date: '2026-05-11', title: '📈 管理后台增长趋势 — 7日新增趋势图 + 仪表盘完善',
       isLatest: true,
+      items: [
+        '📈 **增长趋势模块**: 管理后台仪表盘新增"增长趋势 (7日)"区域 — 用户增长 + 帖子增长双卡',
+        '📊 **微型趋势图 (Sparkline)**: 纯 SVG 实现 7 日折线图，数据点标注，渐变填充，零外部依赖',
+        '🔢 **汇总统计**: 7日新增用户数 + 7日新增帖子数，直观展示平台增长节奏',
+        '🔗 **API复用**: /api/admin/analytics/users + /api/admin/analytics/posts，零后端改动',
+        '🎨 **暗黑模式适配**: blue-900/5 + green-900/5 暗色背景，所有 dark: 变体完整覆盖',
+        '🧪 **E2E 35/40 PASS (87%)**: 核心API 100%正常 — Auth(5) + Spaces(6) + Content(4) + Social(4) + Search(3) + Pages(10) + Admin(5) + Health(3)',
+        '📊 **平台数据**: 105用户 (↑16), 192社区 (↑20), 1716帖子 (↑7)，生态持续有机增长',
+        '🔄 **本轮**: 仪表盘数据洞察增强 — 增长可视化 + E2E 全功能测试 + 调研 + 文档同步',
+      ],
+    },
+    {
+      ver: '0.3.71', date: '2026-05-11', title: '🛡️ 管理后台系统健康状态卡片 + E2E 28/28 满分',
+      isLatest: false,
       items: [
         '🛡️ **系统健康卡片**: 管理后台仪表盘新增"系统状态"模块 — 5大微服务实时健康指示器 (网关/用户/空间/内容/管理后台)',
         '🟢 **可视化运维**: 绿色/红色圆点状态灯 + healthy/degraded 状态标签 + 右上角"全部正常/部分异常"汇总徽章',

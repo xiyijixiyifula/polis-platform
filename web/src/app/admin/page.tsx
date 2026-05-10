@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Building2, FileText, Activity, TrendingUp, DollarSign, MessageSquare, AlertTriangle, Server, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Building2, FileText, Activity, TrendingUp, DollarSign, MessageSquare, AlertTriangle, Server, CheckCircle, XCircle, UserPlus, FilePlus } from 'lucide-react';
 
 interface Stats {
   total_users: number; total_spaces: number; total_posts: number;
@@ -28,14 +28,19 @@ interface HealthData {
   };
 }
 
+interface GrowthItem { date: string; count: number; }
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [health, setHealth] = useState<HealthData | null>(null);
+  const [userGrowth, setUserGrowth] = useState<GrowthItem[]>([]);
+  const [postGrowth, setPostGrowth] = useState<GrowthItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
     fetchHealth();
+    fetchGrowth();
   }, []);
 
   const fetchStats = async () => {
@@ -57,6 +62,50 @@ export default function AdminDashboard() {
       if (data.code === 0) setHealth(data.data);
     } catch (e) { console.error(e); }
   };
+
+  const fetchGrowth = async () => {
+    const token = localStorage.getItem('polis_admin_token');
+    try {
+      const [usersRes, postsRes] = await Promise.all([
+        fetch('/api/admin/analytics/users?days=7', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/analytics/posts?days=7', { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const usersData = await usersRes.json();
+      const postsData = await postsRes.json();
+      if (usersData.code === 0) setUserGrowth(usersData.data);
+      if (postsData.code === 0) setPostGrowth(postsData.data);
+    } catch (e) { console.error(e); }
+  };
+
+  const Sparkline = ({ data, color, height = 40 }: { data: GrowthItem[]; color: string; height?: number }) => {
+    if (!data || data.length === 0) return <div className="h-10 flex items-center text-xs text-gray-400">暂无数据</div>;
+    const maxVal = Math.max(...data.map(d => d.count), 1);
+    const width = 150;
+    const pad = 4;
+    const cw = width - pad * 2;
+    const ch = height - pad * 2;
+    const points = data.map((d, i) => {
+      const x = pad + (i / (data.length - 1)) * cw;
+      const y = pad + ch - (d.count / maxVal) * ch;
+      return `${x},${y}`;
+    }).join(' ');
+    const firstPt = `${pad},${pad + ch}`;
+    const lastPt = `${pad + cw},${pad + ch}`;
+    return (
+      <svg width={width} height={height} className="flex-shrink-0">
+        <path d={`M${firstPt} L${points} L${lastPt} Z`} fill={`${color}15`} />
+        <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        {data.map((d, i) => {
+          const x = pad + (i / (data.length - 1)) * cw;
+          const y = pad + ch - (d.count / maxVal) * ch;
+          return <circle key={i} cx={x} cy={y} r="2" fill={color} />;
+        })}
+      </svg>
+    );
+  };
+
+  const user7dTotal = userGrowth.reduce((s, d) => s + d.count, 0);
+  const post7dTotal = postGrowth.reduce((s, d) => s + d.count, 0);
 
   const statCards = stats ? [
     { icon: Users, label: '总用户', value: stats.total_users, color: 'bg-blue-500' },
@@ -167,6 +216,40 @@ export default function AdminDashboard() {
           )}
         </div>
       </div>
+
+      {/* Growth Trends */}
+      {(userGrowth.length > 0 || postGrowth.length > 0) && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">增长趋势 (7日)</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Users Growth */}
+            <div className="rounded-lg border border-blue-100 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/5 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">新增用户</span>
+                </div>
+                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{user7dTotal}</span>
+              </div>
+              <Sparkline data={userGrowth} color="#3b82f6" />
+            </div>
+            {/* Posts Growth */}
+            <div className="rounded-lg border border-green-100 dark:border-green-900/30 bg-green-50/50 dark:bg-green-900/5 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <FilePlus className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">新增帖子</span>
+                </div>
+                <span className="text-lg font-bold text-green-600 dark:text-green-400">{post7dTotal}</span>
+              </div>
+              <Sparkline data={postGrowth} color="#22c55e" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recent activity */}
       {stats && stats.reported_content > 0 && (
