@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.58', date: '2026-05-10', title: '⚠️ 维护中断 — 服务器离线 (Ping/SSH/HTTP 全不可达)',
+      ver: '0.3.59', date: '2026-05-10', title: '🔄 维护确认 — 服务器恢复 + E2E 140/141 (1项瞬态)',
       isLatest: true,
+      items: [
+        '🔄 **服务器恢复**: 中断约3小时后自动恢复, uptime 1天2小时, 6服务全活',
+        '🧪 **E2E 140/141**: 1项USER关注列表API瞬态失败(已确认API正常), 其余140项全通',
+        '📊 **性能基线**: 空间API 0.84s, Feed 0.83s, 搜索 0.73s, 投票API 0.77s',
+        '📄 **页面覆盖**: 31/31 全部200 OK, 公共空间总数突破120',
+        '🔄 **维护轮次**: 无代码变更 — 服务器恢复确认 + 部署v0.3.58/v0.3.59文档更新',
+      ],
+    },
+    {
+      ver: '0.3.58', date: '2026-05-10', title: '⚠️ 维护中断 — 服务器离线 (Ping/SSH/HTTP 全不可达)',
+      isLatest: false,
       items: [
         '⚠️ **服务器离线**: Ping 100%丢包, SSH 连接超时, HTTP 000, 持续时间 >20分钟',
         '🔬 **社区调研**: ActivityPub生态持续活跃 (Lemmy ★14.4K, Plume ★2.2K, rustodon ★882)',
