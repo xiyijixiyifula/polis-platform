@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.57', date: '2026-05-10', title: '💰 后台交易管理 + 管理后台前端集成全部完成',
+      ver: '0.3.58', date: '2026-05-10', title: '⚠️ 维护中断 — 服务器离线 (Ping/SSH/HTTP 全不可达)',
       isLatest: true,
+      items: [
+        '⚠️ **服务器离线**: Ping 100%丢包, SSH 连接超时, HTTP 000, 持续时间 >20分钟',
+        '🔬 **社区调研**: ActivityPub生态持续活跃 (Lemmy ★14.4K, Plume ★2.2K, rustodon ★882)',
+        '📌 **状态**: 无代码变更，等待服务器恢复后下一轮恢复正常维护',
+        '📄 **上次验证**: v0.3.57 部署后8/8管理页面全200, E2E 141/141 连续15轮满分',
+      ],
+    },
+    {
+      ver: '0.3.57', date: '2026-05-10', title: '💰 后台交易管理 + 管理后台前端集成全部完成',
+      isLatest: false,
       items: [
         '💰 **交易管理页面**: 后台 /admin/transactions 新增交易流水记录 (付款/收款/类型/金额/状态/支付方式)',
         '📊 **四维统计卡片**: 交易总数/已成交金额/已完成笔数/当前页 实时汇总',
