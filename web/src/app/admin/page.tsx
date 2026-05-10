@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Building2, FileText, Activity, TrendingUp, DollarSign } from 'lucide-react';
+import { Users, Building2, FileText, Activity, TrendingUp, DollarSign, MessageSquare, AlertTriangle } from 'lucide-react';
 
 interface Stats {
   total_users: number; total_spaces: number; total_posts: number;
@@ -73,12 +73,16 @@ export default function AdminDashboard() {
       {/* Quick actions */}
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">快捷操作</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
-            { label: '用户管理', href: '/admin/users', icon: Users, color: 'text-blue-600 bg-blue-50' },
-            { label: '社区管理', href: '/admin/spaces', icon: Building2, color: 'text-green-600 bg-green-50' },
-            { label: '内容审核', href: '/admin/posts', icon: FileText, color: 'text-purple-600 bg-purple-50' },
-            { label: '系统设置', href: '/admin/settings', icon: Activity, color: 'text-orange-600 bg-orange-50' },
+            { label: '用户管理', href: '/admin/users', icon: Users, color: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400' },
+            { label: '社区管理', href: '/admin/spaces', icon: Building2, color: 'text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400' },
+            { label: '内容审核', href: '/admin/posts', icon: FileText, color: 'text-purple-600 bg-purple-50 dark:bg-purple-900/30 dark:text-purple-400' },
+            { label: '评论管理', href: '/admin/comments', icon: MessageSquare, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 dark:text-indigo-400' },
+            { label: '举报处理', href: '/admin/reports', icon: AlertTriangle, color: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400' },
+            { label: '交易流水', href: '/admin/transactions', icon: DollarSign, color: 'text-teal-600 bg-teal-50 dark:bg-teal-900/20 dark:text-teal-400' },
+            { label: '数据分析', href: '/admin/analytics', icon: TrendingUp, color: 'text-pink-600 bg-pink-50 dark:bg-pink-900/20 dark:text-pink-400' },
+            { label: '系统设置', href: '/admin/settings', icon: Activity, color: 'text-orange-600 bg-orange-50 dark:bg-orange-900/20 dark:text-orange-400' },
           ].map((item) => {
             const Icon = item.icon;
             return (
