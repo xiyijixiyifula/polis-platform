@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Building2, FileText, Settings, LogOut, Shield, AlertTriangle, MessageSquare, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, FileText, Settings, LogOut, Shield, AlertTriangle, MessageSquare, DollarSign, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -41,6 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { icon: MessageSquare, label: '评论管理', href: '/admin/comments' },
     { icon: AlertTriangle, label: '举报管理', href: '/admin/reports' },
     { icon: DollarSign, label: '交易管理', href: '/admin/transactions' },
+    { icon: TrendingUp, label: '数据分析', href: '/admin/analytics' },
     { icon: Settings, label: '系统设置', href: '/admin/settings' },
   ];
 
