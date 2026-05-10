@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.63', date: '2026-05-10', title: '🎨 管理后台暗黑模式适配 — 全10页面统一深色体验',
+      ver: '0.3.64', date: '2026-05-10', title: '🐛 Bug修复 — 管理后台仪表盘 reported_content SQL 逻辑错误',
       isLatest: true,
+      items: [
+        '🐛 **SQL Bug修复**: stats.rs 中 `reported_content` 字段从 `posts` 表改为 `reports` 表查询 (WHERE status = pending)',
+        '📊 **修复前**: reported_content = 1680 (帖子总数，完全错误) → **修复后**: reported_content = 0 (无待处理举报，正确)',
+        '🧪 **E2E 141/141 满分**: 连续20轮满分 (v0.3.43→v0.3.64)，系统极度稳定',
+        '🛡️ **系统健康**: 6服务active, uptime 1天7小时+, 内存 964M 可用, 磁盘 8.7G',
+        '📄 **平台数据**: 75用户, 146空间, 1680帖子, 132评论, 53日活',
+        '🔄 **维护轮次**: Rust 后端 Bug 修复 + 服务器编译部署 + E2E 验证 + 文档同步',
+      ],
+    },
+    {
+      ver: '0.3.63', date: '2026-05-10', title: '🎨 管理后台暗黑模式适配 — 全10页面统一深色体验',
+      isLatest: false,
       items: [
         '🌙 **管理后台暗黑模式**: 10 个 admin 页面全面适配 dark: 变体 (布局 + 仪表盘 + 8 管理模块 + 登录)',
         '🎨 **视觉一致**: 侧边栏深色底板 + 表格深色行悬停 + 卡片/表单/按钮深色适配 + 徽章色彩暗色优化',
