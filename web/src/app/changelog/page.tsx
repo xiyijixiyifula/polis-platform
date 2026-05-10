@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.66', date: '2026-05-11', title: '📊 管理后台数据分析仪表盘 — 日增趋势柱状图 + 日期范围选择',
+      ver: '0.3.67', date: '2026-05-11', title: '⚠️ 维护中断 — 服务器离线 + 等待恢复',
       isLatest: true,
+      items: [
+        '⚠️ **服务器离线**: Ping 100%丢包 + SSH/HTTP 全超时, 类似 v0.3.58 中断模式',
+        '🔬 **离线调研**: ActivityPub 生态稳定 (Lemmy ★14.3K), Rust 1.95.0, Next.js v16.3 canary',
+        '📄 **文档推送**: changelog + README + 定时任务.md 更新至 GitHub',
+        '⏳ **等待恢复**: 上次类似中断持续~3小时后自愈 (v0.3.58), 本次等待中',
+        '🔄 **恢复后**: 立即执行 E2E 全栈测试 + 服务健康检查',
+      ],
+    },
+    {
+      ver: '0.3.66', date: '2026-05-11', title: '📊 管理后台数据分析仪表盘 — 日增趋势柱状图 + 日期范围选择',
+      isLatest: false,
       items: [
         '📊 **数据分析页面**: 新增 /admin/analytics — 用户日增 + 帖子日增 柱状图 (纯 CSS 实现，零依赖)',
         '📅 **日期范围**: 7/14/30 天可选切换, 汇总卡片 + 趋势表格 + 有数据日标记',
