@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.54', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续第12轮满分',
+      ver: '0.3.55', date: '2026-05-10', title: '🛡️ 后台举报管理 — 前端集成 + E2E 141/141 连续第13轮满分',
       isLatest: true,
+      items: [
+        '🛡️ **举报管理页面**: 后台 /admin/reports 新增举报审核管理 (举报列表 + 状态筛选 + 处理/驳回)',
+        '📊 **状态汇总卡片**: 待处理/已处理/已驳回三色统计卡片',
+        '🔗 **侧边栏集成**: 管理后台侧边栏新增"举报管理"入口 (AlertTriangle 图标)',
+        '🧪 **E2E 141/141 满分**: 连续13轮满分 (v0.3.43→v0.3.55)，系统极度稳定',
+        '📊 **性能基线**: 空间API 0.90s, Feed 0.91s, 搜索 0.77s, 投票API 0.63s',
+        '📄 **页面覆盖**: 29/29 全部200 OK (新增 /admin/reports), 公共空间总数突破110',
+      ],
+    },
+    {
+      ver: '0.3.54', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续第12轮满分',
+      isLatest: false,
       items: [
         '🧪 **E2E 141/141 满分**: 连续12轮满分 (v0.3.43→v0.3.54)，系统极度稳定',
         '🛡️ **系统健康**: 6服务active, load 0.24/0.08/0.02, 健康聚合 ALL_HEALTHY',
