@@ -14,7 +14,7 @@ pub async fn get_platform_stats(pool: &PgPool) -> Result<PlatformStats, AppError
             (SELECT COUNT(*) FROM transactions) as total_transactions,
             (SELECT COUNT(*) FROM users WHERE created_at > NOW() - INTERVAL '1 day') as new_users_today,
             (SELECT COUNT(*) FROM posts WHERE created_at > NOW() - INTERVAL '1 day') as new_posts_today,
-            (SELECT COUNT(*) FROM posts WHERE is_deleted = FALSE AND created_at > NOW() - INTERVAL '7 days') as reported_content,
+            (SELECT COUNT(*) FROM reports WHERE status = 'pending') as reported_content,
             (SELECT COUNT(*) FROM users WHERE updated_at > NOW() - INTERVAL '1 day') as active_users_today"
     ).fetch_one(pool).await?;
 
