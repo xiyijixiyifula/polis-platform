@@ -96,7 +96,7 @@ export default function AdminDashboard() {
       {stats && stats.reported_content > 0 && (
         <div className="mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-4">
           <p className="text-sm text-yellow-800 dark:text-yellow-200">
-            📋 近 7 天有 <strong>{stats.reported_content}</strong> 条新内容需要关注
+            📋 有 <strong>{stats.reported_content}</strong> 条待处理举报需要审核
           </p>
         </div>
       )}

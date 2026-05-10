@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.64', date: '2026-05-10', title: '🐛 Bug修复 — 管理后台仪表盘 reported_content SQL 逻辑错误',
+      ver: '0.3.65', date: '2026-05-10', title: '🔄 维护确认 — E2E 141/141 连续第21轮满分 + 系统健康巡检',
       isLatest: true,
+      items: [
+        '🏷️ **仪表盘标签修复**: reported_content 前端提示语从"近7天有N条新内容"更改为"有N条待处理举报" (对齐 v0.3.64 SQL 修复语义)',
+        '🧪 **E2E 141/141 满分**: 连续21轮满分 (v0.3.43→v0.3.65)，系统极度稳定',
+        '🛡️ **系统健康**: 6服务active, uptime 1天8小时+, load 0.00/0.00/0.07, 内存 958M',
+        '📄 **平台数据**: 75用户, 146空间, 1680帖子, 132评论, 53日活',
+        '🔄 **维护轮次**: 前端标签微调 + E2E 验证 + 后端分析 API 调研 + 文档同步',
+      ],
+    },
+    {
+      ver: '0.3.64', date: '2026-05-10', title: '🐛 Bug修复 — 管理后台仪表盘 reported_content SQL 逻辑错误',
+      isLatest: false,
       items: [
         '🐛 **SQL Bug修复**: stats.rs 中 `reported_content` 字段从 `posts` 表改为 `reports` 表查询 (WHERE status = pending)',
         '📊 **修复前**: reported_content = 1680 (帖子总数，完全错误) → **修复后**: reported_content = 0 (无待处理举报，正确)',
