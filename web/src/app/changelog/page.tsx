@@ -4,8 +4,19 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.67', date: '2026-05-11', title: '⚠️ 维护中断 — 服务器离线 + 等待恢复',
+      ver: '0.3.68', date: '2026-05-11', title: '🔄 维护确认 — 服务器恢复 + E2E 141/141 连续第23轮满分',
       isLatest: true,
+      items: [
+        '🔄 **服务器恢复**: 中断~4小时后自愈, uptime 1天12小时 (未重启), 6服务全活, 内存 1.0Gi',
+        '🧪 **E2E 141/141 满分**: 连续23轮满分 (v0.3.43→v0.3.68), 中断后零回归Bug',
+        '📊 **负载恢复**: load 从 80.58→1.16 迅速回落, 系统韧性验证通过',
+        '📄 **页面验证**: 4/4 关键页面 200 OK, /admin/analytics 正常',
+        '🔬 **离线调研**: ActivityPub 生态稳定, Rust 1.95.0, 无新发布',
+      ],
+    },
+    {
+      ver: '0.3.67', date: '2026-05-11', title: '⚠️ 维护中断 — 服务器离线 + 等待恢复',
+      isLatest: false,
       items: [
         '⚠️ **服务器离线**: Ping 100%丢包 + SSH/HTTP 全超时, 类似 v0.3.58 中断模式',
         '🔬 **离线调研**: ActivityPub 生态稳定 (Lemmy ★14.3K), Rust 1.95.0, Next.js v16.3 canary',
