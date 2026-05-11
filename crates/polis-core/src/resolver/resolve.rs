@@ -47,10 +47,20 @@ pub async fn resolve_space_enabled_modules(pool: &PgPool, space_id: Uuid) -> Res
 
     match row {
         Some((value,)) => {
-            let modules: Vec<String> = serde_json::from_value(value).unwrap_or_default();
-            Ok(if modules.is_empty() { vec!["forum".to_string()] } else { modules })
+            let mut modules: Vec<String> = serde_json::from_value(value).unwrap_or_default();
+            if modules.is_empty() {
+                modules = vec!["forum".to_string()];
+            }
+            // forum 和 article 互为别名，确保启用了 forum 时也能显示 article 类型的帖子
+            if modules.contains(&"forum".to_string()) && !modules.contains(&"article".to_string()) {
+                modules.push("article".to_string());
+            }
+            if modules.contains(&"article".to_string()) && !modules.contains(&"forum".to_string()) {
+                modules.push("forum".to_string());
+            }
+            Ok(modules)
         }
-        None => Ok(vec!["forum".to_string()]),
+        None => Ok(vec!["forum".to_string(), "article".to_string()]),
     }
 }
 
