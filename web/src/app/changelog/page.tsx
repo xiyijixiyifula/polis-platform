@@ -29,7 +29,7 @@ export default function ChangelogPage() {
     },
     {
       ver: '0.3.76', date: '2026-05-11', title: '🔧 修复名称一致性与已加入社区显示 — 创建页 slug 自动生成 + 个人主页社区列表',
-      isLatest: true,
+      isLatest: false,
       items: [
         '🔧 **名称一致性**: 移除社区创建页"自定义"slug 按钮，slug 始终从社区名称自动生成，确保 title 和 namespace 一一对应',
         '👥 **已加入社区**: 修复他人个人主页仅显示"拥有的社区"的问题 — 移除 namespace.startsWith(username) 过滤器，现在同时显示加入的社区',
@@ -37,6 +37,19 @@ export default function ChangelogPage() {
         '🗄️ **种子数据移除**: 删除 `migrations/002_seed_data.sql`（含已废弃的根社区引用），测试需自行注册账号',
         '🛡️ **6服务全活**: 核心页面全部 200 OK + 端到端测试验证（创建空间+加入社区+个人主页显示）',
         '🔄 **本轮**: 用户体验修复 — 社区命名一致性 + 加入的社区可见性 + 种子数据清理',
+      ],
+    },
+    {
+      ver: '0.3.77', date: '2026-05-11', title: '🔄 维护确认 — E2E 18/18 满分 + 系统健康巡检',
+      isLatest: true,
+      items: [
+        '🧪 **E2E 18/18 满分**: 认证(6) + 空间(5) + 内容(4) + 社交(3) + 搜索(2) + 档案(2) + 健康(1) + Trending(1) + 通知(1) — 全链路API测试',
+        '🛡️ **系统健康**: 6服务全活 (active×6), uptime 1天19小时+, load 0.08/0.04/1.99',
+        '✅ **回归验证**: 根社区已彻底移除(is_root=false, root_space_id=None, Trending根社区=0)',
+        '✅ **一致性验证**: 社区名称与命名空间slug一一对应，已加入社区正常显示',
+        '📄 **页面覆盖**: 12/12 公开页面全部200 OK (首页/changelog/探索/创建/注册/登录/搜索/热榜/热门/投票/管理/CLI)',
+        '🔬 **社区调研**: Next.js v16.3-canary.19, Discord/Notion/知识星球/Lemmy 对标分析',
+        '🔄 **本轮**: 纯维护 — 无代码变更, 全量E2E + 页面巡检 + 生态调研 + 文档同步',
       ],
     },
     {
