@@ -160,11 +160,8 @@ export default function ProfilePage() {
         });
         const spacesData = await spacesRes.json();
         if (spacesData.code === 0 && spacesData.data) {
-          const allSpaces: any[] = spacesData.data;
-          const ownedSpaces = allSpaces.filter((s: any) =>
-            s.namespace?.startsWith(user.username + '/')
-          );
-          setUserSpaces(ownedSpaces);
+          // 显示拥有和加入的所有社区
+          setUserSpaces(spacesData.data);
         }
       } catch {}
 
