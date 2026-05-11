@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut } from 'lucide-react';
+import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { users, follow, type User, type FollowUser } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
@@ -53,8 +53,10 @@ export default function UserProfilePage() {
   const [listLoading, setListLoading] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
 
-  // isSelf-only tabs: spaces | bookmarks | likes
+  // isSelf-only tabs: spaces | posts | bookmarks | likes
   const [activeTab, setActiveTab] = useState('spaces');
+  const [myContents, setMyContents] = useState<any[]>([]);
+  const [contentsLoading, setContentsLoading] = useState(false);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [likedPosts, setLikedPosts] = useState<any[]>([]);
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
@@ -136,6 +138,41 @@ export default function UserProfilePage() {
       setLikedLoading(false);
     })();
   }, [isSelf, username]);
+
+  // isSelf: 加载创作内容（我的帖子）
+  useEffect(() => {
+    if (!isSelf || activeTab !== 'posts') return;
+    setContentsLoading(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/my/contents?page=1&page_size=50', { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (data.code === 0 && data.data?.items) setMyContents(data.data.items);
+      } catch {}
+      setContentsLoading(false);
+    })();
+  }, [isSelf, username, activeTab]);
+
+  // 删除自己的帖子
+  const handleDeletePost = async (postId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('确定要删除这篇帖子吗？此操作不可撤销。')) return;
+    try {
+      const res = await fetch('/api/posts/' + postId, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setMyContents(prev => prev.filter((p: any) => p.id !== postId));
+      } else {
+        alert(data.message || '删除失败');
+      }
+    } catch {
+      alert('删除失败');
+    }
+  };
 
   const loadFollowCounts = async () => {
     try {
@@ -360,12 +397,12 @@ export default function UserProfilePage() {
       {isSelf && (
         <div className="mt-6 mb-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex gap-0 overflow-x-auto">
-            {(['spaces', 'bookmarks', 'likes'] as const).map((tab) => (
+            {(['spaces', 'posts', 'bookmarks', 'likes'] as const).map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}>
-                {{spaces: `社区 (${userSpaces.length})`, bookmarks: `收藏 (${bookmarks.length})`, likes: `点赞 (${likedPosts.length})`}[tab]}
+                {{spaces: `社区 (${userSpaces.length})`, posts: `创作 (${myContents.length})`, bookmarks: `收藏 (${bookmarks.length})`, likes: `点赞 (${likedPosts.length})`}[tab]}
               </button>
             ))}
           </div>
@@ -404,6 +441,73 @@ export default function UserProfilePage() {
           <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
             <Heart className="h-8 w-8 mx-auto mb-2 opacity-40" />
             <p className="text-sm">还没有点赞过帖子</p>
+          </div>
+        )
+      )}
+
+      {/* isSelf: 创作 Tab — 自己发布的所有内容 */}
+      {isSelf && activeTab === 'posts' && (
+        contentsLoading ? (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+        ) : myContents.length > 0 ? (
+          <div className="space-y-2">
+            {myContents.map((post: any) => {
+              const space = post.space || {};
+              const spaceNs = space.namespace || '';
+              const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : post.module_type === 'qa' ? '问答' : post.module_type === 'novel' ? '小说' : post.module_type === 'game' ? '游戏' : post.module_type === 'mini_app' ? '小程序' : '交流';
+              return (
+                <div key={post.id} className="card p-4 group hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 mb-1 flex-wrap">
+                        <Link href={spaceNs ? `/space/${encodeURIComponent(spaceNs)}` : '#'}
+                          className="text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[180px]">
+                          {space.title || spaceNs || '未知社区'}
+                        </Link>
+                        <span>·</span>
+                        <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">{moduleLabel}</span>
+                        <span>·</span>
+                        <span>{formatDate(post.created_at)}</span>
+                      </div>
+                      <Link href={`/post/${post.id}${spaceNs ? '?space=' + encodeURIComponent(spaceNs) : ''}`}>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1">
+                          {post.title || '无标题'}
+                        </h3>
+                      </Link>
+                      {post.body && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
+                          {post.body.replace(/<[^>]+>/g, '').slice(0, 200)}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
+                        <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{post.like_count || 0}</span>
+                        <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{post.comment_count || 0}</span>
+                        <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{post.view_count || 0}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Link href={`/post/${post.id}${spaceNs ? '?space=' + encodeURIComponent(spaceNs) : ''}`}
+                        className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-primary-600 transition-colors"
+                        title="编辑">
+                        <PenLine className="h-4 w-4" />
+                      </Link>
+                      <button
+                        onClick={(e) => handleDeletePost(post.id, e)}
+                        className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors"
+                        title="删除">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+            <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">还没有发布过内容</p>
+            <Link href="/post/new" className="text-sm text-primary-600 hover:underline mt-1 inline-block">去发布第一篇</Link>
           </div>
         )
       )}
