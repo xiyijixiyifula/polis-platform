@@ -233,7 +233,7 @@ export default function SpacePage() {
     setLoadingMore(true);
     try {
       const nextPage = postPage + 1;
-      const res = await fetch(`/api/spaces/${cleanNamespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`);
+      const res = await fetch(`/api/spaces/${cleanNamespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`, showHiddenPosts ? { headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` } } : undefined);
       const data = await res.json();
       if (data.code === 0 && Array.isArray(data.data)) {
         const morePosts = data.data;
@@ -321,7 +321,7 @@ export default function SpacePage() {
     setPostLoading(true);
 
     const fetchers: Promise<any>[] = [
-      fetch(`/api/spaces/${cleanNamespace}/posts?page=${postPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`).then(r => r.json()),
+      fetch(`/api/spaces/${cleanNamespace}/posts?page=${postPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`, showHiddenPosts ? { headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` } } : undefined).then(r => r.json()),
       fetch(`/api/spaces/${cleanNamespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
     ];
 
