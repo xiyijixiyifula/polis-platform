@@ -269,7 +269,8 @@ async fn handle_public_content(
                 module: None,
                 sort: None,
             });
-            let enabled = resolve_space_enabled_modules(&h.pool, space_id).await.unwrap_or_default();
+            let enabled = resolve_space_enabled_modules(&h.pool, space_id).await
+                .unwrap_or_else(|_| vec!["forum".to_string()]);
             let (posts, pagination) = h.get_posts(space_id, q.pagination, q.module, q.sort, enabled).await?;
             Ok(json_ok(ApiResponse::success_with_pagination(posts, pagination)))
         }
