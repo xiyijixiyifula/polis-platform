@@ -117,6 +117,7 @@ export default function SpacePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [ownerName, setOwnerName] = useState<string | null>(null);
   const [postSort, setPostSort] = useState<string>('newest');
+  const [showHiddenPosts, setShowHiddenPosts] = useState(false);
 
   // Series state
   const [seriesList, setSeriesList] = useState<Series[]>([]);
@@ -214,12 +215,25 @@ export default function SpacePage() {
     } catch {}
   }, [cleanNamespace]);
 
+  const toggleUnhide = useCallback(async (postId: string) => {
+    try {
+      const token = localStorage.getItem('polis_access_token');
+      if (!token) { alert('请先登录'); return; }
+      const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/unhide`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (data.code === 0) {
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_hidden: false } : p));
+        setFeatured(prev => prev.map(p => p.id === postId ? { ...p, is_hidden: false } : p));
+      }
+    } catch {}
+  }, [cleanNamespace]);
+
   const loadMorePosts = useCallback(async () => {
     if (loadingMore) return;
     setLoadingMore(true);
     try {
       const nextPage = postPage + 1;
-      const res = await fetch(`/api/spaces/${cleanNamespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}`);
+      const res = await fetch(`/api/spaces/${cleanNamespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`);
       const data = await res.json();
       if (data.code === 0 && Array.isArray(data.data)) {
         const morePosts = data.data;
@@ -240,7 +254,7 @@ export default function SpacePage() {
     } catch {} finally {
       setLoadingMore(false);
     }
-  }, [cleanNamespace, postPage, postSort, loadingMore, modules]);
+  }, [cleanNamespace, postPage, postSort, loadingMore, modules, showHiddenPosts]);
 
   const goToPostPage = (p: number) => {
     if (p < 1 || p > postTotalPages) return;
@@ -307,7 +321,7 @@ export default function SpacePage() {
     setPostLoading(true);
 
     const fetchers: Promise<any>[] = [
-      fetch(`/api/spaces/${cleanNamespace}/posts?page=${postPage}&page_size=10&sort=${postSort}`).then(r => r.json()),
+      fetch(`/api/spaces/${cleanNamespace}/posts?page=${postPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`).then(r => r.json()),
       fetch(`/api/spaces/${cleanNamespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
     ];
 
@@ -346,7 +360,7 @@ export default function SpacePage() {
       })
       .catch(() => {})
       .finally(() => setPostLoading(false));
-  }, [cleanNamespace, modules.polls, postSort, postPage]);
+  }, [cleanNamespace, modules.polls, postSort, postPage, showHiddenPosts]);
 
   // Fetch series list when series tab is active or module is enabled
   useEffect(() => {
@@ -703,8 +717,8 @@ export default function SpacePage() {
                 </div>
               </Link>
 
-              {/* Sort selector */}
-              <div className="flex items-center gap-2 mb-4">
+              {/* Sort selector + Show hidden toggle */}
+              <div className="flex items-center gap-2 mb-4 flex-wrap">
                 <span className="text-xs text-gray-500 dark:text-gray-400">排序:</span>
                 <select
                   value={postSort}
@@ -715,6 +729,17 @@ export default function SpacePage() {
                   <option value="views">最多浏览</option>
                   <option value="likes">最多点赞</option>
                 </select>
+                {isOwner && (
+                  <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer ml-2">
+                    <input
+                      type="checkbox"
+                      checked={showHiddenPosts}
+                      onChange={(e) => setShowHiddenPosts(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                    />
+                    显示已隐藏
+                  </label>
+                )}
               </div>
 
               {/* Normal announcements in posts feed */}
@@ -751,7 +776,8 @@ export default function SpacePage() {
                       created_at: post.created_at,
                       tags: post.tags,
                       is_pinned: post.is_pinned,
-                    }} canPin={isOwner} onTogglePin={() => togglePin(post.id, post.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} />
+                      is_hidden: post.is_hidden,
+                    }} canPin={isOwner && !post.is_hidden} onTogglePin={() => togglePin(post.id, post.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} canUnhide={isOwner && post.is_hidden} onToggleUnhide={() => toggleUnhide(post.id)} />
                   ))}
                 </div>
               ) : (

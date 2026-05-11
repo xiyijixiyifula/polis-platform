@@ -76,6 +76,7 @@ export interface Post {
   comment_count: number;
   is_liked?: boolean;
   is_bookmarked?: boolean;
+  is_hidden?: boolean;
   created_at: string;
   updated_at: string;
 }

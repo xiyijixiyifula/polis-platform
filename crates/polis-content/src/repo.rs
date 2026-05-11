@@ -89,6 +89,7 @@ impl ContentRepo {
         page_size: u32,
         module_type: Option<&str>,
         sort: Option<&str>,
+        include_hidden: bool,
     ) -> Result<(Vec<Post>, Pagination), AppError> {
         let offset = ((page - 1) * page_size) as i64;
         let limit = page_size as i64;
@@ -100,18 +101,22 @@ impl ContentRepo {
             _ => "ORDER BY is_pinned DESC, created_at DESC",
         };
 
+        let hidden_filter = if include_hidden { "" } else { " AND hidden_by_owner = FALSE" };
+
         let (posts, total) = if let Some(mt) = module_type {
-            let total: (i64,) = sqlx::query_as(
-                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'",
-            )
+            let count_sql = format!(
+                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE{} AND visibility = 'public'",
+                hidden_filter
+            );
+            let total: (i64,) = sqlx::query_as(&count_sql)
             .bind(space_id)
             .bind(mt)
             .fetch_one(&self.pool)
             .await?;
 
             let query_str = format!(
-                "SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' {} LIMIT $3 OFFSET $4",
-                order_clause
+                "SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE{} AND visibility = 'public' {} LIMIT $3 OFFSET $4",
+                hidden_filter, order_clause
             );
             let posts = sqlx::query_as::<_, Post>(&query_str)
             .bind(space_id)
@@ -123,16 +128,18 @@ impl ContentRepo {
 
             (posts, total.0 as u64)
         } else {
-            let total: (i64,) = sqlx::query_as(
-                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'",
-            )
+            let count_sql = format!(
+                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE{} AND visibility = 'public'",
+                hidden_filter
+            );
+            let total: (i64,) = sqlx::query_as(&count_sql)
             .bind(space_id)
             .fetch_one(&self.pool)
             .await?;
 
             let query_str = format!(
-                "SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' {} LIMIT $2 OFFSET $3",
-                order_clause
+                "SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE{} AND visibility = 'public' {} LIMIT $2 OFFSET $3",
+                hidden_filter, order_clause
             );
             let posts = sqlx::query_as::<_, Post>(&query_str)
             .bind(space_id)

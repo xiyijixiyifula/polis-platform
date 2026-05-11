@@ -22,6 +22,7 @@ interface PostCardProps {
     created_at: string;
     tags?: string[];
     is_pinned?: boolean;
+    is_hidden?: boolean;
     visibility?: string;
     is_liked?: boolean;
     is_bookmarked?: boolean;
@@ -30,9 +31,11 @@ interface PostCardProps {
   onTogglePin?: () => void;
   canHide?: boolean;
   onToggleHide?: () => void;
+  canUnhide?: boolean;
+  onToggleUnhide?: () => void;
 }
 
-export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: PostCardProps) {
+export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, canUnhide, onToggleUnhide }: PostCardProps) {
   const excerpt = post.body ? post.body.replace(/<[^>]+>/g, '').slice(0, 200) : '';
   const spaceLink = post.space_ns || post.space_id || '';
   const author = post.author;
@@ -43,6 +46,11 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: P
     <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="relative group glass-card block p-4">
       {post.is_pinned && (
         <div className="mb-2 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
+      )}
+
+      {/* Hidden badge */}
+      {post.is_hidden && (
+        <div className="mb-2 text-xs text-orange-600 dark:text-orange-400 font-medium">🙈 已隐藏 — 仅空间所有者可见</div>
       )}
 
       {/* Visibility badge */}
@@ -75,9 +83,24 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide }: P
         </div>
       )}
 
-      {/* Hide toggle button (space owner: index management) */}
-      {canHide && onToggleHide && (
+      {/* Hide/Unhide toggle button (space owner: index management) */}
+      {canUnhide && onToggleUnhide && (
         <div className={`absolute top-3 right-3 z-10 ${canPin && onTogglePin ? 'right-20' : ''}`}>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleUnhide(); }}
+            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full
+              hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
+              text-orange-500 hover:text-green-500"
+            title="取消隐藏（恢复空间索引）"
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+            <span>取消隐藏</span>
+          </button>
+        </div>
+      )}
+      {canHide && onToggleHide && !post.is_hidden && (
+        <div className={`absolute top-3 right-3 z-10 ${(canPin && onTogglePin) || (canUnhide && onToggleUnhide) ? (canPin && onTogglePin ? 'right-20' : 'right-20') : ''}`}>
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleHide(); }}

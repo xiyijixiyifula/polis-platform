@@ -49,6 +49,7 @@ pub struct ListPostsQuery {
     #[serde(flatten)] pub pagination: PaginationParams,
     pub module: Option<String>,
     pub sort: Option<String>,
+    pub include_hidden: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -268,10 +269,29 @@ async fn handle_public_content(
                 pagination: PaginationParams { page: Some(1), page_size: Some(20) },
                 module: None,
                 sort: None,
+                include_hidden: None,
             });
+            // include_hidden 仅空间所有者可用
+            let include_hidden = if q.include_hidden.unwrap_or(false) {
+                let current_user = maybe_extract_user_id(req.headers())?;
+                if let Some(uid) = current_user {
+                    let owner_id: Option<Uuid> = sqlx::query_scalar(
+                        "SELECT owner_id FROM spaces WHERE id = $1"
+                    )
+                    .bind(space_id)
+                    .fetch_optional(&h.pool)
+                    .await?
+                    .flatten();
+                    owner_id == Some(uid)
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
             let enabled = resolve_space_enabled_modules(&h.pool, space_id).await
                 .unwrap_or_else(|_| vec!["forum".to_string(), "article".to_string()]);
-            let (posts, pagination) = h.get_posts(space_id, q.pagination, q.module, q.sort, enabled).await?;
+            let (posts, pagination) = h.get_posts(space_id, q.pagination, q.module, q.sort, enabled, include_hidden).await?;
             Ok(json_ok(ApiResponse::success_with_pagination(posts, pagination)))
         }
         (Some(id), None) => {
@@ -763,7 +783,17 @@ fn parse_query_params<T: serde::de::DeserializeOwned>(query: Option<&str>) -> Op
         let key = parts.next()?;
         let value = parts.next().unwrap_or("");
         let decoded = urlencoding_decode(value).unwrap_or_else(|| value.to_string());
-        map.insert(key.to_string(), serde_json::Value::String(decoded.to_string()));
+        // 智能类型推断：将 bool 字符串转为 JSON bool，数字转为 JSON number
+        let json_val = if decoded.eq_ignore_ascii_case("true") {
+            serde_json::Value::Bool(true)
+        } else if decoded.eq_ignore_ascii_case("false") {
+            serde_json::Value::Bool(false)
+        } else if let Ok(n) = decoded.parse::<i64>() {
+            serde_json::Value::Number(n.into())
+        } else {
+            serde_json::Value::String(decoded)
+        };
+        map.insert(key.to_string(), json_val);
     }
     serde_json::from_value(serde_json::Value::Object(map)).ok()
 }

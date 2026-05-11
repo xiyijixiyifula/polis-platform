@@ -224,6 +224,7 @@ pub struct PostPublic {
     pub comment_count: i64,
     pub is_liked: bool,
     pub is_bookmarked: bool,
+    pub is_hidden: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

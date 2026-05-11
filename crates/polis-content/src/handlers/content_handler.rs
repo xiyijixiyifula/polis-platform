@@ -124,13 +124,14 @@ impl ContentHandler {
         module_type: Option<String>,
         sort: Option<String>,
         enabled_modules: Vec<String>,
+        include_hidden: bool,
     ) -> Result<(Vec<PostPublic>, Pagination), AppError> {
         let page = params.page.unwrap_or(1);
         let page_size = params.page_size.unwrap_or(20).min(100);
 
         let (posts, pagination) = self
             .repo
-            .find_posts_by_space(space_id, page, page_size, module_type.as_deref(), sort.as_deref())
+            .find_posts_by_space(space_id, page, page_size, module_type.as_deref(), sort.as_deref(), include_hidden)
             .await?;
 
         // 按 enabled_modules 过滤：模块关闭 = 内容隐藏（用户Ⓚ OS: 关闭文件夹 = 隐藏所有文件）
@@ -174,6 +175,7 @@ impl ContentHandler {
                     comment_count: p.comment_count,
                     is_liked: false,
                     is_bookmarked: false,
+                    is_hidden: p.hidden_by_owner,
                     created_at: p.created_at,
                     updated_at: p.updated_at,
                 }
@@ -234,6 +236,7 @@ impl ContentHandler {
                     comment_count: p.comment_count,
                     is_liked: false,
                     is_bookmarked: false,
+                    is_hidden: p.hidden_by_owner,
                     created_at: p.created_at,
                     updated_at: p.updated_at,
                 }
@@ -352,7 +355,7 @@ impl ContentHandler {
                 is_pinned: p.is_pinned, is_featured: p.is_featured,
                 view_count: p.view_count, like_count: p.like_count,
                 comment_count: p.comment_count,
-                is_liked: false, is_bookmarked: false,
+                is_liked: false, is_bookmarked: false, is_hidden: p.hidden_by_owner,
                 created_at: p.created_at, updated_at: p.updated_at,
             }
         }).collect();
@@ -435,6 +438,7 @@ impl ContentHandler {
             comment_count: post.comment_count,
             is_liked,
             is_bookmarked,
+            is_hidden: post.hidden_by_owner,
             created_at: post.created_at,
             updated_at: post.updated_at,
         })
