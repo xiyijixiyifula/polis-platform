@@ -28,8 +28,6 @@ export default function CreateSpacePage() {
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [title, setTitle] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugManual, setSlugManual] = useState(false);
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState('public');
   const [error, setError] = useState('');
@@ -45,29 +43,22 @@ export default function CreateSpacePage() {
     } catch {}
   }, []);
 
-  const autoSlug = useMemo(() => deriveSlug(title), [title]);
-
-  useEffect(() => {
-    if (!slugManual && title) {
-      setSlug(autoSlug);
-    }
-  }, [autoSlug, slugManual]);
+  const slug = useMemo(() => deriveSlug(title), [title]);
 
   const namespacePreview = username
     ? `${username}/${slug || '...'}`
     : slug || 'your-community';
 
   const handleCreate = async () => {
-    const finalSlug = slug || deriveSlug(title);
     if (!title.trim()) { setError('请输入社区名称'); return; }
-    if (finalSlug.length < 2) { setError('社区标识至少 2 个字符'); return; }
+    if (slug.length < 2) { setError('社区标识至少 2 个字符'); return; }
 
     setError('');
     setCreating(true);
 
     try {
       const res = await spaces.create({
-        slug: finalSlug,
+        slug,
         title: title.trim(),
         description: description || undefined,
         visibility,
@@ -118,54 +109,18 @@ export default function CreateSpacePage() {
           />
         </div>
 
-        {/* 命名空间 */}
+        {/* 命名空间 — 根据社区名称自动生成，确保一一对应 */}
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            命名空间
-            {!slugManual && title && (
-              <span className="ml-1 text-xs text-gray-400 font-normal">（根据名称自动生成）</span>
-            )}
+            命名空间 <span className="ml-1 text-xs text-gray-400 font-normal">（根据名称自动生成）</span>
           </label>
           <div className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-2.5">
             <Github className="h-4 w-4 text-gray-400 shrink-0" />
             <span className="text-sm font-mono text-gray-700 dark:text-gray-300 truncate">
-              {namespacePreview}
+              {title ? namespacePreview : '输入社区名称后自动生成'}
             </span>
-            {slugManual ? (
-              <button
-                type="button"
-                onClick={() => { setSlugManual(false); setSlug(autoSlug); }}
-                className="text-xs text-primary-600 dark:text-primary-400 hover:underline shrink-0 ml-auto"
-              >
-                自动
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setSlugManual(true)}
-                className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0 ml-auto"
-              >
-                自定义
-              </button>
-            )}
           </div>
-          {slugManual && (
-            <div className="mt-2">
-              <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3">
-                {username && (
-                  <span className="text-sm text-gray-400 dark:text-gray-500 shrink-0">@{username}/</span>
-                )}
-                <input
-                  type="text"
-                  className="flex-1 border-0 bg-transparent py-2 text-sm focus:outline-none dark:text-white font-mono"
-                  placeholder="custom-slug"
-                  value={slug}
-                  onChange={e => setSlug(e.target.value.replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf-]/g, '').toLowerCase())}
-                />
-              </div>
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">支持中文、字母、数字和连字符</p>
-            </div>
-          )}
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">命名空间与社区名称一一对应，无法单独修改</p>
         </div>
 
         {/* 简介 */}
