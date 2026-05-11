@@ -5,7 +5,7 @@ export default function ChangelogPage() {
   const versions = [
     {
       ver: '0.3.74', date: '2026-05-11', title: '⚠️ 维护中断 — 服务器离线 + 离线调研 + 等待恢复',
-      isLatest: true,
+      isLatest: false,
       items: [
         '⚠️ **服务器离线**: HTTP 000 (全页面不可达) + Ping 100%丢包 + SSH超时, 类似 v0.3.58/0.3.67 中断模式',
         '🔬 **离线调研**: ActivityPub生态 (Lemmy ★14.3K), Rust社区项目, Next.js v16.3 canary系列',
@@ -13,6 +13,18 @@ export default function ChangelogPage() {
         '📄 **文档推送**: changelog + README + 定时任务.md 更新至 GitHub',
         '⏳ **等待恢复**: 上次类似中断持续3-4小时后自愈 (v0.3.58/0.3.68), 本次等待中',
         '🔄 **恢复后**: 立即执行全量E2E测试 + 服务健康检查 + 数据完整性验证',
+      ],
+    },
+    {
+      ver: '0.3.75', date: '2026-05-11', title: '🏗️ 移除根社区模型 — 简化空间创建 + 数据库清理',
+      isLatest: true,
+      items: [
+        '🏗️ **移除根社区**: 删除 create_space() 中的根社区自动创建逻辑 — 不再生成 is_root=true 的社区，空间命名空间保持 username/slug 格式',
+        '🗄️ **数据库清理**: 删除 96 个 E2E 测试产生的根社区，解除所有空间的 root_space_id 外键引用 (100 → NULL)',
+        '🧹 **前端清理**: 移除 SpaceCard、管理后台、热榜、热门社区、空间详情页等 6 个页面中的"根社区"徽章',
+        '📐 **代码简化**: space_handler.rs 减少 ~45 行根社区创建逻辑，空间创建流程更直观',
+        '🛡️ **6服务全活**: 通过 + 核心页面 (首页/探索/热榜/更新日志) 全部 200 OK',
+        '🔄 **本轮**: 代码架构简化 — 移除不必要的抽象层 + 数据库清理 + 前端UI瘦身',
       ],
     },
     {
