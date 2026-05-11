@@ -66,54 +66,6 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
         </div>
       )}
 
-      {/* Pin toggle button */}
-      {canPin && onTogglePin && (
-        <div className="absolute top-3 right-3 z-10">
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePin(); }}
-            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full
-              hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
-              text-gray-400 hover:text-amber-500"
-            title={post.is_pinned ? '取消置顶' : '置顶'}
-          >
-            <Pin className={`h-3.5 w-3.5 ${post.is_pinned ? 'fill-amber-500 text-amber-500' : ''}`} />
-            <span>{post.is_pinned ? '已置顶' : '置顶'}</span>
-          </button>
-        </div>
-      )}
-
-      {/* Hide/Unhide toggle button (space owner: index management) */}
-      {canUnhide && onToggleUnhide && (
-        <div className={`absolute top-3 right-3 z-10 ${canPin && onTogglePin ? 'right-20' : ''}`}>
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleUnhide(); }}
-            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full
-              hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
-              text-orange-500 hover:text-green-500"
-            title="取消隐藏（恢复空间索引）"
-          >
-            <EyeOff className="h-3.5 w-3.5" />
-            <span>取消隐藏</span>
-          </button>
-        </div>
-      )}
-      {canHide && onToggleHide && !post.is_hidden && (
-        <div className={`absolute top-3 right-3 z-10 ${(canPin && onTogglePin) || (canUnhide && onToggleUnhide) ? (canPin && onTogglePin ? 'right-20' : 'right-20') : ''}`}>
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleHide(); }}
-            className="flex items-center gap-1 text-xs px-2 py-1 rounded-full
-              hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors
-              text-gray-400 hover:text-red-500"
-            title="隐藏帖子（移除空间索引）"
-          >
-            <EyeOff className="h-3.5 w-3.5" />
-            <span>隐藏</span>
-          </button>
-        </div>
-      )}
 
       <div className="flex items-start gap-3">
         {/* Vote column */}
@@ -182,6 +134,41 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
                 <Clock className="h-3.5 w-3.5" />
                 <span>{estimateReadTime((post as any).body || '')}</span>
               </span>
+            )}
+            {/* 管理操作：置顶 / 隐藏 / 取消隐藏 */}
+            <span className="text-gray-300 dark:text-gray-700 mx-0.5">|</span>
+            {canPin && onTogglePin && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePin(); }}
+                className={`flex items-center gap-1 hover:text-amber-500 transition-colors ${post.is_pinned ? 'text-amber-500' : ''}`}
+                title={post.is_pinned ? '取消置顶' : '置顶'}
+              >
+                <Pin className={`h-3.5 w-3.5 ${post.is_pinned ? 'fill-current' : ''}`} />
+                <span>{post.is_pinned ? '已置顶' : '置顶'}</span>
+              </button>
+            )}
+            {canUnhide && onToggleUnhide && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleUnhide(); }}
+                className="flex items-center gap-1 text-orange-500 hover:text-green-500 transition-colors"
+                title="取消隐藏"
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+                <span>取消隐藏</span>
+              </button>
+            )}
+            {canHide && onToggleHide && !post.is_hidden && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleHide(); }}
+                className="flex items-center gap-1 hover:text-red-500 transition-colors"
+                title="隐藏"
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+                <span>隐藏</span>
+              </button>
             )}
             <div className="ml-auto flex items-center gap-1">
               <ShareButton url={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} title={post.title} />
