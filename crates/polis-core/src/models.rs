@@ -249,7 +249,29 @@ pub struct UpdatePostRequest {
     pub visibility: Option<Visibility>,
 }
 
+// ==================== 跨社区投稿引用（Rust 所有权模型） ====================
 
+/// 帖子引用：内容在不同社区的投放
+/// 用户Ⓚ OS: 内容本体属于创作者，社区持有内容的引用（类似 Rust &T）
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PostReference {
+    pub id: Uuid,
+    pub post_id: Uuid,
+    pub space_id: Uuid,
+    pub module_type: String,
+    pub status: String, // pending | approved | rejected
+    pub submitted_by: Uuid,
+    pub reviewed_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub reviewed_at: Option<DateTime<Utc>>,
+}
+
+/// 投稿请求
+#[derive(Debug, Deserialize)]
+pub struct CreateReferenceRequest {
+    pub space_ns: String,      // 目标社区 namespace
+    pub module_type: Option<String>, // 目标模块，默认 forum
+}
 
 // ==================== 付费社区（会员等级） ====================
 

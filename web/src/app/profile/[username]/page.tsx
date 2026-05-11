@@ -62,6 +62,15 @@ export default function UserProfilePage() {
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
   const [likedLoading, setLikedLoading] = useState(false);
 
+  // 投稿引用状态
+  const [showRefDialog, setShowRefDialog] = useState(false);
+  const [refPostId, setRefPostId] = useState('');
+  const [refSpaceNs, setRefSpaceNs] = useState('');
+  const [refModuleType, setRefModuleType] = useState('forum');
+  const [refSubmitting, setRefSubmitting] = useState(false);
+  const [refError, setRefError] = useState('');
+  const [refSuccess, setRefSuccess] = useState('');
+
   const getAuthHeaders = () => {
     const token = localStorage.getItem('polis_access_token');
     return {
@@ -172,6 +181,31 @@ export default function UserProfilePage() {
     } catch {
       alert('删除失败');
     }
+  };
+
+  // 投稿引用
+  const handleSubmitReference = async () => {
+    if (!refSpaceNs.trim()) { setRefError('请输入目标社区（格式：用户名/社区名 或 社区名）'); return; }
+    setRefSubmitting(true);
+    setRefError('');
+    setRefSuccess('');
+    try {
+      const res = await fetch('/api/posts/' + refPostId + '/reference', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
+        body: JSON.stringify({ space_ns: refSpaceNs.trim(), module_type: refModuleType }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setRefSuccess('投稿已提交，等待社区所有者审核');
+        setTimeout(() => { setShowRefDialog(false); setRefSuccess(''); }, 2000);
+      } else {
+        setRefError(data.message || '投稿失败');
+      }
+    } catch {
+      setRefError('网络错误');
+    }
+    setRefSubmitting(false);
   };
 
   const loadFollowCounts = async () => {
@@ -488,6 +522,12 @@ export default function UserProfilePage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRefPostId(post.id); setRefSpaceNs(''); setRefModuleType('forum'); setRefError(''); setRefSuccess(''); setShowRefDialog(true); }}
+                        className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-500 transition-colors"
+                        title="投稿到其他社区">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      </button>
                       <Link href={`/post/${post.id}${spaceNs ? '?space=' + encodeURIComponent(spaceNs) : ''}`}
                         className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-primary-600 transition-colors"
                         title="编辑">
@@ -574,6 +614,49 @@ export default function UserProfilePage() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* 投稿引用弹窗 */}
+      {showRefDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowRefDialog(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📬 投稿到其他社区</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+              将内容引用投放到目标社区。公开社区直接投稿，私有社区需先加入。
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">目标社区</label>
+                <input type="text" value={refSpaceNs}
+                  onChange={(e) => setRefSpaceNs(e.target.value)}
+                  placeholder="用户名/社区名 或 根社区名"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">目标模块</label>
+                <select value={refModuleType} onChange={(e) => setRefModuleType(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                  <option value="forum">交流</option>
+                  <option value="share">分享</option>
+                  <option value="wiki">知识库</option>
+                  <option value="qa">问答</option>
+                  <option value="novel">小说</option>
+                  <option value="game">游戏</option>
+                  <option value="mini_app">小程序</option>
+                </select>
+              </div>
+              {refError && <p className="text-xs text-red-500">{refError}</p>}
+              {refSuccess && <p className="text-xs text-green-500">{refSuccess}</p>}
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <button onClick={() => setShowRefDialog(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">取消</button>
+              <button onClick={handleSubmitReference} disabled={refSubmitting}
+                className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50">
+                {refSubmitting ? '提交中...' : '投稿'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

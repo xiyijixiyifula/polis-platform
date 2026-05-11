@@ -1,5 +1,5 @@
 use polis_core::error::AppError;
-use polis_core::models::{Post, Comment, Pagination, UserPublic, Series, SpaceTier, Subscription, DirectMessage};
+use polis_core::models::{Post, PostReference, Comment, Pagination, UserPublic, Series, SpaceTier, Subscription, DirectMessage};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -1215,6 +1215,141 @@ impl ContentRepo {
             "top_viewed_posts": top_viewed_json,
             "top_liked_posts": top_liked_json,
         }))
+    }
+
+    /// 批量查询帖子（用于引用合并）
+    pub async fn find_posts_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Post>, AppError> {
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let posts = sqlx::query_as::<_, Post>(
+            "SELECT * FROM posts WHERE id = ANY($1) AND is_deleted = FALSE"
+        )
+        .bind(ids)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(posts)
+    }
+
+    // ===== 跨社区投稿引用 =====
+
+    /// 创建投稿引用申请
+    pub async fn create_reference(
+        &self,
+        post_id: Uuid,
+        space_id: Uuid,
+        module_type: &str,
+        submitted_by: Uuid,
+    ) -> Result<PostReference, AppError> {
+        let ref_row = sqlx::query_as::<_, PostReference>(
+            "INSERT INTO post_references (post_id, space_id, module_type, status, submitted_by)
+             VALUES ($1, $2, $3, 'pending', $4) RETURNING *"
+        )
+        .bind(post_id)
+        .bind(space_id)
+        .bind(module_type)
+        .bind(submitted_by)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(ref_row)
+    }
+
+    /// 查找已存在的引用（避免重复投稿）
+    pub async fn find_reference(
+        &self,
+        post_id: Uuid,
+        space_id: Uuid,
+    ) -> Result<Option<PostReference>, AppError> {
+        let row = sqlx::query_as::<_, PostReference>(
+            "SELECT * FROM post_references WHERE post_id = $1 AND space_id = $2"
+        )
+        .bind(post_id)
+        .bind(space_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row)
+    }
+
+    /// 列出帖子的所有引用
+    pub async fn list_references_by_post(
+        &self,
+        post_id: Uuid,
+    ) -> Result<Vec<PostReference>, AppError> {
+        let rows = sqlx::query_as::<_, PostReference>(
+            "SELECT * FROM post_references WHERE post_id = $1 ORDER BY created_at DESC"
+        )
+        .bind(post_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
+    /// 列出空间的待审核引用
+    pub async fn list_pending_references_by_space(
+        &self,
+        space_id: Uuid,
+    ) -> Result<Vec<PostReference>, AppError> {
+        let rows = sqlx::query_as::<_, PostReference>(
+            "SELECT * FROM post_references WHERE space_id = $1 AND status = 'pending' ORDER BY created_at DESC"
+        )
+        .bind(space_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows)
+    }
+
+    /// 审核引用（通过/拒绝）
+    pub async fn review_reference(
+        &self,
+        reference_id: Uuid,
+        status: &str, // "approved" | "rejected"
+        reviewed_by: Uuid,
+    ) -> Result<PostReference, AppError> {
+        let row = sqlx::query_as::<_, PostReference>(
+            "UPDATE post_references SET status = $1, reviewed_by = $2, reviewed_at = NOW()
+             WHERE id = $3 AND status = 'pending' RETURNING *"
+        )
+        .bind(status)
+        .bind(reviewed_by)
+        .bind(reference_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or_else(|| AppError::NotFound("Reference not found or already reviewed".to_string()))?;
+        Ok(row)
+    }
+
+    /// 撤回引用（投稿人自己撤回）
+    pub async fn delete_reference(
+        &self,
+        reference_id: Uuid,
+        submitted_by: Uuid,
+    ) -> Result<(), AppError> {
+        let result = sqlx::query(
+            "DELETE FROM post_references WHERE id = $1 AND submitted_by = $2"
+        )
+        .bind(reference_id)
+        .bind(submitted_by)
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Err(AppError::NotFound("Reference not found or not yours".to_string()));
+        }
+        Ok(())
+    }
+
+    /// 获取空间中已通过引用的帖子 ID 列表
+    pub async fn find_approved_reference_post_ids(
+        &self,
+        space_id: Uuid,
+    ) -> Result<Vec<Uuid>, AppError> {
+        let rows: Vec<(Uuid,)> = sqlx::query_as(
+            "SELECT post_id FROM post_references WHERE space_id = $1 AND status = 'approved'"
+        )
+        .bind(space_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
     }
 
 }

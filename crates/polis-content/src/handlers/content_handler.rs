@@ -1,6 +1,6 @@
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
-use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscription, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, Pagination, Post, PostPublic, SeriesPublic, UpdatePostRequest, UserPublic, PaginationParams,
+use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscription, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, Pagination, Post, PostPublic, PostReference, SeriesPublic, UpdatePostRequest, UserPublic, PaginationParams,
 };
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
@@ -129,10 +129,21 @@ impl ContentHandler {
         let page = params.page.unwrap_or(1);
         let page_size = params.page_size.unwrap_or(20).min(100);
 
-        let (posts, pagination) = self
+        let (mut posts, pagination) = self
             .repo
             .find_posts_by_space(space_id, page, page_size, module_type.as_deref(), sort.as_deref(), include_hidden)
             .await?;
+
+        // 合并已通过的投稿引用（Rust 所有权模型：引用指向创作者的内容本体）
+        let ref_post_ids = self.repo.find_approved_reference_post_ids(space_id).await.unwrap_or_default();
+        if !ref_post_ids.is_empty() {
+            let existing_ids: std::collections::HashSet<Uuid> = posts.iter().map(|p| p.id).collect();
+            let new_ref_ids: Vec<Uuid> = ref_post_ids.into_iter().filter(|id| !existing_ids.contains(id)).collect();
+            if !new_ref_ids.is_empty() {
+                let ref_posts = self.repo.find_posts_by_ids(&new_ref_ids).await.unwrap_or_default();
+                posts.extend(ref_posts);
+            }
+        }
 
         // 按 enabled_modules 过滤：模块关闭 = 内容隐藏（用户Ⓚ OS: 关闭文件夹 = 隐藏所有文件）
         let enabled_set: std::collections::HashSet<String> = enabled_modules.into_iter().collect();
@@ -596,6 +607,83 @@ impl ContentHandler {
             self.repo.hide_post(post_id).await?;
             Ok(true) // now hidden
         }
+    }
+
+    // ===== 跨社区投稿引用 =====
+
+    /// 向目标社区投稿（提交引用申请）
+    /// 规则：公开→直接提交；私有→需成员；不公开→不可投稿
+    pub async fn submit_reference(
+        &self,
+        post_id: Uuid,
+        space_id: Uuid,
+        module_type: &str,
+        submitter_id: Uuid,
+    ) -> Result<PostReference, AppError> {
+        // 检查帖子存在且未删除
+        let post = self.repo.find_post_by_id(post_id).await?
+            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+        if post.is_deleted {
+            return Err(AppError::Validation("Cannot reference a deleted post".to_string()));
+        }
+
+        // 检查目标社区存在且可见性
+        let visibility: String = sqlx::query_scalar(
+            "SELECT visibility FROM spaces WHERE id = $1 AND status = 'active'"
+        )
+        .bind(space_id)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        match visibility.as_str() {
+            "private" => {
+                // 私有社区：需先加入
+                let is_member: bool = sqlx::query_scalar(
+                    "SELECT EXISTS(SELECT 1 FROM space_members WHERE space_id = $1 AND user_id = $2)"
+                )
+                .bind(space_id)
+                .bind(submitter_id)
+                .fetch_one(&self.pool)
+                .await?;
+                if !is_member {
+                    return Err(AppError::Forbidden("需要先加入私有社区才能投稿".to_string()));
+                }
+            }
+            "unlisted" => {
+                return Err(AppError::Forbidden("不公开社区不支持投稿".to_string()));
+            }
+            _ => {} // public
+        }
+
+        // 检查是否已存在引用（防重复）
+        if let Some(existing) = self.repo.find_reference(post_id, space_id).await? {
+            return Err(AppError::Validation(
+                format!("已存在投稿引用（状态: {}）", existing.status)
+            ));
+        }
+
+        let ref_row = self.repo.create_reference(post_id, space_id, module_type, submitter_id).await?;
+        Ok(ref_row)
+    }
+
+    /// 审核引用
+    pub async fn review_reference(
+        &self,
+        reference_id: Uuid,
+        status: &str,
+        reviewer_id: Uuid,
+    ) -> Result<PostReference, AppError> {
+        self.repo.review_reference(reference_id, status, reviewer_id).await
+    }
+
+    /// 撤回引用
+    pub async fn withdraw_reference(
+        &self,
+        reference_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<(), AppError> {
+        self.repo.delete_reference(reference_id, user_id).await
     }
 
     /// 点赞/取消点赞

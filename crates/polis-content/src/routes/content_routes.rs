@@ -6,7 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, SeriesPublic, UpdatePostRequest, PaginationParams, SendMessageRequest, MarkMessagesReadRequest, CreateTierRequest, UpdateTierRequest};
+use polis_core::models::{ApiResponse, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, PostReference, SeriesPublic, UpdatePostRequest, PaginationParams, SendMessageRequest, MarkMessagesReadRequest, CreateTierRequest, UpdateTierRequest};
 use polis_core::resolver::resolve::{resolve_space_id, resolve_space_enabled_modules};
 use crate::handlers::content_handler::ContentHandler;
 use crate::handlers::chat_handler::ChatHandler;
@@ -140,6 +140,24 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
         return Ok((ns.to_string(), None, Some("analytics".to_string())));
     }
 
+    if let Some(pos) = remaining.find("/references") {
+        let ns = &remaining[..pos];
+        if ns.is_empty() {
+            return Err(AppError::NotFound("Missing namespace".to_string()));
+        }
+        let after_refs = &remaining[pos + 11..]; // skip "/references"
+        if after_refs.is_empty() {
+            return Ok((ns.to_string(), None, Some("references".to_string())));
+        }
+        let parts: Vec<&str> = after_refs.split('/').filter(|s| !s.is_empty()).collect();
+        if parts.is_empty() {
+            return Ok((ns.to_string(), None, Some("references".to_string())));
+        }
+        let ref_id = Uuid::parse_str(parts[0]).map_err(|_| AppError::Validation("Invalid reference ID".to_string()))?;
+        let action = parts.get(1).map(|s| format!("ref-{}", s));
+        return Ok((ns.to_string(), Some(ref_id), action));
+    }
+
     Err(AppError::NotFound("Invalid content path".to_string()))
 }
 
@@ -207,6 +225,10 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/posts/{id}/report", post(report_post_by_id_route))
         // 通过 ID 更新/删除帖子（需认证）
         .route("/api/posts/{id}", put(update_post_by_id_route).delete(delete_post_by_id_route))
+        // 跨社区投稿引用
+        .route("/api/posts/{id}/reference", post(submit_reference_route))
+        .route("/api/posts/{id}/references", get(list_post_references_route))
+        .route("/api/posts/{id}/references/{ref_id}", delete(withdraw_reference_route))
         // 创作中心：作者查看所有自己的内容（用户Ⓚ OS: /home/user/ 目录）
         .route("/api/my/contents", get(get_my_contents_route))
         // 私信 (Direct Messages)
@@ -330,6 +352,34 @@ async fn handle_public_content(
             let analytics = h.get_space_analytics(space_id).await?;
             Ok(json_ok(ApiResponse::success(analytics)))
         }
+        (None, Some("references")) => {
+            // 仅空间所有者可查看待审核投稿
+            let current_user = maybe_extract_user_id(req.headers())?;
+            let uid = current_user.ok_or(AppError::Unauthorized)?;
+            let owner_id: Option<Uuid> = sqlx::query_scalar(
+                "SELECT owner_id FROM spaces WHERE id = $1"
+            ).bind(space_id).fetch_optional(&h.pool).await?.flatten();
+            if owner_id != Some(uid) {
+                return Err(AppError::Forbidden("Only space owner can view references".to_string()));
+            }
+            let refs = h.repo.list_pending_references_by_space(space_id).await?;
+            let post_ids: Vec<Uuid> = refs.iter().map(|r| r.post_id).collect();
+            let posts = h.repo.find_posts_by_ids(&post_ids).await.unwrap_or_default();
+            let author_ids: Vec<Uuid> = posts.iter().map(|p| p.author_id).collect();
+            let authors = h.repo.find_users_batch(&author_ids).await.unwrap_or_default();
+            let items: Vec<serde_json::Value> = refs.iter().map(|r| {
+                let post = posts.iter().find(|p| p.id == r.post_id);
+                let author = post.and_then(|p| authors.get(&p.author_id));
+                serde_json::json!({
+                    "id": r.id, "post_id": r.post_id, "space_id": r.space_id,
+                    "module_type": r.module_type, "status": r.status,
+                    "submitted_by": r.submitted_by, "created_at": r.created_at,
+                    "post_title": post.map(|p| p.title.as_str()).unwrap_or("?"),
+                    "author_name": author.map(|a| a.display_name.as_str()).unwrap_or("?"),
+                })
+            }).collect();
+            Ok(json_ok(ApiResponse::success(items)))
+        }
         _ => Err(AppError::NotFound("Route not found".to_string())),
     }
 }
@@ -419,6 +469,28 @@ async fn handle_auth_content(
                 (Some(id), Some("hide")) | (Some(id), Some("unhide")) => {
                     let hidden = h.hide_post_from_space(id, uid).await?;
                     Ok(json_ok(ApiResponse::success(serde_json::json!({"hidden": hidden}))))
+                }
+                (Some(ref_id), Some("ref-approve")) => {
+                    let space_id = resolve_space_id(&h.pool, &ns).await?;
+                    let owner_id: Option<Uuid> = sqlx::query_scalar(
+                        "SELECT owner_id FROM spaces WHERE id = $1"
+                    ).bind(space_id).fetch_optional(&h.pool).await?.flatten();
+                    if owner_id != Some(uid) {
+                        return Err(AppError::Forbidden("Only space owner can approve references".to_string()));
+                    }
+                    let ref_row: PostReference = h.review_reference(ref_id, "approved", uid).await?;
+                    Ok(json_ok(ApiResponse::success(ref_row)))
+                }
+                (Some(ref_id), Some("ref-reject")) => {
+                    let space_id = resolve_space_id(&h.pool, &ns).await?;
+                    let owner_id: Option<Uuid> = sqlx::query_scalar(
+                        "SELECT owner_id FROM spaces WHERE id = $1"
+                    ).bind(space_id).fetch_optional(&h.pool).await?.flatten();
+                    if owner_id != Some(uid) {
+                        return Err(AppError::Forbidden("Only space owner can reject references".to_string()));
+                    }
+                    let ref_row: PostReference = h.review_reference(ref_id, "rejected", uid).await?;
+                    Ok(json_ok(ApiResponse::success(ref_row)))
                 }
                 _ => Err(AppError::NotFound("Route not found".to_string())),
             }
@@ -1135,6 +1207,44 @@ async fn delete_post_by_id_route(
     Extension(uid): Extension<Uuid>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     h.delete_post(id, uid).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+// ===== 跨社区投稿引用路由 =====
+
+#[derive(Deserialize)]
+struct SubmitReferenceRequest {
+    space_ns: String,
+    module_type: Option<String>,
+}
+
+async fn submit_reference_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(post_id): Path<Uuid>,
+    Extension(uid): Extension<Uuid>,
+    Json(r): Json<SubmitReferenceRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let space_id = resolve_space_id(&h.pool, &r.space_ns).await?;
+    let module_type = r.module_type.unwrap_or_else(|| "forum".to_string());
+    let ref_row: PostReference = h.submit_reference(post_id, space_id, &module_type, uid).await?;
+    Ok(json_ok(ApiResponse::success(ref_row)))
+}
+
+async fn list_post_references_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(post_id): Path<Uuid>,
+    Extension(_uid): Extension<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let refs = h.repo.list_references_by_post(post_id).await?;
+    Ok(json_ok(ApiResponse::success(refs)))
+}
+
+async fn withdraw_reference_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path((_post_id, ref_id)): Path<(Uuid, Uuid)>,
+    Extension(uid): Extension<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    h.withdraw_reference(ref_id, uid).await?;
     Ok(json_ok(ApiResponse::success(())))
 }
 
