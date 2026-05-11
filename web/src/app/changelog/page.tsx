@@ -4,8 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.73', date: '2026-05-11', title: '👥 管理后台最近动态面板 — 实时注册/社区动态 + E2E 41/41 满分',
+      ver: '0.3.74', date: '2026-05-11', title: '⚠️ 维护中断 — 服务器离线 + 离线调研 + 等待恢复',
       isLatest: true,
+      items: [
+        '⚠️ **服务器离线**: HTTP 000 (全页面不可达) + Ping 100%丢包 + SSH超时, 类似 v0.3.58/0.3.67 中断模式',
+        '🔬 **离线调研**: ActivityPub生态 (Lemmy ★14.3K), Rust社区项目, Next.js v16.3 canary系列',
+        '💡 **新功能方向梳理**: 长文AI摘要、内容付费墙分级、Event模块、ActivityPub联邦 — 对标知乎/Substack/Discord/Lemmy',
+        '📄 **文档推送**: changelog + README + 定时任务.md 更新至 GitHub',
+        '⏳ **等待恢复**: 上次类似中断持续3-4小时后自愈 (v0.3.58/0.3.68), 本次等待中',
+        '🔄 **恢复后**: 立即执行全量E2E测试 + 服务健康检查 + 数据完整性验证',
+      ],
+    },
+    {
+      ver: '0.3.73', date: '2026-05-11', title: '👥 管理后台最近动态面板 — 实时注册/社区动态 + E2E 41/41 满分',
+      isLatest: false,
       items: [
         '👥 **最近动态面板**: 管理后台仪表盘新增"最近动态"模块 — 最新5个注册用户 + 最新5个创建社区',
         '🕐 **智能时间显示**: "刚刚/N分钟前/N小时前/N天前" 相对时间格式，直观感知平台活跃度',
