@@ -370,22 +370,8 @@ function FeedLayout() {
                 <TrendingUp className="h-5 w-5 text-primary-500" />
                 热门趋势
               </h3>
-              <div className="divide-y divide-gray-200/50 dark:divide-gray-800/50">
-                {[
-                  { rank: 1, tag: '独立游戏', posts: 128 },
-                  { rank: 2, tag: '设计趋势', posts: 96 },
-                  { rank: 3, tag: 'React 19', posts: 72 },
-                  { rank: 4, tag: 'Rust 2026', posts: 45 },
-                  { rank: 5, tag: 'AI 编程', posts: 38 },
-                ].map((topic) => (
-                  <Link key={topic.rank} href={'/search?q=' + encodeURIComponent(topic.tag)} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                    <span className="text-sm font-bold text-gray-400 w-5">{topic.rank}</span>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">#{topic.tag}</p>
-                      <p className="text-xs text-gray-500">{topic.posts} 条帖子</p>
-                    </div>
-                  </Link>
-                ))}
+              <div className="px-4 py-6 text-center text-gray-400 dark:text-gray-500">
+                <p className="text-sm">成为第一个发帖的人，引领社区趋势 🚀</p>
               </div>
             </div>
 

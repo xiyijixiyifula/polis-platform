@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { PostCard } from '@/components/PostCard';
@@ -24,38 +24,50 @@ interface Announcement {
 
 export default function SpacePage() {
   const params = useParams();
-  let namespace = '';
-  // Decode namespace from browser URL (most reliable for Chinese characters)
-  if (typeof window !== 'undefined') {
-    const p = window.location.pathname;
-    namespace = decodeURIComponent(p.replace(/^\/space\//, ''));
-  } else {
-    // SSR fallback: use params
+
+  // 使用 useMemo 确保 namespace 在 SSR/客户端 hydration 期间稳定不变
+  // 避免因 window 检测双路径导致的短暂空值 → "社区不存在" 闪现 bug
+  const namespace = useMemo(() => {
     const rawNs = params.namespace;
-    namespace = Array.isArray(rawNs)
-      ? (rawNs as string[]).map(s => decodeURIComponent(s)).join('/')
-      : decodeURIComponent((rawNs as string) || '');
-  }
+    if (!rawNs) return '';
+    if (Array.isArray(rawNs)) {
+      return (rawNs as string[]).map(s => {
+        try { return decodeURIComponent(s); } catch { return s; }
+      }).join('/');
+    }
+    try { return decodeURIComponent(rawNs as string); } catch { return rawNs as string; }
+  }, [params.namespace]);
 
   // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
   const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
     'members', 'settings', 'video', 'code_repo', 'qa', 'files', 'series', 'membership', 'novel', 'game', 'mini_app']);
-  const nsParts = namespace.split('/');
-  let urlTab: string | null = null;
-  if (nsParts.length > 1 && knownSubRoutes.has(nsParts[nsParts.length - 1])) {
-    urlTab = nsParts.pop()!;
-    namespace = nsParts.join('/');
-  }
+
+  // 从原始命名空间中剥离子路由后缀，得到纯社区命名空间
+  const cleanNamespace = useMemo(() => {
+    const parts = namespace.split('/');
+    if (parts.length > 1 && knownSubRoutes.has(parts[parts.length - 1])) {
+      return parts.slice(0, -1).join('/');
+    }
+    return namespace;
+  }, [namespace]);
+
+  const urlTab: string | null = useMemo(() => {
+    const parts = namespace.split('/');
+    if (parts.length > 1 && knownSubRoutes.has(parts[parts.length - 1])) {
+      return parts[parts.length - 1];
+    }
+    return null;
+  }, [namespace]);
 
   // Module settings (persisted in localStorage)
-  const [modules, setModules] = useState<SpaceModules>(() => loadModules(namespace));
+  const [modules, setModules] = useState<SpaceModules>(() => loadModules(cleanNamespace));
   const [showSettings, setShowSettings] = useState(false);
 
   // Sync modules when namespace changes
   useEffect(() => {
-    setModules(loadModules(namespace));
+    setModules(loadModules(cleanNamespace));
     setShowSettings(false);
-  }, [namespace]);
+  }, [cleanNamespace]);
 
   // Space ownership (must be declared before availableTabs — analytics tab depends on it)
   const [isOwner, setIsOwner] = useState(false);
@@ -126,9 +138,9 @@ export default function SpacePage() {
 
   // Fetch members when tab changes to 'members'
   useEffect(() => {
-    if (activeTab === 'members' && namespace && members.length === 0) {
+    if (activeTab === 'members' && cleanNamespace && members.length === 0) {
       setMembersLoading(true);
-      fetch(`/api/spaces/${namespace}/members`)
+      fetch(`/api/spaces/${cleanNamespace}/members`)
         .then(r => r.json())
         .then(data => {
           if (data.code === 0 && Array.isArray(data.data)) {
@@ -138,7 +150,7 @@ export default function SpacePage() {
         .catch(() => {})
         .finally(() => setMembersLoading(false));
     }
-  }, [activeTab, namespace]);
+  }, [activeTab, cleanNamespace]);
 
   // Space ownership + tier management
   const [showTierForm, setShowTierForm] = useState(false);
@@ -154,8 +166,8 @@ export default function SpacePage() {
         setIsOwner(me.id === space.owner_id);
         // 检查当前用户是否已是成员
         const token = localStorage.getItem('polis_access_token');
-        if (token && namespace) {
-          fetch(`/api/spaces/${namespace}/members`, {
+        if (token && cleanNamespace) {
+          fetch(`/api/spaces/${cleanNamespace}/members`, {
             headers: { Authorization: `Bearer ${token}` },
           })
             .then(r => r.json())
@@ -171,11 +183,11 @@ export default function SpacePage() {
         }
       }
     } catch {}
-  }, [space?.owner_id, namespace]);
+  }, [space?.owner_id, cleanNamespace]);
 
   const togglePin = useCallback(async (postId: string, isPinned: boolean) => {
     try {
-      const res = await fetch(`/api/spaces/${namespace}/posts/${postId}/pin`, { method: 'POST' });
+      const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/pin`, { method: 'POST' });
       const data = await res.json();
       if (data.code === 0) {
         const newPinned = data.data?.pinned;
@@ -183,12 +195,12 @@ export default function SpacePage() {
         setFeatured(prev => prev.map(p => p.id === postId ? { ...p, is_pinned: newPinned } : p));
       }
     } catch {}
-  }, [namespace]);
+  }, [cleanNamespace]);
 
   const toggleHide = useCallback(async (postId: string) => {
     if (!confirm('确定要隐藏这篇帖子吗？隐藏后将从空间索引中移除，但内容不会删除。')) return;
     try {
-      const res = await fetch(`/api/spaces/${namespace}/posts/${postId}/hide`, { method: 'POST' });
+      const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/hide`, { method: 'POST' });
       const data = await res.json();
       if (data.code === 0) {
         // Remove from all local lists (posts, featured, module-filtered lists)
@@ -196,14 +208,14 @@ export default function SpacePage() {
         setFeatured(prev => prev.filter(p => p.id !== postId));
       }
     } catch {}
-  }, [namespace]);
+  }, [cleanNamespace]);
 
   const loadMorePosts = useCallback(async () => {
     if (loadingMore) return;
     setLoadingMore(true);
     try {
       const nextPage = postPage + 1;
-      const res = await fetch(`/api/spaces/${namespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}`);
+      const res = await fetch(`/api/spaces/${cleanNamespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}`);
       const data = await res.json();
       if (data.code === 0 && Array.isArray(data.data)) {
         const morePosts = data.data;
@@ -224,7 +236,7 @@ export default function SpacePage() {
     } catch {} finally {
       setLoadingMore(false);
     }
-  }, [namespace, postPage, postSort, loadingMore, modules]);
+  }, [cleanNamespace, postPage, postSort, loadingMore, modules]);
 
   const goToPostPage = (p: number) => {
     if (p < 1 || p > postTotalPages) return;
@@ -233,16 +245,16 @@ export default function SpacePage() {
   };
 
   // Parse namespace for GitHub-style display: username/community-name
-  const ghParts = namespace.split('/');
-  const hasOwnerPrefix = nsParts.length >= 2;
-  const displayNs = namespace;
+  const ghParts = cleanNamespace.split('/');
+  const hasOwnerPrefix = ghParts.length >= 2;
+  const displayNs = cleanNamespace;
   const communityName = hasOwnerPrefix ? ghParts[ghParts.length - 1] : ghParts[0];
   const ownerSegment = hasOwnerPrefix ? ghParts[0] : null;
 
   useEffect(() => {
-    if (!namespace) return;
+    if (!cleanNamespace) return;
     setLoading(true);
-    fetch(`/api/spaces/${namespace}`)
+    fetch(`/api/spaces/${cleanNamespace}`)
       .then(r => r.json())
       .then(data => {
         if (data.code === 0) {
@@ -250,7 +262,7 @@ export default function SpacePage() {
           // Try to resolve owner info
           // 从服务器同步 enabled_modules：覆盖 localStorage
           if (data.data.enabled_modules && Array.isArray(data.data.enabled_modules)) {
-            const serverMods = { ...loadModules(namespace) };
+            const serverMods = { ...loadModules(cleanNamespace) };
             // 默认为 false，仅服务器启用的模块设为 true
             for (const key of Object.keys(serverMods) as (keyof SpaceModules)[]) {
               serverMods[key] = false;
@@ -268,7 +280,7 @@ export default function SpacePage() {
             }
             serverMods.posts = true; // 交流模块始终可用
             setModules(serverMods);
-            saveModules(namespace, serverMods);
+            saveModules(cleanNamespace, serverMods);
           }
           if (data.data.owner_id) {
             fetch(`/api/users/${data.data.owner_id}`)
@@ -284,24 +296,24 @@ export default function SpacePage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [namespace]);
+  }, [cleanNamespace]);
 
   useEffect(() => {
-    if (!namespace) return;
+    if (!cleanNamespace) return;
     setPostLoading(true);
 
     const fetchers: Promise<any>[] = [
-      fetch(`/api/spaces/${namespace}/posts?page=${postPage}&page_size=10&sort=${postSort}`).then(r => r.json()),
-      fetch(`/api/spaces/${namespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
+      fetch(`/api/spaces/${cleanNamespace}/posts?page=${postPage}&page_size=10&sort=${postSort}`).then(r => r.json()),
+      fetch(`/api/spaces/${cleanNamespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
     ];
 
     // Only fetch polls if the module is enabled
     if (modules.polls) {
-      fetchers.push(fetch(`/api/spaces/${namespace}/polls`).then(r => r.json()));
+      fetchers.push(fetch(`/api/spaces/${cleanNamespace}/polls`).then(r => r.json()));
     }
 
     // Always fetch announcements for banners
-    fetchers.push(fetch(`/api/spaces/${namespace}/announcements`).then(r => r.json()));
+    fetchers.push(fetch(`/api/spaces/${cleanNamespace}/announcements`).then(r => r.json()));
 
     Promise.all(fetchers)
       .then((results) => {
@@ -330,14 +342,14 @@ export default function SpacePage() {
       })
       .catch(() => {})
       .finally(() => setPostLoading(false));
-  }, [namespace, modules.polls, postSort, postPage]);
+  }, [cleanNamespace, modules.polls, postSort, postPage]);
 
   // Fetch series list when series tab is active or module is enabled
   useEffect(() => {
-    if (!namespace || !modules.series) return;
+    if (!cleanNamespace || !modules.series) return;
     if (activeTab === 'series') {
       setSeriesLoading(true);
-      fetch(`/api/series/space/${namespace}`)
+      fetch(`/api/series/space/${cleanNamespace}`)
         .then(r => r.json())
         .then(data => {
           if (data.code === 0) {
@@ -347,21 +359,21 @@ export default function SpacePage() {
         .catch(() => {})
         .finally(() => setSeriesLoading(false));
     }
-  }, [namespace, activeTab, modules.series]);
+  }, [cleanNamespace, activeTab, modules.series]);
 
   useEffect(() => {
-    if (!namespace || !modules.membership) return;
+    if (!cleanNamespace || !modules.membership) return;
     if (activeTab === 'membership') {
       setTiersLoading(true);
       Promise.all([
-        tiers.list(namespace),
-        subscribe.get(namespace).catch(() => ({ code: 0, data: null })),
+        tiers.list(cleanNamespace),
+        subscribe.get(cleanNamespace).catch(() => ({ code: 0, data: null })),
       ]).then(([tRes, sRes]) => {
         if (tRes.code === 0) setSpaceTiers(tRes.data || []);
         if (sRes.code === 0 && sRes.data) setMySubscription(sRes.data);
       }).catch(() => {}).finally(() => setTiersLoading(false));
     }
-  }, [namespace, activeTab, modules.membership]);
+  }, [cleanNamespace, activeTab, modules.membership]);
 
   const handleCreateSeries = async () => {
     const token = localStorage.getItem('polis_access_token');
@@ -369,7 +381,7 @@ export default function SpacePage() {
     if (!newSeriesTitle.trim()) { alert('请输入系列标题'); return; }
     setSeriesCreating(true);
     try {
-      const res = await fetch(`/api/series/space/${namespace}`, {
+      const res = await fetch(`/api/series/space/${cleanNamespace}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ title: newSeriesTitle.trim(), description: newSeriesDesc.trim(), visibility: 'public' }),
@@ -380,7 +392,7 @@ export default function SpacePage() {
         setNewSeriesDesc('');
         setShowCreateSeries(false);
         // Refresh series list
-        const listRes = await fetch(`/api/series/space/${namespace}`);
+        const listRes = await fetch(`/api/series/space/${cleanNamespace}`);
         const listData = await listRes.json();
         if (listData.code === 0) setSeriesList(listData.data || []);
       } else {
@@ -402,7 +414,7 @@ export default function SpacePage() {
       <div className="mx-auto max-w-7xl px-4 py-16 text-center">
         <div className="text-5xl mb-4">🔍</div>
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">社区不存在</h2>
-        <p className="mt-2 text-gray-500 dark:text-gray-400">未找到社区 "{namespace}"</p>
+        <p className="mt-2 text-gray-500 dark:text-gray-400">未找到社区 "{cleanNamespace}"</p>
         <Link href="/explore" className="btn-primary mt-4 inline-block px-6 py-2">浏览其他社区</Link>
       </div>
     );
@@ -461,7 +473,7 @@ export default function SpacePage() {
                 const token = localStorage.getItem('polis_access_token');
                 if (!token) { alert('请先登录'); return; }
                 setJoining(true);
-                const res = await fetch(`/api/spaces/${namespace}/join`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+                const res = await fetch(`/api/spaces/${cleanNamespace}/join`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
                 const data = await res.json();
                 if (data.code === 0) {
                   setIsMember(true);
@@ -543,7 +555,7 @@ export default function SpacePage() {
           </button>
           {showSettings && (
             <SpaceSettings
-              namespace={namespace}
+              namespace={cleanNamespace}
               modules={modules}
               onChange={setModules}
               onClose={() => setShowSettings(false)}
@@ -591,7 +603,7 @@ export default function SpacePage() {
                   </div>
                   <div className="space-y-2">
                     {featured.slice(0, 4).map((post) => (
-                      <Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(namespace)}`}
+                      <Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(cleanNamespace)}`}
                         className="card block hover:border-primary-300 dark:hover:border-primary-600 transition-colors group py-3 px-4">
                         <div className="flex items-center gap-2">
                           <Pin className="h-3.5 w-3.5 text-amber-500 shrink-0" />
@@ -625,7 +637,7 @@ export default function SpacePage() {
                       const authorUsername = author.username || '';
                       const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
                       return (
-                        <Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(namespace)}`
+                        <Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(cleanNamespace)}`
                         } className="block px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors rounded-lg border-b border-gray-100 dark:border-gray-800 last:border-0">
                         {/* Module / Title line */}
                         <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-0.5 flex-wrap">
@@ -661,7 +673,7 @@ export default function SpacePage() {
                   <div className="card py-8 text-center text-gray-400 dark:text-gray-500">
                     <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">还没有内容</p>
-                    <Link href={`/post/new?space=${encodeURIComponent(namespace)}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
+                    <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
                       发布第一篇帖子
                     </Link>
                   </div>
@@ -673,7 +685,7 @@ export default function SpacePage() {
           {/* === Posts Tab (交流) === */}
           {activeTab === 'posts' && (
             <>
-              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=forum`}
+              <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <PenLine className="h-5 w-5" />
@@ -727,7 +739,7 @@ export default function SpacePage() {
                       body: post.body,
                       author: post.author,
                       space_id: post.space_id,
-                      space_ns: namespace,
+                      space_ns: cleanNamespace,
                       space_name: space?.title,
                       like_count: post.like_count,
                       comment_count: post.comment_count,
@@ -873,7 +885,7 @@ export default function SpacePage() {
               ) : seriesList.length > 0 ? (
                 <div className="space-y-3">
                   {seriesList.map((s) => (
-                    <SeriesCard key={s.id} series={s} namespace={namespace} />
+                    <SeriesCard key={s.id} series={s} namespace={cleanNamespace} />
                   ))}
                 </div>
               ) : (
@@ -925,14 +937,14 @@ export default function SpacePage() {
                             setTierSaving(true);
                             try {
                               if (editingTier) {
-                                await tiers.update(namespace, editingTier.id, {
+                                await tiers.update(cleanNamespace, editingTier.id, {
                                   name: tierForm.name.trim(),
                                   price_cents: parseInt(tierForm.price_cents) || 0,
                                   description: tierForm.description.trim(),
                                   benefits,
                                 });
                               } else {
-                                await tiers.create(namespace, {
+                                await tiers.create(cleanNamespace, {
                                   name: tierForm.name.trim(),
                                   price_cents: parseInt(tierForm.price_cents) || 0,
                                   description: tierForm.description.trim(),
@@ -941,7 +953,7 @@ export default function SpacePage() {
                               }
                               setShowTierForm(false); setEditingTier(null);
                               // Refresh
-                              const tRes = await tiers.list(namespace);
+                              const tRes = await tiers.list(cleanNamespace);
                               if (tRes.code === 0) setSpaceTiers(tRes.data || []);
                             } catch (e: any) { alert(e?.message || '保存失败'); }
                             finally { setTierSaving(false); }
@@ -980,8 +992,8 @@ export default function SpacePage() {
                                 <button onClick={async (e) => { e.preventDefault(); e.stopPropagation();
                                   if (!confirm('确定删除等级 "' + tier.name + '" 吗？')) return;
                                   try {
-                                    await tiers.delete(namespace, tier.id);
-                                    const tRes = await tiers.list(namespace);
+                                    await tiers.delete(cleanNamespace, tier.id);
+                                    const tRes = await tiers.list(cleanNamespace);
                                     if (tRes.code === 0) setSpaceTiers(tRes.data || []);
                                   } catch (e: any) { alert(e?.message || '删除失败'); }
                                 }} title="删除" className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
@@ -1010,12 +1022,12 @@ export default function SpacePage() {
                                   if (isMyTier) {
                                     if (!confirm('确定要取消订阅吗？')) return;
                                     setSubscribing(tier.id);
-                                    try { await subscribe.cancel(namespace); setMySubscription(null); } catch (e: any) { alert(e?.message || '取消失败'); } finally { setSubscribing(null); }
+                                    try { await subscribe.cancel(cleanNamespace); setMySubscription(null); } catch (e: any) { alert(e?.message || '取消失败'); } finally { setSubscribing(null); }
                                   } else {
                                     setSubscribing(tier.id);
                                     try {
-                                      const res = await subscribe.join(namespace, tier.id);
-                                      if (res.code === 0) { const sRes = await subscribe.get(namespace); if (sRes.code === 0 && sRes.data) setMySubscription(sRes.data); }
+                                      const res = await subscribe.join(cleanNamespace, tier.id);
+                                      if (res.code === 0) { const sRes = await subscribe.get(cleanNamespace); if (sRes.code === 0 && sRes.data) setMySubscription(sRes.data); }
                                       else { alert(res.message || '订阅失败'); }
                                     } catch (e: any) { alert(e?.message || '订阅失败'); } finally { setSubscribing(null); }
                                   }
@@ -1045,7 +1057,7 @@ export default function SpacePage() {
           {/* === Wiki Tab（知识库 — 所有成员可编辑）=== */}
           {activeTab === 'wiki' && (
             <>
-              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=wiki`}
+              <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=wiki`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <Library className="h-5 w-5" />
@@ -1070,7 +1082,7 @@ export default function SpacePage() {
                       body: post.body,
                       author: post.author,
                       space_id: post.space_id,
-                      space_ns: namespace,
+                      space_ns: cleanNamespace,
                       space_name: space.title,
                       like_count: post.like_count,
                       comment_count: post.comment_count,
@@ -1095,7 +1107,7 @@ export default function SpacePage() {
           {activeTab === 'share' && (
             <>
               {isOwner ? (
-                <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=share`}
+                <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=share`}
                   className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                   <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                     <PenLine className="h-5 w-5" />
@@ -1126,7 +1138,7 @@ export default function SpacePage() {
                       body: post.body,
                       author: post.author,
                       space_id: post.space_id,
-                      space_ns: namespace,
+                      space_ns: cleanNamespace,
                       space_name: space.title,
                       like_count: post.like_count,
                       comment_count: post.comment_count,
@@ -1150,7 +1162,7 @@ export default function SpacePage() {
           {/* === Polls Tab === */}
           {activeTab === 'polls' && (
             <>
-              <Link href={`/polls/new?space=${encodeURIComponent(namespace)}`}
+              <Link href={`/polls/new?space=${encodeURIComponent(cleanNamespace)}`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <Vote className="h-5 w-5" />
@@ -1272,7 +1284,7 @@ export default function SpacePage() {
                 <MessageSquare className="h-4 w-4 text-primary-600" />
                 <span className="font-medium text-sm text-gray-900 dark:text-white">社区聊天室</span>
               </div>
-              <SpaceChat namespace={namespace} />
+              <SpaceChat namespace={cleanNamespace} />
             </div>
           )}
 
@@ -1295,7 +1307,7 @@ export default function SpacePage() {
           {/* === QA Tab（问答 — 提问与回答）=== */}
           {activeTab === 'qa' && (
             <>
-              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=qa`}
+              <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=qa`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <HelpCircle className="h-5 w-5" />
@@ -1320,7 +1332,7 @@ export default function SpacePage() {
                       body: post.body,
                       author: post.author,
                       space_id: post.space_id,
-                      space_ns: namespace,
+                      space_ns: cleanNamespace,
                       space_name: space.title,
                       like_count: post.like_count,
                       comment_count: post.comment_count,
@@ -1344,7 +1356,7 @@ export default function SpacePage() {
           {/* === Novel Tab（小说/阅读 — 章节连载）=== */}
           {activeTab === 'novel' && (
             <>
-              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=novel`}
+              <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=novel`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <BookText className="h-5 w-5" />
@@ -1369,7 +1381,7 @@ export default function SpacePage() {
                       body: post.body,
                       author: post.author,
                       space_id: post.space_id,
-                      space_ns: namespace,
+                      space_ns: cleanNamespace,
                       space_name: space.title,
                       like_count: post.like_count,
                       comment_count: post.comment_count,
@@ -1393,7 +1405,7 @@ export default function SpacePage() {
           {/* === Game Tab（游戏 — 游戏内容讨论与分享）=== */}
           {activeTab === 'game' && (
             <>
-              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=game`}
+              <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=game`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <Gamepad2 className="h-5 w-5" />
@@ -1418,7 +1430,7 @@ export default function SpacePage() {
                       body: post.body,
                       author: post.author,
                       space_id: post.space_id,
-                      space_ns: namespace,
+                      space_ns: cleanNamespace,
                       space_name: space.title,
                       like_count: post.like_count,
                       comment_count: post.comment_count,
@@ -1442,7 +1454,7 @@ export default function SpacePage() {
           {/* === MiniApp Tab（小程序 — 嵌入式小应用）=== */}
           {activeTab === 'mini_app' && (
             <>
-              <Link href={`/post/new?space=${encodeURIComponent(namespace)}&module=mini_app`}
+              <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=mini_app`}
                 className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <AppWindow className="h-5 w-5" />
@@ -1467,7 +1479,7 @@ export default function SpacePage() {
                       body: post.body,
                       author: post.author,
                       space_id: post.space_id,
-                      space_ns: namespace,
+                      space_ns: cleanNamespace,
                       space_name: space.title,
                       like_count: post.like_count,
                       comment_count: post.comment_count,
@@ -1514,7 +1526,7 @@ export default function SpacePage() {
 
           {/* === Analytics Tab (空间创建者专属) === */}
           {activeTab === 'analytics' && isOwner && (
-            <SpaceAnalytics namespace={namespace} spaceTitle={space?.title} />
+            <SpaceAnalytics namespace={cleanNamespace} spaceTitle={space?.title} />
           )}
         </main>
 
@@ -1557,7 +1569,7 @@ export default function SpacePage() {
 
             {/* Analytics mini card (owner only) */}
             {isOwner && (
-              <SpaceAnalyticsMini namespace={namespace} />
+              <SpaceAnalyticsMini namespace={cleanNamespace} />
             )}
 
             {/* Clustered communities info */}
