@@ -4,8 +4,18 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.78', date: '2026-05-11', title: '👤 个人主页优化 — 可分享URL + 创建/加入分区 + 退出社区',
+      ver: '0.3.79', date: '2026-05-11', title: '🐛 修复社区帖子列表返回空数据 — enabled_modules 过滤误伤',
       isLatest: true,
+      items: [
+        '🔍 **根因定位**: resolve_space_enabled_modules 调用处使用 unwrap_or_default()，当 DB 查询短暂出错时返回空 Vec<String>，导致 get_posts() 的 enabled_modules 过滤器移除全部帖子（COUNT=1 但 SELECT 返回空 → pagination.total=1, data=[]）',
+        '🛡️ **修复方案**: 将 unwrap_or_default() 改为 unwrap_or_else(|_| vec!["forum".to_string()]) — 错误兜底为 forum 模块，确保帖子不会被误过滤',
+        '📋 **影响范围**: 所有空间（尤其是中文命名空间），任何 resolve_space_enabled_modules 出错时都会触发',
+        '🚀 **部署**: polis-content 服务重新编译部署，已验证正常运行',
+      ],
+    },
+    {
+      ver: '0.3.78', date: '2026-05-11', title: '👤 个人主页优化 — 可分享URL + 创建/加入分区 + 退出社区',
+      isLatest: false,
       items: [
         '🔗 **可分享个人主页**: /profile 自动重定向到 /profile/{username}，用户可直接复制链接分享自己的主页',
         '📁 **社区分区展示**: 个人主页"创建的社区"和"加入的社区"分为两个独立区域，一目了然',
