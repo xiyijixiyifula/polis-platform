@@ -187,7 +187,9 @@ export default function SpacePage() {
 
   const togglePin = useCallback(async (postId: string, isPinned: boolean) => {
     try {
-      const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/pin`, { method: 'POST' });
+      const token = localStorage.getItem('polis_access_token');
+      if (!token) { alert('请先登录'); return; }
+      const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/pin`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.code === 0) {
         const newPinned = data.data?.pinned;
@@ -200,7 +202,9 @@ export default function SpacePage() {
   const toggleHide = useCallback(async (postId: string) => {
     if (!confirm('确定要隐藏这篇帖子吗？隐藏后将从空间索引中移除，但内容不会删除。')) return;
     try {
-      const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/hide`, { method: 'POST' });
+      const token = localStorage.getItem('polis_access_token');
+      if (!token) { alert('请先登录'); return; }
+      const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/hide`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.code === 0) {
         // Remove from all local lists (posts, featured, module-filtered lists)
