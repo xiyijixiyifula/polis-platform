@@ -236,9 +236,16 @@ export default function UserProfilePage() {
     );
   }
 
-  // 分离拥有的社区和加入的社区
-  const ownedSpaces = userSpaces.filter((sp: any) => sp.namespace?.startsWith(username + '/'));
-  const joinedSpaces = userSpaces.filter((sp: any) => !sp.namespace?.startsWith(username + '/'));
+  // 分离拥有的社区和加入的社区（通过 owner_id 精确区分）
+  const ownedSpaces = userSpaces.filter((sp: any) => {
+    if (sp.owner_id && user?.id) return sp.owner_id === user.id;
+    // 兼容旧数据：无 owner_id 时回退到 namespace 前缀匹配
+    return sp.namespace?.startsWith(username + '/');
+  });
+  const joinedSpaces = userSpaces.filter((sp: any) => {
+    if (sp.owner_id && user?.id) return sp.owner_id !== user.id;
+    return !sp.namespace?.startsWith(username + '/');
+  });
 
   const spaceCardData = (sp: any) => ({
     id: sp.id,
@@ -408,7 +415,7 @@ export default function UserProfilePage() {
           {ownedSpaces.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
-                我创建的社区 ({ownedSpaces.length})
+                {isSelf ? '我创建的社区' : `${user.display_name} 创建的社区`} ({ownedSpaces.length})
               </h3>
               <div className="space-y-3">
                 {ownedSpaces.map((sp: any) => (
@@ -422,7 +429,7 @@ export default function UserProfilePage() {
           {joinedSpaces.length > 0 && (
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
-                我加入的社区 ({joinedSpaces.length})
+                {isSelf ? '我加入的社区' : `${user.display_name} 加入的社区`} ({joinedSpaces.length})
               </h3>
               <div className="space-y-3">
                 {joinedSpaces.map((sp: any) => (

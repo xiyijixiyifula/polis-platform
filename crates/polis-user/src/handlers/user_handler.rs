@@ -187,6 +187,7 @@ impl UserHandler {
                         'id', s.id,
                         'namespace', s.namespace,
                         'slug', s.slug,
+                        'owner_id', s.owner_id,
                         'title', s.title,
                         'description', s.description,
                         'icon_url', s.icon_url,
