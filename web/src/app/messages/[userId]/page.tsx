@@ -3,19 +3,22 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, User, Send } from 'lucide-react';
-import { messages, users, type DirectMessage, type User as UserType } from '@/lib/api';
+import { ArrowLeft, User, Send, Pin, Trash2, Search, X } from 'lucide-react';
+import { messages, users, type DirectMessage } from '@/lib/api';
 
 export default function ConversationPage() {
   const params = useParams();
   const userId = params.userId as string;
   const [msgs, setMsgs] = useState<DirectMessage[]>([]);
-  const [otherUser, setOtherUser] = useState<UserType | null>(null);
+  const [otherUser, setOtherUser] = useState<any>(null);
   const [newMsg, setNewMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUserId, setCurrentUserId] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
+  const [searchResults, setSearchResults] = useState<DirectMessage[] | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -24,7 +27,6 @@ export default function ConversationPage() {
     if (!token) { setLoading(false); return; }
     setIsLoggedIn(true);
 
-    // Get current user from stored data or token
     try {
       const userData = localStorage.getItem('polis_user');
       if (userData) {
@@ -39,20 +41,9 @@ export default function ConversationPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      // Load user profile
-      try {
-        const profileRes = await users.getProfile(userId);
-        // profile returns user by ID or username... hmm, this might not work. Let's try fetching by user ID from messages API
-        // Actually getProfile expects username. We need the username from somewhere.
-        // Since we're navigating from conversations list which has the user data, we might not have it.
-        // Fallback: just display the user ID
-      } catch {}
-
-      // Load conversation messages
       const res = await messages.getConversation(userId);
       if (res.code === 0 && Array.isArray(res.data)) {
         setMsgs(res.data);
-        // Mark as read
         await messages.markRead(userId);
       }
     } catch (e: any) {
@@ -62,7 +53,6 @@ export default function ConversationPage() {
     }
   };
 
-  // Load user info from conversations list or via ID
   useEffect(() => {
     if (!isLoggedIn) return;
     const loadUser = async () => {
@@ -75,7 +65,6 @@ export default function ConversationPage() {
             return;
           }
         }
-        // Fallback: try to find user by username via search
         try {
           const searchRes = await fetch(`/api/users/search?q=${encodeURIComponent(userId)}&limit=1`, {
             headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` }
@@ -84,7 +73,6 @@ export default function ConversationPage() {
           if (data.code === 0 && Array.isArray(data.data) && data.data.length > 0) {
             setOtherUser(data.data[0]);
           } else {
-            // Just use the ID as display name
             setOtherUser({ id: userId, username: userId.substring(0, 8), display_name: userId.substring(0, 8), avatar_url: null, bio: '', verified: false, created_at: '' });
           }
         } catch {
@@ -99,7 +87,6 @@ export default function ConversationPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs]);
 
-  // Auto refresh every 5s
   useEffect(() => {
     if (!isLoggedIn) return;
     const interval = setInterval(() => {
@@ -130,6 +117,42 @@ export default function ConversationPage() {
     }
   };
 
+  const handleTogglePin = async (msgId: string) => {
+    try {
+      const res = await messages.togglePin(msgId);
+      if (res.code === 0) {
+        loadData();
+      }
+    } catch {}
+  };
+
+  const handleDelete = async (msgId: string) => {
+    if (!confirm('确定要删除这条消息吗？')) return;
+    try {
+      const res = await fetch(`/api/messages/${msgId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` },
+      });
+      if (res.ok) {
+        setMsgs(prev => prev.filter(m => m.id !== msgId));
+      }
+    } catch {}
+  };
+
+  const handleSearch = async () => {
+    if (!searchQ.trim()) return;
+    try {
+      const res = await messages.search(searchQ.trim(), userId);
+      if (res.code === 0 && Array.isArray(res.data)) {
+        setSearchResults(res.data);
+      }
+    } catch {}
+  };
+
+  // Separate pinned from regular messages
+  const pinnedMsgs = msgs.filter(m => m.is_pinned);
+  const regularMsgs = msgs.filter(m => !m.is_pinned);
+
   if (!isLoggedIn) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
@@ -139,6 +162,8 @@ export default function ConversationPage() {
     );
   }
 
+  const displayMsgs = searchResults !== null ? searchResults : regularMsgs;
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-4 h-[calc(100vh-3.5rem)] flex flex-col">
       {/* Header */}
@@ -146,7 +171,7 @@ export default function ConversationPage() {
         <Link href="/messages" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
           <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center overflow-hidden">
             {otherUser?.avatar_url ? (
               <img src={otherUser.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -158,30 +183,97 @@ export default function ConversationPage() {
             {otherUser?.display_name || otherUser?.username || '用户'}
           </Link>
         </div>
+        {/* Search toggle */}
+        <button onClick={() => setShowSearch(!showSearch)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <Search className="h-4 w-4" />
+        </button>
       </div>
+
+      {/* Search bar (toggle) */}
+      {showSearch && (
+        <div className="flex items-center gap-2 py-2 border-b border-gray-200 dark:border-gray-700">
+          <input
+            type="text"
+            value={searchQ}
+            onChange={e => setSearchQ(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }}
+            placeholder="在当前对话中搜索..."
+            className="flex-1 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
+          />
+          <button onClick={handleSearch} className="px-3 py-1.5 text-xs rounded-full bg-primary-500 text-white hover:bg-primary-600 transition-colors">搜索</button>
+          {searchResults !== null && (
+            <button onClick={() => { setSearchResults(null); setSearchQ(''); }} className="p-1 text-gray-400 hover:text-gray-600">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Pinned messages */}
+      {pinnedMsgs.length > 0 && searchResults === null && (
+        <div className="border-b border-gray-100 dark:border-gray-800 py-2">
+          <div className="flex items-center gap-1 text-xs text-gray-400 mb-1 px-1">
+            <Pin className="h-3 w-3" /> 已置顶 ({pinnedMsgs.length})
+          </div>
+          <div className="space-y-1">
+            {pinnedMsgs.map((msg) => {
+              const isMe = msg.sender_id === currentUserId;
+              return (
+                <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group relative`}>
+                  <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
+                    isMe
+                      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 rounded-br-md'
+                      : 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-100 rounded-bl-md'
+                  }`}>
+                    <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                    <div className="text-[10px] mt-1 text-amber-500 dark:text-amber-400">
+                      📌 {formatMsgTime(msg.created_at)}
+                    </div>
+                  </div>
+                  <button onClick={() => handleTogglePin(msg.id)} className="absolute -top-1 -right-1 p-0.5 rounded-full bg-white dark:bg-gray-800 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-amber-500" title="取消置顶">
+                    <Pin className="h-3 w-3" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4">
         {loading ? (
           <div className="text-center py-12 text-gray-400">加载中...</div>
-        ) : msgs.length === 0 ? (
+        ) : displayMsgs.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-gray-400 dark:text-gray-500 text-sm">暂无消息，发送第一条私信吧</p>
+            <p className="text-gray-400 dark:text-gray-500 text-sm">
+              {searchResults !== null ? '未找到匹配的消息' : '暂无消息，发送第一条私信吧'}
+            </p>
           </div>
         ) : (
-          [...msgs].reverse().map((msg) => {
+          [...displayMsgs].reverse().map((msg) => {
             const isMe = msg.sender_id === currentUserId;
             return (
-              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+              <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} group relative`}>
                 <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm ${
                   isMe
                     ? 'bg-primary-500 text-white rounded-br-md'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md'
                 }`}>
                   <div className="whitespace-pre-wrap break-words">{msg.content}</div>
-                  <div className={`text-[10px] mt-1 ${isMe ? 'text-primary-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                  <div className={`text-[10px] mt-1 flex items-center gap-1 ${isMe ? 'text-primary-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                    {msg.is_pinned && <Pin className="h-2.5 w-2.5" />}
                     {formatMsgTime(msg.created_at)}
                   </div>
+                </div>
+                {/* Action buttons on hover */}
+                <div className={`absolute top-0 ${isMe ? '-left-16' : '-right-16'} hidden group-hover:flex items-center gap-0.5`}>
+                  <button onClick={() => handleTogglePin(msg.id)} className="p-1 rounded text-gray-400 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title={msg.is_pinned ? '取消置顶' : '置顶'}>
+                    <Pin className="h-3 w-3" />
+                  </button>
+                  <button onClick={() => handleDelete(msg.id)} className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="删除">
+                    <Trash2 className="h-3 w-3" />
+                  </button>
                 </div>
               </div>
             );

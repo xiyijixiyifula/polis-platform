@@ -43,4 +43,39 @@ impl MessageHandler {
     pub async fn get_unread_count(&self, user_id: Uuid) -> Result<i64, AppError> {
         self.repo.get_unread_dm_count(user_id).await
     }
+
+    /// 删除私信
+    pub async fn delete_message(&self, msg_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        self.repo.delete_direct_message(msg_id, user_id).await
+    }
+
+    /// 置顶/取消置顶消息
+    pub async fn toggle_pin_message(&self, msg_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        self.repo.toggle_pin_message(msg_id, user_id).await
+    }
+
+    /// 搜索私信
+    pub async fn search_messages(&self, user_id: Uuid, other_user_id: Option<Uuid>, q: &str, limit: i64) -> Result<Vec<DirectMessage>, AppError> {
+        self.repo.search_direct_messages(user_id, other_user_id, q, limit).await
+    }
+
+    /// 静音对话
+    pub async fn mute_conversation(&self, user_id: Uuid, muted_user_id: Uuid) -> Result<(), AppError> {
+        self.repo.mute_conversation(user_id, muted_user_id).await
+    }
+
+    /// 取消静音
+    pub async fn unmute_conversation(&self, user_id: Uuid, muted_user_id: Uuid) -> Result<(), AppError> {
+        self.repo.unmute_conversation(user_id, muted_user_id).await
+    }
+
+    /// 是否已静音
+    pub async fn is_muted(&self, user_id: Uuid, muted_user_id: Uuid) -> Result<bool, AppError> {
+        self.repo.is_conversation_muted(user_id, muted_user_id).await
+    }
+
+    /// 获取已静音列表
+    pub async fn get_muted_list(&self, user_id: Uuid) -> Result<Vec<Uuid>, AppError> {
+        self.repo.get_muted_conversations(user_id).await
+    }
 }

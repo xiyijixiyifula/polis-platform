@@ -539,6 +539,8 @@ export interface DirectMessage {
   receiver_id: string;
   content: string;
   is_read: boolean;
+  is_pinned: boolean;
+  is_deleted: boolean;
   created_at: string;
 }
 
@@ -575,4 +577,24 @@ export const messages = {
   /** 获取未读私信数量 */
   getUnreadCount: () =>
     request<number>('/messages/unread-count'),
+
+  /** 删除与某用户的对话 */
+  deleteConversation: (userId: string) =>
+    request<{ deleted: boolean }>(`/messages/${userId}`, { method: 'DELETE' }),
+
+  /** 置顶/取消置顶消息 */
+  togglePin: (msgId: string) =>
+    request<{ pinned: boolean }>(`/messages/${msgId}/pin`, { method: 'POST' }),
+
+  /** 搜索私信 */
+  search: (q: string, userId?: string, pageSize?: number) =>
+    request<DirectMessage[]>(`/messages/search?q=${encodeURIComponent(q)}${userId ? '&user_id=' + userId : ''}&page_size=${pageSize || 20}`),
+
+  /** 静音对话 */
+  muteConversation: (userId: string) =>
+    request<{ muted: boolean }>(`/messages/conversations/${userId}/mute`, { method: 'POST' }),
+
+  /** 取消静音对话 */
+  unmuteConversation: (userId: string) =>
+    request<{ muted: boolean }>(`/messages/conversations/${userId}/mute`, { method: 'DELETE' }),
 };

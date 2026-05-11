@@ -26,6 +26,9 @@ function FeedLayout() {
   const [activeTab, setActiveTab] = useState('all');
   const [trendingSpaces, setTrendingSpaces] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [unreadDm, setUnreadDm] = useState(0);
+  const [unreadNotif, setUnreadNotif] = useState(0);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -33,6 +36,16 @@ function FeedLayout() {
     const stored = localStorage.getItem('polis_user');
     if (stored) {
       try { setCurrentUser(JSON.parse(stored)); } catch {}
+    }
+    // Fetch sidebar badge counts
+    const token = localStorage.getItem('polis_access_token');
+    if (token) {
+      fetch('/api/messages/unread-count', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(d => { if (d.code === 0) setUnreadDm(d.data || 0); }).catch(() => {});
+      fetch('/api/notifications/unread-count', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(d => { if (d.code === 0) setUnreadNotif(d.data || 0); }).catch(() => {});
+      fetch('/api/bookmarks', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json()).then(d => { if (d.code === 0 && Array.isArray(d.data)) setBookmarkCount(d.data.length); }).catch(() => {});
     }
   }, []);
 
@@ -137,7 +150,7 @@ function FeedLayout() {
             {/* Navigation */}
             <nav className="flex-1 space-y-1">
               {[
-                { icon: Home, label: '首页', href: '/', active: true },
+                { icon: Home, label: '首页', href: '/' },
                 { icon: Compass, label: '探索', href: '/explore' },
                 { icon: Bell, label: '通知', href: '/notifications' },
                 { icon: Mail, label: '消息', href: '/messages' },
@@ -148,10 +161,23 @@ function FeedLayout() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className={'nav-item flex items-center gap-4 px-3 py-3 rounded-full transition-colors text-lg ' + (item.active ? 'active' : '')}
+                  className="nav-item flex items-center gap-4 px-3 py-3 rounded-full transition-all text-lg glass-btn"
                 >
                   <item.icon className="h-6 w-6 shrink-0" />
                   <span className="font-medium">{item.label}</span>
+                  {item.label === '消息' && unreadDm > 0 && (
+                    <span className="ml-auto h-5 min-w-[20px] flex items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1.5">
+                      {unreadDm > 99 ? '99+' : unreadDm}
+                    </span>
+                  )}
+                  {item.label === '通知' && unreadNotif > 0 && (
+                    <span className="ml-auto h-5 min-w-[20px] flex items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1.5">
+                      {unreadNotif > 99 ? '99+' : unreadNotif}
+                    </span>
+                  )}
+                  {item.label === '收藏' && bookmarkCount > 0 && (
+                    <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{bookmarkCount}</span>
+                  )}
                 </Link>
               ))}
             </nav>
@@ -365,28 +391,28 @@ function FeedLayout() {
             </form>
 
             {/* Trending Topics */}
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl overflow-hidden">
-              <h3 className="px-4 pt-4 pb-2 text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <div className="glass-card p-4 overflow-hidden">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
                 <TrendingUp className="h-5 w-5 text-primary-500" />
                 热门趋势
               </h3>
-              <div className="px-4 py-6 text-center text-gray-400 dark:text-gray-500">
+              <div className="text-center text-gray-400 dark:text-gray-500 py-4">
                 <p className="text-sm">成为第一个发帖的人，引领社区趋势 🚀</p>
               </div>
             </div>
 
             {/* Recommended Communities */}
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl overflow-hidden">
-              <h3 className="px-4 pt-4 pb-2 text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <div className="glass-card p-4 overflow-hidden">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
                 <Users className="h-5 w-5 text-primary-500" />
                 推荐社区
               </h3>
-              <div className="divide-y divide-gray-200/50 dark:divide-gray-800/50">
+              <div className="divide-y divide-black/5 dark:divide-white/5">
                 {trendingSpaces.length > 0 ? (
                   trendingSpaces.map((space: any) => {
                     const vis = getSpaceVisual(space.namespace || '');
                     return (
-                    <Link key={space.id} href={'/space/' + space.namespace} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <Link key={space.id} href={'/space/' + space.namespace} className="flex items-center gap-3 px-2 py-3 hover:bg-white/30 dark:hover:bg-white/5 transition-colors rounded-lg">
                       <div className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center overflow-hidden" style={{ background: vis.gradient }}>
                         {space.icon_url ? (
                           <img src={space.icon_url} alt="" className="h-full w-full rounded-xl object-cover" />
@@ -402,7 +428,7 @@ function FeedLayout() {
                     )})
                 ) : (
                   [...Array(3)].map((_, i) => (
-                    <div key={i} className="px-4 py-3 animate-pulse">
+                    <div key={i} className="px-2 py-3 animate-pulse">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-gray-200 dark:bg-gray-700" />
                         <div className="flex-1">
@@ -413,7 +439,7 @@ function FeedLayout() {
                     </div>
                   ))
                 )}
-                <Link href="/explore" className="block px-4 py-3 text-sm text-primary-600 dark:text-primary-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <Link href="/explore" className="block px-2 py-3 text-sm text-primary-600 dark:text-primary-400 hover:bg-white/30 dark:hover:bg-white/5 transition-colors rounded-lg">
                   显示更多
                 </Link>
               </div>

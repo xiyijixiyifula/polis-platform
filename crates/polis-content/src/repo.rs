@@ -1352,4 +1352,116 @@ impl ContentRepo {
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
 
+    // ===== 私信增强 =====
+
+    /// 删除私信（软删除）
+    pub async fn delete_direct_message(&self, msg_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        let affected = sqlx::query(
+            "UPDATE direct_messages SET is_deleted = TRUE WHERE id = $1 AND (sender_id = $2 OR receiver_id = $2)"
+        )
+        .bind(msg_id).bind(user_id)
+        .execute(&self.pool).await?
+        .rows_affected();
+        if affected == 0 {
+            return Err(AppError::NotFound("Message not found".to_string()));
+        }
+        Ok(())
+    }
+
+    /// 置顶/取消置顶消息（切换 is_pinned）
+    pub async fn toggle_pin_message(&self, msg_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let row: (bool,) = sqlx::query_as(
+            "UPDATE direct_messages SET is_pinned = NOT is_pinned WHERE id = $1 AND (sender_id = $2 OR receiver_id = $2) RETURNING is_pinned"
+        )
+        .bind(msg_id).bind(user_id)
+        .fetch_optional(&self.pool).await?
+        .ok_or(AppError::NotFound("Message not found".to_string()))?;
+        Ok(row.0)
+    }
+
+    /// 获取置顶消息列表
+    pub async fn get_pinned_messages(&self, user_id: Uuid, other_user_id: Uuid) -> Result<Vec<Uuid>, AppError> {
+        let rows: Vec<(Uuid,)> = sqlx::query_as(
+            "SELECT id FROM direct_messages WHERE is_pinned = TRUE AND is_deleted = FALSE AND ((sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)) ORDER BY created_at ASC"
+        )
+        .bind(user_id).bind(other_user_id)
+        .fetch_all(&self.pool).await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    /// 搜索对话消息
+    pub async fn search_direct_messages(&self, user_id: Uuid, other_user_id: Option<Uuid>, q: &str, limit: i64) -> Result<Vec<DirectMessage>, AppError> {
+        let pattern = format!("%{}%", q);
+        let msgs = if let Some(ouid) = other_user_id {
+            sqlx::query_as::<_, DirectMessage>(
+                "SELECT * FROM direct_messages WHERE is_deleted = FALSE AND content ILIKE $1 AND ((sender_id = $2 AND receiver_id = $3) OR (sender_id = $3 AND receiver_id = $2)) ORDER BY created_at DESC LIMIT $4"
+            )
+            .bind(&pattern).bind(user_id).bind(ouid).bind(limit)
+            .fetch_all(&self.pool).await?
+        } else {
+            sqlx::query_as::<_, DirectMessage>(
+                "SELECT * FROM direct_messages WHERE is_deleted = FALSE AND content ILIKE $1 AND (sender_id = $2 OR receiver_id = $2) ORDER BY created_at DESC LIMIT $3"
+            )
+            .bind(&pattern).bind(user_id).bind(limit)
+            .fetch_all(&self.pool).await?
+        };
+        Ok(msgs)
+    }
+
+    /// 静音对话
+    pub async fn mute_conversation(&self, user_id: Uuid, muted_user_id: Uuid) -> Result<(), AppError> {
+        sqlx::query(
+            "INSERT INTO user_conversation_mutes (user_id, muted_user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
+        )
+        .bind(user_id).bind(muted_user_id)
+        .execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 取消静音对话
+    pub async fn unmute_conversation(&self, user_id: Uuid, muted_user_id: Uuid) -> Result<(), AppError> {
+        sqlx::query(
+            "DELETE FROM user_conversation_mutes WHERE user_id = $1 AND muted_user_id = $2"
+        )
+        .bind(user_id).bind(muted_user_id)
+        .execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 检查对话是否已静音
+    pub async fn is_conversation_muted(&self, user_id: Uuid, muted_user_id: Uuid) -> Result<bool, AppError> {
+        let exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM user_conversation_mutes WHERE user_id = $1 AND muted_user_id = $2)"
+        )
+        .bind(user_id).bind(muted_user_id)
+        .fetch_one(&self.pool).await?;
+        Ok(exists)
+    }
+
+    /// 获取用户所有已静音对话
+    pub async fn get_muted_conversations(&self, user_id: Uuid) -> Result<Vec<Uuid>, AppError> {
+        let rows: Vec<(Uuid,)> = sqlx::query_as(
+            "SELECT muted_user_id FROM user_conversation_mutes WHERE user_id = $1"
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool).await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    // ===== 通知系统 =====
+
+    /// 创建通知
+    pub async fn create_notification(&self, user_id: Uuid, typ: &str, actor_id: Uuid, target_type: &str, target_id: Uuid, content: &str) -> Result<(), AppError> {
+        // 不给自己发通知
+        if user_id == actor_id {
+            return Ok(());
+        }
+        sqlx::query(
+            "INSERT INTO notifications (user_id, type, actor_id, target_type, target_id, content) VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(user_id).bind(typ).bind(actor_id).bind(target_type).bind(target_id).bind(content)
+        .execute(&self.pool).await?;
+        Ok(())
+    }
+
 }

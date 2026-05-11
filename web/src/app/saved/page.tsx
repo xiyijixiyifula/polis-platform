@@ -52,7 +52,7 @@ export default function SavedPage() {
       </h1>
 
       {bookmarks.length === 0 ? (
-        <div className="card py-16 text-center">
+        <div className="glass-card py-16 text-center">
           <BookOpen className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500 dark:text-gray-400">还没有收藏任何内容</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">浏览帖子时点击收藏按钮即可保存</p>
@@ -60,7 +60,7 @@ export default function SavedPage() {
       ) : (
         <div className="space-y-2">
           {bookmarks.map((b: any) => (
-            <div key={b.post_id || b.id} className="card flex items-center gap-3 py-3 px-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors group">
+            <div key={b.post_id || b.id} className="glass-card flex items-center gap-3 py-3 px-4 group">
               <Link href={`/post/${b.post_id || b.id}`} className="flex-1 min-w-0 flex items-center gap-3">
                 <Bookmark className="h-4 w-4 text-yellow-500 shrink-0" />
                 <div className="flex-1 min-w-0">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, ChevronRight, Pin, Star, Send } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
@@ -65,6 +65,9 @@ export default function NotificationsPage() {
 
     if (targetType === 'post' && targetId) {
       router.push(`/post/${targetId}`);
+    } else if (targetType === 'reference' && targetId) {
+      // Navigate to post detail page (reference relates to original post)
+      router.push(`/post/${targetId}`);
     } else if (targetType === 'user' && targetId) {
       router.push(`/profile/${n.actor?.username || ''}`);
     } else if (targetType === 'space' && targetId) {
@@ -77,6 +80,10 @@ export default function NotificationsPage() {
       case 'like': return <Heart className="h-4 w-4 text-red-500" />;
       case 'comment': return <MessageCircle className="h-4 w-4 text-blue-500" />;
       case 'follow': return <UserPlus className="h-4 w-4 text-green-500" />;
+      case 'pin': return <Pin className="h-4 w-4 text-amber-500" />;
+      case 'featured': return <Star className="h-4 w-4 text-purple-500" />;
+      case 'reference': return <Send className="h-4 w-4 text-cyan-500" />;
+      case 'reference_review': return <CheckCheck className="h-4 w-4 text-emerald-500" />;
       default: return <Bell className="h-4 w-4 text-gray-500" />;
     }
   };

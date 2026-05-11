@@ -235,8 +235,13 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/messages/conversations", get(get_conversations_route))
         .route("/api/messages/unread-count", get(get_unread_dm_count_route))
         .route("/api/messages/read", post(mark_messages_read_route))
+        .route("/api/messages/search", get(search_messages_route))
         .route("/api/messages/{user_id}", get(get_conversation_messages_route))
+        .route("/api/messages/{user_id}", delete(delete_conversation_route))
         .route("/api/messages", post(send_message_route))
+        .route("/api/messages/{msg_id}/pin", post(toggle_pin_message_route))
+        .route("/api/messages/conversations/{user_id}/mute", post(mute_conversation_route))
+        .route("/api/messages/conversations/{user_id}/mute", delete(unmute_conversation_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
     let share_routes = Router::new()
@@ -1371,4 +1376,69 @@ async fn get_unread_dm_count_route(
     let dm = MessageHandler::new(h.pool.clone());
     let count = dm.get_unread_count(uid).await?;
     Ok(json_ok(ApiResponse::success(count)))
+}
+
+/// DELETE /api/messages/{user_id} — 删除与某用户的所有消息（软删除）
+async fn delete_conversation_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(other_user_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    // Delete all messages between uid and other_user_id
+    sqlx::query(
+        "UPDATE direct_messages SET is_deleted = TRUE WHERE ((sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)) AND is_deleted = FALSE"
+    )
+    .bind(uid).bind(other_user_id)
+    .execute(&h.pool).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+/// POST /api/messages/{msg_id}/pin — 置顶/取消置顶消息
+async fn toggle_pin_message_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(msg_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let dm = MessageHandler::new(h.pool.clone());
+    let pinned = dm.toggle_pin_message(msg_id, uid).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"pinned": pinned}))))
+}
+
+/// GET /api/messages/search?q=xxx — 搜索私信
+async fn search_messages_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let q = params.get("q").cloned().unwrap_or_default();
+    if q.is_empty() {
+        return Err(AppError::Validation("搜索关键词不能为空".to_string()));
+    }
+    let other_user_id = params.get("user_id").and_then(|s| Uuid::parse_str(s).ok());
+    let limit: i64 = params.get("page_size").and_then(|s| s.parse().ok()).unwrap_or(20).min(50);
+    let dm = MessageHandler::new(h.pool.clone());
+    let msgs = dm.search_messages(uid, other_user_id, &q, limit).await?;
+    Ok(json_ok(ApiResponse::success(msgs)))
+}
+
+/// POST /api/messages/conversations/{user_id}/mute — 静音对话
+async fn mute_conversation_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(other_user_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let dm = MessageHandler::new(h.pool.clone());
+    dm.mute_conversation(uid, other_user_id).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"muted": true}))))
+}
+
+/// DELETE /api/messages/conversations/{user_id}/mute — 取消静音
+async fn unmute_conversation_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Path(other_user_id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let dm = MessageHandler::new(h.pool.clone());
+    dm.unmute_conversation(uid, other_user_id).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"muted": false}))))
 }

@@ -539,6 +539,13 @@ impl ContentHandler {
         }
 
         let pinned = self.repo.toggle_pin(post_id).await?;
+
+        if pinned {
+            let actor_name = self.find_user_name(user_id).await.unwrap_or_else(|| "有人".to_string());
+            let content = format!("{} 置顶了你的帖子", actor_name);
+            self.create_notification(post.author_id, "pin", Some(user_id), Some("post"), Some(post_id), &content).await;
+        }
+
         Ok(pinned)
     }
 
@@ -569,6 +576,13 @@ impl ContentHandler {
         }
 
         let featured = self.repo.toggle_featured(post_id).await?;
+
+        if featured {
+            let actor_name = self.find_user_name(user_id).await.unwrap_or_else(|| "有人".to_string());
+            let content = format!("{} 精选了你的帖子", actor_name);
+            self.create_notification(post.author_id, "featured", Some(user_id), Some("post"), Some(post_id), &content).await;
+        }
+
         Ok(featured)
     }
 
@@ -664,6 +678,14 @@ impl ContentHandler {
         }
 
         let ref_row = self.repo.create_reference(post_id, space_id, module_type, submitter_id).await?;
+
+        // 通知帖子作者：有人将你的内容投稿到其他社区
+        if post.author_id != submitter_id {
+            let actor_name = self.find_user_name(submitter_id).await.unwrap_or_else(|| "有人".to_string());
+            let content = format!("{} 将你的帖子投稿到了其他社区", actor_name);
+            self.create_notification(post.author_id, "reference", Some(submitter_id), Some("post"), Some(post_id), &content).await;
+        }
+
         Ok(ref_row)
     }
 
@@ -674,7 +696,15 @@ impl ContentHandler {
         status: &str,
         reviewer_id: Uuid,
     ) -> Result<PostReference, AppError> {
-        self.repo.review_reference(reference_id, status, reviewer_id).await
+        let ref_row = self.repo.review_reference(reference_id, status, reviewer_id).await?;
+
+        // 通知投稿者：你的投稿已被审核
+        let action_label = if status == "approved" { "通过" } else { "拒绝" };
+        let actor_name = self.find_user_name(reviewer_id).await.unwrap_or_else(|| "社区管理员".to_string());
+        let content = format!("{} {}了你的投稿", actor_name, action_label);
+        self.create_notification(ref_row.submitted_by, "reference_review", Some(reviewer_id), Some("reference"), Some(reference_id), &content).await;
+
+        Ok(ref_row)
     }
 
     /// 撤回引用

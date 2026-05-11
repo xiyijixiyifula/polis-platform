@@ -490,7 +490,7 @@ export default function UserProfilePage() {
               const spaceNs = space.namespace || '';
               const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : post.module_type === 'qa' ? '问答' : post.module_type === 'novel' ? '小说' : post.module_type === 'game' ? '游戏' : post.module_type === 'mini_app' ? '小程序' : '交流';
               return (
-                <div key={post.id} className="card p-4 group hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                <div key={post.id} className="glass-card p-4 group transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       {/* 去路：社区 → 模块 */}
