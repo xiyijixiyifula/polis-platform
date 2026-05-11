@@ -65,11 +65,7 @@ export default function TrendingPage() {
                           <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors truncate">
                             {space.title}
                           </h3>
-                          {space.is_root && (
-                            <span className="shrink-0 rounded bg-primary-100 dark:bg-primary-900/30 px-1.5 py-0.5 text-[10px] font-medium text-primary-700 dark:text-primary-400">
-                              根社区
-                            </span>
-                          )}
+                          {/* 根社区徽章已移除 */}
                         </div>
                         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">/{space.namespace}</p>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{space.description}</p>

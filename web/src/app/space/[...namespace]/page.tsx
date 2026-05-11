@@ -401,11 +401,7 @@ export default function SpacePage() {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{space.title}</h1>
-              {space.is_root && (
-                <span className="rounded bg-primary-100 dark:bg-primary-900/30 px-2 py-0.5 text-xs font-medium text-primary-700 dark:text-primary-400">
-                  根社区
-                </span>
-              )}
+              {/* 根社区徽章已移除 */}
             </div>
             {/* GitHub-style namespace breadcrumb */}
             <div className="mt-1 flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
@@ -1529,19 +1525,7 @@ export default function SpacePage() {
             )}
 
             {/* Clustered communities info */}
-            {space.is_root && (
-              <div className="card">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5" /> 同名社区集群
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  多个用户创建了同名社区 &quot;{communityName}&quot;，此处聚合展示相关内容索引。
-                </p>
-                <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                  格式: @用户/社区名，类似 GitHub 的 organization/repo 结构。
-                </p>
-              </div>
-            )}
+            {/* 同名社区集群面板已移除（不再使用根社区模型） */}
           </div>
         </aside>
       </div>

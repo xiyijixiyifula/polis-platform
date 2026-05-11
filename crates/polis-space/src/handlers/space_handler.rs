@@ -39,16 +39,6 @@ impl SpaceHandler {
             ));
         }
 
-        // 检查是否存在根社区
-        let root_space = self.repo.find_root_by_slug(&req.slug).await?;
-        let (is_root, root_space_id) = if let Some(ref root) = root_space {
-            // 已有根社区，创建用户子社区
-            (false, Some(root.id))
-        } else {
-            // 没有根社区，同时创建根社区和用户社区
-            (true, None)
-        };
-
         // 构建 namespace - GitHub 风格: username/slug
         let namespace = format!("{}/{}", username, req.slug);
 
@@ -72,36 +62,7 @@ impl SpaceHandler {
 
         let description = req.description.unwrap_or_default();
 
-        // 如果是根社区，先创建根社区
-        let root_id = if is_root {
-            let root = self
-                .repo
-                .create(
-                    &req.slug,
-                    &req.slug,
-                    None, // 根社区没有 owner
-                    true,
-                    None,
-                    &req.title,
-                    &description,
-                    &visibility,
-                    &enabled_modules,
-                )
-                .await?;
-
-            // 发布根社区创建事件
-            self.publish_event(subjects::SPACE_CREATED, serde_json::json!({
-                "space_id": root.id.to_string(),
-                "namespace": root.namespace,
-                "is_root": true,
-            })).await;
-
-            Some(root.id)
-        } else {
-            root_space_id
-        };
-
-        // 创建用户社区
+        // 直接创建用户社区（不再创建根社区）
         let space = self
             .repo
             .create(
@@ -109,7 +70,7 @@ impl SpaceHandler {
                 &req.slug,
                 Some(user_id),
                 false,
-                root_id,
+                None, // 不再关联根社区
                 &req.title,
                 &description,
                 &visibility,
@@ -128,8 +89,6 @@ impl SpaceHandler {
             "space_id": space.id.to_string(),
             "namespace": space.namespace,
             "owner_id": user_id.to_string(),
-            "is_root": false,
-            "root_space_id": root_id.map(|id: Uuid| id.to_string()),
         })).await;
 
         // 发布成员加入事件

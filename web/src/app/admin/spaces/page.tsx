@@ -68,7 +68,7 @@ export default function AdminSpacesPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100">{space.title}</h3>
-                  {space.is_root && <span className="text-[10px] bg-primary-100 dark:bg-primary-800 text-primary-700 dark:text-primary-300 px-1.5 py-0.5 rounded">根社区</span>}
+                  {/* 根社区徽章已移除 */}
                   <span className={`text-[10px] px-1.5 py-0.5 rounded ${
                     space.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                   }`}>{space.status}</span>
