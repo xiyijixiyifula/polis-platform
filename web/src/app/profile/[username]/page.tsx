@@ -139,9 +139,9 @@ export default function UserProfilePage() {
     })();
   }, [isSelf, username]);
 
-  // isSelf: 加载创作内容（我的帖子）
+  // isSelf: 加载创作内容（我的帖子 — 预加载以显示准确计数）
   useEffect(() => {
-    if (!isSelf || activeTab !== 'posts') return;
+    if (!isSelf) return;
     setContentsLoading(true);
     (async () => {
       try {
@@ -151,7 +151,7 @@ export default function UserProfilePage() {
       } catch {}
       setContentsLoading(false);
     })();
-  }, [isSelf, username, activeTab]);
+  }, [isSelf, username]);
 
   // 删除自己的帖子
   const handleDeletePost = async (postId: string, e: React.MouseEvent) => {
@@ -459,14 +459,16 @@ export default function UserProfilePage() {
                 <div key={post.id} className="card p-4 group hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 mb-1 flex-wrap">
+                      {/* 去路：社区 → 模块 */}
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 mb-1.5 flex-wrap">
+                        <span className="text-gray-300 dark:text-gray-600">📬</span>
                         <Link href={spaceNs ? `/space/${encodeURIComponent(spaceNs)}` : '#'}
-                          className="text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[180px]">
+                          className="font-medium text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[160px]">
                           {space.title || spaceNs || '未知社区'}
                         </Link>
-                        <span>·</span>
-                        <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">{moduleLabel}</span>
-                        <span>·</span>
+                        <span className="text-gray-300 dark:text-gray-600">›</span>
+                        <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs text-gray-600 dark:text-gray-400">{moduleLabel}</span>
+                        <span className="text-gray-300 dark:text-gray-600">·</span>
                         <span>{formatDate(post.created_at)}</span>
                       </div>
                       <Link href={`/post/${post.id}${spaceNs ? '?space=' + encodeURIComponent(spaceNs) : ''}`}>
