@@ -59,6 +59,8 @@ export default function SpacePage() {
 
   // Space ownership (must be declared before availableTabs — analytics tab depends on it)
   const [isOwner, setIsOwner] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   // Active tab - default to overview (GitHub style)
   const availableTabs = [
@@ -147,12 +149,29 @@ export default function SpacePage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem('polis_user');
-      if (stored && space?.owner_id) {
+      if (stored && space) {
         const me = JSON.parse(stored);
         setIsOwner(me.id === space.owner_id);
+        // 检查当前用户是否已是成员
+        const token = localStorage.getItem('polis_access_token');
+        if (token && namespace) {
+          fetch(`/api/spaces/${namespace}/members`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then(r => r.json())
+            .then(data => {
+              if (data.code === 0 && Array.isArray(data.data)) {
+                const found = data.data.some((m: any) =>
+                  (m.user?.id || m.user_id) === me.id
+                );
+                setIsMember(found);
+              }
+            })
+            .catch(() => {});
+        }
       }
     } catch {}
-  }, [space?.owner_id]);
+  }, [space?.owner_id, namespace]);
 
   const togglePin = useCallback(async (postId: string, isPinned: boolean) => {
     try {
@@ -430,13 +449,30 @@ export default function SpacePage() {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button className="btn-primary text-sm px-5 py-2" onClick={async () => {
-              const token = localStorage.getItem('polis_access_token');
-              if (!token) { alert('请先登录'); return; }
-              const res = await fetch(`/api/spaces/${namespace}/join`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
-              const data = await res.json();
-              alert(data.code === 0 ? '已加入社区！' : data.message || '操作失败');
-            }}>加入社区</button>
+            <button
+              className={`text-sm px-5 py-2 rounded-lg transition-colors ${
+                isOwner || isMember
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 cursor-default'
+                  : 'btn-primary'
+              }`}
+              disabled={isOwner || isMember || joining}
+              onClick={async () => {
+                if (isOwner || isMember) return;
+                const token = localStorage.getItem('polis_access_token');
+                if (!token) { alert('请先登录'); return; }
+                setJoining(true);
+                const res = await fetch(`/api/spaces/${namespace}/join`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+                const data = await res.json();
+                if (data.code === 0) {
+                  setIsMember(true);
+                } else {
+                  alert(data.message || '操作失败');
+                }
+                setJoining(false);
+              }}
+            >
+              {isOwner ? '我的社区' : isMember ? '✓ 已加入' : joining ? '加入中...' : '加入社区'}
+            </button>
             <button className="btn-secondary p-2 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
               <Share2 className="h-4 w-4" />
             </button>
