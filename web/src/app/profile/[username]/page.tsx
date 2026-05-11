@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, UserPlus, Users, UserCheck, MessageSquare } from 'lucide-react';
+import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { users, follow, type User, type FollowUser } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
+import { FeedItem } from '@/components/FeedItem';
 
 function FollowList({ users: list, loading, emptyText }: {
   users: FollowUser[];
@@ -52,6 +53,21 @@ export default function UserProfilePage() {
   const [listLoading, setListLoading] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
 
+  // isSelf-only tabs: spaces | bookmarks | likes
+  const [activeTab, setActiveTab] = useState('spaces');
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [likedPosts, setLikedPosts] = useState<any[]>([]);
+  const [bookmarksLoading, setBookmarksLoading] = useState(false);
+  const [likedLoading, setLikedLoading] = useState(false);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('polis_access_token');
+    return {
+      Authorization: token ? 'Bearer ' + token : '',
+      'Content-Type': 'application/json',
+    };
+  };
+
   useEffect(() => {
     if (!username) return;
     setLoading(true);
@@ -84,7 +100,6 @@ export default function UserProfilePage() {
         });
         const spData = await spRes.json();
         if (spData.code === 0 && spData.data) {
-          // 显示用户拥有和加入的所有社区
           setUserSpaces(spData.data);
         }
       } catch {}
@@ -93,6 +108,34 @@ export default function UserProfilePage() {
       setLoading(false);
     })();
   }, [username]);
+
+  // isSelf: 加载收藏
+  useEffect(() => {
+    if (!isSelf) return;
+    setBookmarksLoading(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/bookmarks', { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (data.code === 0 && data.data) setBookmarks(data.data);
+      } catch {}
+      setBookmarksLoading(false);
+    })();
+  }, [isSelf, username]);
+
+  // isSelf: 加载点赞
+  useEffect(() => {
+    if (!isSelf) return;
+    setLikedLoading(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/liked-posts', { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (data.code === 0 && data.data) setLikedPosts(data.data);
+      } catch {}
+      setLikedLoading(false);
+    })();
+  }, [isSelf, username]);
 
   const loadFollowCounts = async () => {
     try {
@@ -150,6 +193,27 @@ export default function UserProfilePage() {
     setFollowLoading(false);
   };
 
+  // 退出社区
+  const handleLeaveSpace = async (namespace: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('确定要退出这个社区吗？')) return;
+    try {
+      const res = await fetch('/api/spaces/' + encodeURIComponent(namespace) + '/leave', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setUserSpaces(prev => prev.filter((s: any) => s.namespace !== namespace));
+      } else {
+        alert(data.message || '操作失败');
+      }
+    } catch (e: any) {
+      alert(e?.message || '操作失败');
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
@@ -172,8 +236,25 @@ export default function UserProfilePage() {
     );
   }
 
+  // 分离拥有的社区和加入的社区
+  const ownedSpaces = userSpaces.filter((sp: any) => sp.namespace?.startsWith(username + '/'));
+  const joinedSpaces = userSpaces.filter((sp: any) => !sp.namespace?.startsWith(username + '/'));
+
+  const spaceCardData = (sp: any) => ({
+    id: sp.id,
+    namespace: sp.namespace,
+    title: sp.title,
+    description: sp.description || '',
+    icon_url: sp.icon_url || null,
+    member_count: sp.member_count || 0,
+    post_count: sp.post_count || 0,
+    is_root: sp.is_root || false,
+    owner_id: sp.owner_id || null,
+  });
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
+      {/* 用户信息卡片 */}
       <div className="card">
         <div className="flex flex-col sm:flex-row items-start gap-6">
           <div className="h-20 w-20 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-3xl">
@@ -212,6 +293,13 @@ export default function UserProfilePage() {
                   </button>
                 </div>
               )}
+              {isSelf && (
+                <div className="flex items-center gap-2">
+                  <Link href="/settings" className="btn-secondary text-sm px-4 py-1.5">
+                    编辑资料
+                  </Link>
+                </div>
+              )}
             </div>
             {user.bio && (
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{user.bio}</p>
@@ -236,6 +324,7 @@ export default function UserProfilePage() {
         </div>
       </div>
 
+      {/* 粉丝/关注列表 */}
       {showFollowers && (
         <div className="mt-4 card">
           <div className="flex items-center justify-between mb-3">
@@ -260,32 +349,118 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {userSpaces.length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            社区 ({userSpaces.length})
-          </h2>
-          <div className="space-y-3">
-            {userSpaces.map((sp: any) => (
-              <SpaceCard key={sp.id || sp.namespace} space={{
-                id: sp.id,
-                namespace: sp.namespace,
-                title: sp.title,
-                description: sp.description || '',
-                icon_url: sp.icon_url || null,
-                member_count: sp.member_count || 0,
-                post_count: sp.post_count || 0,
-                is_root: sp.is_root || false,
-                owner_id: sp.owner_id || null,
-              }} />
+      {/* isSelf: 选项卡 */}
+      {isSelf && (
+        <div className="mt-6 mb-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex gap-0 overflow-x-auto">
+            {(['spaces', 'bookmarks', 'likes'] as const).map((tab) => (
+              <button key={tab} onClick={() => setActiveTab(tab)}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}>
+                {{spaces: `社区 (${userSpaces.length})`, bookmarks: `收藏 (${bookmarks.length})`, likes: `点赞 (${likedPosts.length})`}[tab]}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      {!loading && userSpaces.length === 0 && (
-        <div className="mt-6 card py-8 text-center text-gray-500 dark:text-gray-400">
-          <p className="text-sm">该用户还没有加入任何社区</p>
+      {/* isSelf: 收藏 Tab */}
+      {isSelf && activeTab === 'bookmarks' && (
+        bookmarksLoading ? (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+        ) : bookmarks.length > 0 ? (
+          <div className="card divide-y divide-gray-100 dark:divide-gray-800">
+            {bookmarks.map((item: any) => (
+              <FeedItem key={item.id} item={item} />
+            ))}
+          </div>
+        ) : (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+            <Bookmark className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">还没有收藏过帖子</p>
+          </div>
+        )
+      )}
+
+      {/* isSelf: 点赞 Tab */}
+      {isSelf && activeTab === 'likes' && (
+        likedLoading ? (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+        ) : likedPosts.length > 0 ? (
+          <div className="card divide-y divide-gray-100 dark:divide-gray-800">
+            {likedPosts.map((item: any) => (
+              <FeedItem key={item.id} item={item} />
+            ))}
+          </div>
+        ) : (
+          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+            <Heart className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">还没有点赞过帖子</p>
+          </div>
+        )
+      )}
+
+      {/* 社区列表（自己：Tab模式；他人：直接显示） */}
+      {(isSelf ? activeTab === 'spaces' : true) && (
+        <div className="mt-6">
+          {/* 创建的社区 */}
+          {ownedSpaces.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
+                我创建的社区 ({ownedSpaces.length})
+              </h3>
+              <div className="space-y-3">
+                {ownedSpaces.map((sp: any) => (
+                  <SpaceCard key={sp.id || sp.namespace} space={spaceCardData(sp)} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 加入的社区 */}
+          {joinedSpaces.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
+                我加入的社区 ({joinedSpaces.length})
+              </h3>
+              <div className="space-y-3">
+                {joinedSpaces.map((sp: any) => (
+                  <div key={sp.id || sp.namespace} className="flex items-center gap-2 group">
+                    <div className="flex-1">
+                      <SpaceCard space={spaceCardData(sp)} />
+                    </div>
+                    {isSelf && (
+                      <button
+                        onClick={(e) => handleLeaveSpace(sp.namespace, e)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 inline-flex items-center gap-1 text-xs px-3 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium"
+                        title="退出社区"
+                      >
+                        <LogOut className="h-3.5 w-3.5" /> 退出
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 空状态 */}
+          {userSpaces.length === 0 && (
+            <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+              {isSelf ? (
+                <>
+                  <div className="text-3xl mb-2">🏛️</div>
+                  <p className="text-sm">还没有加入任何社区</p>
+                  <Link href="/create" className="mt-2 inline-block text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                    创建你的第一个社区 →
+                  </Link>
+                </>
+              ) : (
+                <p className="text-sm">该用户还没有加入任何社区</p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

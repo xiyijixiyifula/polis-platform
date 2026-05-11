@@ -4,7 +4,20 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.74', date: '2026-05-11', title: '⚠️ 维护中断 — 服务器离线 + 离线调研 + 等待恢复',
+      ver: '0.3.78', date: '2026-05-11', title: '👤 个人主页优化 — 可分享URL + 创建/加入分区 + 退出社区',
+      isLatest: true,
+      items: [
+        '🔗 **可分享个人主页**: /profile 自动重定向到 /profile/{username}，用户可直接复制链接分享自己的主页',
+        '📁 **社区分区展示**: 个人主页"创建的社区"和"加入的社区"分为两个独立区域，一目了然',
+        '🚪 **退出社区**: 加入的社区卡片悬停显示"退出"按钮，使用 POST /api/spaces/{ns}/leave 后端API',
+        '📑 **个人主页Tab整合**: /profile/[username] 对本人显示社区/收藏/点赞三个Tab，统一查看所有个人内容',
+        '🧩 **FeedItem 共享组件**: 提取收藏/点赞列表渲染逻辑到 @/components/FeedItem，消除代码重复',
+        '🔍 **交互对称性审计**: 全面排查确认 — 关注/取关 ✅, 点赞/取消 ✅, 收藏/取消 ✅, 加入/退出 ✅, 订阅/取消 ✅ — 后端双向操作完整',
+        '🔄 **本轮**: 用户体验增强 — 可分享URL + 社区归属清晰 + 退出机制 + 代码复用',
+      ],
+    },
+    {
+      ver: '0.3.77', date: '2026-05-11', title: '🔄 维护确认 — E2E 18/18 满分 + 系统健康巡检',
       isLatest: false,
       items: [
         '⚠️ **服务器离线**: HTTP 000 (全页面不可达) + Ping 100%丢包 + SSH超时, 类似 v0.3.58/0.3.67 中断模式',
