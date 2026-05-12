@@ -446,17 +446,39 @@ export const posts = {
       body: JSON.stringify({ body, ...(parentId ? { parent_id: parentId } : {}) }),
     }),
 
+  /** 直接通过帖子ID评论（无需namespace，v0.3.22 RESTful 别名） */
+  createCommentById: (postId: string, body: string, parentId?: string) =>
+    request<Comment>(`/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body, ...(parentId ? { parent_id: parentId } : {}) }),
+    }),
+
   likeComment: (commentId: string) =>
     request<boolean>(`/comments/${commentId}/like`, { method: 'POST' }),
 
   like: (namespace: string, id: string) =>
     request<boolean>(`/spaces/${namespace}/posts/${id}/like`, { method: 'POST' }),
 
+  /** 直接通过帖子ID点赞（无需namespace，v0.3.22 RESTful 别名） */
+  likeById: (id: string) =>
+    request<{ liked: boolean; post_id: string }>(`/posts/${id}/like`, { method: 'POST' }),
+
   bookmark: (namespace: string, id: string) =>
     request<boolean>(`/spaces/${namespace}/posts/${id}/bookmark`, { method: 'POST' }),
 
+  /** 直接通过帖子ID收藏（无需namespace，v0.3.22 RESTful 别名） */
+  bookmarkById: (id: string) =>
+    request<{ bookmarked: boolean; post_id: string }>(`/posts/${id}/bookmark`, { method: 'POST' }),
+
   report: (namespace: string, id: string, reason: string) =>
     request<void>(`/spaces/${namespace}/posts/${id}/report`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+
+  /** 直接通过帖子ID举报（无需namespace） */
+  reportById: (id: string, reason: string) =>
+    request<{ report_id: string; message: string }>(`/posts/${id}/report`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
@@ -597,4 +619,11 @@ export const messages = {
   /** 取消静音对话 */
   unmuteConversation: (userId: string) =>
     request<{ muted: boolean }>(`/messages/conversations/${userId}/mute`, { method: 'DELETE' }),
+};
+
+/** 联系人（互相关注的微信式通讯录） */
+export const contacts = {
+  /** 获取互相关注的联系人列表 */
+  getMutual: () =>
+    request<Array<{ id: string; username: string; display_name: string; is_mutual: boolean }>>('/contacts/mutual'),
 };

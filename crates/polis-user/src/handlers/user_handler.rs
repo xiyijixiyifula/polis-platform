@@ -324,4 +324,24 @@ impl UserHandler {
         ).bind(username).fetch_all(&self.repo.pool).await?;
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
+
+    /// 获取互相关注的联系人（WeChat-style contacts: 我关注了TA 且 TA关注了我）
+    pub async fn get_mutual_contacts(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows = sqlx::query_as::<_, (serde_json::Value,)>(
+            r#"SELECT json_build_object(
+                'id', u.id,
+                'username', u.username,
+                'display_name', u.display_name,
+                'is_mutual', true
+               )
+               FROM follows f1
+               JOIN follows f2 ON f1.followee_id = f2.follower_id AND f1.follower_id = f2.followee_id
+               JOIN users u ON f1.followee_id = u.id
+               WHERE f1.follower_id = $1
+                 AND f1.followee_type = 'user'
+                 AND f2.followee_type = 'user'
+               ORDER BY u.display_name"#
+        ).bind(user_id).fetch_all(&self.repo.pool).await?;
+        Ok(rows.into_iter().map(|r| r.0).collect())
+    }
 }

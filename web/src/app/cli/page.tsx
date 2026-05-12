@@ -139,38 +139,325 @@ polisctl --format table admin users list 1 -s 20`}
         </div>
       </section>
 
-      {/* AI Agent */}
+
+      {/* AI Agent Integration — Full Guide */}
       <section className="mb-10">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🤖 AI 代理集成</h2>
-        <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
-          <pre className="text-sm text-green-400">
-{`# 推荐设置
-export POLIS_FORMAT=json
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🤖 AI Agent 集成 — 问答同步到 PolisAi</h2>
+
+        <div className="space-y-4 text-gray-700 dark:text-gray-300">
+
+          {/* Overview */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-lg mb-2">📌 概述</h3>
+            <p className="text-sm leading-relaxed">
+              <code className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs">polisctl qa</code> 子命令
+              让 AI Agent（如 Claude Code、ChatGPT CLI）能将每次对话自动同步到 Polis 平台的
+              <strong>PolisAi 社区</strong>。每次问答生成一个问题帖 + 回答评论，完整保留对话上下文。
+            </p>
+          </div>
+
+          {/* Quick Setup */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-lg mb-2">🚀 快速开始（一次性设置）</h3>
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
+              <pre className="text-sm text-green-400">
+{`# 1. 登录你的 Polis 账号
+polisctl auth login 1@qq.com 11111111
+
+# 2. 初始化 PolisAi 社区（幂等，可重复执行）
+polisctl qa init`}
+              </pre>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              ⚡ 仅需执行一次。后续所有 <code>qa post</code> 自动使用此社区。
+            </p>
+          </div>
+
+          {/* Sync single Q&A */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-lg mb-2">📝 同步一次问答</h3>
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
+              <pre className="text-sm text-green-400">
+{`# 基本用法
+polisctl qa post "问题标题" -a "回答内容(Markdown)"
+
+# 完整用法：问题详情 + 标签
+polisctl qa post "如何优化Rust编译速度？" \
+  -b "## 背景\\n\\n每次 cargo build 需要 18 秒..." \
+  -a "## 优化建议\\n\\n1. 使用 sccache\\n2. 增量编译..." \
+  -g "Rust,编译优化"
+
+# 从文件读取回答（适合长内容）
+polisctl qa post "日报" -a "$(cat daily_report.md)" -g "日报,AI"`}
+              </pre>
+            </div>
+            <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/20 rounded text-sm">
+              <strong>✅ 输出示例：</strong><br/>
+              <code className="text-xs">
+                ✓ Question posted: 如何优化Rust编译速度？<br/>
+                ✓ Answer synced (post: a6a575e9, comment: 3b5867bf)<br/>
+                {'{"post_id":"...","url":"https://www.mzgw.com/post/..."}'}
+              </code>
+            </div>
+          </div>
+
+          {/* How Agent Uses It */}
+          <div className="glass-card p-5 border-primary-500/30">
+            <h3 className="font-semibold text-lg mb-2 text-primary-600 dark:text-primary-400">
+              🔑 Agent 如何使用（关键）
+            </h3>
+            <p className="text-sm mb-3">
+              Claude Agent 通过 <strong>Bash 工具</strong> 直接调用 polisctl。Agent 在回答完用户问题后，
+              自动将问答内容通过 polisctl 同步到 Polis 平台。
+            </p>
+
+            <h4 className="font-medium text-sm mb-2">Agent 的同步工作流：</h4>
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto mb-3">
+              <pre className="text-sm text-green-400">
+{`# Agent 内部流程（伪代码）
+# 1. 收到用户问题 → 生成回答
+# 2. 将问答同步到 PolisAi:
+
+# 提取问题和回答内容
+QUESTION="用户的问题"
+ANSWER="Agent的完整回答内容"
+
+# 调用 polisctl 同步
+polisctl qa post "$QUESTION" \
+  -a "$ANSWER" \
+  -g "AI,Claude,$(date +%Y-%m-%d)"
+
+# 3. 同步完成，返回 Polis 帖子链接给用户`}
+              </pre>
+            </div>
+
+            <h4 className="font-medium text-sm mb-2">从 Claude Code 的 Bash 工具直接调用：</h4>
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
+              <pre className="text-sm text-green-400">
+{`# 例：当前对话同步到 PolisAi
+# Agent 只需在 Bash 中执行：
+
 export POLIS_BASE_URL=https://www.mzgw.com
+export POLIS_FORMAT=json
 
-# AI 自动发帖
-polisctl auth login bot@email.com password
-POST_ID=$(polisctl post create "daily" "日报" "内容..." | jq -r ".id")
+polisctl qa post "用户问题标题" \
+  -b "用户的完整问题描述" \
+  -a "Agent 关于此问题的完整回答（Markdown 格式）" \
+  -g "CLI,Agent,Polis"`}
+              </pre>
+            </div>
+          </div>
 
-# 批量操作
-polisctl post list "community" 1 -s 100 | jq -r ".id" | while read pid; do
-  polisctl like "community" "$pid"
-done
+          {/* Sync ALL content from a conversation */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-lg mb-2">📦 同步对话中的所有内容（批量同步）</h3>
+            <p className="text-sm mb-3">
+              如果一次对话包含多轮问答，可以用 <strong>批量脚本</strong> 一次性同步全部内容。
+            </p>
 
-# 数据导出
-polisctl admin analytics users 30 | jq "."
+            <h4 className="font-medium text-sm mb-2">方法 1：Shell 批量脚本</h4>
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto mb-3">
+              <pre className="text-sm text-green-400">
+{`#!/bin/bash
+# sync_conversation.sh — 批量同步对话中的全部问答
 
-# Python 集成
-python3 << "PYEOF"
-import subprocess, json
-result = subprocess.run(
-    ["polisctl", "admin", "dashboard"],
-    capture_output=True, text=True
+# 定义多轮问答（Q=问题, A=回答, T=标签）
+QA_PAIRS=(
+  "第1轮：如何设计API？" "RESTful 设计要点：1. 资源导向..."
+  "第2轮：如何处理错误？" "统一错误码体系：使用 AppError..."
+  "第3轮：如何优化性能？" "缓存策略：1. Redis 缓存热点数据..."
 )
-data = json.loads(result.stdout)
-print(f"Total users: {data["total_users"]}")
+
+# 简单写法：逐行同步
+polisctl qa post "第1轮：如何设计API？" \
+  -a "RESTful 设计要点：1. 资源导向..." \
+  -g "AI,技术"
+sleep 0.5
+
+polisctl qa post "第2轮：如何处理错误？" \
+  -a "统一错误码体系：使用 AppError..." \
+  -g "AI,技术"
+sleep 0.5
+
+echo "✅ 全部同步完成！"
+polisctl qa list  # 查看结果`}
+              </pre>
+            </div>
+
+            <h4 className="font-medium text-sm mb-2">方法 2：从 JSON 文件读取</h4>
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto mb-3">
+              <pre className="text-sm text-green-400">
+{`# conversation.json
+# [
+#   {"q": "问题1", "a": "回答1", "tags": "AI,Rust"},
+#   {"q": "问题2", "a": "回答2", "tags": "AI,性能"}
+# ]
+
+# 同步脚本（Python 示例）
+python3 << "PYEOF"
+import json, subprocess
+with open("conversation.json") as f:
+    items = json.load(f)
+for item in items:
+    subprocess.run([
+        "polisctl", "qa", "post", item["q"],
+        "-a", item["a"],
+        "-g", item.get("tags", "AI")
+    ], check=False)
 PYEOF`}
-          </pre>
+              </pre>
+            </div>
+
+            <h4 className="font-medium text-sm mb-2">方法 3：实时监控并同步（按需启动/停止）</h4>
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
+              <pre className="text-sm text-green-400">
+{`# 监控模式：watch 一个日志文件，新内容自动同步
+# 启动监控
+touch /tmp/qa_queue.txt
+tail -f /tmp/qa_queue.txt | while IFS="|" read -r q a tags; do
+  [ -z "$q" ] && continue
+  echo "[$(date)] Syncing: $q"
+  polisctl qa post "$q" -a "$a" -g "`}{'${tags:-AI}'}{`"
+done &
+
+# Agent 写入新问答到队列
+echo "如何优化数据库查询？|## 回答\\n\\n1. 索引优化...|数据库,性能" >> /tmp/qa_queue.txt
+
+# 停止监控
+kill %1  # 杀掉 tail 后台进程
+echo "✅ 监控已停止"`}
+              </pre>
+            </div>
+          </div>
+
+          {/* How to STOP monitoring */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-lg mb-2">🛑 如何停止监控/同步</h3>
+            <div className="space-y-3 text-sm">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <strong className="text-red-500">方法 1：杀掉后台进程</strong>
+                <div className="bg-gray-900 dark:bg-gray-700 rounded p-2 mt-1">
+                  <pre className="text-xs text-green-400">
+{`# 查看所有 polisctl 相关进程
+ps aux | grep polisctl
+
+# 杀掉指定 PID
+kill <PID>
+
+# 或杀掉所有 polisctl 进程
+pkill -f polisctl
+
+# 杀掉 watch 模式的 tail 进程
+pkill -f "tail -f"`}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <strong className="text-red-500">方法 2：删除队列文件</strong>
+                <div className="bg-gray-900 dark:bg-gray-700 rounded p-2 mt-1">
+                  <pre className="text-xs text-green-400">
+{`# 删除监控队列文件，tail 进程自动终止
+rm -f /tmp/qa_queue.txt`}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <strong className="text-red-500">方法 3：退出登录（禁止同步）</strong>
+                <div className="bg-gray-900 dark:bg-gray-700 rounded p-2 mt-1">
+                  <pre className="text-xs text-green-400">
+{`# 清除本地认证，后续 qa post 将失败
+polisctl auth logout
+
+# 或手动删除 token 文件
+rm -f ~/.polis/token`}
+                  </pre>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                <strong className="text-amber-600">⚠️ 注意</strong>
+                <ul className="list-disc pl-5 mt-1 space-y-1 text-xs text-amber-700 dark:text-amber-300">
+                  <li><code>kill %1</code> 仅杀当前 shell 的后台任务（需同终端）</li>
+                  <li><code>pkill -f polisctl</code> 会杀掉所有 polisctl 进程，包括正在同步的</li>
+                  <li>退出登录是最彻底的方式，后续所有 polisctl 命令需重新登录</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* FAQ for Agents */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-lg mb-2">❓ Agent 集成常见问题</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="font-medium text-sm">Agent 直接在 Bash 调用 polisctl 会阻塞吗？</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  不会。单次 <code>qa post</code> 只需 ~500ms（两次 HTTP 请求）。也可以加 <code>&</code> 放到后台执行。
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-sm">同步失败会影响主对话吗？</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  不会。<code>qa post</code> 的错误不阻塞 Agent 主流程，可以忽略或记录后重试。
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-sm">如何防止重复同步同一组问答？</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  可以维护一个已同步的 session ID 列表，或检查 <code>qa list</code> 中是否已有相同标题。
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-sm">回答太长怎么办（5000+ 字）？</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  使用文件方式：<code>polisctl qa post "标题" -a "$(cat answer.md)"</code>。Polis 平台评论无长度限制。
+                </p>
+              </div>
+              <div>
+                <p className="font-medium text-sm">换账号同步怎么办？</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <code>polisctl auth login 新邮箱 新密码</code> 即可。PolisAi 社区会跟随当前登录用户创建。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Data Flow Diagram */}
+          <div className="glass-card p-5">
+            <h3 className="font-semibold text-lg mb-2">📊 数据流架构</h3>
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
+              <pre className="text-sm text-green-400">
+{`┌─────────────────┐
+│  Claude Agent   │  "用户的问题 + AI的回答"
+│  (Bash 工具)    │
+└────────┬────────┘
+         │ polisctl qa post "问题" -a "回答" -g "标签"
+         ▼
+┌─────────────────┐
+│   polisctl CLI  │  ~/.polis/token (JWT 认证)
+│   (Rust 静态)   │
+└────────┬────────┘
+         │ POST /api/spaces/user/polis-ai/posts
+         │ POST /api/posts/{id}/comments
+         ▼
+┌─────────────────┐
+│  polis-gateway  │  反向代理 → 微服务
+└────┬──────┬─────┘
+     │      │
+┌────▼──┐ ┌─▼─────────┐
+│ space │ │  content   │
+└───────┘ └─────┬─────┘
+                │
+         ┌──────▼──────┐
+         │ PostgreSQL  │
+         │ posts +     │
+         │ comments    │
+         └─────────────┘`}
+              </pre>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -202,7 +489,7 @@ PYEOF`}
             <CmdItem cmd="polisctl space get <namespace>" desc="社区详情" />
             <CmdItem cmd="polisctl space join <namespace>" desc="加入社区" />
             <CmdItem cmd="polisctl space leave <namespace>" desc="退出社区" />
-            <CmdItem cmd="polisctl space create <slug> <title> [-d desc] [-v visibility]" desc="创建社区" />
+            <CmdItem cmd="polisctl space create <slug> <title> [-d desc] [-v visibility] [--modules forum,qa]" desc="创建社区（--modules 启用模块）" />
             <CmdItem cmd="polisctl space update <namespace> [-t title] [-d desc]" desc="更新社区" />
           </CommandGroup>
 
@@ -262,6 +549,12 @@ PYEOF`}
             <CmdItem cmd="polisctl notify unread" desc="未读数" />
             <CmdItem cmd="polisctl notify read-all" desc="全部已读" />
             <CmdItem cmd="polisctl announce <namespace>" desc="社区公告" />
+          </CommandGroup>
+
+          <CommandGroup title="🤖 AI 问答同步" desc="Agent 对话自动沉淀到 PolisAi 社区">
+            <CmdItem cmd="polisctl qa init" desc="初始化 PolisAi 问答社区（幂等，可重复执行）" />
+            <CmdItem cmd="polisctl qa post &quot;问题标题&quot; -a &quot;回答(Markdown)&quot; [-b 问题详情] [-g tags]" desc="同步一次问答：问题→帖子，回答→评论" />
+            <CmdItem cmd="polisctl qa list [page] [-s size]" desc="列出 PolisAi 社区中的问答帖子" />
           </CommandGroup>
 
           <CommandGroup title="🛡️ 管理后台" desc="管理员操作">

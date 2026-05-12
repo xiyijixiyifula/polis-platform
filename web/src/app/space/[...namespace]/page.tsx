@@ -465,7 +465,7 @@ export default function SpacePage() {
                   <span className="text-gray-300 dark:text-gray-600">/</span>
                 </>
               ) : null}
-              <span className="font-mono text-gray-700 dark:text-gray-300">/{communityName}</span>
+              <span className="font-mono text-gray-700 dark:text-gray-300">{communityName}</span>
             </div>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{space.description}</p>
             <div className="mt-3 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
@@ -590,7 +590,7 @@ export default function SpacePage() {
             <div className="space-y-5">
               {/* Community Description */}
               {space.description && (
-                <div className="card">
+                <div className="glass-card p-6">
                   <div className="flex items-center gap-2 mb-3">
                     <Layout className="h-4 w-4 text-gray-400" />
                     <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">关于</h3>
@@ -622,7 +622,7 @@ export default function SpacePage() {
                   <div className="space-y-2">
                     {featured.slice(0, 4).map((post) => (
                       <Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(cleanNamespace)}`}
-                        className="card block hover:border-primary-300 dark:hover:border-primary-600 transition-colors group py-3 px-4">
+                        className="glass-card block hover:border-primary-400 dark:hover:border-primary-600 transition-colors group py-3 px-4">
                         <div className="flex items-center gap-2">
                           <Pin className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                           <h4 className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 truncate">
@@ -645,7 +645,7 @@ export default function SpacePage() {
                   <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">社区动态</h3>
                 </div>
                 {postLoading ? (
-                  <div className="card py-6 text-center text-gray-400 animate-pulse">加载中...</div>
+                  <div className="glass-card py-6 text-center text-gray-400 animate-pulse">加载中...</div>
                 ) : posts.length > 0 ? (
                   <div className="space-y-1">
                     {posts.slice(0, 20).map((post) => {
@@ -688,7 +688,7 @@ export default function SpacePage() {
                     })}
                   </div>
                 ) : (
-                  <div className="card py-8 text-center text-gray-400 dark:text-gray-500">
+                  <div className="glass-card py-8 text-center text-gray-400 dark:text-gray-500">
                     <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
                     <p className="text-sm">还没有内容</p>
                     <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
@@ -704,7 +704,7 @@ export default function SpacePage() {
           {activeTab === 'posts' && (
             <>
               <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`}
-                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <PenLine className="h-5 w-5" />
                 </div>
@@ -749,7 +749,7 @@ export default function SpacePage() {
                     <Megaphone className="h-3 w-3" /> 公告
                   </h4>
                   {announcements.filter(a => a.importance === 'normal').map(ann => (
-                    <div key={ann.id} className="card py-2.5 px-4">
+                    <div key={ann.id} className="glass-card py-2.5 px-4">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">{ann.title}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{ann.body}</p>
                     </div>
@@ -758,7 +758,7 @@ export default function SpacePage() {
               )}
 
               {postLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
               ) : posts.length > 0 ? (
                 <div className="space-y-3">
                   {posts.map((post) => (
@@ -781,7 +781,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无帖子</p>
                   <p className="text-sm mt-1">成为第一个发帖的人吧！</p>
@@ -860,7 +860,7 @@ export default function SpacePage() {
                 {!showCreateSeries ? (
                   <button
                     onClick={() => setShowCreateSeries(true)}
-                    className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group w-full text-left"
+                    className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group w-full text-left"
                   >
                     <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                       <BookOpen className="h-5 w-5" />
@@ -874,7 +874,7 @@ export default function SpacePage() {
                     </div>
                   </button>
                 ) : (
-                  <div className="card">
+                  <div className="glass-card p-6">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">创建新系列</h3>
                     <input
                       type="text"
@@ -911,7 +911,7 @@ export default function SpacePage() {
 
               {/* Series list */}
               {seriesLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载系列...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载系列...</div>
               ) : seriesList.length > 0 ? (
                 <div className="space-y-3">
                   {seriesList.map((s) => (
@@ -919,7 +919,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无系列</p>
                   <p className="text-sm mt-1">创建系列来组织你的文章合集</p>
@@ -932,7 +932,7 @@ export default function SpacePage() {
           {activeTab === 'membership' && (
             <>
               <div className="mb-4">
-                <div className="card">
+                <div className="glass-card p-6">
                   <div className="flex items-center gap-2 mb-3">
                     <Crown className="h-4 w-4 text-amber-500" />
                     <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">会员等级</h3>
@@ -1088,7 +1088,7 @@ export default function SpacePage() {
           {activeTab === 'wiki' && (
             <>
               <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=wiki`}
-                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <Library className="h-5 w-5" />
                 </div>
@@ -1102,7 +1102,7 @@ export default function SpacePage() {
               </Link>
 
               {postLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
               ) : posts.filter(p => p.module_type === 'wiki').length > 0 ? (
                 <div className="space-y-3">
                   {posts.filter(p => p.module_type === 'wiki').map((post) => (
@@ -1124,7 +1124,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <Library className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无知识库页面</p>
                   <p className="text-sm mt-1">创建第一篇知识库文档吧！</p>
@@ -1138,7 +1138,7 @@ export default function SpacePage() {
             <>
               {isOwner ? (
                 <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=share`}
-                  className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                  className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
                   <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                     <PenLine className="h-5 w-5" />
                   </div>
@@ -1151,14 +1151,14 @@ export default function SpacePage() {
                   </div>
                 </Link>
               ) : (
-                <div className="card mb-4 py-4 px-4 text-center">
+                <div className="glass-card mb-4 py-4 px-4 text-center">
                   <Share2 className="h-8 w-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                   <p className="text-sm text-gray-500 dark:text-gray-400">此模块仅社区创建者可发布内容</p>
                 </div>
               )}
 
               {postLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
               ) : posts.filter(p => p.module_type === 'share' || !p.module_type).length > 0 ? (
                 <div className="space-y-3">
                   {posts.filter(p => p.module_type === 'share' || !p.module_type).map((post) => (
@@ -1180,7 +1180,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <Share2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无分享内容</p>
                   {isOwner && <p className="text-sm mt-1">发布你的第一篇分享吧！</p>}
@@ -1193,7 +1193,7 @@ export default function SpacePage() {
           {activeTab === 'polls' && (
             <>
               <Link href={`/polls/new?space=${encodeURIComponent(cleanNamespace)}`}
-                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <Vote className="h-5 w-5" />
                 </div>
@@ -1213,7 +1213,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无投票</p>
                   <p className="text-sm mt-1">发起第一个投票吧！</p>
@@ -1250,7 +1250,7 @@ export default function SpacePage() {
                   </div>
                 ))
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <Megaphone className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无公告</p>
                 </div>
@@ -1262,14 +1262,14 @@ export default function SpacePage() {
           {activeTab === 'members' && (
             <>
               {membersLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
               ) : members.length > 0 ? (
                 <div className="space-y-2">
                   {members.map((m) => (
                     <Link
                       key={m.user.id}
                       href={`/profile/${m.user.username}`}
-                      className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group"
+                      className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group"
                     >
                       <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
                         {(m.user.display_name || m.user.username).charAt(0).toUpperCase()}
@@ -1298,7 +1298,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <UserCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无成员</p>
                   <p className="text-sm mt-1">成为第一个加入的成员吧！</p>
@@ -1309,7 +1309,7 @@ export default function SpacePage() {
 
           {/* === Chat Tab（v0.3.0 — 实时聊天）=== */}
           {activeTab === 'chat' && (
-            <div className="card overflow-hidden">
+            <div className="glass-card overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2">
                 <MessageSquare className="h-4 w-4 text-primary-600" />
                 <span className="font-medium text-sm text-gray-900 dark:text-white">社区聊天室</span>
@@ -1319,7 +1319,7 @@ export default function SpacePage() {
           )}
 
           {activeTab === 'video' && (
-            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+            <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
               <Video className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>视频模块</p>
               <p className="text-sm mt-1">即将推出，敬请期待</p>
@@ -1327,7 +1327,7 @@ export default function SpacePage() {
           )}
 
           {activeTab === 'code_repo' && (
-            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+            <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
               <Code className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>代码仓库</p>
               <p className="text-sm mt-1">即将推出 Git 代码托管功能</p>
@@ -1338,7 +1338,7 @@ export default function SpacePage() {
           {activeTab === 'qa' && (
             <>
               <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=qa`}
-                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <HelpCircle className="h-5 w-5" />
                 </div>
@@ -1352,7 +1352,7 @@ export default function SpacePage() {
               </Link>
 
               {postLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
               ) : posts.filter(p => p.module_type === 'qa').length > 0 ? (
                 <div className="space-y-3">
                   {posts.filter(p => p.module_type === 'qa').map((post) => (
@@ -1374,7 +1374,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <HelpCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无问答</p>
                   <p className="text-sm mt-1">提出第一个问题吧！</p>
@@ -1387,7 +1387,7 @@ export default function SpacePage() {
           {activeTab === 'novel' && (
             <>
               <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=novel`}
-                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <BookText className="h-5 w-5" />
                 </div>
@@ -1401,7 +1401,7 @@ export default function SpacePage() {
               </Link>
 
               {postLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
               ) : posts.filter(p => p.module_type === 'novel').length > 0 ? (
                 <div className="space-y-3">
                   {posts.filter(p => p.module_type === 'novel').map((post) => (
@@ -1423,7 +1423,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <BookText className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无小说内容</p>
                   <p className="text-sm mt-1">发布你的第一篇小说章节吧！</p>
@@ -1436,7 +1436,7 @@ export default function SpacePage() {
           {activeTab === 'game' && (
             <>
               <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=game`}
-                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <Gamepad2 className="h-5 w-5" />
                 </div>
@@ -1450,7 +1450,7 @@ export default function SpacePage() {
               </Link>
 
               {postLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
               ) : posts.filter(p => p.module_type === 'game').length > 0 ? (
                 <div className="space-y-3">
                   {posts.filter(p => p.module_type === 'game').map((post) => (
@@ -1472,7 +1472,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <Gamepad2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无游戏内容</p>
                   <p className="text-sm mt-1">发布你的第一篇游戏攻略吧！</p>
@@ -1485,7 +1485,7 @@ export default function SpacePage() {
           {activeTab === 'mini_app' && (
             <>
               <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=mini_app`}
-                className="card flex items-center gap-3 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group mb-4">
+                className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
                 <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
                   <AppWindow className="h-5 w-5" />
                 </div>
@@ -1499,7 +1499,7 @@ export default function SpacePage() {
               </Link>
 
               {postLoading ? (
-                <div className="card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+                <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
               ) : posts.filter(p => p.module_type === 'mini_app').length > 0 ? (
                 <div className="space-y-3">
                   {posts.filter(p => p.module_type === 'mini_app').map((post) => (
@@ -1521,7 +1521,7 @@ export default function SpacePage() {
                   ))}
                 </div>
               ) : (
-                <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+                <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
                   <AppWindow className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>暂无小程序内容</p>
                   <p className="text-sm mt-1">发布你的第一个小程序吧！</p>
@@ -1531,7 +1531,7 @@ export default function SpacePage() {
           )}
 
           {activeTab === 'chat' && (
-            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+            <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
               <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>聊天模块</p>
               <p className="text-sm mt-1">即将推出即时通讯功能</p>
@@ -1539,7 +1539,7 @@ export default function SpacePage() {
           )}
 
           {activeTab === 'store' && (
-            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+            <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
               <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>商城模块</p>
               <p className="text-sm mt-1">即将推出商品交易功能</p>
@@ -1547,7 +1547,7 @@ export default function SpacePage() {
           )}
 
           {activeTab === 'course' && (
-            <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
+            <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
               <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-30" />
               <p>课程模块</p>
               <p className="text-sm mt-1">即将推出在线课程功能</p>
@@ -1563,7 +1563,7 @@ export default function SpacePage() {
         {/* Right sidebar */}
         <aside className="w-72 shrink-0 hidden xl:block">
           <div className="sticky top-20 space-y-4">
-            <div className="card">
+            <div className="glass-card p-6">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">关于社区</h3>
               <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
                 <div className="flex justify-between">

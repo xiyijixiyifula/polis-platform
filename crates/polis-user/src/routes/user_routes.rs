@@ -32,6 +32,7 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/follow", post(toggle_follow))
         // RESTful 风格 API 别名 (v0.3.22)
         .route("/api/users/{username}/follow", post(follow_by_username).delete(unfollow_by_username))
+        .route("/api/contacts/mutual", get(get_mutual_contacts))
         .route("/api/auth/logout", post(logout))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
     public.merge(auth).with_state(handler)
@@ -127,4 +128,12 @@ async fn unfollow_by_username(
 /// POST /api/auth/logout — 登出
 async fn logout() -> Json<ApiResponse<String>> {
     Json(ApiResponse::success("logged_out".to_string()))
+}
+
+/// GET /api/contacts/mutual — 互相关注的联系人（微信式通讯录）
+async fn get_mutual_contacts(
+    State(h): State<Arc<UserHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
+    Ok(Json(ApiResponse::success(h.get_mutual_contacts(uid).await?)))
 }

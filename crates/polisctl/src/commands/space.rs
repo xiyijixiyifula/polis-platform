@@ -90,13 +90,18 @@ pub async fn create(
     title: &str,
     description: Option<&str>,
     visibility: Option<&str>,
+    modules: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     let token = config.require_auth()?;
+    let modules_vec: Vec<&str> = modules
+        .map(|m| m.split(',').map(|s| s.trim()).collect())
+        .unwrap_or_else(|| vec!["forum"]);
     let body = json!({
         "slug": slug,
         "title": title,
         "description": description.unwrap_or(""),
-        "visibility": visibility.unwrap_or("public")
+        "visibility": visibility.unwrap_or("public"),
+        "enabled_modules": modules_vec
     });
     let resp = client.post("/api/spaces", Some(&token), &body).await?;
     print_output(extract_data(&resp), config.format);

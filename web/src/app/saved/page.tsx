@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { Bookmark, BookOpen, Trash2 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { FeedItem } from '@/components/FeedItem';
 
 export default function SavedPage() {
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const router = useRouter();
 
   useEffect(() => {
     fetchBookmarks();
@@ -47,31 +45,31 @@ export default function SavedPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6 flex items-center gap-2">
-        <Bookmark className="h-6 w-6 text-primary-600" /> 我的收藏
-      </h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <Bookmark className="h-6 w-6 text-primary-600" /> 我的收藏
+        </h1>
+        {bookmarks.length > 0 && (
+          <span className="text-sm text-gray-400 dark:text-gray-500">{bookmarks.length} 条</span>
+        )}
+      </div>
 
       {bookmarks.length === 0 ? (
-        <div className="glass-card py-16 text-center">
+        <div className="glass-card p-6 py-16 text-center">
           <BookOpen className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500 dark:text-gray-400">还没有收藏任何内容</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">浏览帖子时点击收藏按钮即可保存</p>
+          <Link href="/" className="text-sm text-primary-600 dark:text-primary-400 hover:underline mt-3 inline-block">去发现内容 →</Link>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="glass-card p-0 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
           {bookmarks.map((b: any) => (
-            <div key={b.post_id || b.id} className="glass-card flex items-center gap-3 py-3 px-4 group">
-              <Link href={`/post/${b.post_id || b.id}`} className="flex-1 min-w-0 flex items-center gap-3">
-                <Bookmark className="h-4 w-4 text-yellow-500 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{b.post?.title || b.title || '(已删除)'}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">收藏于 {formatDate(b.created_at)}</p>
-                </div>
-              </Link>
+            <div key={b.post_id || b.id} className="relative group">
+              <FeedItem item={b} />
               <button
-                onClick={(e) => { e.preventDefault(); removeBookmark(b); }}
+                onClick={() => removeBookmark(b)}
                 disabled={removingId === (b.post_id || b.id)}
-                className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
                 title="取消收藏"
               >
                 <Trash2 className="h-4 w-4" />

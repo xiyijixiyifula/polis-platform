@@ -136,6 +136,41 @@ enum Commands {
         #[command(subcommand)]
         action: AdminAction,
     },
+    /// Q&A sync: sync AI agent Q&A sessions to PolisAi community
+    Qa {
+        #[command(subcommand)]
+        action: QaAction,
+    },
+}
+
+// === QA Subcommands ===
+#[derive(Subcommand)]
+enum QaAction {
+    /// Initialize the PolisAi community (idempotent, safe to run multiple times)
+    Init,
+    /// Sync a single Q&A: question → post, answer → comment
+    Post {
+        /// Question title
+        question: String,
+        /// Answer content (Markdown)
+        #[arg(short, long)]
+        answer: String,
+        /// Question body/detail (optional, defaults to question title)
+        #[arg(short, long)]
+        body: Option<String>,
+        /// Tags (comma-separated)
+        #[arg(short = 'g', long)]
+        tags: Option<String>,
+    },
+    /// List recent Q&A posts in the PolisAi community
+    List {
+        /// Page number
+        #[arg(default_value = "1")]
+        page: u32,
+        /// Page size
+        #[arg(short, long, default_value = "20")]
+        size: u32,
+    },
 }
 
 // === Auth Subcommands ===
@@ -278,6 +313,9 @@ enum SpaceAction {
         /// Visibility (public/private/unlisted)
         #[arg(short, long, default_value = "public")]
         visibility: String,
+        /// Enabled modules (comma-separated, e.g. "forum,qa")
+        #[arg(long, default_value = "forum")]
+        modules: String,
     },
     /// Update space info
     Update {
@@ -926,8 +964,8 @@ async fn main() -> Result<(), anyhow::Error> {
             SpaceAction::Join { namespace } => commands::space::join(&config, &client, &namespace).await,
             SpaceAction::Leave { namespace } => commands::space::leave(&config, &client, &namespace).await,
             SpaceAction::Members { namespace } => commands::space::members(&config, &client, &namespace).await,
-            SpaceAction::Create { slug, title, description, visibility } => {
-                commands::space::create(&config, &client, &slug, &title, description.as_deref(), Some(&visibility)).await
+            SpaceAction::Create { slug, title, description, visibility, modules } => {
+                commands::space::create(&config, &client, &slug, &title, description.as_deref(), Some(&visibility), Some(&modules)).await
             }
             SpaceAction::Update { namespace, title, description } => {
                 commands::space::update(&config, &client, &namespace, title.as_deref(), description.as_deref()).await
@@ -1132,6 +1170,17 @@ async fn main() -> Result<(), anyhow::Error> {
             },
             AdminAction::Transactions { page, size } => commands::admin::transactions(&config, &client, page, size).await,
             AdminAction::Analytics { analytics_type, days } => commands::admin::analytics(&config, &client, &analytics_type, days).await,
+        },
+
+        // === QA ===
+        Commands::Qa { action } => match action {
+            QaAction::Init => commands::qa::init(&config, &client).await,
+            QaAction::Post { question, answer, body, tags } => {
+                commands::qa::post(&config, &client, &question, &answer, body.as_deref(), tags.as_deref()).await
+            }
+            QaAction::List { page, size } => {
+                commands::qa::list(&config, &client, page, size).await
+            }
         },
     }
 }

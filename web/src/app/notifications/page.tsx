@@ -103,7 +103,7 @@ export default function NotificationsPage() {
       </div>
 
       {notifs.length === 0 ? (
-        <div className="card py-16 text-center">
+        <div className="glass-card p-6 py-16 text-center">
           <Bell className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500 dark:text-gray-400">暂无通知</p>
         </div>
@@ -113,7 +113,7 @@ export default function NotificationsPage() {
             <button
               key={n.id}
               onClick={() => handleClick(n)}
-              className={`w-full text-left card flex items-start gap-3 py-3 px-4 transition-colors hover:border-primary-300 dark:hover:border-primary-500 ${!n.is_read ? 'bg-primary-50/50 dark:bg-primary-900/10 border-primary-200 dark:border-primary-800' : ''}`}
+              className={`w-full text-left glass-card flex items-start gap-3 py-3 px-4 transition-colors ${!n.is_read ? 'border-primary-300 dark:border-primary-600 bg-primary-50/50 dark:bg-primary-900/20' : 'hover:border-primary-300 dark:hover:border-primary-500'}`}
             >
               <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
                 {getIcon(n.type)}

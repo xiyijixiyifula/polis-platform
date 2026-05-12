@@ -20,7 +20,7 @@ function FollowList({ users: list, loading, emptyText }: {
     <div className="space-y-2">
       {list.map((u: FollowUser) => (
         <Link key={u.id} href={`/profile/${u.username}`}
-          className="card flex items-center gap-3 py-3 px-4 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+          className="glass-card flex items-center gap-3 py-3 px-4 hover:border-white/50 dark:hover:border-white/20 transition-colors">
           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
             {u.display_name?.charAt(0) || '?'}
           </div>
@@ -65,11 +65,20 @@ export default function UserProfilePage() {
   // 投稿引用状态
   const [showRefDialog, setShowRefDialog] = useState(false);
   const [refPostId, setRefPostId] = useState('');
+  const [refPostModuleType, setRefPostModuleType] = useState('forum'); // 源帖子的模块类型
   const [refSpaceNs, setRefSpaceNs] = useState('');
   const [refModuleType, setRefModuleType] = useState('forum');
   const [refSubmitting, setRefSubmitting] = useState(false);
   const [refError, setRefError] = useState('');
   const [refSuccess, setRefSuccess] = useState('');
+  // 用户搜索 & 社区列表
+  const [refUserQuery, setRefUserQuery] = useState('');
+  const [refUserResults, setRefUserResults] = useState<any[]>([]);
+  const [refUserLoading, setRefUserLoading] = useState(false);
+  const [refSelectedUser, setRefSelectedUser] = useState<any>(null);
+  const [refUserSpaces, setRefUserSpaces] = useState<any[]>([]);
+  const [refSpacesLoading, setRefSpacesLoading] = useState(false);
+  const [refShowUserDropdown, setRefShowUserDropdown] = useState(false);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('polis_access_token');
@@ -183,9 +192,52 @@ export default function UserProfilePage() {
     }
   };
 
+  // 搜索用户（用户名模糊匹配）
+  const handleSearchUsers = async (query: string) => {
+    setRefUserQuery(query);
+    setRefSelectedUser(null);
+    setRefUserSpaces([]);
+    setRefSpaceNs('');
+    if (!query.trim()) { setRefUserResults([]); return; }
+    setRefUserLoading(true);
+    try {
+      const res = await fetch(`/api/users/search?q=${encodeURIComponent(query.trim())}&limit=8`);
+      const data = await res.json();
+      if (data.code === 0 && Array.isArray(data.data)) {
+        setRefUserResults(data.data);
+        setRefShowUserDropdown(true);
+      }
+    } catch {}
+    setRefUserLoading(false);
+  };
+
+  // 选择用户后加载其社区列表
+  const handleSelectUser = async (user: any) => {
+    setRefSelectedUser(user);
+    setRefUserQuery(user.username);
+    setRefShowUserDropdown(false);
+    setRefUserResults([]);
+    setRefSpaceNs('');
+    setRefSpacesLoading(true);
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(user.username)}/spaces`);
+      const data = await res.json();
+      if (data.code === 0 && Array.isArray(data.data)) {
+        // 过滤：只显示启用了相同模块类型的社区
+        const filtered = data.data.filter((s: any) => {
+          const mods = s.enabled_modules;
+          if (!mods || !Array.isArray(mods)) return refPostModuleType === 'forum';
+          return mods.includes(refPostModuleType);
+        });
+        setRefUserSpaces(filtered);
+      }
+    } catch {}
+    setRefSpacesLoading(false);
+  };
+
   // 投稿引用
   const handleSubmitReference = async () => {
-    if (!refSpaceNs.trim()) { setRefError('请输入目标社区（格式：用户名/社区名 或 社区名）'); return; }
+    if (!refSpaceNs.trim()) { setRefError('请选择目标社区'); return; }
     setRefSubmitting(true);
     setRefError('');
     setRefSuccess('');
@@ -288,7 +340,7 @@ export default function UserProfilePage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-10">
-        <div className="card animate-pulse space-y-4">
+        <div className="glass-card p-6 animate-pulse space-y-4">
           <div className="h-20 w-20 bg-gray-200 rounded-full" />
           <div className="h-6 w-1/3 bg-gray-200 rounded" />
           <div className="h-4 w-1/2 bg-gray-100 rounded" />
@@ -333,7 +385,7 @@ export default function UserProfilePage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
       {/* 用户信息卡片 */}
-      <div className="card">
+      <div className="glass-card p-6">
         <div className="flex flex-col sm:flex-row items-start gap-6">
           <div className="h-20 w-20 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-3xl">
             {user.display_name?.charAt(0) || '?'}
@@ -404,7 +456,7 @@ export default function UserProfilePage() {
 
       {/* 粉丝/关注列表 */}
       {showFollowers && (
-        <div className="mt-4 card">
+        <div className="mt-4 glass-card p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <Users className="h-4 w-4" /> 粉丝 ({followerCount})
@@ -416,7 +468,7 @@ export default function UserProfilePage() {
       )}
 
       {showFollowing && (
-        <div className="mt-4 card">
+        <div className="mt-4 glass-card p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <UserCheck className="h-4 w-4" /> 关注 ({followingCount})
@@ -446,15 +498,15 @@ export default function UserProfilePage() {
       {/* isSelf: 收藏 Tab */}
       {isSelf && activeTab === 'bookmarks' && (
         bookmarksLoading ? (
-          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
         ) : bookmarks.length > 0 ? (
-          <div className="card divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="glass-card p-0 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
             {bookmarks.map((item: any) => (
               <FeedItem key={item.id} item={item} />
             ))}
           </div>
         ) : (
-          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
             <Bookmark className="h-8 w-8 mx-auto mb-2 opacity-40" />
             <p className="text-sm">还没有收藏过帖子</p>
           </div>
@@ -464,15 +516,15 @@ export default function UserProfilePage() {
       {/* isSelf: 点赞 Tab */}
       {isSelf && activeTab === 'likes' && (
         likedLoading ? (
-          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
         ) : likedPosts.length > 0 ? (
-          <div className="card divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="glass-card p-0 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
             {likedPosts.map((item: any) => (
               <FeedItem key={item.id} item={item} />
             ))}
           </div>
         ) : (
-          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
             <Heart className="h-8 w-8 mx-auto mb-2 opacity-40" />
             <p className="text-sm">还没有点赞过帖子</p>
           </div>
@@ -482,7 +534,7 @@ export default function UserProfilePage() {
       {/* isSelf: 创作 Tab — 自己发布的所有内容 */}
       {isSelf && activeTab === 'posts' && (
         contentsLoading ? (
-          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
         ) : myContents.length > 0 ? (
           <div className="space-y-2">
             {myContents.map((post: any) => {
@@ -523,7 +575,7 @@ export default function UserProfilePage() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setRefPostId(post.id); setRefSpaceNs(''); setRefModuleType('forum'); setRefError(''); setRefSuccess(''); setShowRefDialog(true); }}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); const mt = post.module_type || 'forum'; setRefPostId(post.id); setRefPostModuleType(mt); setRefModuleType(mt); setRefSpaceNs(''); setRefUserQuery(''); setRefUserResults([]); setRefSelectedUser(null); setRefUserSpaces([]); setRefError(''); setRefSuccess(''); setShowRefDialog(true); }}
                         className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-500 transition-colors"
                         title="投稿到其他社区">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -546,7 +598,7 @@ export default function UserProfilePage() {
             })}
           </div>
         ) : (
-          <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
             <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
             <p className="text-sm">还没有发布过内容</p>
             <Link href="/post/new" className="text-sm text-primary-600 hover:underline mt-1 inline-block">去发布第一篇</Link>
@@ -600,7 +652,7 @@ export default function UserProfilePage() {
 
           {/* 空状态 */}
           {userSpaces.length === 0 && (
-            <div className="card py-12 text-center text-gray-500 dark:text-gray-400">
+            <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
               {isSelf ? (
                 <>
                   <div className="text-3xl mb-2">🏛️</div>
@@ -617,41 +669,104 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* 投稿引用弹窗 */}
+      {/* 投稿引用弹窗 — 优化版：用户搜索 + 社区下拉 + 模块限制 */}
       {showRefDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowRefDialog(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">📬 投稿到其他社区</h3>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">📬 投稿到其他社区</h3>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              将内容引用投放到目标社区。公开社区直接投稿，私有社区需先加入。
+              将内容引用投放到目标社区。模块限制：
+              <span className="px-1.5 py-0.5 rounded bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium text-xs ml-1">
+                {refPostModuleType === 'qa' ? '问答' : refPostModuleType === 'share' ? '分享' : refPostModuleType === 'wiki' ? '知识库' : refPostModuleType === 'novel' ? '小说' : refPostModuleType === 'game' ? '游戏' : refPostModuleType === 'mini_app' ? '小程序' : '交流'}
+              </span>
+              &nbsp;仅可投稿到同模块社区
             </p>
+
+            {/* Step 1: 搜索用户 */}
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">目标社区</label>
-                <input type="text" value={refSpaceNs}
-                  onChange={(e) => setRefSpaceNs(e.target.value)}
-                  placeholder="用户名/社区名 或 根社区名"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">搜索创作者</label>
+                <div className="relative">
+                  <input type="text" value={refUserQuery}
+                    onChange={(e) => handleSearchUsers(e.target.value)}
+                    onFocus={() => { if (refUserResults.length > 0) setRefShowUserDropdown(true); }}
+                    onBlur={() => setTimeout(() => setRefShowUserDropdown(false), 200)}
+                    placeholder="输入用户名搜索..."
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none" />
+                  {refUserLoading && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">搜索中...</span>
+                  )}
+                  {/* 用户下拉列表 */}
+                  {refShowUserDropdown && refUserResults.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg max-h-48 overflow-y-auto">
+                      {refUserResults.map((u: any) => (
+                        <button key={u.id} type="button"
+                          onMouseDown={() => handleSelectUser(u)}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                          <span className="w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 text-xs font-bold shrink-0">
+                            {(u.display_name || u.username || '?').charAt(0)}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="font-medium text-gray-900 dark:text-white truncate">{u.display_name || u.username}</div>
+                            <div className="text-xs text-gray-400">@{u.username}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {refSelectedUser && (
+                  <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+                    ✓ 已选择：{refSelectedUser.display_name || refSelectedUser.username} (@{refSelectedUser.username})
+                  </p>
+                )}
               </div>
+
+              {/* Step 2: 选择目标社区（仅显示同模块社区） */}
               <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">目标模块</label>
-                <select value={refModuleType} onChange={(e) => setRefModuleType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
-                  <option value="forum">交流</option>
-                  <option value="share">分享</option>
-                  <option value="wiki">知识库</option>
-                  <option value="qa">问答</option>
-                  <option value="novel">小说</option>
-                  <option value="game">游戏</option>
-                  <option value="mini_app">小程序</option>
-                </select>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">目标社区</label>
+                {refSpacesLoading ? (
+                  <p className="text-xs text-gray-400">加载社区列表...</p>
+                ) : refSelectedUser && refUserSpaces.length === 0 ? (
+                  <div className="px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                      {refSelectedUser.username} 暂无「
+                      {refPostModuleType === 'qa' ? '问答' : refPostModuleType === 'share' ? '分享' : refPostModuleType === 'wiki' ? '知识库' : refPostModuleType === 'novel' ? '小说' : refPostModuleType === 'game' ? '游戏' : refPostModuleType === 'mini_app' ? '小程序' : '交流'}
+                      」模块的社区
+                    </p>
+                  </div>
+                ) : refUserSpaces.length > 0 ? (
+                  <select value={refSpaceNs} onChange={(e) => setRefSpaceNs(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none">
+                    <option value="">-- 选择社区 --</option>
+                    {refUserSpaces.map((s: any) => (
+                      <option key={s.id || s.namespace} value={s.namespace}>
+                        {s.title || s.namespace} ({s.namespace})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-xs text-gray-400">请先搜索并选择创作者</p>
+                )}
               </div>
+
+              {/* 模块类型（锁定，不可更改） */}
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  目标模块 <span className="text-amber-500">（锁定为源帖模块）</span>
+                </label>
+                <input type="text" readOnly
+                  value={refPostModuleType === 'qa' ? '问答 (qa)' : refPostModuleType === 'share' ? '分享 (share)' : refPostModuleType === 'wiki' ? '知识库 (wiki)' : refPostModuleType === 'novel' ? '小说 (novel)' : refPostModuleType === 'game' ? '游戏 (game)' : refPostModuleType === 'mini_app' ? '小程序 (mini_app)' : '交流 (forum)'}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none" />
+              </div>
+
               {refError && <p className="text-xs text-red-500">{refError}</p>}
               {refSuccess && <p className="text-xs text-green-500">{refSuccess}</p>}
             </div>
+
             <div className="flex items-center justify-end gap-2 mt-6">
               <button onClick={() => setShowRefDialog(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">取消</button>
-              <button onClick={handleSubmitReference} disabled={refSubmitting}
+              <button onClick={handleSubmitReference} disabled={refSubmitting || !refSpaceNs.trim()}
                 className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50">
                 {refSubmitting ? '提交中...' : '投稿'}
               </button>

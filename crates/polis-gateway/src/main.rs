@@ -53,6 +53,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/users/{*path}", any(proxy_user_router))
         .route("/api/my/{*path}", any(proxy_to_content))
         .route("/api/follow", any(proxy_to_user))
+        .route("/api/contacts/{*path}", any(proxy_to_user))
         // 代理路由 - 社区 + 内容服务 (同一 catch-all, 按 path 分发)
         .route("/api/search", any(proxy_to_space))
         .route("/api/spaces", any(proxy_space_router))

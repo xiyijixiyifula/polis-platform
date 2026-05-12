@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen } from 'lucide-react';
+import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen, UserPlus, UserCheck, MessageSquare } from 'lucide-react';
 import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
 import { posts, series, Comment, Post, type Series } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
@@ -52,6 +52,10 @@ function PostDetailContent() {
   const [editBody, setEditBody] = useState('');
   const [editTags, setEditTags] = useState('');
   const [editVisibility, setEditVisibility] = useState('public');
+
+  // Follow author
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
+  const [authorFollowLoading, setAuthorFollowLoading] = useState(false);
 
   // Series management
   const [spaceSeries, setSpaceSeries] = useState<Series[]>([]);
@@ -154,6 +158,45 @@ function PostDetailContent() {
     }
   }, [post]);
 
+  // Check if current user is following the author
+  useEffect(() => {
+    if (!post?.author || isAuthor) return;
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId) return;
+    const authorUsername = post.author.username;
+    if (!authorUsername) return;
+    fetch(`/api/users/${authorUsername}/followers`, {
+      headers: { Authorization: 'Bearer ' + localStorage.getItem('polis_access_token') },
+    })
+      .then(r => r.json())
+      .then(d => {
+        if (d.code === 0 && Array.isArray(d.data)) {
+          setIsFollowingAuthor(d.data.some((u: any) => u.id === currentUserId));
+        }
+      })
+      .catch(() => {});
+  }, [post, isAuthor]);
+
+  // Handle follow/unfollow author
+  const handleFollowAuthor = async () => {
+    if (!post?.author?.id) return;
+    const token = localStorage.getItem('polis_access_token');
+    if (!token) { window.location.href = '/login'; return; }
+    setAuthorFollowLoading(true);
+    try {
+      const res = await fetch('/api/follow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ followee_type: 'user', followee_id: post.author.id }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setIsFollowingAuthor(data.data ?? true);
+      }
+    } catch {}
+    setAuthorFollowLoading(false);
+  };
+
   // Load space series when author is identified and space is known
   useEffect(() => {
     if (!isAuthor || !spaceNs) return;
@@ -230,17 +273,13 @@ function PostDetailContent() {
   const handleLike = async () => {
     if (!post) return;
     try {
-      const res = await posts.like(currentNs, post.id);
+      const res = await posts.likeById(post.id);
       if (res.data !== null) {
-        // Support both boolean (old format) and {liked, like_count} (v0.3.23+ format)
         const data = res.data as any;
-        const liked: boolean = typeof data === 'boolean' ? data : data.liked;
-        const count: number | null = typeof data === 'object' && data.like_count !== undefined
-          ? data.like_count
-          : null;
+        const liked: boolean = typeof data === 'boolean' ? data : (data.liked ?? false);
         setLiked(liked);
-        if (count !== null) {
-          setLikeCount(count);
+        if (typeof data === 'object' && data.like_count !== undefined) {
+          setLikeCount(data.like_count);
         } else {
           setLikeCount((prev) => (liked ? prev + 1 : Math.max(0, prev - 1)));
         }
@@ -251,15 +290,18 @@ function PostDetailContent() {
   const handleBookmark = async () => {
     if (!post) return;
     try {
-      const res = await posts.bookmark(currentNs, post.id);
-      if (res.data !== null) setBookmarked(res.data);
+      const res = await posts.bookmarkById(post.id);
+      if (res.data !== null) {
+        const data = res.data as any;
+        setBookmarked(typeof data === 'boolean' ? data : (data.bookmarked ?? false));
+      }
     } catch {}
   };
 
   const handleReport = async () => {
     if (!post) return;
     try {
-      await posts.report(currentNs, post.id, reportReason || '违规内容');
+      await posts.reportById(post.id, reportReason || '违规内容');
       setShowReport(false);
       setReportReason('');
       alert('举报已提交，我们会尽快处理。');
@@ -273,7 +315,7 @@ function PostDetailContent() {
     const text = parentId ? replyText.trim() : commentText.trim();
     if (!text) return;
     try {
-      const res = await posts.createComment(currentNs, post.id, text, parentId);
+      const res = await posts.createCommentById(post.id, text, parentId);
       if (res.data) {
         setComments((prev) => [res.data!, ...prev]);
         if (parentId) {
@@ -343,23 +385,60 @@ function PostDetailContent() {
       </Link>
 
       <article className="card">
-        <div className="flex items-start gap-3 mb-6">
-          <div className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-lg">
-            {authorName.charAt(0)}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <Link href={authorUsername ? `/profile/${authorUsername}` : '#'} className="font-medium text-gray-900 hover:text-primary-600">
+        {/* 作者信息区 — 明确标注 + 关注 + 私信 */}
+        <div className="flex items-start gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+          <Link href={authorUsername ? `/profile/${authorUsername}` : '#'} className="shrink-0">
+            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-lg hover:ring-2 ring-primary-300 transition-all">
+              {authorName.charAt(0)}
+            </div>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+                作者
+              </span>
+              <Link href={authorUsername ? `/profile/${authorUsername}` : '#'} className="font-semibold text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                 {authorName}
               </Link>
+              {authorUsername && (
+                <span className="text-sm text-gray-400 dark:text-gray-500">@{authorUsername}</span>
+              )}
               <span className="text-xs text-gray-400">· {formatDate(post.created_at)}</span>
             </div>
             {spaceFromUrl && (
-              <Link href={`/space/${spaceFromUrl}`} className="text-xs text-primary-600 hover:underline">
+              <Link href={`/space/${spaceFromUrl}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-0.5 inline-block">
                 /{spaceFromUrl}
               </Link>
             )}
           </div>
+          {/* 非作者本人时才显示关注/私信按钮 */}
+          {!isAuthor && author && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={handleFollowAuthor}
+                disabled={authorFollowLoading}
+                className={`inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
+                  isFollowingAuthor
+                    ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500'
+                    : 'btn-primary text-xs px-3 py-1.5'
+                }`}
+              >
+                {authorFollowLoading ? (
+                  <span className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : isFollowingAuthor ? (
+                  <><UserCheck className="h-3.5 w-3.5" /> 已关注</>
+                ) : (
+                  <><UserPlus className="h-3.5 w-3.5" /> 关注</>
+                )}
+              </button>
+              <Link
+                href={`/messages/${author.id}`}
+                className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium transition-all bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:text-primary-600 dark:hover:text-primary-400"
+              >
+                <MessageSquare className="h-3.5 w-3.5" /> 私信
+              </Link>
+            </div>
+          )}
         </div>
 
         {isEditing ? (

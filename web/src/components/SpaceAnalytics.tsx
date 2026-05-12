@@ -53,7 +53,7 @@ export function SpaceAnalytics({ namespace, spaceTitle }: SpaceAnalyticsProps) {
 
   if (loading) {
     return (
-      <div className="card py-8 text-center text-gray-400 animate-pulse">
+      <div className="glass-card py-8 text-center text-gray-400 animate-pulse">
         加载数据分析...
       </div>
     );
@@ -61,7 +61,7 @@ export function SpaceAnalytics({ namespace, spaceTitle }: SpaceAnalyticsProps) {
 
   if (error) {
     return (
-      <div className="card py-8 text-center text-gray-400">
+      <div className="glass-card py-8 text-center text-gray-400">
         <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
         <p>{error}</p>
       </div>
@@ -177,7 +177,7 @@ export function SpaceAnalytics({ namespace, spaceTitle }: SpaceAnalyticsProps) {
 
       {/* Empty state — show when no posts have analytics */}
       {data.total_posts === 0 && (
-        <div className="card py-6 text-center text-gray-400 dark:text-gray-500">
+        <div className="glass-card py-6 text-center text-gray-400 dark:text-gray-500">
           <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-30" />
           <p className="text-sm">暂无数据</p>
           <p className="text-xs mt-1">发布内容后开始显示数据统计</p>
@@ -213,7 +213,7 @@ export function SpaceAnalyticsMini({ namespace }: { namespace: string }) {
   ];
 
   return (
-    <div className="card">
+    <div className="glass-card p-6">
       <div className="flex items-center gap-1.5 mb-3">
         <BarChart3 className="h-3.5 w-3.5 text-primary-500" />
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">数据速览</h3>
