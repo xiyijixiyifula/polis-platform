@@ -189,9 +189,6 @@ function FeedLayout() {
                       {unreadNotif > 99 ? '99+' : unreadNotif}
                     </span>
                   )}
-                  {item.label === '收藏' && bookmarkCount > 0 && (
-                    <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{bookmarkCount}</span>
-                  )}
                 </Link>
               ))}
             </nav>
