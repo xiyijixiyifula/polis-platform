@@ -153,8 +153,8 @@ function FeedLayout() {
           <div className="sticky top-0 h-screen flex flex-col py-3 px-3">
             {/* Logo */}
             <div className="px-3 pb-3 mb-2">
-              <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-2xl font-bold text-primary-600 dark:text-primary-400 tracking-tight glass-btn">
-                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+              <Link href="/" className="nav-item flex items-center gap-4 px-3 py-3 rounded-full transition-all text-xl font-bold text-primary-600 dark:text-primary-400 tracking-tight glass-btn w-full">
+                <span className="h-6 w-6 shrink-0 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm">
                   P
                 </span>
                 Polis
