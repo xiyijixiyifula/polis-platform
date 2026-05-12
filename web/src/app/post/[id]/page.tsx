@@ -650,7 +650,7 @@ function PostDetailContent() {
                     <span className="font-medium text-sm text-gray-900">{comment.author?.display_name || comment.author?.username || '匿名'}</span>
                     <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{comment.body}</p>
+                  <CherryRender markdown={comment.body} />
                   <div className="mt-1.5 flex items-center gap-3">
                     <button
                       onClick={() => handleCommentLike(comment.id)}

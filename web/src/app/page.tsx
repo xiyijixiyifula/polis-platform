@@ -25,6 +25,7 @@ function FeedLayout() {
   const [totalItems, setTotalItems] = useState(0);
   const [activeTab, setActiveTab] = useState('all');
   const [trendingSpaces, setTrendingSpaces] = useState<any[]>([]);
+  const [trendingPosts, setTrendingPosts] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [unreadDm, setUnreadDm] = useState(0);
   const [unreadNotif, setUnreadNotif] = useState(0);
@@ -58,6 +59,16 @@ function FeedLayout() {
   }, []);
 
   useEffect(() => { fetchTrending(); }, [fetchTrending]);
+
+  const fetchTrendingPosts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/feed?page=1&page_size=5&sort=hot');
+      const data = await res.json();
+      if (data.code === 0 && data.data) setTrendingPosts(data.data.slice(0, 5));
+    } catch {}
+  }, []);
+
+  useEffect(() => { fetchTrendingPosts(); }, [fetchTrendingPosts]);
 
   const getSortParam = (tab: string) => {
     if (tab === 'hot') return '&sort=hot';
@@ -142,13 +153,16 @@ function FeedLayout() {
           <div className="sticky top-0 h-screen flex flex-col py-3 px-3">
             {/* Logo */}
             <div className="px-3 pb-3 mb-2">
-              <Link href="/" className="text-2xl font-bold text-primary-600 dark:text-primary-400 tracking-tight">
+              <Link href="/" className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-2xl font-bold text-primary-600 dark:text-primary-400 tracking-tight glass-btn">
+                <span className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-sm font-bold shadow-sm">
+                  P
+                </span>
                 Polis
               </Link>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 space-y-1">
+            <nav className="flex-1 flex flex-col gap-1">
               {[
                 { icon: Home, label: '首页', href: '/' },
                 { icon: Compass, label: '探索', href: '/explore' },
@@ -161,7 +175,7 @@ function FeedLayout() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className="nav-item flex items-center gap-4 px-3 py-3 rounded-full transition-all text-lg glass-btn"
+                  className="nav-item flex items-center gap-4 px-3 py-3 rounded-full transition-all text-lg glass-btn w-full"
                 >
                   <item.icon className="h-6 w-6 shrink-0" />
                   <span className="font-medium">{item.label}</span>
@@ -396,9 +410,36 @@ function FeedLayout() {
                 <TrendingUp className="h-5 w-5 text-primary-500" />
                 热门趋势
               </h3>
-              <div className="text-center text-gray-400 dark:text-gray-500 py-4">
-                <p className="text-sm">成为第一个发帖的人，引领社区趋势 🚀</p>
-              </div>
+              {trendingPosts.length > 0 ? (
+                <div className="divide-y divide-black/5 dark:divide-white/5">
+                  {trendingPosts.map((post: any, i: number) => (
+                    <Link key={post.id} href={'/post/' + post.id} className="flex items-start gap-3 px-2 py-2.5 hover:bg-white/30 dark:hover:bg-white/5 transition-colors rounded-lg">
+                      <span className="text-lg font-bold text-gray-300 dark:text-gray-600 shrink-0 w-6 text-center">
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {post.title || '无标题'}
+                        </p>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
+                          <span className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            {formatCount(post.view_count || 0)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="h-3 w-3" />
+                            {formatCount(post.comment_count || 0)}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-400 dark:text-gray-500 py-4">
+                  <p className="text-sm">成为第一个发帖的人，引领社区趋势 🚀</p>
+                </div>
+              )}
             </div>
 
             {/* Recommended Communities */}
