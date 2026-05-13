@@ -205,6 +205,8 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/notifications/unread-count", get(unread_count_route))
         .route("/api/notifications/read", post(mark_read_route))
         .route("/api/notifications/read-all", post(mark_all_read_route))
+        .route("/api/notifications/delete", post(delete_notifications_route))
+        .route("/api/notifications/{id}", delete(delete_notification_route))
         // 系列（专栏）管理接口
         .route("/api/series/space/{*ns}", post(create_series_route))
         .route("/api/series/{id}", put(update_series_route).delete(delete_series_route))
@@ -704,6 +706,33 @@ async fn mark_read_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     sqlx::query("UPDATE notifications SET is_read = TRUE WHERE id = $1 AND user_id = $2 AND is_read = FALSE")
         .bind(body.notification_id).bind(uid).execute(&h.pool).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+#[derive(Deserialize)]
+struct DeleteNotificationsBody { ids: Vec<Uuid> }
+
+async fn delete_notifications_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Json(body): Json<DeleteNotificationsBody>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    if body.ids.is_empty() {
+        return Ok(json_ok(ApiResponse::success(0)));
+    }
+    let result = sqlx::query(
+        "DELETE FROM notifications WHERE id = ANY($1) AND user_id = $2"
+    ).bind(&body.ids).bind(uid).execute(&h.pool).await?;
+    Ok(json_ok(ApiResponse::success(result.rows_affected())))
+}
+
+async fn delete_notification_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    axum::extract::Path(id): axum::extract::Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    sqlx::query("DELETE FROM notifications WHERE id = $1 AND user_id = $2")
+        .bind(id).bind(uid).execute(&h.pool).await?;
     Ok(json_ok(ApiResponse::success(())))
 }
 

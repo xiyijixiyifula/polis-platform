@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, ChevronRight, Pin, Star, Send } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, ChevronRight, Pin, Star, Send, Trash2, Square, CheckSquare } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
@@ -9,6 +9,8 @@ export default function NotificationsPage() {
   const [notifs, setNotifs] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [markingIds, setMarkingIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
 
   useEffect(() => { fetchNotifs(); fetchUnread(); }, []);
@@ -46,7 +48,7 @@ export default function NotificationsPage() {
       });
       setNotifs((prev) => prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)));
       fetchUnread();
-    } catch {} 
+    } catch {}
     finally {
       setMarkingIds((prev) => {
         const next = new Set(prev);
@@ -54,6 +56,58 @@ export default function NotificationsPage() {
         return next;
       });
     }
+  };
+
+  // ==== Selection ====
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === notifs.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(notifs.map((n) => n.id)));
+    }
+  };
+
+  // ==== Delete ====
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0 || deleting) return;
+    setDeleting(true);
+    try {
+      await fetch('/api/notifications/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+      setNotifs((prev) => prev.filter((n) => !selectedIds.has(n.id)));
+      setSelectedIds(new Set());
+      fetchUnread();
+    } catch {}
+    finally { setDeleting(false); }
+  };
+
+  const deleteOne = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token()}` },
+      });
+      setNotifs((prev) => prev.filter((n) => n.id !== id));
+      setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
+      fetchUnread();
+    } catch {}
+    finally { setDeleting(false); }
   };
 
   /** Navigate to the target content based on notification type */
@@ -66,7 +120,6 @@ export default function NotificationsPage() {
     if (targetType === 'post' && targetId) {
       router.push(`/post/${targetId}`);
     } else if (targetType === 'reference' && targetId) {
-      // Navigate to post detail page (reference relates to original post)
       router.push(`/post/${targetId}`);
     } else if (targetType === 'user' && targetId) {
       router.push(`/profile/${n.actor?.username || ''}`);
@@ -88,6 +141,8 @@ export default function NotificationsPage() {
     }
   };
 
+  const allSelected = notifs.length > 0 && selectedIds.size === notifs.length;
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -95,12 +150,36 @@ export default function NotificationsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">通知</h1>
           {unreadCount > 0 && <p className="text-sm text-gray-500 mt-1">{unreadCount} 条未读</p>}
         </div>
-        {unreadCount > 0 && (
-          <button onClick={markAllRead} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1">
-            <CheckCheck className="h-3.5 w-3.5" /> 全部已读
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button onClick={markAllRead} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1">
+              <CheckCheck className="h-3.5 w-3.5" /> 全部已读
+            </button>
+          )}
+          {selectedIds.size > 0 && (
+            <button
+              onClick={deleteSelected}
+              disabled={deleting}
+              className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {deleting ? '...' : `删除(${selectedIds.size})`}
+            </button>
+          )}
+        </div>
       </div>
+
+      {notifs.length > 0 && (
+        <div className="flex items-center gap-2 mb-3 px-1">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            {allSelected ? <CheckSquare className="h-4 w-4 text-primary-500" /> : <Square className="h-4 w-4" />}
+            全选
+          </button>
+        </div>
+      )}
 
       {notifs.length === 0 ? (
         <div className="glass-card p-6 py-16 text-center">
@@ -110,23 +189,46 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifs.map((n: any) => (
-            <button
+            <div
               key={n.id}
-              onClick={() => handleClick(n)}
-              className={`w-full text-left glass-card flex items-start gap-3 py-3 px-4 transition-colors ${!n.is_read ? 'border-primary-300 dark:border-primary-600 bg-primary-50/50 dark:bg-primary-900/20' : 'hover:border-primary-300 dark:hover:border-primary-500'}`}
+              className={`w-full glass-card flex items-start gap-3 py-3 px-4 transition-colors group ${!n.is_read ? 'border-primary-300 dark:border-primary-600 bg-primary-50/50 dark:bg-primary-900/20' : 'hover:border-primary-300 dark:hover:border-primary-500'}`}
             >
-              <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                {getIcon(n.type)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-700 dark:text-gray-200">{n.content}</p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatDate(n.created_at)}</p>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
+              {/* Checkbox */}
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleSelect(n.id); }}
+                className="shrink-0 mt-1 text-gray-300 hover:text-primary-500 dark:text-gray-600 dark:hover:text-primary-400 transition-colors"
+              >
+                {selectedIds.has(n.id)
+                  ? <CheckSquare className="h-5 w-5 text-primary-500" />
+                  : <Square className="h-5 w-5" />
+                }
+              </button>
+
+              {/* Content — clickable to navigate */}
+              <button onClick={() => handleClick(n)} className="flex items-start gap-3 flex-1 min-w-0 text-left">
+                <div className="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                  {getIcon(n.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-700 dark:text-gray-200">{n.content}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatDate(n.created_at)}</p>
+                </div>
+              </button>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 shrink-0">
                 {!n.is_read && <div className="h-2 w-2 rounded-full bg-primary-500" />}
                 <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                <button
+                  onClick={(e) => deleteOne(n.id, e)}
+                  disabled={deleting}
+                  className="ml-1 p-1 rounded-md text-gray-300 hover:text-red-500 dark:text-gray-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                  title="删除"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}
