@@ -242,6 +242,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/messages/{user_id}", delete(delete_conversation_route))
         .route("/api/messages", post(send_message_route))
         .route("/api/messages/{msg_id}/pin", post(toggle_pin_message_route))
+        .route("/api/messages/delete", post(batch_delete_conversations_route))
         .route("/api/messages/conversations/{user_id}/mute", post(mute_conversation_route))
         .route("/api/messages/conversations/{user_id}/mute", delete(unmute_conversation_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
@@ -1420,6 +1421,25 @@ async fn delete_conversation_route(
     .bind(uid).bind(other_user_id)
     .execute(&h.pool).await?;
     Ok(json_ok(ApiResponse::success(())))
+}
+
+/// POST /api/messages/delete — 批量删除与多个用户的会话（需认证）
+#[derive(Deserialize)]
+struct BatchDeleteRequest {
+    ids: Vec<Uuid>,
+}
+
+async fn batch_delete_conversations_route(
+    State(h): State<Arc<ContentHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Json(req): Json<BatchDeleteRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    if req.ids.is_empty() {
+        return Err(AppError::Validation("请选择要删除的对话".to_string()));
+    }
+    let dm = MessageHandler::new(h.pool.clone());
+    let deleted = dm.batch_delete_conversations(uid, req.ids).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({ "deleted": deleted }))))
 }
 
 /// POST /api/messages/{msg_id}/pin — 置顶/取消置顶消息

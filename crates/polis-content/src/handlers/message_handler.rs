@@ -74,6 +74,11 @@ impl MessageHandler {
         self.repo.is_conversation_muted(user_id, muted_user_id).await
     }
 
+    /// 批量删除与多个用户的会话（软删除）
+    pub async fn batch_delete_conversations(&self, user_id: Uuid, other_user_ids: Vec<Uuid>) -> Result<u64, AppError> {
+        self.repo.batch_delete_conversations(user_id, &other_user_ids).await
+    }
+
     /// 获取已静音列表
     pub async fn get_muted_list(&self, user_id: Uuid) -> Result<Vec<Uuid>, AppError> {
         self.repo.get_muted_conversations(user_id).await

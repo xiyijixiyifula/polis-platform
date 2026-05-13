@@ -1082,7 +1082,7 @@ impl ContentRepo {
                     content,
                     created_at
                 FROM direct_messages
-                WHERE sender_id = $1 OR receiver_id = $1
+                WHERE (sender_id = $1 OR receiver_id = $1) AND is_deleted = FALSE
                 ORDER BY
                     CASE WHEN sender_id = $1 THEN receiver_id ELSE sender_id END,
                     created_at DESC
@@ -1124,7 +1124,7 @@ impl ContentRepo {
 
     pub async fn get_conversation_messages(&self, user_id: Uuid, other_user_id: Uuid, limit: i64, offset: i64) -> Result<Vec<DirectMessage>, AppError> {
         let msgs = sqlx::query_as::<_, DirectMessage>(
-            "SELECT * FROM direct_messages WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1) ORDER BY created_at DESC LIMIT $3 OFFSET $4"
+            "SELECT * FROM direct_messages WHERE ((sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)) AND is_deleted = FALSE ORDER BY created_at DESC LIMIT $3 OFFSET $4"
         )
         .bind(user_id)
         .bind(other_user_id)
@@ -1366,6 +1366,21 @@ impl ContentRepo {
             return Err(AppError::NotFound("Message not found".to_string()));
         }
         Ok(())
+    }
+
+    /// 批量删除与多个用户的会话（软删除）
+    pub async fn batch_delete_conversations(&self, user_id: Uuid, other_user_ids: &[Uuid]) -> Result<u64, AppError> {
+        let mut total = 0u64;
+        for other_id in other_user_ids {
+            let affected = sqlx::query(
+                "UPDATE direct_messages SET is_deleted = TRUE WHERE ((sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)) AND is_deleted = FALSE"
+            )
+            .bind(user_id).bind(other_id)
+            .execute(&self.pool).await?
+            .rows_affected();
+            total += affected;
+        }
+        Ok(total)
     }
 
     /// 置顶/取消置顶消息（切换 is_pinned）

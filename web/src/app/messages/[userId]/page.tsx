@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, User, Send, Pin, Trash2, Search, X } from 'lucide-react';
+import { ArrowLeft, User, Send, Pin, Trash2, Search, X, Eraser } from 'lucide-react';
 import { messages, users, type DirectMessage } from '@/lib/api';
 
 export default function ConversationPage() {
@@ -117,6 +117,16 @@ export default function ConversationPage() {
     }
   };
 
+  const handleClearChat = async () => {
+    if (!confirm('确定要清除所有聊天记录吗？此操作不可撤销。')) return;
+    try {
+      const res = await messages.deleteConversation(userId);
+      if (res.code === 0) {
+        setMsgs([]);
+      }
+    } catch {}
+  };
+
   const handleTogglePin = async (msgId: string) => {
     try {
       const res = await messages.togglePin(msgId);
@@ -183,6 +193,10 @@ export default function ConversationPage() {
             {otherUser?.display_name || otherUser?.username || '用户'}
           </Link>
         </div>
+        {/* Clear chat */}
+        <button onClick={handleClearChat} className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="清除聊天记录">
+          <Eraser className="h-4 w-4" />
+        </button>
         {/* Search toggle */}
         <button onClick={() => setShowSearch(!showSearch)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
           <Search className="h-4 w-4" />

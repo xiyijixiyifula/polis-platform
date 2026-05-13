@@ -619,6 +619,13 @@ export const messages = {
   /** 取消静音对话 */
   unmuteConversation: (userId: string) =>
     request<{ muted: boolean }>(`/messages/conversations/${userId}/mute`, { method: 'DELETE' }),
+
+  /** 批量删除与多个用户的会话 */
+  batchDelete: (userIds: string[]) =>
+    request<{ deleted: number }>('/messages/delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids: userIds }),
+    }),
 };
 
 /** 联系人（互相关注的微信式通讯录） */

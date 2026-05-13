@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MessageSquare, User, Trash2, BellOff, Search, X, Users, MessageCircle } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Trash2, BellOff, Search, X, Users, MessageCircle, CheckSquare, Square } from 'lucide-react';
 import { messages, contacts, type ConversationSummary } from '@/lib/api';
 
 type Contact = { id: string; username: string; display_name: string; is_mutual: boolean };
@@ -18,6 +18,8 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchDeleting, setBatchDeleting] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('polis_access_token');
@@ -50,6 +52,36 @@ export default function MessagesPage() {
       }
     } catch {}
     setContactsLoading(false);
+  };
+
+  const toggleSelect = (userId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId); else next.add(userId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === conversations.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(conversations.map(c => c.other_user.id)));
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0 || batchDeleting) return;
+    if (!confirm(`确定要删除 ${selectedIds.size} 条对话吗？删除后聊天记录将被清除。`)) return;
+    setBatchDeleting(true);
+    try {
+      const res = await messages.batchDelete(Array.from(selectedIds));
+      if (res.code === 0) {
+        setConversations(prev => prev.filter(c => !selectedIds.has(c.other_user.id)));
+        setSelectedIds(new Set());
+      }
+    } catch {}
+    setBatchDeleting(false);
   };
 
   const handleDelete = async (userId: string, e: React.MouseEvent) => {
@@ -176,11 +208,45 @@ export default function MessagesPage() {
               <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">访问其他用户的个人主页，点击"发送私信"开始对话</p>
             </div>
           ) : (
-            <div className="space-y-0.5">
+            <>
+              {/* Batch action bar */}
+              <div className="flex items-center justify-between px-1 mb-2">
+                <button
+                  onClick={toggleSelectAll}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  {selectedIds.size === conversations.length && conversations.length > 0
+                    ? <CheckSquare className="h-4 w-4" />
+                    : <Square className="h-4 w-4" />
+                  }
+                  {selectedIds.size === conversations.length ? '取消全选' : '全选'}
+                </button>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={handleBatchDelete}
+                    disabled={batchDeleting}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-500 text-white text-xs hover:bg-red-600 disabled:opacity-50 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    删除({selectedIds.size})
+                  </button>
+                )}
+              </div>
+              <div className="space-y-0.5">
               {conversations.map((conv) => (
-                <div key={conv.other_user.id} className="group relative">
+                <div key={conv.other_user.id} className="group relative flex items-center gap-2">
+                  {/* Checkbox */}
+                  <button
+                    onClick={(e) => { e.preventDefault(); toggleSelect(conv.other_user.id); }}
+                    className="shrink-0 p-1 text-gray-400 hover:text-primary-500 transition-colors"
+                  >
+                    {selectedIds.has(conv.other_user.id)
+                      ? <CheckSquare className="h-5 w-5 text-primary-500" />
+                      : <Square className="h-5 w-5" />
+                    }
+                  </button>
                   <Link href={`/messages/${conv.other_user.id}`}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    className="flex-1 flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                     <div className="relative shrink-0">
                       <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center overflow-hidden">
                         {conv.other_user.avatar_url ? (
@@ -221,7 +287,8 @@ export default function MessagesPage() {
                 </div>
               ))}
             </div>
-          )}
+          </>
+        )}
         </>
       )}
 
