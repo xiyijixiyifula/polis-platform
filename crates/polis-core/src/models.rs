@@ -200,6 +200,8 @@ pub struct Post {
     pub like_count: i64,
     pub comment_count: i64,
     pub metadata: serde_json::Value,
+    /// 分享密码（明文，NULL 表示无密码保护）
+    pub password_hash: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -225,6 +227,8 @@ pub struct PostPublic {
     pub is_liked: bool,
     pub is_bookmarked: bool,
     pub is_hidden: bool,
+    /// 是否设置有分享密码（需要解锁才能查看正文）
+    pub has_password: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -238,6 +242,8 @@ pub struct CreatePostRequest {
     pub content_type: Option<ContentType>,
     pub tags: Option<Vec<String>>,
     pub visibility: Option<Visibility>,
+    /// 密码分享密码（明文，仅 visibility=unlisted 时生效）
+    pub password: Option<String>,
 }
 
 /// 更新帖子请求
@@ -247,6 +253,14 @@ pub struct UpdatePostRequest {
     pub body: Option<String>,
     pub tags: Option<Vec<String>>,
     pub visibility: Option<Visibility>,
+    /// 密码分享密码（明文，仅 visibility=unlisted 时生效）
+    pub password: Option<String>,
+}
+
+/// 解锁密码保护帖子请求
+#[derive(Debug, Deserialize)]
+pub struct UnlockPostRequest {
+    pub password: String,
 }
 
 // ==================== 跨社区投稿引用（Rust 所有权模型） ====================

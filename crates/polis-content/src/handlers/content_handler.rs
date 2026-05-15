@@ -1,6 +1,6 @@
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
-use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscription, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, Pagination, Post, PostPublic, PostReference, SeriesPublic, UpdatePostRequest, UserPublic, PaginationParams,
+use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscription, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, Pagination, Post, PostPublic, PostReference, SeriesPublic, UpdatePostRequest, UnlockPostRequest, UserPublic, PaginationParams,
 };
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
@@ -41,6 +41,7 @@ impl ContentHandler {
             .map(|t| serde_json::to_value(t).unwrap_or_default())
             .unwrap_or(serde_json::Value::Array(vec![]));
         let visibility = req.visibility.unwrap_or_default().to_string();
+        let password_hash = req.password.as_deref();
 
         let post = self
             .repo
@@ -53,6 +54,7 @@ impl ContentHandler {
                 &content_type,
                 &tags,
                 &visibility,
+                password_hash,
             )
             .await?;
 
@@ -187,6 +189,7 @@ impl ContentHandler {
                     is_liked: false,
                     is_bookmarked: false,
                     is_hidden: p.hidden_by_owner,
+                    has_password: p.password_hash.is_some(),
                     created_at: p.created_at,
                     updated_at: p.updated_at,
                 }
@@ -248,6 +251,7 @@ impl ContentHandler {
                     is_liked: false,
                     is_bookmarked: false,
                     is_hidden: p.hidden_by_owner,
+                    has_password: p.password_hash.is_some(),
                     created_at: p.created_at,
                     updated_at: p.updated_at,
                 }
@@ -367,6 +371,7 @@ impl ContentHandler {
                 view_count: p.view_count, like_count: p.like_count,
                 comment_count: p.comment_count,
                 is_liked: false, is_bookmarked: false, is_hidden: p.hidden_by_owner,
+                has_password: p.password_hash.is_some(),
                 created_at: p.created_at, updated_at: p.updated_at,
             }
         }).collect();
@@ -431,13 +436,22 @@ impl ContentHandler {
             (false, false)
         };
 
+        // 密码保护：非作者需解锁才能查看正文
+        let has_password = post.password_hash.is_some();
+        let is_author = current_user_id.map_or(false, |uid| uid == post.author_id);
+        let visible_body = if has_password && !is_author {
+            String::new() // 上锁：正文隐藏在密码后面
+        } else {
+            post.body
+        };
+
         Ok(PostPublic {
             id: post.id,
             space_id: post.space_id,
             module_type: serde_json::from_str(&format!("\"{}\"", post.module_type)).unwrap_or_default(),
             author,
             title: post.title,
-            body: post.body,
+            body: visible_body,
             content_type: serde_json::from_str(&format!("\"{}\"", post.content_type)).unwrap_or_default(),
             media_urls: serde_json::from_value(post.media_urls).unwrap_or_default(),
             tags: serde_json::from_value(post.tags).unwrap_or_default(),
@@ -450,6 +464,7 @@ impl ContentHandler {
             is_liked,
             is_bookmarked,
             is_hidden: post.hidden_by_owner,
+            has_password,
             created_at: post.created_at,
             updated_at: post.updated_at,
         })
@@ -476,6 +491,12 @@ impl ContentHandler {
 
         let tags = req.tags.as_ref().map(|t| serde_json::to_value(t).unwrap_or_default());
         let visibility = req.visibility.as_ref().map(|v| v.to_string());
+        // 密码：仅当 visibility 为 unlisted 且有提供时才更新
+        // 前端发 undefined/null → serde 反序列为 None → 不更新密码
+        // 前端发具体密码 → 更新
+        // 前端发空字符串 "" → 清除密码
+        let password_hash = req.password
+            .and_then(|p| if p.is_empty() { None } else { Some(p) });
 
         let updated = self.repo.update_post(
             post_id,
@@ -483,8 +504,57 @@ impl ContentHandler {
             req.body.as_deref(),
             tags.as_ref(),
             visibility.as_deref(),
+            password_hash.as_deref(),
         ).await?;
         Ok(updated)
+    }
+
+    /// 解锁密码保护的帖子（验证密码后返回完整内容）
+    pub async fn unlock_post(
+        &self,
+        post_id: Uuid,
+        req: UnlockPostRequest,
+    ) -> Result<PostPublic, AppError> {
+        let post = self.repo.verify_post_password(post_id, &req.password)
+            .await?
+            .ok_or(AppError::Forbidden("密码错误".to_string()))?;
+
+        let author_ids = vec![post.author_id];
+        let authors = self.repo.find_users_batch(&author_ids).await?;
+        let author = authors.get(&post.author_id).cloned().unwrap_or(UserPublic {
+            id: post.author_id,
+            username: String::new(),
+            display_name: String::new(),
+            avatar_url: None,
+            bio: String::new(),
+            verified: false,
+            notification_prefs: serde_json::json!({}),
+            created_at: post.created_at,
+        });
+
+        Ok(PostPublic {
+            id: post.id,
+            space_id: post.space_id,
+            module_type: serde_json::from_str(&format!("\"{}\"", post.module_type)).unwrap_or_default(),
+            author,
+            title: post.title,
+            body: post.body,
+            content_type: serde_json::from_str(&format!("\"{}\"", post.content_type)).unwrap_or_default(),
+            media_urls: serde_json::from_value(post.media_urls).unwrap_or_default(),
+            tags: serde_json::from_value(post.tags).unwrap_or_default(),
+            visibility: serde_json::from_str(&format!("\"{}\"", post.visibility)).unwrap_or_default(),
+            is_pinned: post.is_pinned,
+            is_featured: post.is_featured,
+            view_count: post.view_count,
+            like_count: post.like_count,
+            comment_count: post.comment_count,
+            is_liked: false,
+            is_bookmarked: false,
+            is_hidden: post.hidden_by_owner,
+            has_password: true,
+            created_at: post.created_at,
+            updated_at: post.updated_at,
+        })
     }
 
     /// 删除帖子

@@ -25,11 +25,12 @@ impl ContentRepo {
         content_type: &str,
         tags: &serde_json::Value,
         visibility: &str,
+        password_hash: Option<&str>,
     ) -> Result<Post, AppError> {
         let post = sqlx::query_as::<_, Post>(
             r#"
-            INSERT INTO posts (space_id, module_type, author_id, title, body, content_type, tags, visibility)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO posts (space_id, module_type, author_id, title, body, content_type, tags, visibility, password_hash)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
             "#,
         )
@@ -41,6 +42,7 @@ impl ContentRepo {
         .bind(content_type)
         .bind(tags)
         .bind(visibility)
+        .bind(password_hash)
         .fetch_one(&self.pool)
         .await?;
         Ok(post)
@@ -170,6 +172,7 @@ impl ContentRepo {
         body: Option<&str>,
         tags: Option<&serde_json::Value>,
         visibility: Option<&str>,
+        password_hash: Option<&str>,
     ) -> Result<Post, AppError> {
         let post = sqlx::query_as::<_, Post>(
             r#"
@@ -178,6 +181,7 @@ impl ContentRepo {
                 body = COALESCE($3, body),
                 tags = COALESCE($4, tags),
                 visibility = COALESCE($5, visibility),
+                password_hash = COALESCE($6, password_hash),
                 updated_at = NOW()
             WHERE id = $1 AND is_deleted = FALSE
             RETURNING *
@@ -188,7 +192,20 @@ impl ContentRepo {
         .bind(body)
         .bind(tags)
         .bind(visibility)
+        .bind(password_hash)
         .fetch_one(&self.pool)
+        .await?;
+        Ok(post)
+    }
+
+    /// 验证帖子分享密码
+    pub async fn verify_post_password(&self, post_id: Uuid, password: &str) -> Result<Option<Post>, AppError> {
+        let post = sqlx::query_as::<_, Post>(
+            "SELECT * FROM posts WHERE id = $1 AND is_deleted = FALSE AND password_hash = $2"
+        )
+        .bind(post_id)
+        .bind(password)
+        .fetch_optional(&self.pool)
         .await?;
         Ok(post)
     }

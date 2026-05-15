@@ -6,7 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, PostReference, SeriesPublic, UpdatePostRequest, PaginationParams, SendMessageRequest, MarkMessagesReadRequest, CreateTierRequest, UpdateTierRequest};
+use polis_core::models::{ApiResponse, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, PostReference, SeriesPublic, UpdatePostRequest, UnlockPostRequest, PaginationParams, SendMessageRequest, MarkMessagesReadRequest, CreateTierRequest, UpdateTierRequest};
 use polis_core::resolver::resolve::{resolve_space_id, resolve_space_enabled_modules};
 use crate::handlers::content_handler::ContentHandler;
 use crate::handlers::chat_handler::ChatHandler;
@@ -176,6 +176,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     .route("/api/feed", get(feed_route))
         .route("/api/posts/{id}", get(get_post_by_id_route))
         .route("/api/posts/{id}/view", post(increment_view_route))
+        .route("/api/posts/{id}/unlock", post(unlock_post_route))
         .route("/api/posts/{id}/download", get(download_post_route))
         .route("/api/posts/{id}/comments", get(get_post_comments_route).post(create_comment_by_post_id))
         // 获取投票分数（赞同/反对）
@@ -1233,6 +1234,16 @@ async fn update_post_by_id_route(
     Json(r): Json<UpdatePostRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let post = h.update_post(id, uid, r).await?;
+    Ok(json_ok(ApiResponse::success(post)))
+}
+
+/// POST /api/posts/{id}/unlock — 解锁密码保护的帖子
+async fn unlock_post_route(
+    State(h): State<Arc<ContentHandler>>,
+    Path(id): Path<Uuid>,
+    Json(req): Json<UnlockPostRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let post = h.unlock_post(id, req).await?;
     Ok(json_ok(ApiResponse::success(post)))
 }
 
