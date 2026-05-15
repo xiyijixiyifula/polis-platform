@@ -59,7 +59,7 @@ export default function CreateSpacePage() {
     try {
       const res = await spaces.create({
         slug,
-        title: title.trim(),
+        title: slug,  // 社区名与空间标识统一
         description: description || undefined,
         visibility,
       });
