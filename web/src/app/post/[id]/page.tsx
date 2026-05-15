@@ -52,6 +52,11 @@ function PostDetailContent() {
   const [editBody, setEditBody] = useState('');
   const [editTags, setEditTags] = useState('');
   const [editVisibility, setEditVisibility] = useState('public');
+  const [editPassword, setEditPassword] = useState('');
+  // 解锁密码保护的帖子
+  const [showUnlock, setShowUnlock] = useState(false);
+  const [unlockPassword, setUnlockPassword] = useState('');
+  const [unlocking, setUnlocking] = useState(false);
 
   // Follow author
   const [isFollowingAuthor, setIsFollowingAuthor] = useState(false);
@@ -229,6 +234,7 @@ function PostDetailContent() {
     setEditBody(post.body || '');
     setEditTags(post.tags?.join(', ') || '');
     setEditVisibility(post.visibility || 'public');
+    setEditPassword(''); // 编辑时不回显密码，留空表示不修改
   };
 
   const handleCancelEdit = () => {
@@ -239,11 +245,14 @@ function PostDetailContent() {
     if (!post || !editTitle.trim()) return;
     try {
       const tagArray = editTags ? editTags.split(',').map(t => t.trim()).filter(Boolean) : undefined;
+      // 密码分享：仅 unlisted 时发送密码
+      const passwordPayload = editVisibility === 'unlisted' ? editPassword : undefined;
       const res = await posts.update(currentNs, post.id, {
         title: editTitle.trim(),
         body: editBody,
         tags: tagArray,
         visibility: editVisibility !== post.visibility ? editVisibility : undefined,
+        password: passwordPayload,
       });
       if (res.data) {
         setPost(res.data);
@@ -252,6 +261,23 @@ function PostDetailContent() {
     } catch {
       alert('编辑失败，请重试');
     }
+  };
+
+  // 解锁密码保护的帖子
+  const handleUnlock = async () => {
+    if (!unlockPassword.trim() || !postId) return;
+    setUnlocking(true);
+    try {
+      const res = await posts.unlock(postId, unlockPassword);
+      if (res.data) {
+        setPost(res.data);
+        setShowUnlock(false);
+        setUnlockPassword('');
+      }
+    } catch (err: any) {
+      alert(err.message || '密码错误，请重试');
+    }
+    setUnlocking(false);
   };
 
   const handleDelete = async () => {
@@ -477,18 +503,33 @@ function PostDetailContent() {
               className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white"
               placeholder="标签 (用逗号分隔, 如: Rust, 教程)"
             />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-gray-500 dark:text-gray-400">可见性:</span>
               <select
                 value={editVisibility}
-                onChange={(e) => setEditVisibility(e.target.value)}
+                onChange={(e) => { setEditVisibility(e.target.value); if (e.target.value !== 'unlisted') setEditPassword(''); }}
                 className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white"
               >
                 <option value="public">🌐 公开 — 所有人可见</option>
                 <option value="private">🔒 私密 — 仅自己可见</option>
-                <option value="space_member">👥 社区成员 — 仅社区成员可见</option>
+                <option value="unlisted">🔗 密码分享 — 输入密码后可见</option>
               </select>
             </div>
+            {editVisibility === 'unlisted' && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500 dark:text-gray-400">分享密码:</span>
+                <input
+                  type="text"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white w-48"
+                  placeholder="设置访问密码"
+                />
+                {editPassword && (
+                  <span className="text-xs text-gray-400">🔑 访问者需输入此密码才能查看内容</span>
+                )}
+              </div>
+            )}
             <textarea
               value={editBody}
               onChange={(e) => setEditBody(e.target.value)}
@@ -513,7 +554,35 @@ function PostDetailContent() {
               </div>
             )}
 
-            <CherryRender markdown={post.body} />
+            {/* 密码保护 — 非作者需解锁查看 */}
+            {(post as any).has_password && !(post as any).body && !isAuthor ? (
+              <div className="my-8 p-6 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200/60 dark:border-amber-700/30">
+                <div className="text-center mb-4">
+                  <span className="text-4xl">🔐</span>
+                  <h3 className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">此内容已加密分享</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">请输入分享密码以查看完整内容</p>
+                </div>
+                <div className="flex gap-2 max-w-sm mx-auto">
+                  <input
+                    type="password"
+                    value={unlockPassword}
+                    onChange={(e) => setUnlockPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+                    className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 text-sm dark:bg-gray-800 dark:text-white"
+                    placeholder="请输入分享密码"
+                  />
+                  <button
+                    onClick={handleUnlock}
+                    disabled={unlocking || !unlockPassword.trim()}
+                    className="btn-primary text-sm px-4 disabled:opacity-50"
+                  >
+                    {unlocking ? '验证中...' : '解锁'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <CherryRender markdown={post.body} />
+            )}
           </>
         )}
 

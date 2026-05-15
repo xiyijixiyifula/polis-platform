@@ -77,6 +77,7 @@ export interface Post {
   is_liked?: boolean;
   is_bookmarked?: boolean;
   is_hidden?: boolean;
+  has_password?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -404,7 +405,7 @@ export const series = {
 };
 
 export const posts = {
-  create: (namespace: string, data: { title: string; body: string; module_type?: string; tags?: string[]; visibility?: string }) =>
+  create: (namespace: string, data: { title: string; body: string; module_type?: string; tags?: string[]; visibility?: string; password?: string }) =>
     request<Post>(`/spaces/${namespace}/posts`, {
       method: 'POST',
       body: JSON.stringify({ ...data, content_type: 'text', module_type: data.module_type || 'forum' }),
@@ -495,10 +496,17 @@ export const posts = {
   view: (id: string) =>
     request<{ view_count: number }>(`/posts/${id}/view`, { method: 'POST' }),
 
-  update: (namespace: string, id: string, data: { title?: string; body?: string; tags?: string[]; visibility?: string }) =>
+  update: (namespace: string, id: string, data: { title?: string; body?: string; tags?: string[]; visibility?: string; password?: string }) =>
     request<Post>(`/spaces/${namespace}/posts/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+
+  /** 解锁密码保护的帖子 */
+  unlock: (id: string, password: string) =>
+    request<Post>(`/posts/${id}/unlock`, {
+      method: 'POST',
+      body: JSON.stringify({ password }),
     }),
 
   delete: (namespace: string, id: string) =>

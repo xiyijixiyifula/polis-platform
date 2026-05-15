@@ -70,6 +70,7 @@ function NewPostForm() {
 
   const [moduleType, setModuleType] = useState(urlModule === 'share' ? 'share' : urlModule === 'wiki' ? 'wiki' : urlModule === 'qa' ? 'qa' : urlModule === 'novel' ? 'novel' : urlModule === 'game' ? 'game' : urlModule === 'mini_app' ? 'mini_app' : 'forum');
   const [visibility, setVisibility] = useState('public');
+  const [password, setPassword] = useState('');
   useEffect(() => {
     if (
       availableModules.length > 0 &&
@@ -208,6 +209,7 @@ function NewPostForm() {
         module_type: moduleType,
         tags: tags.split(/[,，、\s]+/).filter(Boolean),
         visibility,
+        password: visibility === 'unlisted' && password ? password : undefined,
       });
       if (res.code === 0 && res.data?.id) {
         const postId = res.data.id;
@@ -444,19 +446,28 @@ function NewPostForm() {
           </p>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-gray-500 dark:text-gray-400">
             可见性:
           </span>
           <select
             value={visibility}
-            onChange={(e) => setVisibility(e.target.value)}
+            onChange={(e) => { setVisibility(e.target.value); if (e.target.value !== 'unlisted') setPassword(''); }}
             className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
           >
             <option value="public">🌐 公开 — 所有人可见</option>
             <option value="private">🔒 私密 — 仅自己可见</option>
-            <option value="unlisted">🔗 不公开 — 有链接可见</option>
+            <option value="unlisted">🔗 密码分享 — 输入密码后可见</option>
           </select>
+          {visibility === 'unlisted' && (
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent w-36"
+              placeholder="分享密码（可选）"
+            />
+          )}
         </div>
 
         {space && seriesList.length > 0 && (
