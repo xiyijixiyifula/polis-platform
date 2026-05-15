@@ -380,9 +380,31 @@ function PostDetailContent() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
-      <Link href={spaceFromUrl ? `/space/${spaceFromUrl}` : '/'} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4">
-        <ChevronLeft className="h-4 w-4" /> {spaceFromUrl ? `返回 /${spaceFromUrl}` : '返回首页'}
-      </Link>
+      {/* 面包屑导航 — 毛玻璃胶囊 */}
+      <div className="mb-5">
+        <Link
+          href={spaceFromUrl ? `/space/${spaceFromUrl}` : '/'}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm transition-all duration-300
+            bg-white/60 dark:bg-white/5 backdrop-blur-md
+            border border-black/5 dark:border-white/5
+            text-gray-500 dark:text-gray-400
+            hover:bg-white/80 dark:hover:bg-white/10 hover:text-gray-800 dark:hover:text-gray-200 hover:border-black/10 dark:hover:border-white/10
+            shadow-sm"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          <span className="text-xs font-medium text-gray-400 dark:text-gray-500">返回</span>
+          {spaceFromUrl ? (
+            <>
+              <span className="w-px h-3.5 bg-gray-300/60 dark:bg-gray-600/40" aria-hidden />
+              <span className="text-xs text-gray-600 dark:text-gray-300 max-w-[200px] truncate">
+                {spaceFromUrl.split('/').pop() || spaceFromUrl}
+              </span>
+            </>
+          ) : (
+            <span className="text-xs text-gray-600 dark:text-gray-300">首页</span>
+          )}
+        </Link>
+      </div>
 
       <article className="post-glass">
         {/* 作者信息区 — 明确标注 + 关注 + 私信 */}
