@@ -180,12 +180,12 @@ function FeedLayout() {
                   <item.icon className="h-6 w-6 shrink-0" />
                   <span className="font-medium">{item.label}</span>
                   {item.label === '消息' && unreadDm > 0 && (
-                    <span className="ml-auto h-5 min-w-[20px] flex items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1.5">
+                    <span className="h-5 min-w-[20px] flex items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1.5">
                       {unreadDm > 99 ? '99+' : unreadDm}
                     </span>
                   )}
                   {item.label === '通知' && unreadNotif > 0 && (
-                    <span className="ml-auto h-5 min-w-[20px] flex items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1.5">
+                    <span className="h-5 min-w-[20px] flex items-center justify-center rounded-full bg-red-500 text-[11px] font-bold text-white px-1.5">
                       {unreadNotif > 99 ? '99+' : unreadNotif}
                     </span>
                   )}
