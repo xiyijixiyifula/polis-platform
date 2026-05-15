@@ -34,14 +34,17 @@ export function formatCount(count: number): string {
 export function stripMarkdown(md: string): string {
   if (!md) return '';
   return md
+    // 代码块（包含表格 Markdown 会被 code 块保护）
+    .replace(/```[\s\S]*?```/g, ' ')
+    // 行内代码
+    .replace(/`([^`]*)`/g, '$1')
+    // 表格 — 移除整行分隔符和管道符
+    .replace(/^\|?\s*[-:]{3,}\s*(\|[-:\s]+)*$/gm, '')
+    .replace(/^\|(.+)\|$/gm, (_, row) => row.replace(/\|/g, ' '))
     // 图片
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     // 链接 -> 保留文字
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    // 代码块
-    .replace(/```[\s\S]*?```/g, ' ')
-    // 行内代码
-    .replace(/`([^`]*)`/g, '$1')
     // 标题
     .replace(/^#{1,6}\s+/gm, '')
     // 粗体/斜体/删除线
@@ -51,6 +54,8 @@ export function stripMarkdown(md: string): string {
     .replace(/^[\s]*\d+\.\s+/gm, '')
     // 引用标记
     .replace(/^>\s?/gm, '')
+    // HTML 标签
+    .replace(/<[^>]*>/g, '')
     // 水平线
     .replace(/^(-{3,}|_{3,}|\*{3,})$/gm, '')
     // 多余空白

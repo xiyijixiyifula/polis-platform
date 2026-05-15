@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen, UserPlus, UserCheck, MessageSquare } from 'lucide-react';
-import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
+import { formatDate, formatCount, estimateReadTime, stripMarkdown } from '@/lib/utils';
 import { posts, series, Comment, Post, type Series } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
@@ -746,7 +746,7 @@ function PostDetailContent() {
             {relatedPosts.map((p) => (
               <Link key={p.id} href={`/post/${p.id}?space=${currentNs}`} className="block p-3 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-colors border-b border-gray-100/50 dark:border-gray-700/30 last:border-b-0">
                 <h4 className="font-medium text-gray-900 mb-1">{p.title}</h4>
-                <p className="text-sm text-gray-500 line-clamp-2">{p.summary || p.body}</p>
+                <p className="text-sm text-gray-500 line-clamp-2">{stripMarkdown(p.summary || p.body)}</p>
                 <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
                   <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {formatCount(p.like_count)}</span>
                   <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {formatCount(p.comment_count)}</span>
