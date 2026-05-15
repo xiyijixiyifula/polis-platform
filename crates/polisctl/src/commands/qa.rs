@@ -91,7 +91,7 @@ pub async fn init(config: &Config, client: &HttpClient) -> Result<(), anyhow::Er
     Ok(())
 }
 
-/// Sync a single Q&A: question → post (qa module), answer → comment
+/// Sync a single Q&A: question → post title, answer → post body (qa module)
 pub async fn post(
     config: &Config,
     client: &HttpClient,
@@ -119,9 +119,10 @@ pub async fn post(
         .map(|t| t.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect())
         .unwrap_or_default();
 
-    let question_body = body.unwrap_or(question);
+    // body: answer content goes into post body (not as a separate comment)
+    let post_body_content = body.unwrap_or(answer);
 
-    // Step 1: Create the question post
+    // Create the Q&A post: title = question, body = answer
     let post_url = format!(
         "/api/spaces/{}/posts",
         urlencoding::encode(&namespace)
@@ -129,7 +130,7 @@ pub async fn post(
 
     let post_body = json!({
         "title": question,
-        "body": question_body,
+        "body": post_body_content,
         "module_type": "qa",
         "content_type": "text",
         "tags": tags_list
@@ -142,44 +143,23 @@ pub async fn post(
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Failed to get post ID from response"))?;
 
-    print_success(&format!("Question posted: {}", question.chars().take(60).collect::<String>()));
+    print_success(&format!(
+        "Q&A posted: {} → https://www.mzgw.com/post/{}?space={}",
+        question.chars().take(50).collect::<String>(),
+        post_id,
+        urlencoding::encode(&namespace),
+    ));
 
-    // Step 2: Post the answer as a comment
-    let comment_url = format!("/api/posts/{}/comments", post_id);
-    let comment_body = json!({ "body": answer });
-
-    match client.post(&comment_url, Some(&token), &comment_body).await {
-        Ok(comment_resp) => {
-            let comment_data = extract_data(&comment_resp);
-            let comment_id = comment_data
-                .get("id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("?");
-
-            print_success(&format!(
-                "Answer synced (post: {}, comment: {})",
-                post_id, comment_id
-            ));
-
-            // Output full result in JSON mode
-            print_output(
-                &json!({
-                    "post_id": post_id,
-                    "comment_id": comment_id,
-                    "title": question,
-                    "url": format!("https://www.mzgw.com/post/{}", post_id),
-                    "tags": tags_list,
-                }),
-                config.format,
-            );
-        }
-        Err(e) => {
-            // Post was created but comment failed — still report partial success
-            eprintln!("\x1b[33m⚠ Answer comment failed: {}\x1b[0m", e);
-            eprintln!("\x1b[32m✓ Question posted (post_id: {})\x1b[0m", post_id);
-            eprintln!("  URL: https://www.mzgw.com/post/{}", post_id);
-        }
-    }
+    // Output full result in JSON mode
+    print_output(
+        &json!({
+            "post_id": post_id,
+            "title": question,
+            "url": format!("https://www.mzgw.com/post/{}?space={}", post_id, urlencoding::encode(&namespace)),
+            "tags": tags_list,
+        }),
+        config.format,
+    );
 
     Ok(())
 }

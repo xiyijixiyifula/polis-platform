@@ -31,6 +31,30 @@
   .dark .card {
     @apply border-gray-700 bg-gray-800;
   }
+  .post-glass {
+    position: relative;
+    border-radius: 20px;
+    padding: 1.5rem;
+    /* 半透明底色 — 让页面背景透过 */
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.35) 100%
+    );
+    /* 极淡的边框融入背景 */
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    /* 柔和模糊让卡片融入背景 — 不去裁剪内容 */
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+  }
+  .dark .post-glass {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.06);
+  }
 }
 
 /* ===== Editor Styles ===== */

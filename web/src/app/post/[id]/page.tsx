@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen, UserPlus, UserCheck, MessageSquare } from 'lucide-react';
@@ -351,13 +351,13 @@ function PostDetailContent() {
   if (loading) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-10">
-        <div className="card animate-pulse space-y-4">
-          <div className="h-6 w-1/3 bg-gray-200 rounded" />
-          <div className="h-4 w-2/3 bg-gray-100 rounded" />
+        <div className="post-glass animate-pulse space-y-4">
+          <div className="h-6 w-1/3 bg-gray-200 dark:bg-gray-700 rounded" />
+          <div className="h-4 w-2/3 bg-gray-100 dark:bg-gray-700 rounded" />
           <div className="space-y-2">
-            <div className="h-4 w-full bg-gray-100 rounded" />
-            <div className="h-4 w-full bg-gray-100 rounded" />
-            <div className="h-4 w-3/4 bg-gray-100 rounded" />
+            <div className="h-4 w-full bg-gray-100 dark:bg-gray-700 rounded" />
+            <div className="h-4 w-full bg-gray-100 dark:bg-gray-700 rounded" />
+            <div className="h-4 w-3/4 bg-gray-100 dark:bg-gray-700 rounded" />
           </div>
         </div>
       </div>
@@ -384,7 +384,7 @@ function PostDetailContent() {
         <ChevronLeft className="h-4 w-4" /> {spaceFromUrl ? `返回 /${spaceFromUrl}` : '返回首页'}
       </Link>
 
-      <article className="card">
+      <article className="post-glass">
         {/* 作者信息区 — 明确标注 + 关注 + 私信 */}
         <div className="flex items-start gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
           <Link href={authorUsername ? `/profile/${authorUsername}` : '#'} className="shrink-0">
@@ -481,7 +481,7 @@ function PostDetailContent() {
           </div>
         ) : (
           <>
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">{post.title}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{post.title}</h1>
 
             {post.tags && post.tags.length > 0 && (
               <div className="mb-6 flex flex-wrap gap-2">
@@ -596,90 +596,133 @@ function PostDetailContent() {
         )}
       </article>
 
-      <div className="mt-6 card">
-        <h3 className="font-semibold text-gray-900 mb-4">评论 ({comments.length})</h3>
-        {replyToId ? (
-          <div className="mb-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500">回复评论</span>
-              <button onClick={() => { setReplyToId(null); setReplyText(''); }} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
-            </div>
-            <textarea
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="输入回复..."
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white resize-none"
-              rows={2}
-            />
-            <button onClick={() => handleComment(replyToId!)} disabled={!replyText.trim()} className="mt-2 btn btn-primary text-xs disabled:opacity-50">发表回复</button>
-          </div>
-        ) : (
-          <>
-            <div className="flex gap-3">
-              <textarea
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="发表评论"
-                className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-sm dark:bg-gray-800 dark:text-white resize-none"
-                rows={3}
-              />
-            </div>
-            <button
-              onClick={() => handleComment()}
-              disabled={!commentText.trim()}
-              className="mt-2 btn btn-primary text-sm disabled:opacity-50"
-            >
-              发表评论
-            </button>
-          </>
-        )}
+      <div className="mt-6 post-glass">
+        <h3 className="font-semibold text-gray-900 dark:text-white mb-4">评论 ({comments.length})</h3>
+        {/* New comment input */}
+        <div className="flex gap-3">
+          <textarea
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="发表评论"
+            className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-sm dark:bg-gray-800 dark:text-white resize-none"
+            rows={3}
+          />
+        </div>
+        <button
+          onClick={() => handleComment()}
+          disabled={!commentText.trim()}
+          className="mt-2 btn btn-primary text-sm disabled:opacity-50"
+        >
+          发表评论
+        </button>
 
         {comments.length === 0 ? (
           <p className="text-center text-gray-400 text-sm mt-6">暂无评论，来发表第一条评论吧</p>
         ) : (
-          <div className="mt-6 space-y-4">
-            {comments.map((comment) => {
+          (() => {
+            // Build comment tree from flat list
+            const childrenMap = new Map<string, Comment[]>();
+            const roots: Comment[] = [];
+            for (const c of comments) {
+              if (c.parent_id) {
+                const list = childrenMap.get(c.parent_id) || [];
+                list.push(c);
+                childrenMap.set(c.parent_id, list);
+              } else {
+                roots.push(c);
+              }
+            }
+
+            const MAX_DEPTH = 5;
+
+            const renderCommentNode = (comment: Comment, depth: number): React.ReactNode => {
+              const children = childrenMap.get(comment.id) || [];
               const isCommentLiked = likedComments.has(comment.id);
+              const isReplying = replyToId === comment.id;
+
               return (
-              <div key={comment.id} className="flex gap-3 border-t border-gray-100 dark:border-gray-700 pt-4">
-                <div className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-medium">
-                  {(comment.author?.display_name || comment.author?.username || '匿').charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm text-gray-900">{comment.author?.display_name || comment.author?.username || '匿名'}</span>
-                    <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
+                <div key={comment.id}>
+                  <div className={`flex gap-3 pt-3 ${depth === 0 ? 'border-t border-gray-100 dark:border-gray-700' : ''}`}>
+                    {/* Indentation and thread line for nested replies */}
+                    {depth > 0 && (
+                      <div className="shrink-0 flex items-stretch" style={{ width: depth * 20 + 8 }}>
+                        <div className="w-px bg-gray-200 dark:bg-gray-700" />
+                      </div>
+                    )}
+                    <div className="h-7 w-7 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-medium mt-0.5">
+                      {(comment.author?.display_name || comment.author?.username || '匿').charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm text-gray-900 dark:text-white">
+                          {comment.author?.display_name || comment.author?.username || '匿名'}
+                        </span>
+                        <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
+                      </div>
+                      <div className="mt-0.5">
+                        <CherryRender markdown={comment.body} />
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-3">
+                        <button
+                          onClick={() => handleCommentLike(comment.id)}
+                          className={`flex items-center gap-1 text-xs transition-colors ${isCommentLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
+                        >
+                          <Heart className={`h-3.5 w-3.5 ${isCommentLiked ? 'fill-current' : ''}`} />
+                          {comment.like_count > 0 ? formatCount(comment.like_count) : ''}
+                        </button>
+                        <button
+                          onClick={() => { setReplyToId(isReplying ? null : comment.id); setReplyText(''); }}
+                          className={`flex items-center gap-1 text-xs transition-colors ${isReplying ? 'text-primary-500' : 'text-gray-400 hover:text-primary-600'}`}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" /> 回复
+                        </button>
+                      </div>
+                      {/* Inline reply input */}
+                      {isReplying && (
+                        <div className="mt-2 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-gray-500">
+                              回复 @{comment.author?.username || comment.author?.display_name || '匿名'}
+                            </span>
+                            <button onClick={() => { setReplyToId(null); setReplyText(''); }} className="text-xs text-gray-400 hover:text-gray-600">取消</button>
+                          </div>
+                          <textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="输入回复..."
+                            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-sm dark:bg-gray-800 dark:text-white resize-none"
+                            rows={2}
+                          />
+                          <button onClick={() => handleComment(comment.id)} disabled={!replyText.trim()} className="mt-2 btn btn-primary text-xs disabled:opacity-50">发表回复</button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <CherryRender markdown={comment.body} />
-                  <div className="mt-1.5 flex items-center gap-3">
-                    <button
-                      onClick={() => handleCommentLike(comment.id)}
-                      className={`flex items-center gap-1 text-xs transition-colors ${isCommentLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500'}`}
-                    >
-                      <Heart className={`h-3.5 w-3.5 ${isCommentLiked ? 'fill-current' : ''}`} />
-                      {comment.like_count > 0 ? formatCount(comment.like_count) : ''}
-                    </button>
-                    <button
-                      onClick={() => { setReplyToId(comment.id); setReplyText(''); }}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary-600 transition-colors"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" /> 回复
-                    </button>
-                  </div>
+                  {/* Nested children */}
+                  {depth < MAX_DEPTH && children.length > 0 && (
+                    <div>
+                      {children.map(child => renderCommentNode(child, depth + 1))}
+                    </div>
+                  )}
                 </div>
-              </div>
               );
-            })}
-          </div>
+            };
+
+            return (
+              <div className="mt-6 space-y-0">
+                {roots.map(root => renderCommentNode(root, 0))}
+              </div>
+            );
+          })()
         )}
       </div>
 
       {relatedPosts.length > 0 && (
-        <div className="mt-6">
-          <h3 className="font-semibold text-gray-900 mb-4">同社区更多帖子</h3>
+        <div className="mt-6 post-glass">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4">同社区更多帖子</h3>
           <div className="space-y-3">
             {relatedPosts.map((p) => (
-              <Link key={p.id} href={`/post/${p.id}?space=${currentNs}`} className="card block hover:border-primary-300 transition-colors">
+              <Link key={p.id} href={`/post/${p.id}?space=${currentNs}`} className="block p-3 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-colors border-b border-gray-100/50 dark:border-gray-700/30 last:border-b-0">
                 <h4 className="font-medium text-gray-900 mb-1">{p.title}</h4>
                 <p className="text-sm text-gray-500 line-clamp-2">{p.summary || p.body}</p>
                 <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
