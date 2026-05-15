@@ -30,18 +30,39 @@ export function formatCount(count: number): string {
   return count.toString();
 }
 
+/** 移除 Markdown 格式，提取纯文本 */
+export function stripMarkdown(md: string): string {
+  if (!md) return '';
+  return md
+    // 图片
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    // 链接 -> 保留文字
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    // 代码块
+    .replace(/```[\s\S]*?```/g, ' ')
+    // 行内代码
+    .replace(/`([^`]*)`/g, '$1')
+    // 标题
+    .replace(/^#{1,6}\s+/gm, '')
+    // 粗体/斜体/删除线
+    .replace(/(\*{1,3}|_{1,3}|~~)(.*?)\1/g, '$2')
+    // 列表标记
+    .replace(/^[\s]*[-*+]\s+/gm, '')
+    .replace(/^[\s]*\d+\.\s+/gm, '')
+    // 引用标记
+    .replace(/^>\s?/gm, '')
+    // 水平线
+    .replace(/^(-{3,}|_{3,}|\*{3,})$/gm, '')
+    // 多余空白
+    .replace(/\n{2,}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /** 估算阅读时间 (基于中英文混合内容, 300字/分钟) */
 export function estimateReadTime(body: string): string {
   if (!body) return '1 分钟';
-  // Remove Markdown syntax (headings, links, code blocks, images)
-  const plain = body
-    .replace(/#{1,6}\s+/g, '')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`[^`]*`/g, '')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
-    .replace(/[*_~>|]/g, '')
-    .replace(/\n+/g, ' ');
+  const plain = stripMarkdown(body);
   // Count Chinese characters (CJK range) + English words
   const chineseChars = (plain.match(/[\u4e00-\u9fff\u3400-\u4dbf]/g) || []).length;
   const englishWords = plain.replace(/[\u4e00-\u9fff\u3400-\u4dbf]/g, '').trim().split(/\s+/).filter(w => w.length > 0).length;

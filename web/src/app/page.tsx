@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { formatDate, formatCount } from '@/lib/utils';
+import { formatDate, formatCount, stripMarkdown } from '@/lib/utils';
 import {
   Home, Compass, Bell, Mail, Bookmark, User, Settings,
   Search, TrendingUp, MessageCircle, Heart, Eye,
@@ -574,7 +574,7 @@ function FeedItemCard({ item }: { item: any }) {
       {/* Line 2: Preview */}
       {item.preview && (
         <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 pl-5">
-          {item.preview}
+          {stripMarkdown(item.preview)}
         </p>
       )}
 
