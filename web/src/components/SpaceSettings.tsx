@@ -123,7 +123,7 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
     { key: 'wiki', label: '知识库', icon: Library, locked: false, comingSoon: false, desc: '协作文档，所有成员可编辑知识库页面' },
     { key: 'series', label: '系列', icon: BookOpen, locked: false, comingSoon: false, desc: '内容系列/专栏，组织帖子合集' },
     { key: 'membership', label: '会员', icon: Crown, locked: false, comingSoon: false, desc: '付费会员等级与订阅管理' },
-    { key: 'video', label: '视频', icon: Video, locked: false, comingSoon: true, desc: '视频内容发布与播放' },
+    { key: 'video', label: '视频', icon: Video, locked: false, comingSoon: false, desc: '视频内容发布与播放' },
     { key: 'code_repo', label: '代码仓库', icon: Code, locked: false, comingSoon: true, desc: 'Git 代码仓库托管' },
     { key: 'qa', label: '问答', icon: HelpCircle, locked: false, comingSoon: false, desc: '提问与回答' },
     { key: 'polls', label: '投票', icon: BarChart3, locked: false, comingSoon: false, desc: '社区投票和问卷调查' },

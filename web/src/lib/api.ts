@@ -649,3 +649,92 @@ export const contacts = {
   getMutual: () =>
     request<Array<{ id: string; username: string; display_name: string; is_mutual: boolean }>>('/contacts/mutual'),
 };
+
+// ===== 视频模块 =====
+
+export interface VideoItem {
+  id: string;
+  space_id: string;
+  space_ns: string;
+  uploader: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  };
+  title: string;
+  description: string;
+  duration_seconds: number | null;
+  thumbnail_url: string | null;
+  hls_url: string | null;
+  status: string;
+  review_status: string;
+  visibility: string;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  is_liked: boolean;
+  share_code?: string;
+  created_at: string;
+}
+
+export interface VideoComment {
+  id: string;
+  video_id: string;
+  author: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  };
+  parent_id: string | null;
+  body: string;
+  like_count: number;
+  created_at: string;
+}
+
+export const videos = {
+  /** 获取空间视频列表 */
+  list: (namespace: string, page?: number, pageSize?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.set('page', String(page));
+    if (pageSize) params.set('page_size', String(pageSize));
+    return request<VideoItem[]>(`/spaces/${encodeNs(namespace)}/videos?${params.toString()}`);
+  },
+
+  /** 获取视频详情 */
+  get: (id: string) => request<VideoItem>(`/videos/${id}`),
+
+  /** 通过分享码获取视频 */
+  getByShareCode: (code: string) => request<VideoItem>(`/videos/share/${code}`),
+
+  /** 上传视频 */
+  upload: (namespace: string, fileBase64: string, title: string, description?: string, visibility?: string, extension?: string) =>
+    request<VideoItem>(`/spaces/${encodeNs(namespace)}/videos`, {
+      method: 'POST',
+      body: JSON.stringify({ file_data: fileBase64, title, description: description || '', visibility: visibility || 'public', extension: extension || 'mp4' }),
+    }),
+
+  /** 更新视频 */
+  update: (id: string, data: { title?: string; description?: string; visibility?: string }) =>
+    request<VideoItem>(`/videos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  /** 删除视频 */
+  delete: (id: string) =>
+    request<void>(`/videos/${id}`, { method: 'DELETE' }),
+
+  /** 点赞 */
+  toggleLike: (id: string) =>
+    request<{ liked: boolean }>(`/videos/${id}/like`, { method: 'POST' }),
+
+  /** 获取评论 */
+  getComments: (id: string) =>
+    request<VideoComment[]>(`/videos/${id}/comments`),
+
+  /** 添加评论 */
+  createComment: (id: string, body: string, parentId?: string) =>
+    request<VideoComment>(`/videos/${id}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body, ...(parentId ? { parent_id: parentId } : {}) }),
+    }),
+};

@@ -15,6 +15,7 @@ import { tiers, subscribe } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
 import { SpaceChat } from '@/components/SpaceChat';
 import { SpaceParticles } from '@/components/SpaceParticles';
+import { SpaceVideoTab } from '@/components/SpaceVideoTab';
 
 interface Announcement {
   id: string; title: string; body: string;
@@ -1319,11 +1320,7 @@ export default function SpacePage() {
           )}
 
           {activeTab === 'video' && (
-            <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
-              <Video className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>视频模块</p>
-              <p className="text-sm mt-1">即将推出，敬请期待</p>
-            </div>
+            <SpaceVideoTab namespace={cleanNamespace} isOwner={isOwner} />
           )}
 
           {activeTab === 'code_repo' && (

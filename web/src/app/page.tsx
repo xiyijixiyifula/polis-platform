@@ -6,7 +6,7 @@ import { formatDate, formatCount, stripMarkdown } from '@/lib/utils';
 import {
   Home, Compass, Bell, Mail, Bookmark, User, Settings,
   Search, TrendingUp, MessageCircle, Heart, Eye,
-  Share2, Repeat2, Sparkles, Users, FlaskConical
+  Share2, Repeat2, Sparkles, Users, FlaskConical, Play
 } from 'lucide-react';
 import { getSpaceVisual } from '@/components/SpaceCard';
 
@@ -512,12 +512,14 @@ function FeedItemCard({ item }: { item: any }) {
   const getTypeIcon = () => {
     if (item.type === 'poll') return '📊';
     if (item.type === 'announcement') return '📢';
+    if (item.type === 'video') return '🎬';
     return '📝';
   };
 
   const getModuleLabel = () => {
     if (item.type === 'poll') return '投票';
     if (item.type === 'announcement') return '公告';
+    if (item.type === 'video') return '视频';
     const mt = item.module_type || '';
     if (mt === 'discussion') return '讨论';
     if (mt === 'article' || mt === 'forum') return '交流';
@@ -526,6 +528,7 @@ function FeedItemCard({ item }: { item: any }) {
     if (mt === 'qa') return '问答';
     if (mt === 'novel') return '小说';
     if (mt === 'game') return '游戏';
+    if (mt === 'video') return '视频';
     if (mt === 'mini_app') return '小程序';
     if (mt === 'activity') return '活动';
     if (mt === 'knowledge') return '知识库';
@@ -537,6 +540,7 @@ function FeedItemCard({ item }: { item: any }) {
     if (item.type === 'poll' && spaceNs) return '/space/' + spaceNs + '/polls';
     if (item.type === 'poll') return '/explore';
     if (item.type === 'announcement' && spaceNs) return '/space/' + spaceNs;
+    if (item.type === 'video' && item.id) return `/video/${item.id}?space=${encodeURIComponent(spaceNs)}`;
     const base = '/post/' + item.id;
     if (spaceNs) return base + '?space=' + encodeURIComponent(spaceNs);
     return base;
@@ -576,6 +580,26 @@ function FeedItemCard({ item }: { item: any }) {
         <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 pl-5">
           {stripMarkdown(item.preview)}
         </p>
+      )}
+
+      {/* 视频封面预览 */}
+      {item.type === 'video' && item.thumbnail_url && (
+        <div className="mt-2 mb-2 pl-5">
+          <div className="relative rounded-xl overflow-hidden max-h-80 bg-gray-100 dark:bg-gray-800">
+            <img src={item.thumbnail_url} alt={item.title}
+              className="w-full object-cover" style={{ maxHeight: '320px' }} />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/20 transition-colors">
+              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                <Play className="h-6 w-6 text-gray-900 ml-0.5" />
+              </div>
+            </div>
+            {item.duration_seconds && (
+              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-xs">
+                {Math.floor(item.duration_seconds / 60)}:{String(item.duration_seconds % 60).padStart(2, '0')}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Line 3: Social stats */}

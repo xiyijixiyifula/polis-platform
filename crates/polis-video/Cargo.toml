@@ -21,3 +21,6 @@ chrono = { workspace = true }
 sqlx = { workspace = true }
 async-nats = { workspace = true }
 reqwest = { workspace = true }
+jsonwebtoken = { workspace = true }
+base64 = "0.22"
+md5 = "0.7"

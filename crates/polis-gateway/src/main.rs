@@ -89,6 +89,10 @@ async fn main() -> anyhow::Result<()> {
         // 代理路由 - 私信
         .route("/api/messages", any(proxy_to_content))
         .route("/api/messages/{*path}", any(proxy_to_content))
+        // 代理路由 - 视频服务
+        .route("/api/videos/{*path}", any(proxy_to_video))
+        .route("/api/videos", any(proxy_to_video))
+        .route("/hls/{*path}", any(proxy_to_video))
         // 代理路由 - 管理后台服务
         .route("/api/admin/{*path}", any(proxy_to_admin))
         .route("/api/admin", any(proxy_to_admin))
@@ -216,8 +220,11 @@ async fn proxy_space_router(
     // 判断是否是内容服务路径（包含 /posts, /featured, /bookmarks, /announcements）
     let remaining = path.strip_prefix("/api/spaces").unwrap_or(path);
     let is_content = remaining.contains("/posts") || remaining.contains("/featured") || remaining.contains("/bookmarks") || remaining.contains("/announcements") || remaining.contains("/polls") || remaining.contains("/files") || remaining.contains("/share") || remaining.contains("/analytics");
+    let is_video = remaining.contains("/videos");
 
-    let base_url = if is_content {
+    let base_url = if is_video {
+        &state.config.video_service_url
+    } else if is_content {
         &state.config.content_service_url
     } else {
         &state.config.space_service_url
@@ -270,6 +277,16 @@ async fn proxy_to_content(
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.content_service_url, path_and_query);
+    proxy_request(&state.client, &target_url, req).await
+}
+
+/// 代理请求到视频服务
+async fn proxy_to_video(
+    State(state): State<Arc<GatewayState>>,
+    req: Request,
+) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
+    let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
+    let target_url = format!("{}{}", state.config.video_service_url, path_and_query);
     proxy_request(&state.client, &target_url, req).await
 }
 
