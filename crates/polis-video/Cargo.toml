@@ -18,9 +18,9 @@ dotenvy = { workspace = true }
 anyhow = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
-sqlx = { workspace = true }
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "derive", "macros"] }
 async-nats = { workspace = true }
-reqwest = { workspace = true }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "http2"] }
 jsonwebtoken = { workspace = true }
 base64 = "0.22"
 md5 = "0.7"
