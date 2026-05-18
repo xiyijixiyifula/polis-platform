@@ -64,6 +64,23 @@ export function stripMarkdown(md: string): string {
     .trim();
 }
 
+/**
+ * Encode a space namespace for safe use in URLs.
+ * Replaces '/' with '~' (URL-unreserved, safe character) to avoid %2F
+ * which Next.js blocks in URLs.
+ */
+export function encodeSpaceForUrl(namespace: string): string {
+  return namespace.replace(/\//g, '~');
+}
+
+/**
+ * Decode a space namespace from a URL parameter.
+ * Reverts the '~' back to '/' to reconstruct the original namespace.
+ */
+export function decodeSpaceFromUrl(encoded: string): string {
+  return encoded.replace(/~/g, '/');
+}
+
 /** 估算阅读时间 (基于中英文混合内容, 300字/分钟) */
 export function estimateReadTime(body: string): string {
   if (!body) return '1 分钟';

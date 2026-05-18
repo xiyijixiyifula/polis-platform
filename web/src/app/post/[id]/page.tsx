@@ -813,7 +813,7 @@ function PostDetailContent() {
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">同社区更多帖子</h3>
           <div className="space-y-3">
             {relatedPosts.map((p) => (
-              <Link key={p.id} href={`/post/${p.id}?space=${currentNs}`} className="block p-3 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-colors border-b border-gray-100/50 dark:border-gray-700/30 last:border-b-0">
+              <Link key={p.id} href={`/post/${p.id}?space=${encodeURIComponent(currentNs)}`} className="block p-3 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-colors border-b border-gray-100/50 dark:border-gray-700/30 last:border-b-0">
                 <h4 className="font-medium text-gray-900 mb-1">{p.title}</h4>
                 <p className="text-sm text-gray-500 line-clamp-2">{stripMarkdown(p.summary || p.body)}</p>
                 <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">

@@ -9,11 +9,13 @@ use crate::error::AppError;
 
 /// 根据 namespace 查询 space_id
 /// namespace 格式: "slug" (根社区) 或 "username/slug" (用户社区)
+/// 支持 URL 安全编码：`~` 会被还原为 `/`（避免 Next.js 拦截 `%2F`）
 pub async fn resolve_space_id(pool: &PgPool, namespace: &str) -> Result<Uuid, AppError> {
+    let namespace = namespace.replace('~', "/");
     let row: Option<(Uuid,)> = sqlx::query_as(
         "SELECT id FROM spaces WHERE namespace = $1 AND status = 'active'"
     )
-    .bind(namespace)
+    .bind(&namespace)
     .fetch_optional(pool)
     .await
     .map_err(|e| AppError::Database(e))?;
@@ -24,10 +26,11 @@ pub async fn resolve_space_id(pool: &PgPool, namespace: &str) -> Result<Uuid, Ap
 
 /// 根据 namespace 查询 space_id，返回 Option
 pub async fn resolve_space_id_optional(pool: &PgPool, namespace: &str) -> Result<Option<Uuid>, AppError> {
+    let namespace = namespace.replace('~', "/");
     let row: Option<(Uuid,)> = sqlx::query_as(
         "SELECT id FROM spaces WHERE namespace = $1 AND status = 'active'"
     )
-    .bind(namespace)
+    .bind(&namespace)
     .fetch_optional(pool)
     .await
     .map_err(|e| AppError::Database(e))?;

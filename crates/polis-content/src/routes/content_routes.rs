@@ -509,8 +509,10 @@ async fn handle_auth_content(
                 (Some(id), None) => {
                     let r: UpdatePostRequest = serde_json::from_slice(&body_bytes)
                         .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
-                    let post = h.update_post(id, uid, r).await?;
-                    Ok(json_ok(ApiResponse::success(post)))
+                    h.update_post(id, uid, r).await?;
+                    // 返回 PostPublic（含 author 对象），保持前端类型一致
+                    let public = h.get_post_public(id, Some(uid)).await?;
+                    Ok(json_ok(ApiResponse::success(public)))
                 }
                 _ => Err(AppError::NotFound("Route not found".to_string())),
             }
@@ -1233,8 +1235,10 @@ async fn update_post_by_id_route(
     Extension(uid): Extension<Uuid>,
     Json(r): Json<UpdatePostRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let post = h.update_post(id, uid, r).await?;
-    Ok(json_ok(ApiResponse::success(post)))
+    h.update_post(id, uid, r).await?;
+    // 返回 PostPublic（含 author 对象），保持前端类型一致
+    let public = h.get_post_public(id, Some(uid)).await?;
+    Ok(json_ok(ApiResponse::success(public)))
 }
 
 /// POST /api/posts/{id}/unlock — 解锁密码保护的帖子

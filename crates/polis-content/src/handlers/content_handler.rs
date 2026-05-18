@@ -157,9 +157,16 @@ impl ContentHandler {
         let author_ids: Vec<Uuid> = posts.iter().map(|p| p.author_id).collect();
         let authors = self.repo.find_users_batch(&author_ids).await?;
 
+        let space_ids: Vec<Uuid> = posts.iter().map(|p| p.space_id).collect();
+        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_default();
+
         let post_publics = posts
             .into_iter()
             .map(|p| {
+                let space_ns = spaces.get(&p.space_id)
+                    .and_then(|s| s.get("namespace").and_then(|v| v.as_str()))
+                    .unwrap_or("")
+                    .to_string();
                 let author = authors.get(&p.author_id).cloned().unwrap_or(UserPublic {
                     id: p.author_id,
                     username: String::new(),
@@ -173,6 +180,7 @@ impl ContentHandler {
                 PostPublic {
                     id: p.id,
                     space_id: p.space_id,
+                    space_ns,
                     module_type: serde_json::from_str(&format!("\"{}\"", p.module_type)).unwrap_or_default(),
                     author,
                     title: p.title,
@@ -216,9 +224,15 @@ impl ContentHandler {
         let posts = self.repo.search_posts(query, tag, limit).await?;
         let author_ids: Vec<Uuid> = posts.iter().map(|p| p.author_id).collect();
         let authors = self.repo.find_users_batch(&author_ids).await?;
+        let space_ids: Vec<Uuid> = posts.iter().map(|p| p.space_id).collect();
+        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_default();
         let post_publics = posts
             .into_iter()
             .map(|p| {
+                let space_ns = spaces.get(&p.space_id)
+                    .and_then(|s| s.get("namespace").and_then(|v| v.as_str()))
+                    .unwrap_or("")
+                    .to_string();
                 let author = authors.get(&p.author_id).cloned().unwrap_or(UserPublic {
                     id: p.author_id,
                     username: String::new(),
@@ -235,6 +249,7 @@ impl ContentHandler {
                 PostPublic {
                     id: p.id,
                     space_id: p.space_id,
+                    space_ns,
                     module_type: serde_json::from_str(&mt).unwrap_or_default(),
                     author,
                     title: p.title,
@@ -351,7 +366,13 @@ impl ContentHandler {
             post_count: series.post_count, sort_order: series.sort_order,
             created_at: series.created_at, updated_at: series.updated_at,
         };
+        let space_ids: Vec<Uuid> = posts.iter().map(|p| p.space_id).collect();
+        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_default();
         let post_publics: Vec<PostPublic> = posts.into_iter().map(|p| {
+            let space_ns = spaces.get(&p.space_id)
+                .and_then(|s| s.get("namespace").and_then(|v| v.as_str()))
+                .unwrap_or("")
+                .to_string();
             let author = authors.get(&p.author_id).cloned().unwrap_or(UserPublic {
                 id: p.author_id, username: String::new(), display_name: String::new(),
                 avatar_url: None, bio: String::new(), verified: false, notification_prefs: serde_json::json!({}), created_at: p.created_at,
@@ -361,6 +382,7 @@ impl ContentHandler {
             let vis = serde_json::json!(p.visibility).to_string();
             PostPublic {
                 id: p.id, space_id: p.space_id,
+                space_ns,
                 module_type: serde_json::from_str(&mt).unwrap_or_default(),
                 author, title: p.title, body: p.body,
                 content_type: serde_json::from_str(&ct).unwrap_or_default(),
@@ -445,9 +467,18 @@ impl ContentHandler {
             post.body
         };
 
+        // 解析社区 namespace（用于前端 API 调用，避免额外一次空间查询）
+        let space_ns = self.repo.find_spaces_batch(&[post.space_id])
+            .await
+            .ok()
+            .and_then(|spaces| spaces.get(&post.space_id)
+                .and_then(|s| s.get("namespace").and_then(|v| v.as_str().map(String::from))))
+            .unwrap_or_default();
+
         Ok(PostPublic {
             id: post.id,
             space_id: post.space_id,
+            space_ns,
             module_type: serde_json::from_str(&format!("\"{}\"", post.module_type)).unwrap_or_default(),
             author,
             title: post.title,
@@ -532,9 +563,17 @@ impl ContentHandler {
             created_at: post.created_at,
         });
 
+        let space_ns = self.repo.find_spaces_batch(&[post.space_id])
+            .await
+            .ok()
+            .and_then(|spaces| spaces.get(&post.space_id)
+                .and_then(|s| s.get("namespace").and_then(|v| v.as_str().map(String::from))))
+            .unwrap_or_default();
+
         Ok(PostPublic {
             id: post.id,
             space_id: post.space_id,
+            space_ns,
             module_type: serde_json::from_str(&format!("\"{}\"", post.module_type)).unwrap_or_default(),
             author,
             title: post.title,

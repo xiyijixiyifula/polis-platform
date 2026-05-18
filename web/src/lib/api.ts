@@ -1,5 +1,10 @@
 const API_BASE = '/api';
 
+/** 在 API 路径中安全编码 namespace：将 / 替换为 ~ 以避免 Next.js 拦截 %2F */
+function encodeNs(ns: string): string {
+  return ns.replace(/\//g, '~');
+}
+
 export interface ApiResponse<T> {
   code: number;
   message: string;
@@ -59,6 +64,7 @@ export interface Space {
 export interface Post {
   id: string;
   space_id: string;
+  space_ns?: string;
   module_type: string;
   author: User | null;
   author_id?: string;
@@ -242,16 +248,16 @@ export const spaces = {
   create: (data: { slug: string; title: string; description?: string; visibility?: string }) =>
     request<Space>('/spaces', { method: 'POST', body: JSON.stringify(data) }),
 
-  get: (namespace: string) => request<Space>(`/spaces/${namespace}`),
+  get: (namespace: string) => request<Space>(`/spaces/${encodeNs(namespace)}`),
 
   update: (namespace: string, data: { title?: string; description?: string; enabled_modules?: string[] }) =>
-    request<Space>(`/spaces/${namespace}`, { method: 'PUT', body: JSON.stringify(data) }),
+    request<Space>(`/spaces/${encodeNs(namespace)}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   join: (namespace: string) =>
-    request<void>(`/spaces/${namespace}/join`, { method: 'POST' }),
+    request<void>(`/spaces/${encodeNs(namespace)}/join`, { method: 'POST' }),
 
   leave: (namespace: string) =>
-    request<void>(`/spaces/${namespace}/leave`, { method: 'POST' }),
+    request<void>(`/spaces/${encodeNs(namespace)}/leave`, { method: 'POST' }),
 
   trending: () => request<Space[]>('/spaces/trending'),
 
@@ -327,11 +333,11 @@ export interface Subscription {
 export const tiers = {
   /** 获取空间的会员等级列表 */
   list: (namespace: string) =>
-    request<SpaceTier[]>(`/tiers/space/${namespace}`),
+    request<SpaceTier[]>(`/tiers/space/${encodeNs(namespace)}`),
 
   /** 创建会员等级 */
   create: (namespace: string, data: { name: string; price_cents: number; description?: string; benefits?: string[] }) =>
-    request<{id: string}>(`/tiers/space/${namespace}`, {
+    request<{id: string}>(`/tiers/space/${encodeNs(namespace)}`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -351,31 +357,31 @@ export const tiers = {
 export const subscribe = {
   /** 订阅付费会员 */
   join: (namespace: string, tierId: string) =>
-    request<{id: string}>(`/subscribe/space/${namespace}`, {
+    request<{id: string}>(`/subscribe/space/${encodeNs(namespace)}`, {
       method: 'POST',
       body: JSON.stringify({ tier_id: tierId }),
     }),
 
   /** 取消订阅 */
   cancel: (namespace: string) =>
-    request<void>(`/subscribe/space/${namespace}`, { method: 'DELETE' }),
+    request<void>(`/subscribe/space/${encodeNs(namespace)}`, { method: 'DELETE' }),
 
   /** 获取当前用户订阅状态 */
   get: (namespace: string) =>
-    request<Subscription | null>(`/subscribe/space/${namespace}`),
+    request<Subscription | null>(`/subscribe/space/${encodeNs(namespace)}`),
 };
 
 export const series = {
   /** 创建系列（专栏） */
   create: (namespace: string, data: { title: string; description?: string; cover_url?: string; visibility?: string }) =>
-    request<{id: string}>(`/series/space/${namespace}`, {
+    request<{id: string}>(`/series/space/${encodeNs(namespace)}`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   /** 获取空间的系列列表 */
   list: (namespace: string) =>
-    request<Series[]>(`/series/space/${namespace}`),
+    request<Series[]>(`/series/space/${encodeNs(namespace)}`),
 
   /** 获取系列详情（含帖子列表） */
   get: (id: string) =>
@@ -406,7 +412,7 @@ export const series = {
 
 export const posts = {
   create: (namespace: string, data: { title: string; body: string; module_type?: string; tags?: string[]; visibility?: string; password?: string }) =>
-    request<Post>(`/spaces/${namespace}/posts`, {
+    request<Post>(`/spaces/${encodeNs(namespace)}/posts`, {
       method: 'POST',
       body: JSON.stringify({ ...data, content_type: 'text', module_type: data.module_type || 'forum' }),
     }),
@@ -418,17 +424,18 @@ export const posts = {
     if (params?.module) search.set('module', params.module);
     if (params?.sort) search.set('sort', params.sort);
     const qs = search.toString();
-    return request<Post[]>(`/spaces/${namespace}/posts${qs ? `?${qs}` : ''}`);
+    return request<Post[]>(`/spaces/${encodeNs(namespace)}/posts${qs ? `?${qs}` : ''}`);
   },
 
-  get: (namespace: string, id: string) => request<Post>(`/spaces/${namespace}/posts/${id}`),
+  get: (namespace: string, id: string) => request<Post>(`/spaces/${encodeNs(namespace)}/posts/${id}`),
 
   getById: async (id: string): Promise<{ post: Post; spaceNs: string } | null> => {
     try {
       const data = await request<Post>(`/posts/${id}`);
       if (data.code === 0 && data.data) {
         const post = data.data;
-        const spaceNs = await resolveSpaceNs(post.space_id);
+        // 优先使用后端直接返回的 space_ns，避免额外空间查询
+        const spaceNs = post.space_ns || await resolveSpaceNs(post.space_id);
         return { post, spaceNs };
       }
     } catch {}
@@ -436,13 +443,13 @@ export const posts = {
   },
 
   getComments: (namespace: string, postId: string) =>
-    request<Comment[]>(`/spaces/${namespace}/posts/${postId}/comments`),
+    request<Comment[]>(`/spaces/${encodeNs(namespace)}/posts/${postId}/comments`),
 
   getCommentsById: (postId: string) =>
     request<Comment[]>(`/posts/${postId}/comments`),
 
   createComment: (namespace: string, postId: string, body: string, parentId?: string) =>
-    request<Comment>(`/spaces/${namespace}/posts/${postId}/comments`, {
+    request<Comment>(`/spaces/${encodeNs(namespace)}/posts/${postId}/comments`, {
       method: 'POST',
       body: JSON.stringify({ body, ...(parentId ? { parent_id: parentId } : {}) }),
     }),
@@ -458,21 +465,21 @@ export const posts = {
     request<boolean>(`/comments/${commentId}/like`, { method: 'POST' }),
 
   like: (namespace: string, id: string) =>
-    request<boolean>(`/spaces/${namespace}/posts/${id}/like`, { method: 'POST' }),
+    request<boolean>(`/spaces/${encodeNs(namespace)}/posts/${id}/like`, { method: 'POST' }),
 
   /** 直接通过帖子ID点赞（无需namespace，v0.3.22 RESTful 别名） */
   likeById: (id: string) =>
     request<{ liked: boolean; post_id: string }>(`/posts/${id}/like`, { method: 'POST' }),
 
   bookmark: (namespace: string, id: string) =>
-    request<boolean>(`/spaces/${namespace}/posts/${id}/bookmark`, { method: 'POST' }),
+    request<boolean>(`/spaces/${encodeNs(namespace)}/posts/${id}/bookmark`, { method: 'POST' }),
 
   /** 直接通过帖子ID收藏（无需namespace，v0.3.22 RESTful 别名） */
   bookmarkById: (id: string) =>
     request<{ bookmarked: boolean; post_id: string }>(`/posts/${id}/bookmark`, { method: 'POST' }),
 
   report: (namespace: string, id: string, reason: string) =>
-    request<void>(`/spaces/${namespace}/posts/${id}/report`, {
+    request<void>(`/spaces/${encodeNs(namespace)}/posts/${id}/report`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
@@ -485,19 +492,19 @@ export const posts = {
     }),
 
   pin: (namespace: string, id: string) =>
-    request<{ pinned: boolean }>(`/spaces/${namespace}/posts/${id}/pin`, { method: 'POST' }),
+    request<{ pinned: boolean }>(`/spaces/${encodeNs(namespace)}/posts/${id}/pin`, { method: 'POST' }),
 
   feature: (namespace: string, id: string) =>
-    request<{ featured: boolean }>(`/spaces/${namespace}/posts/${id}/featured`, { method: 'POST' }),
+    request<{ featured: boolean }>(`/spaces/${encodeNs(namespace)}/posts/${id}/featured`, { method: 'POST' }),
 
   hide: (namespace: string, id: string) =>
-    request<{ hidden: boolean }>(`/spaces/${namespace}/posts/${id}/hide`, { method: 'POST' }),
+    request<{ hidden: boolean }>(`/spaces/${encodeNs(namespace)}/posts/${id}/hide`, { method: 'POST' }),
 
   view: (id: string) =>
     request<{ view_count: number }>(`/posts/${id}/view`, { method: 'POST' }),
 
   update: (namespace: string, id: string, data: { title?: string; body?: string; tags?: string[]; visibility?: string; password?: string }) =>
-    request<Post>(`/spaces/${namespace}/posts/${id}`, {
+    request<Post>(`/spaces/${encodeNs(namespace)}/posts/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
@@ -510,7 +517,7 @@ export const posts = {
     }),
 
   delete: (namespace: string, id: string) =>
-    request<void>(`/spaces/${namespace}/posts/${id}`, { method: 'DELETE' }),
+    request<void>(`/spaces/${encodeNs(namespace)}/posts/${id}`, { method: 'DELETE' }),
 };
 
 export interface VoteScore {

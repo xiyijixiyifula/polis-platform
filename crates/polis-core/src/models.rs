@@ -211,6 +211,9 @@ pub struct Post {
 pub struct PostPublic {
     pub id: Uuid,
     pub space_id: Uuid,
+    /// 社区 namespace（用于前端 API 调用，避免额外的一次空间查询）
+    #[serde(default)]
+    pub space_ns: String,
     pub module_type: ModuleType,
     pub author: UserPublic,
     pub title: String,
