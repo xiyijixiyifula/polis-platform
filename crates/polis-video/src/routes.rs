@@ -33,7 +33,11 @@ fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
 fn parse_path(path: &str) -> Result<(String, Option<Uuid>), AppError> {
     let rem = path.strip_prefix("/api/spaces/").unwrap_or("");
     let pos = rem.find("/videos").ok_or(AppError::NotFound("Invalid path".to_string()))?;
-    let ns = rem[..pos].to_string().replace('~', "/");
+    let ns_raw = &rem[..pos];
+    let ns = percent_encoding::percent_decode_str(ns_raw).decode_utf8()
+        .map_err(|_| AppError::Validation("Invalid UTF-8 in namespace".to_string()))?
+        .to_string()
+        .replace('~', "/");
     if ns.is_empty() { return Err(AppError::NotFound("Missing namespace".to_string())); }
     let after = &rem[pos + 7..].trim_start_matches('/');
     let vid = if after.is_empty() { None }
