@@ -96,12 +96,12 @@ impl VideoRepo {
 
     // ===== 社区操作 =====
 
-    /// 提交视频到社区
+    /// 提交视频到社区（发布即审核通过，社区管理员可后续驳回）
     pub async fn submit_to_space(&self, space_id: Uuid, video_id: Uuid) -> Result<(), AppError> {
         sqlx::query(
-            "INSERT INTO space_videos (space_id, video_id) VALUES ($1,$2) ON CONFLICT (space_id, video_id) DO NOTHING"
+            "INSERT INTO space_videos (space_id, video_id, review_status) VALUES ($1,$2,'approved') ON CONFLICT (space_id, video_id) DO UPDATE SET review_status='approved'"
         ).bind(space_id).bind(video_id).execute(&self.pool).await?;
-        // 更新 space_id 引用
+        // 更新 space_id 引用（指向首次发布的社区）
         sqlx::query("UPDATE videos SET space_id=$1 WHERE id=$2 AND space_id IS NULL")
             .bind(space_id).bind(video_id).execute(&self.pool).await?;
         Ok(())
