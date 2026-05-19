@@ -252,7 +252,8 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/share/{code}", get(get_share_info_route))
         .route("/api/share/{code}/download", get(download_share_route));
 
-    public.merge(auth).merge(share_routes).with_state(handler)
+    let creation = super::creation_routes::creation_routes();
+    public.merge(auth).merge(share_routes).merge(creation).with_state(handler)
 }
 
 /// 私有空间公开访问检查：返回 true 表示应拒绝访问

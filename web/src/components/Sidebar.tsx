@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Flame, Compass, Plus, TrendingUp, Gamepad2, ShoppingBag, BookOpen, PenLine } from 'lucide-react';
+import { Home, Flame, Compass, Plus, TrendingUp, Gamepad2, ShoppingBag, BookOpen, PenLine, FileText } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export function Sidebar() {
@@ -22,6 +22,7 @@ export function Sidebar() {
     { icon: Compass, label: '发现', href: '/explore' },
     { icon: TrendingUp, label: '热榜', href: '/hot' },
     { icon: PenLine, label: '创作中心', href: '/create-center' },
+    { icon: FileText, label: '我的创作', href: '/creations' },
     { separator: true },
     { icon: BookOpen, label: '文章', href: '/explore?type=article' },
     { icon: Gamepad2, label: '游戏', href: '/explore?type=game' },

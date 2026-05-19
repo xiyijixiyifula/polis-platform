@@ -46,7 +46,7 @@ export function VideoCard({ video, namespace, size = 'sm' }: VideoCardProps) {
               <Clock className="h-3 w-3" />{formatDuration(video.duration_seconds)}
             </div>
           )}
-          {video.review_status === 'pending' && (
+          {video.space_review_status === 'pending' && (
             <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-amber-500 text-white text-xs">审核中</div>
           )}
         </div>

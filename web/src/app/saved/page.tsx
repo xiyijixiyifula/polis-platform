@@ -22,20 +22,45 @@ export default function SavedPage() {
   };
 
   const removeBookmark = async (bookmark: any) => {
-    const postId = bookmark.post_id || bookmark.id;
-    const namespace = bookmark.space?.namespace || bookmark.space_namespace || '';
-    if (!postId || !namespace) return;
+    const itemId = bookmark.id;
+    const itemType = bookmark.type || 'post';
+    if (!itemId) return;
 
-    setRemovingId(postId);
+    // For video: prevent removing if we don't know it's a video
+    if (itemType !== 'post') {
+      const token = localStorage.getItem('polis_access_token');
+      if (itemType === 'video') {
+        setRemovingId(itemId);
+        try {
+          const res = await fetch(`/api/videos/${itemId}/bookmark`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          });
+          const data = await res.json();
+          if (data.code === 0) {
+            setBookmarks((prev) => prev.filter((b) => b.id !== itemId));
+          }
+        } catch {} finally {
+          setRemovingId(null);
+        }
+        return;
+      }
+      return; // Unknown type, skip
+    }
+
+    const namespace = bookmark.space?.namespace || bookmark.space_namespace || '';
+    if (!namespace) return;
+
+    setRemovingId(itemId);
     try {
       const token = localStorage.getItem('polis_access_token');
-      const res = await fetch(`/api/spaces/${namespace}/posts/${postId}/bookmark`, {
+      const res = await fetch(`/api/spaces/${namespace}/posts/${itemId}/bookmark`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.code === 0) {
-        setBookmarks((prev) => prev.filter((b) => (b.post_id || b.id) !== postId));
+        setBookmarks((prev) => prev.filter((b) => (b.post_id || b.id) !== itemId));
       }
     } catch {}
     finally {
@@ -64,11 +89,11 @@ export default function SavedPage() {
       ) : (
         <div className="glass-card p-0 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
           {bookmarks.map((b: any) => (
-            <div key={b.post_id || b.id} className="relative group">
+            <div key={b.id} className="relative group">
               <FeedItem item={b} />
               <button
                 onClick={() => removeBookmark(b)}
-                disabled={removingId === (b.post_id || b.id)}
+                disabled={removingId === b.id}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
                 title="取消收藏"
               >

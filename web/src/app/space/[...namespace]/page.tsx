@@ -109,6 +109,7 @@ export default function SpacePage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [polls, setPolls] = useState<any[]>([]);
+  const [overviewVideos, setOverviewVideos] = useState<any[]>([]);
   const [featured, setFeatured] = useState<Post[]>([]);
   const [subSpaces, setSubSpaces] = useState<Space[]>([]);
   const [loading, setLoading] = useState(true);
@@ -334,9 +335,15 @@ export default function SpacePage() {
     // Always fetch announcements for banners
     fetchers.push(fetch(`/api/spaces/${cleanNamespace}/announcements`).then(r => r.json()));
 
+    // Fetch videos for overview if module enabled
+    if (modules.video) {
+      fetchers.push(fetch(`/api/spaces/${cleanNamespace}/videos?page=1&page_size=10`).then(r => r.json()));
+    }
+
     Promise.all(fetchers)
       .then((results) => {
         const [postsData, featuredData] = results;
+        const vidIdx = modules.video ? (results.length - 1) : -1;
         const pollsIdx = modules.polls ? 2 : -1;
         const annIdx = modules.polls ? 3 : 2;
 
@@ -358,6 +365,9 @@ export default function SpacePage() {
         if (featuredData.code === 0) setFeatured(featuredData.data || []);
         if (pollsIdx > 0 && results[pollsIdx]?.code === 0) setPolls(results[pollsIdx].data || []);
         if (results[annIdx]?.code === 0) setAnnouncements(results[annIdx].data || []);
+        if (vidIdx >= 0 && results[vidIdx]?.code === 0) {
+          setOverviewVideos(Array.isArray(results[vidIdx].data) ? results[vidIdx].data : []);
+        } else { setOverviewVideos([]); }
       })
       .catch(() => {})
       .finally(() => setPostLoading(false));
@@ -606,6 +616,8 @@ export default function SpacePage() {
                     <span>·</span>
                     <span>{polls.length} 投票</span>
                     <span>·</span>
+                    <span>{overviewVideos.length} 视频</span>
+                    <span>·</span>
                     <span>{announcements.length} 公告</span>
                     <span>·</span>
                     <span className="capitalize">{{public:'公开', private:'私有', unlisted:'不公开'}[space.visibility]}</span>
@@ -698,6 +710,47 @@ export default function SpacePage() {
                   </div>
                 )}
               </div>
+
+              {/* 最新视频 */}
+              {overviewVideos.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Video className="h-4 w-4 text-gray-400" />
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">最新视频</h3>
+                    <Link href={`/space/${encodeURIComponent(cleanNamespace)}/video`} className="ml-auto text-xs text-primary-600 dark:text-primary-400 hover:underline">
+                      查看全部 →
+                    </Link>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {overviewVideos.slice(0, 6).map((v: any) => (
+                      <Link key={v.id} href={`/video/${v.id}?space=${encodeURIComponent(cleanNamespace)}`}
+                        className="group block">
+                        <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
+                          {v.thumbnail_url ? (
+                            <img src={v.thumbnail_url} alt={v.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                              <Video className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+                            <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+                            </div>
+                          </div>
+                          {v.duration_seconds && (
+                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-xs">
+                              {Math.floor(v.duration_seconds / 60)}:{String(v.duration_seconds % 60).padStart(2, '0')}
+                            </div>
+                          )}
+                        </div>
+                        <h3 className="mt-1.5 text-xs font-medium text-gray-900 dark:text-white line-clamp-2 leading-tight">{v.title}</h3>
+                        <span className="text-xs text-gray-400">{v.view_count || 0} 次播放</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1320,7 +1373,7 @@ export default function SpacePage() {
           )}
 
           {activeTab === 'video' && (
-            <SpaceVideoTab namespace={cleanNamespace} isOwner={isOwner} />
+            <SpaceVideoTab namespace={cleanNamespace} spaceId={space?.id || null} isOwner={isOwner} />
           )}
 
           {activeTab === 'code_repo' && (

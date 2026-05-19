@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle } from 'lucide-react';
+import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle, Video, Globe, Lock, Key } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-import { users, follow, type User, type FollowUser } from '@/lib/api';
+import { users, follow, videos, type User, type FollowUser, type VideoItem } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
 import { FeedItem } from '@/components/FeedItem';
 
@@ -61,6 +61,48 @@ export default function UserProfilePage() {
   const [likedPosts, setLikedPosts] = useState<any[]>([]);
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
   const [likedLoading, setLikedLoading] = useState(false);
+
+  // Video states
+  const [myVideos, setMyVideos] = useState<VideoItem[]>([]);
+  const [videosLoading, setVideosLoading] = useState(false);
+  const [showVideoEdit, setShowVideoEdit] = useState<string | null>(null);
+  const [editVis, setEditVis] = useState('');
+  const [editPwd, setEditPwd] = useState('');
+  const [editPublishing, setEditPublishing] = useState(false);
+
+  // 视频管理
+  const handleDeleteVideo = async (videoId: string, e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!confirm('确定要删除这个视频吗？此操作不可撤销。')) return;
+    try {
+      const res = await videos.delete(videoId);
+      if (res.code === 0) setMyVideos(prev => prev.filter(v => v.id !== videoId));
+      else alert(res.message || '删除失败');
+    } catch { alert('删除失败'); }
+  };
+
+  const handleUpdateVideoVis = async (videoId: string, visibility: string) => {
+    try {
+      const res = await videos.update(videoId, { visibility });
+      if (res.code === 0) setMyVideos(prev => prev.map(v => v.id === videoId ? { ...v, visibility } : v));
+      else alert(res.message || '更新失败');
+    } catch { alert('更新失败'); }
+    setShowVideoEdit(null);
+  };
+
+  const handleSetPassword = async (videoId: string) => {
+    if (!editPwd.trim()) { alert('请输入密码'); return; }
+    setEditPublishing(true);
+    try {
+      const res = await videos.setPassword(videoId, editPwd.trim());
+      if (res.code === 0) {
+        setMyVideos(prev => prev.map(v => v.id === videoId ? { ...v, has_password: true } : v));
+        setEditPwd('');
+        setShowVideoEdit(null);
+      } else alert(res.message || '设置失败');
+    } catch { alert('设置失败'); }
+    setEditPublishing(false);
+  };
 
   // 投稿引用状态
   const [showRefDialog, setShowRefDialog] = useState(false);
@@ -154,6 +196,19 @@ export default function UserProfilePage() {
         if (data.code === 0 && data.data) setLikedPosts(data.data);
       } catch {}
       setLikedLoading(false);
+    })();
+  }, [isSelf, username]);
+
+  // isSelf: 加载视频
+  useEffect(() => {
+    if (!isSelf) return;
+    setVideosLoading(true);
+    (async () => {
+      try {
+        const res = await videos.myVideos(1, 50);
+        if (res.code === 0 && res.data) setMyVideos(Array.isArray(res.data) ? res.data : []);
+      } catch {}
+      setVideosLoading(false);
     })();
   }, [isSelf, username]);
 
@@ -483,12 +538,12 @@ export default function UserProfilePage() {
       {isSelf && (
         <div className="mt-6 mb-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex gap-0 overflow-x-auto">
-            {(['spaces', 'posts', 'bookmarks', 'likes'] as const).map((tab) => (
+            {(['spaces', 'posts', 'videos', 'bookmarks', 'likes'] as const).map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}>
-                {{spaces: `社区 (${userSpaces.length})`, posts: `创作 (${myContents.length})`, bookmarks: `收藏 (${bookmarks.length})`, likes: `点赞 (${likedPosts.length})`}[tab]}
+                {{spaces: `社区 (${userSpaces.length})`, posts: `创作 (${myContents.length})`, videos: `视频 (${myVideos.length})`, bookmarks: `收藏 (${bookmarks.length})`, likes: `点赞 (${likedPosts.length})`}[tab]}
               </button>
             ))}
           </div>
@@ -602,6 +657,100 @@ export default function UserProfilePage() {
             <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
             <p className="text-sm">还没有发布过内容</p>
             <Link href="/post/new" className="text-sm text-primary-600 hover:underline mt-1 inline-block">去发布第一篇</Link>
+          </div>
+        )
+      )}
+
+      {/* isSelf: 视频 Tab */}
+      {isSelf && activeTab === 'videos' && (
+        videosLoading ? (
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+        ) : myVideos.length > 0 ? (
+          <div className="space-y-2">
+            {myVideos.map((v: VideoItem) => (
+              <div key={v.id} className="glass-card p-4 group transition-colors">
+                <div className="flex items-start justify-between gap-4">
+                  <Link href={`/video/${v.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-28 h-16 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
+                      {v.thumbnail_url ? (
+                        <img src={v.thumbnail_url} alt={v.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+                          <Video className="h-6 w-6 text-gray-400" />
+                        </div>
+                      )}
+                      {v.duration_seconds && (
+                        <span className="absolute bottom-1 right-1 px-1 rounded bg-black/60 text-white text-xs">
+                          {Math.floor((v.duration_seconds || 0) / 60)}:{String((v.duration_seconds || 0) % 60).padStart(2, '0')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 line-clamp-1">{v.title}</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{v.description || '暂无描述'}</p>
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                        <span className={`px-1.5 py-0.5 rounded text-xs ${
+                          v.visibility === 'public' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                          v.visibility === 'unlisted' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                          'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {v.visibility === 'public' ? '公开' : v.visibility === 'unlisted' ? '分享' : '私有'}
+                        </span>
+                        {v.has_password && <span className="flex items-center gap-0.5 text-amber-600"><Key className="h-3 w-3" />加密</span>}
+                        <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{v.view_count}</span>
+                        <span className="flex items-center gap-0.5"><Heart className="h-3 w-3" />{v.like_count}</span>
+                      </div>
+                    </div>
+                  </Link>
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowVideoEdit(v.id); setEditVis(v.visibility); setEditPwd(''); }}
+                      className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-500" title="设置">
+                      <Globe className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteVideo(v.id, e)}
+                      className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500" title="删除">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                {/* Edit dropdown */}
+                {showVideoEdit === v.id && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 w-16">可见性：</span>
+                      <div className="flex gap-1">
+                        {['public', 'unlisted', 'private'].map(vis => (
+                          <button key={vis} onClick={() => { handleUpdateVideoVis(v.id, vis); }}
+                            disabled={editVis === vis}
+                            className={`text-xs px-2 py-1 rounded ${editVis === vis ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'}`}>
+                            {vis === 'public' ? '公开' : vis === 'unlisted' ? '分享' : '私有'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 w-16">分享密码：</span>
+                      <input type="text" value={editPwd} onChange={e => setEditPwd(e.target.value)}
+                        placeholder={v.has_password ? '已设置密码' : '设置密码（可选）'}
+                        className="flex-1 text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
+                        onKeyDown={e => e.key === 'Enter' && handleSetPassword(v.id)} />
+                      <button onClick={() => handleSetPassword(v.id)} disabled={editPublishing}
+                        className="text-xs px-2 py-1 rounded bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50">
+                        {editPublishing ? '...' : '设置'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
+            <Video className="h-8 w-8 mx-auto mb-2 opacity-40" />
+            <p className="text-sm">还没有上传过视频</p>
           </div>
         )
       )}

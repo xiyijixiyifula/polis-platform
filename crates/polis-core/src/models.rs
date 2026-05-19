@@ -622,6 +622,291 @@ impl<T: Serialize> ApiResponse<T> {
     }
 }
 
+// ==================== 创作者数据本体 ====================
+
+/// 创作数据模型 - 唯一真实数据，归创作者所有
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Creation {
+    pub id: Uuid,
+    pub creator_id: Uuid,
+    pub content_type: String,
+    pub title: String,
+    pub body: String,
+    pub body_json: Option<serde_json::Value>,
+    pub cover_url: Option<String>,
+    pub media_urls: serde_json::Value,
+    pub visibility: String,
+    pub password_hash: Option<String>,
+    pub view_count: i64,
+    pub like_count: i64,
+    pub comment_count: i64,
+    pub bookmark_count: i64,
+    pub share_count: i64,
+    pub tags: serde_json::Value,
+    pub metadata: serde_json::Value,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// 创作数据公开信息（返回给客户端）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreationPublic {
+    pub id: Uuid,
+    pub creator: UserPublic,
+    pub content_type: String,
+    pub title: String,
+    pub body: String,
+    pub cover_url: Option<String>,
+    pub media_urls: Vec<String>,
+    pub visibility: Visibility,
+    pub view_count: i64,
+    pub like_count: i64,
+    pub comment_count: i64,
+    pub bookmark_count: i64,
+    pub share_count: i64,
+    pub is_liked: bool,
+    pub is_bookmarked: bool,
+    pub has_password: bool,
+    pub tags: Vec<String>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    /// 投稿信息（在"我的创作"页面中展示）
+    pub submissions: Vec<SubmissionInfo>,
+}
+
+/// 投稿信息（嵌入在 CreationPublic 中）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubmissionInfo {
+    pub ref_id: Uuid,
+    pub space: SpaceMini,
+    pub module_type: String,
+    pub display_status: String,
+    pub is_pinned: bool,
+    pub module_views: i32,
+    pub submitted_at: DateTime<Utc>,
+}
+
+/// 社区简要信息（用于嵌入展示）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpaceMini {
+    pub id: Uuid,
+    pub namespace: String,
+    pub title: String,
+}
+
+// ==================== 社区模块引用 ====================
+
+/// 社区模块引用 - 社区模块中的内容是引用的引用
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CommunityModuleRef {
+    pub id: Uuid,
+    pub creation_id: Uuid,
+    pub creator_id: Uuid,
+    pub space_id: Uuid,
+    pub module_type: String,
+    pub display_status: String,
+    pub is_pinned: bool,
+    pub pin_order: i32,
+    pub module_views: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 模块引用公开信息（展示在社区模块页面中）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModuleRefPublic {
+    pub id: Uuid,
+    pub creation: CreationPublic,
+    pub space: SpaceMini,
+    pub module_type: String,
+    pub display_status: String,
+    pub is_pinned: bool,
+    pub module_views: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+// ==================== 投稿申请 ====================
+
+/// 投稿申请
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SubmissionRequest {
+    pub id: Uuid,
+    pub creation_id: Uuid,
+    pub creator_id: Uuid,
+    pub target_space_id: Uuid,
+    pub target_module_type: String,
+    pub message: Option<String>,
+    pub status: String,
+    pub reviewed_by: Option<Uuid>,
+    pub review_note: Option<String>,
+    pub reviewed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+// ==================== 模块管理者 ====================
+
+/// 模块管理者
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ModuleModerator {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub module_type: String,
+    pub user_id: Uuid,
+    pub can_review: bool,
+    pub can_hide: bool,
+    pub can_pin: bool,
+    pub can_manage_members: bool,
+    pub can_edit_settings: bool,
+    pub granted_by: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+// ==================== 社区等级 ====================
+
+/// 社区等级
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CommunityLevel {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub level: i32,
+    pub title: String,
+    pub required_score: i32,
+    pub perks: serde_json::Value,
+}
+
+/// 社区等级公开信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommunityLevelPublic {
+    pub level: i32,
+    pub title: String,
+    pub required_score: i32,
+    pub perks: serde_json::Value,
+    pub current_score: i32,
+    pub progress_percent: f32,
+}
+
+// ==================== 经验日志 ====================
+
+/// 经验日志
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CommunityExpLog {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub user_id: Uuid,
+    pub action_type: String,
+    pub exp_gained: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+// ==================== 请求/响应类型 ====================
+
+/// 创建创作请求
+#[derive(Debug, Deserialize)]
+pub struct CreateCreationRequest {
+    pub content_type: String,
+    pub title: String,
+    pub body: String,
+    pub cover_url: Option<String>,
+    pub media_urls: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+    pub visibility: Option<Visibility>,
+    pub password: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// 更新创作请求
+#[derive(Debug, Deserialize)]
+pub struct UpdateCreationRequest {
+    pub title: Option<String>,
+    pub body: Option<String>,
+    pub cover_url: Option<String>,
+    pub media_urls: Option<Vec<String>>,
+    pub tags: Option<Vec<String>>,
+    pub visibility: Option<Visibility>,
+    pub password: Option<String>,
+    pub metadata: Option<serde_json::Value>,
+    pub status: Option<String>,
+}
+
+/// 投稿到社区请求
+#[derive(Debug, Deserialize)]
+pub struct SubmitToCommunityRequest {
+    pub creation_id: Uuid,
+    pub space_ns: String,
+    pub module_type: String,
+    pub message: Option<String>,
+}
+
+/// 撤稿请求
+#[derive(Debug, Deserialize)]
+pub struct WithdrawSubmissionRequest {
+    pub ref_id: Uuid,
+}
+
+/// 审核引用请求（模块管理者）
+#[derive(Debug, Deserialize)]
+pub struct ReviewRefRequest {
+    pub ref_id: Uuid,
+    pub action: String, // 'approve' | 'reject' | 'hide' | 'show' | 'pin' | 'unpin'
+    pub note: Option<String>,
+}
+
+/// 设置模块管理者请求
+#[derive(Debug, Deserialize)]
+pub struct SetModuleModeratorRequest {
+    pub user_id: Uuid,
+    pub module_type: String,
+    pub can_review: Option<bool>,
+    pub can_hide: Option<bool>,
+    pub can_pin: Option<bool>,
+    pub can_manage_members: Option<bool>,
+    pub can_edit_settings: Option<bool>,
+}
+
+/// 封禁用户请求（模块管理者）
+#[derive(Debug, Deserialize)]
+pub struct BanFromModuleRequest {
+    pub user_id: Uuid,
+    pub module_type: String,
+    pub reason: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+/// 获取我的创作列表查询参数
+#[derive(Debug, Deserialize)]
+pub struct ListCreationsQuery {
+    pub content_type: Option<String>,
+    pub status: Option<String>,
+    pub visibility: Option<String>,
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+}
+
+/// 获取社区模块引用列表查询参数
+#[derive(Debug, Deserialize)]
+pub struct ListModuleRefsQuery {
+    pub module_type: String,
+    pub status: Option<String>, // 'visible' | 'pending' | 'hidden' | 'all'
+    pub sort: Option<String>,   // 'newest' | 'hot' | 'pinned'
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+}
+
+/// 社区等级配置请求
+#[derive(Debug, Deserialize)]
+pub struct ConfigureLevelsRequest {
+    pub levels: Vec<LevelConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LevelConfig {
+    pub level: i32,
+    pub title: String,
+    pub required_score: i32,
+    pub perks: Option<serde_json::Value>,
+}
+
 // Re-export commonly used types
 pub use crate::types::{
     Visibility, SpaceStatus, MemberRole, ModuleType, ContentType, VerifiedType,

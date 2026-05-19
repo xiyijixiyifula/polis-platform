@@ -7,11 +7,12 @@ import { videos, type VideoItem } from '@/lib/api';
 
 interface SpaceVideoTabProps {
   namespace: string;
+  spaceId: string | null;
   isOwner: boolean;
 }
 
 /** 空间视频 Tab — 小红书风格网格展示 + 上传 */
-export function SpaceVideoTab({ namespace, isOwner }: SpaceVideoTabProps) {
+export function SpaceVideoTab({ namespace, spaceId, isOwner }: SpaceVideoTabProps) {
   const [videoList, setVideoList] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all'|'public'|'private'>('all');
@@ -41,18 +42,28 @@ export function SpaceVideoTab({ namespace, isOwner }: SpaceVideoTabProps) {
     if (!selectedFile || !uploadTitle.trim()) { alert('请选择视频文件并填写标题'); return; }
     setUploading(true);
     try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(',')[1]); // 去掉 data:video/mp4;base64, 前缀
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(selectedFile);
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('title', uploadTitle.trim());
+      if (uploadDesc) formData.append('description', uploadDesc);
+      formData.append('visibility', uploadVis);
+
+      const token = localStorage.getItem('polis_access_token');
+      const response = await fetch('/api/videos', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
       });
-      const res = await videos.upload(namespace, base64, uploadTitle.trim(), uploadDesc, uploadVis, selectedFile.name.split('.').pop());
+      const res = await response.json();
       if (res.code === 0 && res.data) {
-        setVideoList(prev => [res.data as unknown as VideoItem, ...prev]);
+        const vid = res.data as any;
+        // 自动发布到当前社区
+        if (spaceId && vid.id) {
+          try { await videos.publishToSpaces(vid.id, [spaceId]); } catch {}
+        }
+        // 刷新列表
+        const listRes = await videos.list(namespace);
+        if (listRes.code === 0 && listRes.data) setVideoList(Array.isArray(listRes.data) ? listRes.data : []);
         setShowUpload(false);
         setUploadTitle(''); setUploadDesc(''); setSelectedFile(null);
       } else {

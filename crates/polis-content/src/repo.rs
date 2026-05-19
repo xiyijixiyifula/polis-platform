@@ -471,9 +471,13 @@ impl ContentRepo {
 
     pub async fn list_bookmarks(&self, user_id: Uuid, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
         let offset = ((page.saturating_sub(1)) * page_size) as i64;
-        let rows = sqlx::query_as::<_, (String, String, String, String, i64, i64, i64, String, String, String, String, String, String, String, String,)>(
+        let limit = page_size as i64;
+
+        // 帖子收藏
+        let post_rows = sqlx::query_as::<_, (String, String, String, String, String, i64, i64, i64, String, String, String, String, String, String, String, String,)>(
             r#"SELECT
-                p.id::text, p.title, LEFT(p.body, 200), p.content_type,
+                b.created_at::text as bm_created_at,
+                p.id::text, p.title, LEFT(p.body, 200) as preview, p.content_type,
                 p.comment_count, p.like_count, p.view_count,
                 p.created_at::text,
                 u.id::text, u.username, u.display_name, COALESCE(u.avatar_url, ''),
@@ -482,36 +486,115 @@ impl ContentRepo {
             JOIN posts p ON p.id = b.target_id AND b.target_type = 'post'
             LEFT JOIN users u ON u.id = p.author_id
             LEFT JOIN spaces s ON s.id = p.space_id
-            WHERE b.user_id = $1 AND p.is_deleted = FALSE
-            ORDER BY b.created_at DESC LIMIT $2 OFFSET $3"#
-        ).bind(user_id).bind(page_size as i64).bind(offset)
+            WHERE b.user_id = $1 AND p.is_deleted = FALSE"#
+        ).bind(user_id)
         .fetch_all(&self.pool).await
-        .map_err(|e| AppError::Internal(format!("bookmarks list query: {}", e)))?;
+        .map_err(|e| AppError::Internal(format!("bookmarks post query: {}", e)))?;
 
-        Ok(rows.into_iter().map(|r| {
-            serde_json::json!({
-                "id": r.0,
+        // 视频收藏 (use sqlx::query + Row for nullable columns)
+        let video_rows = sqlx::query(
+            r#"SELECT
+                b.created_at::text as bm_created_at,
+                v.id::text, v.title, COALESCE(v.description, '') as preview,
+                v.comment_count, v.like_count, v.view_count,
+                v.created_at::text,
+                COALESCE(u.id::text, ''), COALESCE(u.username, ''), COALESCE(u.display_name, ''), COALESCE(u.avatar_url, ''),
+                COALESCE(sv.space_id::text, ''), COALESCE(sp.namespace, ''), COALESCE(sp.title, ''),
+                v.thumbnail_url
+            FROM bookmarks b
+            JOIN videos v ON v.id = b.target_id AND b.target_type = 'video'
+            LEFT JOIN users u ON u.id = v.uploader_id
+            LEFT JOIN LATERAL (SELECT space_id FROM space_videos WHERE video_id = v.id LIMIT 1) sv ON TRUE
+            LEFT JOIN spaces sp ON sp.id = sv.space_id
+            WHERE b.user_id = $1"#
+        ).bind(user_id)
+        .fetch_all(&self.pool).await
+        .map_err(|e| AppError::Internal(format!("bookmarks video query: {}", e)))?;
+
+        use sqlx::Row;
+        let mut items: Vec<(String, serde_json::Value)> = Vec::new(); // (bm_created_at, item)
+        for r in &post_rows {
+            let bm_ts = r.0.clone();
+            items.push((bm_ts, serde_json::json!({
+                "id": r.1,
                 "type": "post",
-                "module_type": r.3,
-                "title": r.1,
-                "preview": r.2,
-                "comment_count": r.4,
-                "like_count": r.5,
-                "view_count": r.6,
-                "created_at": r.7,
+                "module_type": r.4,
+                "title": r.2,
+                "preview": r.3,
+                "content_type": r.4,
+                "comment_count": r.5,
+                "like_count": r.6,
+                "view_count": r.7,
+                "created_at": r.8,
                 "author": {
-                    "id": r.8,
-                    "username": r.9,
-                    "display_name": r.10,
-                    "avatar_url": r.11
+                    "id": r.9,
+                    "username": r.10,
+                    "display_name": r.11,
+                    "avatar_url": r.12
                 },
                 "space": {
-                    "id": r.12,
-                    "namespace": r.13,
-                    "title": r.14
+                    "id": r.13,
+                    "namespace": r.14,
+                    "title": r.15
                 }
-            })
-        }).collect())
+            })));
+        }
+        for row in &video_rows {
+            let bm_ts: String = row.try_get("bm_created_at").unwrap_or_default();
+            let vid: String = row.try_get("id").unwrap_or_default();
+            let title: String = row.try_get("title").unwrap_or_default();
+            let preview: String = row.try_get("preview").unwrap_or_default();
+            let comment_count: i64 = row.try_get("comment_count").unwrap_or(0);
+            let like_count: i64 = row.try_get("like_count").unwrap_or(0);
+            let view_count: i64 = row.try_get("view_count").unwrap_or(0);
+            let created_at: String = row.try_get("created_at").unwrap_or_default();
+            let author_id: String = row.try_get("id").unwrap_or_default();
+            let author_username: String = row.try_get("username").unwrap_or_default();
+            let author_display: String = row.try_get("display_name").unwrap_or_default();
+            let author_avatar: String = row.try_get("avatar_url").unwrap_or_default();
+            let space_id: String = row.try_get("space_id").unwrap_or_default();
+            let space_ns: String = row.try_get("namespace").unwrap_or_default();
+            let space_title: String = row.try_get("title").unwrap_or_default();
+            let thumbnail_url: Option<String> = row.try_get("thumbnail_url").ok().flatten();
+
+            items.push((bm_ts, serde_json::json!({
+                "id": vid,
+                "type": "video",
+                "module_type": "video",
+                "title": title,
+                "preview": preview,
+                "content_type": "video",
+                "thumbnail_url": thumbnail_url,
+                "comment_count": comment_count,
+                "like_count": like_count,
+                "view_count": view_count,
+                "created_at": created_at,
+                "author": {
+                    "id": author_id,
+                    "username": author_username,
+                    "display_name": author_display,
+                    "avatar_url": author_avatar
+                },
+                "space": if !space_id.is_empty() {
+                    Some(serde_json::json!({
+                        "id": space_id,
+                        "namespace": space_ns,
+                        "title": space_title
+                    }))
+                } else {
+                    None
+                }
+            })));
+        }
+        // 按收藏时间倒序
+        items.sort_by(|a, b| b.0.cmp(&a.0));
+        // 分页
+        let paged: Vec<serde_json::Value> = items.into_iter()
+            .skip(offset as usize)
+            .take(limit as usize)
+            .map(|(_, item)| item)
+            .collect();
+        Ok(paged)
     }
 
     /// 获取用户点赞的帖子（Feed 风格数据）
@@ -991,7 +1074,7 @@ impl ContentRepo {
     }
 
 
-    /// Get unified feed across all spaces (posts + polls + announcements)
+    /// Get unified feed across all spaces (posts + polls + announcements + videos)
     pub async fn get_feed(&self, page: u32, page_size: u32) -> Result<(Vec<serde_json::Value>, u64), AppError> {
         // 先获取总数
         let post_total: i64 = sqlx::query_scalar(
@@ -1003,7 +1086,10 @@ impl ContentRepo {
         let ann_total: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM announcements"
         ).fetch_one(&self.pool).await?;
-        let total = (post_total + poll_total + ann_total) as u64;
+        let video_total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM videos v INNER JOIN space_videos sv ON v.id = sv.video_id WHERE v.visibility = 'public' AND sv.review_status = 'approved'"
+        ).fetch_one(&self.pool).await?;
+        let total = (post_total + poll_total + ann_total + video_total) as u64;
 
         let offset = ((page.saturating_sub(1)) * page_size) as i64;
         let limit = page_size as i64;
@@ -1016,11 +1102,15 @@ impl ContentRepo {
         let announcements = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, String, chrono::DateTime<chrono::Utc>,)>(
             "SELECT id, space_id, author_id, title, LEFT(body, 200), importance, created_at FROM announcements ORDER By created_at DESC LIMIT $1 OFFSET $2"
         ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+        let videos = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, i64, i64, i64, Option<String>, Option<i32>, chrono::DateTime<chrono::Utc>,)>(
+            "SELECT v.id, sv.space_id, v.uploader_id, v.title, COALESCE(v.description, ''), v.comment_count, v.like_count, v.view_count, v.thumbnail_url, v.duration_seconds, v.created_at FROM videos v INNER JOIN space_videos sv ON v.id = sv.video_id WHERE v.visibility = 'public' AND sv.review_status = 'approved' ORDER BY v.created_at DESC LIMIT $1 OFFSET $2"
+        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
         let mut user_ids: Vec<Uuid> = Vec::new();
         let mut space_ids: Vec<Uuid> = Vec::new();
         for (_, sid, _, aid, _, _, _, _, _, _, _) in &posts { user_ids.push(*aid); space_ids.push(*sid); }
         for (_, sid, aid, _, _, _) in &polls { user_ids.push(*aid); space_ids.push(*sid); }
         for (_, sid, aid, _, _, _, _) in &announcements { user_ids.push(*aid); space_ids.push(*sid); }
+        for (_, sid, aid, _, _, _, _, _, _, _, _) in &videos { user_ids.push(*aid); space_ids.push(*sid); }
         let users = self.find_users_batch(&user_ids).await?;
         let spaces = self.find_spaces_batch(&space_ids).await?;
         let mut items: Vec<serde_json::Value> = Vec::new();
@@ -1038,6 +1128,11 @@ impl ContentRepo {
             let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));
             let space_info = spaces.get(space_id);
             items.push(serde_json::json!({"id": id, "type": "announcement", "module_type": "announcement", "title": title, "preview": body_preview, "importance": importance, "comment_count": 0, "like_count": 0, "view_count": 0, "created_at": created_at, "author": author, "space": space_info}));
+        }
+        for (id, space_id, author_id, title, desc, comment_count, like_count, view_count, thumbnail_url, duration_seconds, created_at) in &videos {
+            let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));
+            let space_info = spaces.get(space_id);
+            items.push(serde_json::json!({"id": id, "type": "video", "module_type": "video", "title": title, "preview": desc, "thumbnail_url": thumbnail_url, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "duration_seconds": duration_seconds, "author": author, "space": space_info}));
         }
         items.sort_by(|a, b| {
             let ta = a["created_at"].as_str().unwrap_or("");

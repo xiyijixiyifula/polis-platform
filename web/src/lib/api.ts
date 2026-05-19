@@ -542,7 +542,7 @@ export const vote = {
 
 export interface FeedItem {
   id: string;
-  type: 'post' | 'poll' | 'announcement';
+  type: 'post' | 'poll' | 'announcement' | 'video';
   module_type: string;
   title: string;
   preview: string;
@@ -561,6 +561,9 @@ export interface FeedItem {
     description: string;
   } | null;
   importance?: string;
+  thumbnail_url?: string;
+  like_count?: number;
+  view_count?: number;
 }
 
 export const feed = {
@@ -654,8 +657,8 @@ export const contacts = {
 
 export interface VideoItem {
   id: string;
-  space_id: string;
-  space_ns: string;
+  space_id?: string | null;
+  space_ns?: string | null;
   uploader: {
     id: string;
     username: string;
@@ -668,13 +671,21 @@ export interface VideoItem {
   thumbnail_url: string | null;
   hls_url: string | null;
   status: string;
-  review_status: string;
   visibility: string;
   view_count: number;
   like_count: number;
   comment_count: number;
   is_liked: boolean;
+  is_bookmarked: boolean;
   share_code?: string;
+  has_password?: boolean;
+  space_review_status?: string | null;
+  published_spaces?: Array<{
+    space_id: string;
+    namespace: string;
+    title: string;
+    review_status: string;
+  }>;
   created_at: string;
 }
 
@@ -702,15 +713,27 @@ export const videos = {
     return request<VideoItem[]>(`/spaces/${encodeNs(namespace)}/videos?${params.toString()}`);
   },
 
+  /** 获取我的视频列表（创作中心） */
+  myVideos: (page?: number, pageSize?: number) => {
+    const params = new URLSearchParams();
+    if (page) params.set('page', String(page));
+    if (pageSize) params.set('page_size', String(pageSize));
+    return request<VideoItem[]>(`/videos?${params.toString()}`);
+  },
+
   /** 获取视频详情 */
   get: (id: string) => request<VideoItem>(`/videos/${id}`),
 
   /** 通过分享码获取视频 */
-  getByShareCode: (code: string) => request<VideoItem>(`/videos/share/${code}`),
+  getByShareCode: (code: string, password?: string) => {
+    const params = new URLSearchParams();
+    if (password) params.set('password', password);
+    return request<VideoItem>(`/videos/share/${code}?${params.toString()}`);
+  },
 
   /** 上传视频 */
-  upload: (namespace: string, fileBase64: string, title: string, description?: string, visibility?: string, extension?: string) =>
-    request<VideoItem>(`/spaces/${encodeNs(namespace)}/videos`, {
+  upload: (fileBase64: string, title: string, description?: string, visibility?: string, extension?: string) =>
+    request<VideoItem>(`/videos`, {
       method: 'POST',
       body: JSON.stringify({ file_data: fileBase64, title, description: description || '', visibility: visibility || 'public', extension: extension || 'mp4' }),
     }),
@@ -722,6 +745,18 @@ export const videos = {
   /** 删除视频 */
   delete: (id: string) =>
     request<void>(`/videos/${id}`, { method: 'DELETE' }),
+
+  /** 发布到社区 */
+  publishToSpaces: (id: string, spaceIds: string[]) =>
+    request<void>(`/videos/${id}/publish`, { method: 'POST', body: JSON.stringify({ space_ids: spaceIds }) }),
+
+  /** 设置分享密码 */
+  setPassword: (id: string, password: string) =>
+    request<void>(`/videos/${id}/password`, { method: 'POST', body: JSON.stringify({ password }) }),
+
+  /** 收藏 */
+  toggleBookmark: (id: string) =>
+    request<{ bookmarked: boolean }>(`/videos/${id}/bookmark`, { method: 'POST' }),
 
   /** 点赞 */
   toggleLike: (id: string) =>
