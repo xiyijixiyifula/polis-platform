@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils';
 import { users, follow, videos, type User, type FollowUser, type VideoItem } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
 import { FeedItem } from '@/components/FeedItem';
+import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
 
 function FollowList({ users: list, loading, emptyText }: {
   users: FollowUser[];
@@ -586,80 +587,64 @@ export default function UserProfilePage() {
         )
       )}
 
-      {/* isSelf: 创作 Tab — 自己发布的所有内容 */}
-      {isSelf && activeTab === 'posts' && (
-        contentsLoading ? (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
-        ) : myContents.length > 0 ? (
-          <div className="space-y-2">
-            {myContents.map((post: any) => {
-              const space = post.space || {};
-              const spaceNs = space.namespace || '';
-              const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : post.module_type === 'qa' ? '问答' : post.module_type === 'novel' ? '小说' : post.module_type === 'game' ? '游戏' : post.module_type === 'mini_app' ? '小程序' : '交流';
-              return (
-                <div key={post.id} className="glass-card p-4 group transition-colors">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      {/* 去路：社区 → 模块 */}
-                      <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 mb-1.5 flex-wrap">
-                        <span className="text-gray-300 dark:text-gray-600">📬</span>
-                        <Link href={spaceNs ? `/space/${encodeURIComponent(spaceNs)}` : '#'}
-                          className="font-medium text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[160px]">
-                          {space.title || spaceNs || '未知社区'}
-                        </Link>
-                        <span className="text-gray-300 dark:text-gray-600">›</span>
-                        <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-xs text-gray-600 dark:text-gray-400">{moduleLabel}</span>
-                        <span className="text-gray-300 dark:text-gray-600">·</span>
-                        <span>{formatDate(post.created_at)}</span>
-                      </div>
-                      <Link href={`/post/${post.id}${spaceNs ? '?space=' + encodeURIComponent(spaceNs) : ''}`}>
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-1">
-                          {post.title || '无标题'}
-                        </h3>
-                      </Link>
-                      {post.body && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
-                          {post.body.replace(/<[^>]+>/g, '').slice(0, 200)}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-                        <span className="flex items-center gap-1"><Heart className="h-3 w-3" />{post.like_count || 0}</span>
-                        <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" />{post.comment_count || 0}</span>
-                        <span className="flex items-center gap-1"><Eye className="h-3 w-3" />{post.view_count || 0}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); const mt = post.module_type || 'forum'; setRefPostId(post.id); setRefPostModuleType(mt); setRefModuleType(mt); setRefSpaceNs(''); setRefUserQuery(''); setRefUserResults([]); setRefSelectedUser(null); setRefUserSpaces([]); setRefError(''); setRefSuccess(''); setShowRefDialog(true); }}
-                        className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-500 transition-colors"
-                        title="投稿到其他社区">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                      </button>
-                      <Link href={`/post/${post.id}${spaceNs ? '?space=' + encodeURIComponent(spaceNs) : ''}`}
-                        className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-primary-600 transition-colors"
-                        title="编辑">
-                        <PenLine className="h-4 w-4" />
-                      </Link>
-                      <button
-                        onClick={(e) => handleDeletePost(post.id, e)}
-                        className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-colors"
-                        title="删除">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
-            <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">还没有发布过内容</p>
-            <Link href="/post/new" className="text-sm text-primary-600 hover:underline mt-1 inline-block">去发布第一篇</Link>
-          </div>
-        )
-      )}
+	      {/* isSelf: 创作 Tab — 自己发布的所有内容 */}
+	      {isSelf && activeTab === 'posts' && (
+	        contentsLoading ? (
+	          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+	        ) : myContents.length > 0 ? (
+	          <div className="space-y-2">
+	            {myContents.map((post: any) => {
+	              const props = adaptFeedItem(post);
+	              return (
+	                <div key={post.id} className="glass-card rounded-xl overflow-hidden group relative">
+	                  <ContentCard
+	                    {...props}
+	                    isOwner={true}
+	                    showOwnerActions={true}
+	                    onEdit={() => {
+	                      const spaceNs = post.space?.namespace || '';
+	                      window.location.href = `/post/${post.id}${spaceNs ? '?space=' + encodeURIComponent(spaceNs) : ''}`;
+	                    }}
+	                    onDelete={(id) => {
+	                      if (confirm('确定要删除这篇帖子吗？此操作不可撤销。')) {
+	                        const token = localStorage.getItem('polis_access_token');
+	                        fetch(`/api/posts/${id}`, {
+	                          method: 'DELETE',
+	                          headers: { Authorization: 'Bearer ' + (token || '') },
+	                        }).then(r => r.json()).then(data => {
+	                          if (data.code === 0) {
+	                            setMyContents(prev => prev.filter((p: any) => p.id !== id));
+	                          } else alert(data.message || '删除失败');
+	                        }).catch(() => alert('删除失败'));
+	                      }
+	                    }}
+	                    onSubmit={(id) => {
+	                      const mt = post.module_type || 'forum';
+	                      setRefPostId(id);
+	                      setRefPostModuleType(mt);
+	                      setRefModuleType(mt);
+	                      setRefSpaceNs('');
+	                      setRefUserQuery('');
+	                      setRefUserResults([]);
+	                      setRefSelectedUser(null);
+	                      setRefUserSpaces([]);
+	                      setRefError('');
+	                      setRefSuccess('');
+	                      setShowRefDialog(true);
+	                    }}
+	                  />
+	                </div>
+	              );
+	            })}
+	          </div>
+	        ) : (
+	          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
+	            <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
+	            <p className="text-sm">还没有发布过内容</p>
+	            <Link href="/post/new" className="text-sm text-primary-600 hover:underline mt-1 inline-block">去发布第一篇</Link>
+	          </div>
+	        )
+	      )}
 
       {/* isSelf: 视频 Tab */}
       {isSelf && activeTab === 'videos' && (

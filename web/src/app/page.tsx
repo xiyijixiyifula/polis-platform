@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { formatDate, formatCount, stripMarkdown } from '@/lib/utils';
+import { formatCount } from '@/lib/utils';
 import {
   Home, Compass, Bell, Mail, Bookmark, User, Settings,
-  Search, TrendingUp, MessageCircle, Heart, Eye,
-  Share2, Repeat2, Sparkles, Users, FlaskConical, Play
+  Search, TrendingUp, MessageCircle, Eye,
+  Users
 } from 'lucide-react';
 import { getSpaceVisual } from '@/components/SpaceCard';
+import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
 
 // ===== Main Component =====
 export default function HomePage() {
@@ -500,146 +501,8 @@ function FeedLayout() {
   );
 }
 
-// ===== Feed Item Card =====
+// ===== Feed Item Card (delegates to unified ContentCard) =====
 function FeedItemCard({ item }: { item: any }) {
-  const author = item.author || {};
-  const space = item.space || {};
-  const authorUsername = author.username || 'anonymous';
-  const authorDisplayName = author.display_name || author.username || '匿名';
-  const spaceName = space.title || space.namespace || '未知社区';
-  const spaceNs = space.namespace || '';
-  // 从 namespace 提取空间所有者（namespace 格式: owner/slug）
-  const spaceOwner = spaceNs.split('/')[0] || authorUsername;
-
-  const getTypeIcon = () => {
-    if (item.type === 'poll') return '📊';
-    if (item.type === 'announcement') return '📢';
-    if (item.type === 'video') return '🎬';
-    return '📝';
-  };
-
-  const getModuleLabel = () => {
-    if (item.type === 'poll') return '投票';
-    if (item.type === 'announcement') return '公告';
-    if (item.type === 'video') return '视频';
-    const mt = item.module_type || '';
-    if (mt === 'discussion') return '讨论';
-    if (mt === 'article' || mt === 'forum') return '交流';
-    if (mt === 'share') return '分享';
-    if (mt === 'wiki') return '知识库';
-    if (mt === 'qa') return '问答';
-    if (mt === 'novel') return '小说';
-    if (mt === 'game') return '游戏';
-    if (mt === 'video') return '视频';
-    if (mt === 'mini_app') return '小程序';
-    if (mt === 'activity') return '活动';
-    if (mt === 'knowledge') return '知识库';
-    if (mt === 'resource') return '资源';
-    return mt || '帖子';
-  };
-
-  const getItemLink = () => {
-    if (item.type === 'poll' && spaceNs) return '/space/' + spaceNs + '/polls';
-    if (item.type === 'poll') return '/explore';
-    if (item.type === 'announcement' && spaceNs) return '/space/' + spaceNs;
-    if (item.type === 'video' && item.id) return `/video/${item.id}?space=${encodeURIComponent(spaceNs)}`;
-    const base = '/post/' + item.id;
-    if (spaceNs) return base + '?space=' + encodeURIComponent(spaceNs);
-    return base;
-  };
-
-  const likeCount = item.like_count || 0;
-  const commentCount = item.comment_count || 0;
-  const viewCount = item.view_count || 0;
-  // Simulated share and bookmark counts (not yet in API)
-  const shareCount = Math.floor(likeCount * 0.3);
-  const bookmarkCount = Math.floor(likeCount * 0.5);
-
-  return (
-    <Link href={getItemLink()} className="block px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
-      {/* Line 1: @username/community/module / title */}
-      <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-1 flex-wrap">
-        <span className="text-sm">{getTypeIcon()}</span>
-        <Link href={'/profile/' + spaceOwner} className="font-semibold text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[130px]">
-          @{spaceOwner}
-        </Link>
-        <span className="text-gray-300 dark:text-gray-600">/</span>
-        <Link href={spaceNs ? '/space/' + spaceNs : '#'} className="text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[140px]">
-          {spaceName}
-        </Link>
-        <span className="text-gray-300 dark:text-gray-600">/</span>
-        <Link href={spaceNs && item.type === 'poll' ? '/space/' + spaceNs + '/polls' : spaceNs ? '/space/' + spaceNs + '/posts' : '#'} className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-          {getModuleLabel()}
-        </Link>
-        <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
-        <span className="text-gray-900 dark:text-white font-semibold truncate">
-          {item.title || '无标题'}
-        </span>
-      </div>
-
-      {/* Line 2: Preview */}
-      {item.preview && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 pl-5">
-          {stripMarkdown(item.preview)}
-        </p>
-      )}
-
-      {/* 视频封面预览 */}
-      {item.type === 'video' && item.thumbnail_url && (
-        <div className="mt-2 mb-2 pl-5">
-          <div className="relative rounded-xl overflow-hidden max-h-80 bg-gray-100 dark:bg-gray-800">
-            <img src={item.thumbnail_url} alt={item.title}
-              className="w-full object-cover" style={{ maxHeight: '320px' }} />
-            <div className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/20 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                <Play className="h-6 w-6 text-gray-900 ml-0.5" />
-              </div>
-            </div>
-            {item.duration_seconds && (
-              <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-white text-xs">
-                {Math.floor(item.duration_seconds / 60)}:{String(item.duration_seconds % 60).padStart(2, '0')}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Line 3: Social stats */}
-      <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 pl-5">
-        <Link href={getItemLink()} className="flex items-center gap-5 py-1">
-          <span className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors">{authorDisplayName}</span>
-        </Link>
-        <span className="text-gray-300 dark:text-gray-600">·</span>
-        <span className="text-[11px]">{formatDate(item.created_at)}</span>
-      </div>
-
-      <div className="flex items-center gap-5 pl-5 mt-1 text-xs text-gray-400">
-        {/* Like */}
-        <Link href={getItemLink()} className="flex items-center gap-1 hover:text-red-500 transition-colors">
-          <Heart className="h-3.5 w-3.5" />
-          <span>{formatCount(likeCount)}</span>
-        </Link>
-        {/* Comment */}
-        <Link href={getItemLink()} className="flex items-center gap-1 hover:text-primary-600 transition-colors">
-          <MessageCircle className="h-3.5 w-3.5" />
-          <span>{formatCount(commentCount)}</span>
-        </Link>
-        {/* Bookmark */}
-        <button className="flex items-center gap-1 hover:text-yellow-500 transition-colors">
-          <Bookmark className="h-3.5 w-3.5" />
-          <span>{formatCount(bookmarkCount)}</span>
-        </button>
-        {/* Share */}
-        <button className="flex items-center gap-1 hover:text-green-500 transition-colors">
-          <Repeat2 className="h-3.5 w-3.5" />
-          <span>{formatCount(shareCount)}</span>
-        </button>
-        {/* Views */}
-        <span className="flex items-center gap-1 ml-auto">
-          <Eye className="h-3.5 w-3.5" />
-          <span>{formatCount(viewCount)}</span>
-        </span>
-      </div>
-    </Link>
-  );
+  const props = adaptFeedItem(item);
+  return <ContentCard {...props} />;
 }

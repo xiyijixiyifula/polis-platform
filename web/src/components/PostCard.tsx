@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Heart, MessageCircle, Eye, Pin, EyeOff } from 'lucide-react';
-import { formatDate, formatCount, estimateReadTime } from '@/lib/utils';
-import { Clock } from 'lucide-react';
+import { Pin, EyeOff } from 'lucide-react';
+import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
 
@@ -36,107 +35,113 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, canUnhide, onToggleUnhide }: PostCardProps) {
-  const excerpt = post.body ? post.body.replace(/<[^>]+>/g, '').slice(0, 200) : '';
+  // Adapt post to ContentCard format
+  const cardProps = adaptFeedItem({
+    ...post,
+    type: 'post',
+    space: { namespace: post.space_ns, title: post.space_name },
+    author: post.author || {},
+    module_type: 'forum',
+  });
+
   const spaceLink = post.space_ns || post.space_id || '';
-  const author = post.author;
-  const authorName = author?.display_name || author?.username || '匿名';
-  const authorUsername = author?.username || '';
 
   return (
-    <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="relative group glass-card block p-4">
+    <div className="relative group">
+      {/* Pinned badge */}
       {post.is_pinned && (
-        <div className="mb-2 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
+        <div className="absolute top-2 left-4 z-10 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
       )}
 
       {/* Hidden badge */}
       {post.is_hidden && (
-        <div className="mb-2 text-xs text-orange-600 dark:text-orange-400 font-medium">🙈 已隐藏 — 仅空间所有者可见</div>
+        <div className="absolute top-2 left-4 z-10 text-xs text-orange-600 dark:text-orange-400 font-medium">🙈 已隐藏 — 仅空间所有者可见</div>
       )}
 
-      {/* Visibility badge */}
-      {post.visibility && post.visibility !== 'public' && (
-        <div className="mb-2">
-          <span className={`text-xs px-2 py-0.5 rounded-full ${
-            post.visibility === 'private'
-              ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-              : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
-          }`}>
-            {post.visibility === 'private' ? '🔒 私密' : '🔗 不公开'}
-          </span>
-        </div>
-      )}
-
-
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 p-4 glass-card rounded-xl">
         {/* Vote column */}
-        <div className="shrink-0 pt-0.5">
+        <div className="shrink-0 pt-1">
           <VoteButton targetType="post" targetId={post.id} />
         </div>
 
-        <Link href={authorUsername ? `/profile/${authorUsername}` : '#'} className="shrink-0">
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm">
-            {authorName.charAt(0)}
-          </div>
-        </Link>
-
+        {/* Content area */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <Link href={authorUsername ? `/profile/${authorUsername}` : '#'} className="font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400">
-              {authorName}
-            </Link>
-            <span>·</span>
-            <span>{formatDate(post.created_at)}</span>
-            {(post.space_name || post.space_ns) && (
+          {/* Breadcrumb: @spaceOwner/spaceName/forum / title */}
+          <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-1 flex-wrap">
+            {post.space_ns && (
               <>
-                <span>·</span>
-                <Link href={`/space/${spaceLink}`} className="text-primary-600 dark:text-primary-400 hover:underline">
-                  {post.space_name || spaceLink}
+                <span className="font-semibold text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[130px]">
+                  @{post.space_ns.split('/')[0]}
+                </span>
+                <span className="text-gray-300 dark:text-gray-600">/</span>
+                <Link href={`/space/${encodeURIComponent(post.space_ns)}`}
+                  className="text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[140px]">
+                  {post.space_name || post.space_ns}
                 </Link>
+                <span className="text-gray-300 dark:text-gray-600">/</span>
               </>
             )}
+            <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0">
+              交流
+            </span>
+            <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
+            <span className="text-gray-900 dark:text-white font-semibold truncate">
+              {post.title || '无标题'}
+            </span>
           </div>
 
-          <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`}>
-            <h2 className="text-base font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
-              {post.title}
-            </h2>
-          </Link>
-
-          {excerpt && (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{excerpt}</p>
+          {/* Visibility badge */}
+          {post.visibility && post.visibility !== 'public' && (
+            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+              post.visibility === 'private'
+                ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
+            }`}>
+              {post.visibility === 'private' ? '🔒 私密' : '🔗 不公开'}
+            </span>
           )}
 
+          {/* Content preview */}
+          {post.body && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mt-1.5">
+              {post.body.replace(/<[^>]+>/g, '').slice(0, 200)}
+            </p>
+          )}
+
+          {/* Tags */}
           {post.tags && post.tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {post.tags.map((tag) => (
-                <Link key={tag} href={`/search?tag=${encodeURIComponent(tag)}`} className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                <Link key={tag} href={`/search?tag=${encodeURIComponent(tag)}`}
+                  className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
                   #{tag}
                 </Link>
               ))}
             </div>
           )}
 
-          <div className="mt-3 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500">
-            <button className={`like-btn flex items-center gap-1 hover:text-red-500 dark:hover:text-red-400 transition-colors ${post.is_liked ? 'liked text-red-500' : ''}`}>
-              <Heart className={`h-3.5 w-3.5 ${post.is_liked ? 'fill-current' : ''}`} />
-              <span>{formatCount(post.like_count || 0)}</span>
-            </button>
-            <Link href={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} className="flex items-center gap-1 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-              <MessageCircle className="h-3.5 w-3.5" />
-              <span>{formatCount(post.comment_count || 0)}</span>
+          {/* Stats row + management buttons */}
+          <div className="mt-3 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 flex-wrap">
+            <Link href={`/post/${post.id}${spaceLink ? '?space=' + encodeURIComponent(spaceLink) : ''}`}
+              className={`flex items-center gap-1 hover:text-red-500 transition-colors ${post.is_liked ? 'text-red-500' : ''}`}>
+              <span>❤️</span>
+              <span>{post.like_count || 0}</span>
             </Link>
+
+            <Link href={`/post/${post.id}${spaceLink ? '?space=' + encodeURIComponent(spaceLink) : ''}`}
+              className="flex items-center gap-1 hover:text-primary-600 transition-colors">
+              <span>💬</span>
+              <span>{post.comment_count || 0}</span>
+            </Link>
+
             <span className="flex items-center gap-1">
-              <Eye className="h-3.5 w-3.5" />
-              <span>{formatCount(post.view_count || 0)}</span>
+              <span>👁️</span>
+              <span>{post.view_count || 0}</span>
             </span>
-            {(post as any).body && (
-              <span className="flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                <span>{estimateReadTime((post as any).body || '')}</span>
-              </span>
-            )}
-            {/* 管理操作：置顶 / 隐藏 / 取消隐藏 */}
+
+            {/* Management buttons */}
             <span className="text-gray-300 dark:text-gray-700 mx-0.5">|</span>
+
             {canPin && onTogglePin && (
               <button
                 type="button"
@@ -148,6 +153,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
                 <span>{post.is_pinned ? '已置顶' : '置顶'}</span>
               </button>
             )}
+
             {canUnhide && onToggleUnhide && (
               <button
                 type="button"
@@ -159,6 +165,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
                 <span>取消隐藏</span>
               </button>
             )}
+
             {canHide && onToggleHide && !post.is_hidden && (
               <button
                 type="button"
@@ -170,12 +177,13 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
                 <span>隐藏</span>
               </button>
             )}
+
             <div className="ml-auto flex items-center gap-1">
-              <ShareButton url={`/post/${post.id}${spaceLink ? `?space=${encodeURIComponent(spaceLink)}` : ''}`} title={post.title} />
+              <ShareButton url={`/post/${post.id}${spaceLink ? '?space=' + encodeURIComponent(spaceLink) : ''}`} title={post.title} />
             </div>
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
