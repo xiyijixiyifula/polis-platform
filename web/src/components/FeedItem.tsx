@@ -10,7 +10,22 @@ export function FeedItem({ item }: { item: any }) {
   const authorUsername = author.username || '';
   const authorDisplayName = author.display_name || authorUsername || '用户';
   const spaceNs = space.namespace || '';
-  const spaceName = space.title || spaceNs;
+  const spaceTitle = space.title || spaceNs;
+
+  // 从 namespace 提取空间所有者（namespace 格式: owner/slug）
+  const spaceOwner = spaceNs.split('/')[0] || '';
+
+  // 模块类型中文映射
+  const moduleLabel: Record<string, string> = {
+    forum: '交流', article: '交流', share: '分享', wiki: '知识库',
+    series: '系列', membership: '会员', video: '视频',
+    code_repo: '代码仓库', qa: '问答', polls: '投票',
+    announcements: '公告', chat: '聊天', store: '商城',
+    course: '课程', novel: '小说', game: '游戏',
+    mini_app: '小程序', members: '成员', post: '帖子',
+    poll: '投票', announcement: '公告',
+  };
+  const moduleName = moduleLabel[item.module_type] || item.module_type || '';
 
   const getItemLink = () => {
     if (item.type === 'video') return `/video/${item.id}`;
@@ -27,13 +42,21 @@ export function FeedItem({ item }: { item: any }) {
     <Link href={getItemLink()} className="block px-4 py-3 hover:bg-gray-50/50 dark:hover:bg-gray-900/50 transition-colors">
       <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-1 flex-wrap">
         <span className="text-sm">{item.type === 'video' ? '🎬' : ''}</span>
-        <span className="font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[130px]">
-          @{authorUsername}
+        <span className="font-semibold text-primary-600 dark:text-primary-400 truncate max-w-[130px]">
+          @{spaceOwner}
         </span>
         <span className="text-gray-300 dark:text-gray-600">/</span>
-        <span className="text-primary-600 dark:text-primary-400 truncate max-w-[140px]">
-          {spaceName || (item.type === 'video' ? '视频' : '')}
+        <span className="text-gray-700 dark:text-gray-300 truncate max-w-[140px]">
+          {spaceTitle}
         </span>
+        {moduleName && (
+          <>
+            <span className="text-gray-300 dark:text-gray-600">/</span>
+            <span className="text-gray-400 dark:text-gray-500 truncate max-w-[80px]">
+              {moduleName}
+            </span>
+          </>
+        )}
         <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
         <span className="text-gray-900 dark:text-white font-semibold truncate">
           {item.title || '无标题'}

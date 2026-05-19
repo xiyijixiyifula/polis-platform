@@ -508,6 +508,8 @@ function FeedItemCard({ item }: { item: any }) {
   const authorDisplayName = author.display_name || author.username || '匿名';
   const spaceName = space.title || space.namespace || '未知社区';
   const spaceNs = space.namespace || '';
+  // 从 namespace 提取空间所有者（namespace 格式: owner/slug）
+  const spaceOwner = spaceNs.split('/')[0] || authorUsername;
 
   const getTypeIcon = () => {
     if (item.type === 'poll') return '📊';
@@ -558,8 +560,8 @@ function FeedItemCard({ item }: { item: any }) {
       {/* Line 1: @username/community/module / title */}
       <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-1 flex-wrap">
         <span className="text-sm">{getTypeIcon()}</span>
-        <Link href={'/profile/' + authorUsername} className="font-semibold text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[130px]">
-          @{authorUsername}
+        <Link href={'/profile/' + spaceOwner} className="font-semibold text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[130px]">
+          @{spaceOwner}
         </Link>
         <span className="text-gray-300 dark:text-gray-600">/</span>
         <Link href={spaceNs ? '/space/' + spaceNs : '#'} className="text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[140px]">
