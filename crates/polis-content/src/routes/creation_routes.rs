@@ -51,7 +51,7 @@ pub fn creation_routes() -> Router<Arc<ContentHandler>> {
         .route("/api/creations/{id}/submit", post(submit_to_community))
         .route("/api/creations/{id}/submissions", get(list_creation_submissions))
         // 社区模块引用
-        .route("/api/spaces/{ns}/modules/{module_type}/refs", get(list_module_refs))
+        .route("/api/module-refs/{ns}/{module_type}", get(list_module_refs))
         .route("/api/refs/{id}", patch(manage_ref).delete(withdraw_submission))
 }
 
