@@ -93,6 +93,8 @@ pub fn video_routes(handler: Arc<VideoHandler>) -> Router {
         // === 社区上下文（审核、社区列表）===
         .route("/api/spaces/{*path}", get(space_get).post(space_post))
         .nest_service("/hls", ServeDir::new(&handler.config.hls_output_path))
+        // 视频上传需要支持大文件（650MB）
+        .layer(axum::extract::DefaultBodyLimit::max(650 * 1024 * 1024))
         .with_state(handler)
 }
 
