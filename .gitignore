@@ -28,3 +28,5 @@ uploads
 .vscode/
 *.wasm
 web/out/
+# Release artifacts (local build output)
+polis-release-*

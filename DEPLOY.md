@@ -6,7 +6,7 @@
 |------|-----|
 | 服务器 | 47.253.123.3 (root@www.mzgw.com) |
 | 在线地址 | https://www.mzgw.com |
-| 部署方式 | 服务器本地编译 + systemd 管理 |
+| 部署方式 | 本地交叉编译 → GitHub Releases → 服务器下载 + systemd 管理 |
 | 反向代理 | Nginx (:80→443 重定向, :443 HTTPS → Gateway :8080 / Next.js :3000) |
 | SSL 证书 | Let's Encrypt (certbot, 自动续期) |
 | 数据库 | PostgreSQL 本地实例 |
@@ -14,16 +14,26 @@
 ## 当前部署流程
 
 ```
-开发者本地 git push
+开发者本地（macOS arm64）
+    ├── git push (提交代码)
+    ├── cargo build --release --target x86_64-unknown-linux-gnu (交叉编译)
+    └── npm run build (前端构建)
     ↓
-服务器 git pull + cargo build + npm build
+打包 tar.gz (rust/ + frontend/.next/)
     ↓
-systemctl restart 各服务
+gh release create → upload to GitHub Releases
     ↓
-10 项自动化测试
+服务器 (root@speedtest.mzgw.com)
+    ├── wget <release-url>
+    ├── tar -xzf + cp binaries to /root/polis/target/release/
+    ├── cp -r .next to /opt/polis-web/.next
+    └── systemctl restart 所有 6 个服务
     ↓
-健康检查通过 OR 自动回滚
+健康检查通过
 ```
+
+> **交叉编译工具链**：macOS arm64 → Linux x86_64 通过 **zig cc** 实现。
+> 配置见 `.cargo/config.toml` + `deploy/zig-cc-linker.sh`。前置条件：`brew install zig`。
 
 ## 脚本说明
 
@@ -75,10 +85,10 @@ systemctl restart 各服务
 ### 已知限制（待改进）
 | 问题 | 严重度 | 状态 |
 |------|--------|------|
-| 服务器直接编译（CPU/内存压力） | 🟡 中 | 建议迁移到 CI/CD |
+| ~~服务器直接编译（CPU/内存压力）~~ | 🟢 已解决 | ✅ v0.3.81 — 本地交叉编译 + Releases 部署 |
+| ~~生产环境安装 Rust 工具链~~ | 🟢 已解决 | ✅ v0.3.81 — 服务器无需 Rust |
 | 无蓝绿/滚动部署（有短暂中断） | 🟡 中 | 待处理 |
 | 日志无自动轮转（可能撑满磁盘） | 🟡 中 | 待配置 logrotate |
-| 生产环境安装 Rust 工具链 | 🟢 低 | 建议 Docker 化 |
 
 ## 未来改进计划
 
@@ -87,7 +97,8 @@ systemctl restart 各服务
 - [ ] 添加 systemd 健康检查 (WatchdogSec)
 
 ### Phase 2: 部署优化（中期）
-- [ ] GitHub Actions CI/CD: 构建产物 → 服务器拉取
+- [x] ~~GitHub Actions CI/CD: 构建产物 → 服务器拉取~~ → 已实现：本地交叉编译 + GitHub Releases
+- [ ] CI/CD 自动化: GitHub Actions 自动交叉编译 + 发布 Release
 - [ ] 蓝绿部署: 构建到新目录 → 切换 symlink → 重载
 - [ ] 监控告警: Prometheus + Grafana
 

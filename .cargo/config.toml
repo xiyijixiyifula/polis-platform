@@ -1,0 +1,9 @@
+# Cross-compilation: macOS arm64 → Linux x86_64 via zig cc
+# Prerequisites: brew install zig
+# zig linker wrapper at deploy/zig-cc-linker.sh
+
+[target.x86_64-unknown-linux-gnu]
+linker = "deploy/zig-cc-linker.sh"
+
+[unstable]
+# Enable unstable features if needed
