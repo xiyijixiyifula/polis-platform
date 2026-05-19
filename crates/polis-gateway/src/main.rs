@@ -104,6 +104,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/health/space", get(proxy_health_space))
         .route("/api/health/content", get(proxy_health_content))
         .route("/api/health/admin", get(proxy_health_admin))
+        .route("/api/health/video", get(proxy_health_video))
         // 健康检查 - 聚合
         .route("/api/health/all", get(health_check_all))
         .layer(TraceLayer::new_for_http())
@@ -158,10 +159,11 @@ async fn health_check_all(
     let space_health = proxy_health(&state.client, &state.config.space_service_url);
     let content_health = proxy_health(&state.client, &state.config.content_service_url);
     let admin_health = proxy_health(&state.client, &state.config.admin_service_url);
+    let video_health = proxy_health(&state.client, &state.config.video_service_url);
 
-    let (u, s, c, a) = tokio::join!(user_health, space_health, content_health, admin_health);
+    let (u, s, c, a, v) = tokio::join!(user_health, space_health, content_health, admin_health, video_health);
 
-    let all_healthy = [&u, &s, &c, &a].iter().all(|h| {
+    let all_healthy = [&u, &s, &c, &a, &v].iter().all(|h| {
         h.get("status").and_then(|v| v.as_str()) == Some("healthy")
     });
 
@@ -172,6 +174,7 @@ async fn health_check_all(
             "space": s,
             "content": c,
             "admin": a,
+            "video": v,
         },
         "all_healthy": all_healthy,
     })))
@@ -206,6 +209,14 @@ async fn proxy_health_admin(
     State(state): State<Arc<GatewayState>>,
 ) -> Json<ApiResponse<Value>> {
     let health = proxy_health(&state.client, &state.config.admin_service_url).await;
+    Json(ApiResponse::success(health))
+}
+
+/// 代理视频服务 health
+async fn proxy_health_video(
+    State(state): State<Arc<GatewayState>>,
+) -> Json<ApiResponse<Value>> {
+    let health = proxy_health(&state.client, &state.config.video_service_url).await;
     Json(ApiResponse::success(health))
 }
 
