@@ -886,7 +886,7 @@ pub struct ListCreationsQuery {
 /// 获取社区模块引用列表查询参数
 #[derive(Debug, Deserialize)]
 pub struct ListModuleRefsQuery {
-    pub module_type: String,
+    pub module_type: Option<String>,
     pub status: Option<String>, // 'visible' | 'pending' | 'hidden' | 'all'
     pub sort: Option<String>,   // 'newest' | 'hot' | 'pinned'
     pub page: Option<u32>,
