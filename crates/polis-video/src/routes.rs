@@ -266,4 +266,12 @@ async fn space_post(State(h): State<Arc<VideoHandler>>, Path(path): Path<String>
 // Health
 // ================================================================
 
-async fn health_check() -> Json<JVal> { ok_str("Video service is running") }
+async fn health_check(State(h): State<Arc<VideoHandler>>) -> Json<JVal> {
+    let db_ok = sqlx::query("SELECT 1").fetch_one(&h.repo.pool).await.is_ok();
+    ok(serde_json::json!({
+        "service": "polis-video",
+        "status": if db_ok { "healthy" } else { "degraded" },
+        "database": db_ok,
+        "version": env!("CARGO_PKG_VERSION"),
+    }))
+}
