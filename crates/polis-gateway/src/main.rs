@@ -86,6 +86,11 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/upload", any(proxy_to_content))
         .route("/api/import/markdown", any(proxy_to_content))
         .route("/api/feed", any(proxy_to_content))
+        // 代理路由 - 创作中心 & 引用驱动架构
+        .route("/api/creations", any(proxy_to_content))
+        .route("/api/creations/{*path}", any(proxy_to_content))
+        .route("/api/module-refs/{*path}", any(proxy_to_content))
+        .route("/api/refs/{*path}", any(proxy_to_content))
         // 代理路由 - 私信
         .route("/api/messages", any(proxy_to_content))
         .route("/api/messages/{*path}", any(proxy_to_content))
@@ -230,7 +235,7 @@ async fn proxy_space_router(
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or(path);
     // 判断是否是内容服务路径（包含 /posts, /featured, /bookmarks, /announcements）
     let remaining = path.strip_prefix("/api/spaces").unwrap_or(path);
-    let is_content = remaining.contains("/posts") || remaining.contains("/featured") || remaining.contains("/bookmarks") || remaining.contains("/announcements") || remaining.contains("/polls") || remaining.contains("/files") || remaining.contains("/share") || remaining.contains("/analytics");
+    let is_content = remaining.contains("/posts") || remaining.contains("/featured") || remaining.contains("/bookmarks") || remaining.contains("/announcements") || remaining.contains("/polls") || remaining.contains("/files") || remaining.contains("/share") || remaining.contains("/analytics") || remaining.contains("/modules") || remaining.contains("/references");
     let is_video = remaining.contains("/videos");
 
     let base_url = if is_video {
