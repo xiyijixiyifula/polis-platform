@@ -21,16 +21,32 @@
 
 ---
 
-## ✨ 当前功能 (v0.3.78)
+## ✨ 当前功能 (v0.3.80)
+
+### 🏗️ 引用驱动架构（核心设计）
+
+Polis 采用**引用驱动架构**：内容数据归创作者所有（`creations` 表），社区只是引用文件夹（`community_module_refs` 表）。同一内容可投稿到多个社区，点赞/评论/浏览量跟随数据本体走，社区仅控制引用可见性。
+
+| 概念 | 类比 | 实现 |
+|------|------|------|
+| **创作数据本体** | 原始文件 | `creations` 表 — 创作者完全控制 |
+| **社区模块引用** | 文件夹快捷方式 | `community_module_refs` 表 — 可显示/隐藏/审核 |
+| **投稿** | 创建快捷方式 | 同一创作可投到多个社区 |
+| **撤稿** | 删除快捷方式 | 仅移除引用，创作本体保留 |
+
+### 功能列表
 
 | 功能 | 状态 | 说明 |
 |------|------|------|
 | 👤 用户系统 | ✅ | 注册/登录/JWT 认证/个人资料编辑 |
 | 🏛️ 社区创建 | ✅ | 创建社区、嵌套命名空间、公开/私有/不公开 |
-| 💬 交流板块 | ✅ | Markdown 发帖、标签、置顶、精选、Cherry Engine 渲染（原"文章"模块） |
+| 🏗️ 引用驱动架构 | ✅ | 数据本体与社区引用分离、跨社区投稿/撤稿 |
+| 🎨 创作中心 | ✅ | `/creations` 统一管理、新建/编辑/详情/投稿弹窗 |
+| 💬 交流板块 | ✅ | Markdown 发帖、标签、置顶、精选、Cherry Engine 渲染 |
 | 🔖 分享模块 | ✅ | 个人分享空间，仅创建者可发布，他人可阅读/点赞/评论 |
 | 📚 知识库(Wiki) | ✅ | 协作文档模块，所有成员可编写 Markdown 知识库页面 |
 | ❓ 问答(QA) | ✅ | 社区提问与回答模块，空间内问答 Tab 过滤展示 |
+| 🎬 视频模块 | ✅ | 视频上传/FFmpeg 转码/HLS 播放/缩略图/发布到社区/审核 |
 | 👥 成员列表 | ✅ | 空间成员展示 (头像/用户名/角色/加入时间)，后端 JOIN 查询 |
 | 💬 实时聊天 | ✅ | 空间聊天室 (REST + 轮询), 消息持久化 |
 | ✉️ 私信系统 | ✅ | 用户间私信、会话列表、未读计数、标记已读 |
@@ -40,47 +56,41 @@
 | 👥 关注/粉丝 | ✅ | 关注用户、粉丝列表、互关 |
 | 🔔 通知系统 | ✅ | 互动通知、未读数、标记已读、偏好设置 |
 | 🗳️ 投票/问卷 | ✅ | 单选/多选投票、实时结果、社区投票列表 |
-| ⚙️ 模块配置 | ✅ | 社区模块开关，按需启用（默认仅文章） |
+| ⚙️ 模块配置 | ✅ | 16 种社区模块开关（交流/分享/知识库/系列/会员/视频/代码仓库/问答/投票/公告/聊天/商城/课程/小说/游戏/小程序/成员） |
 | 🏠 社区概览 | ✅ | GitHub 风格概览首页、精选内容、快速操作 |
 | 📢 社区公告 | ✅ | 紧急/重要/普通分级、横幅展示 |
 | 📝 草稿箱 | ✅ | 未完成帖子自动保存 |
 | 🔍 全站搜索 | ✅ | PostgreSQL ILIKE 全文搜索（社区+帖子+用户三Tab） |
 | 🍎 深色模式 | ✅ | Apple iOS 层级系统、纯黑背景、纯手动触发、无自动跟随 |
 | 🔒 帖子可见性 | ✅ | 公开/私密/不公开三级权限, 编辑器选择器 + PostCard徽章 |
-| 🛡️ 管理后台 | ✅ | 9 模块全功能仪表盘 + 系统健康 + 增长趋势 + 最近动态 + 暗黑模式 — 用户/社区/内容/评论/举报/交易/分析/设置 |
+| 🛡️ 管理后台 | ✅ | 9 模块全功能仪表盘 + 系统健康 + 增长趋势 + 最近动态 + 暗黑模式 |
 | 📋 更新日志 | ✅ | `/changelog` 版本历史 |
 | 🤖 AI 研究 | ✅ | 自动社区调研 + `/research` 报告页 |
 | 🔒 HTTPS | ✅ | Let's Encrypt TLS 1.3 |
 | 📦 数据导出 | ✅ | Markdown/JSON 格式导出 |
-| 🏥 服务健康检查 | ✅ | Gateway 聚合 /api/health/all + 4 微服务独立 /health + polisctl health CLI |
+| 🏥 服务健康检查 | ✅ | Gateway 聚合 /api/health/all + 6 微服务独立 /health |
 | 📝 Markdown 编辑器 | ✅ | Cherry Markdown 集成，完整工具栏 |
 | 📁 文件分享系统 | ✅ | 文件上传、分享链接、密码保护下载 |
 | 🧩 小程序 | ✅ | 嵌入式小应用，ModuleType::MiniApp 后端复用 |
 | 🎮 游戏 | ✅ | 游戏攻略/评测/资讯，ModuleType::Game 后端复用 |
-| 📊 投票中心 | ✅ | 全平台投票列表 /polls + GET /api/polls API + Feed导航修复 |
+| 📊 投票中心 | ✅ | 全平台投票列表 /polls + GET /api/polls API |
 | 📖 小说/阅读 | ✅ | 小说发布与阅读，章节连载，ModuleType::Novel 后端复用 |
 | 📖 专栏/内容系列 | ✅ | 系列创建、文章收录、系列展示页 |
 | 💰 付费社区 | ✅ | 会员等级创建/编辑/订阅管理 |
 | 🤝 粉丝/关注页 | ✅ | 独立粉丝列表和关注列表页面 |
-| 📰 信息流首页 | ✅ | 3 栏布局、@用户/社区/模块 时间线、分页导航(页码跳转+无限滚动) |
+| 📰 信息流首页 | ✅ | 3 栏布局、@用户/社区/模块 时间线、分页导航 |
 | 🖥️ CLI 命令行工具 | ✅ | Rust 静态二进制、20+ 命令、JSON/Table 输出 |
-| 🎨 Cherry 渲染修复 | ✅ | Engine Core API 同步渲染、CSS 作用域隔离 |
-| 🏗️ 简化空间创建 | ✅ | 移除根社区模型 + slug自动生成（与社区名称一致），创建流程更简洁 |
-| 👥 个人主页社区列表 | ✅ | 显示用户拥有和加入的所有社区（不再仅显示拥有的） |
 | 📝 帖子编辑 | ✅ | 帖子作者可在详情页内联编辑标题/标签/内容 + API + CLI |
-| 📊 空间分析 | ✅ | 空间仪表盘 — 6 项指标 + 热门排行 (帖子/浏览/点赞/评论/投票/系列) |
-| 🧪 E2E 测试 | ✅ | 27/27 (100%) 全栈自动化测试通过 (v0.3.46 验证) |
-| 👁️ 浏览量计数 | ✅ | POST /api/posts/{id}/view + polisctl post view CLI + 前端自动递增 |
-| 🏷️ 标签搜索 | ✅ | 按标签浏览帖子 + 点击标签直达搜索结果 + CLI --tag 过滤 |
-| ⏱️ 阅读时间 | ✅ | 帖子卡片和详情页显示预计阅读时长 (中英文混合估算) |
-| 📥 Markdown下载 | ✅ | 帖子详情页一键下载为 .md 文件 (YAML frontmatter + 正文) |
+| 📊 空间分析 | ✅ | 空间仪表盘 — 6 项指标 + 热门排行 |
+| 🧪 E2E 测试 | ✅ | 全栈自动化测试 |
 | 🎨 玻璃拟态卡片 | ✅ | PostCard/SpaceCard 毛玻璃背景 + 悬浮上浮 + 绿色辉光阴影 |
 | 🖥️ 深色控制台侧边栏 | ✅ | 首页左侧导航 — 深蓝渐变 + 绿色左边框激活态 |
-| 🔷 几何SVG社区图标 | ✅ | 8种独特几何形状 (六边形/齿轮/花朵等) + 8种配色, 哈希确定性选择 |
+| 🔷 几何SVG社区图标 | ✅ | 8种独特几何形状 + 8种配色, 哈希确定性选择 |
 | ✨ 粒子背景动画 | ✅ | SpaceParticles Canvas 组件 — 粒子连线 + 响应式缩放 |
 | 🏠 Hero Banner | ✅ | 首页 Feed 顶部 — "连接思想，共创未来" + 粒子背景 + CTA |
-| ❤️ 点赞心跳动画 | ✅ | heartPulse 动画 + like-btn 样式 + btn-ripple 水波纹 |
 | 💎 Liquid Glass 液体玻璃 | ✅ | SVG feTurbulence 动态折射 + 四层架构 + 渐变流动背景 |
+| 👥 模块管理者 | ✅ | 社区模块权限管理（审核/隐藏/置顶/封禁） |
+| 🎚️ 社区等级系统 | ✅ | Lv.1~Lv.6 经验成长体系 |
 
 ---
 
@@ -88,8 +98,6 @@
 
 | 功能 | 计划版本 | 进度 |
 |------|----------|------|
-| 💬 实时聊天 | v0.3.0 | ✅ REST API + 前端聊天室 (v0.3.0) |
-| 🎬 视频上传 | v0.4.0 | 桩代码 |
 | 🛍️ 社区商城 | v0.5.0 | 桩代码 |
 | 💻 Git 代码仓库 | v0.5.0 | 桩代码 |
 | 💰 打赏/支付 | v0.5.0 | 桩代码 |
@@ -125,14 +133,14 @@ systemctl restart polis-gateway
          ┌────▼─────┐                ┌─────▼────┐
          │ Gateway  │ :8080          │ Next.js  │ :3000
          └────┬─────┘                └──────────┘
-    ┌─────────┼──────────┬──────────┐
-    │         │          │          │
-┌───▼──┐ ┌───▼──┐ ┌─────▼────┐ ┌───▼───┐
-│ User │ │ Space│ │ Content  │ │ Admin │
-│:3001 │ │:3002 │ │ :3003    │ │:3050  │
-└──────┘ └──────┘ └──────────┘ └───────┘
-    │         │          │          │
-    └─────────┴──────────┴──────────┘
+    ┌────┬────┼──────────┬──────────┬─────┐
+    │    │    │          │          │     │
+┌───▼┐ ┌▼──┐ ┌▼──┐ ┌────▼────┐ ┌──▼──┐ ┌▼──────┐
+│Usr│ │Spc│ │Cnt│ │  Video  │ │Admin│ │Future │
+│3001│ │3002│ │3003│ │  3004  │ │3050 │ │svcs   │
+└───┘ └───┘ └───┘ └─────────┘ └─────┘ └───────┘
+    │    │    │          │          │
+    └────┴────┴──────────┴──────────┘
                     │
            ┌────────▼────────┐
            │  PostgreSQL     │
@@ -145,18 +153,13 @@ systemctl restart polis-gateway
 | polis-user | 3001 | Axum + SQLx | ✅ 运行中 |
 | polis-space | 3002 | Axum + SQLx | ✅ 运行中 |
 | polis-content | 3003 | Axum + SQLx | ✅ 运行中 |
+| polis-video | 3004 | Axum + SQLx + FFmpeg | ✅ 运行中 |
 | polis-admin | 3050 | Axum + SQLx | ✅ 运行中 |
 | polis-web | 3000 | Next.js 14 | ✅ 运行中 |
-| polis-chat | - | Axum | 🚧 规划中 |
-| polis-video | - | Axum | 🚧 规划中 |
 | polis-store | - | Axum | 🚧 规划中 |
 | polis-code | - | Axum | 🚧 规划中 |
 | polis-pay | - | Axum | 🚧 规划中 |
 | polis-search | - | Axum + Tantivy | 🚧 规划中 |
-| polis-export | - | Axum | 🚧 规划中 |
-| polis-notify | - | Axum | 🚧 规划中 |
-| polis-plugin-engine | - | WASM runtime | 🚧 规划中 |
-| polis-aggregate | - | Axum | 🚧 规划中 |
 
 ---
 
@@ -204,31 +207,27 @@ polis/
 │   ├── USER-GUIDE.md         ← 用户使用指南
 │   ├── CLI-GUIDE.md          ← CLI 命令行指南
 │   └── HTTPS-CONFIG.md       ← HTTPS 配置参考
-├── migrations/               ← 数据库 SQL
-├── crates/                   ← Rust 微服务 + CLI (17 个)
-│   ├── polisctl/               ← CLI 命令行工具（Rust）
-│   ├── polis-core/           ← 共享库 (模型/错误/工具)
+├── migrations/               ← 数据库迁移 SQL (15+ 文件)
+├── crates/                   ← Rust 微服务 (7 个生产 + CLI)
+│   ├── polis-core/           ← 共享库 (模型/错误/解析器)
 │   ├── polis-gateway/        ← API 网关 ⭐
 │   ├── polis-user/           ← 用户服务 ⭐
 │   ├── polis-space/          ← 社区服务 ⭐
-│   ├── polis-content/        ← 内容服务 ⭐
+│   ├── polis-content/        ← 内容服务（含引用驱动架构/创作中心）⭐
+│   ├── polis-video/          ← 视频服务（上传/转码/HLS）⭐
 │   ├── polis-admin/          ← 管理后台 ⭐
-│   └── ...                   ← 更多规划中的服务
+│   └── polisctl/             ← CLI 命令行工具
 └── web/                      ← Next.js 14 前端
     └── src/app/              ← 页面路由
 ```
 
 ⭐ = 当前生产环境运行中
+
 ---
 
-| `admin` | 管理后台（dashboard/stats/users/spaces/posts/...） |
-
-📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://www.mzgw.com/cli)
-
-## 🏗️ 自动化系统
 ## 🖥️ 命令行工具 (polisctl)
 
-Polis 提供完整的命令行接口，使用 **Rust** 编写为单一静态二进制文件，无需运行时依赖，支持 Linux、macOS、Windows。设计为 AI 代理友好，JSON 模式输出。
+Polis 提供完整的命令行接口，使用 **Rust** 编写为单一静态二进制文件，无需运行时依赖。支持 JSON/Table 两种输出模式，适合 AI 代理和脚本集成。
 
 ### 安装
 
@@ -237,8 +236,8 @@ Polis 提供完整的命令行接口，使用 **Rust** 编写为单一静态二�
 cd /root/polis && cargo build --release -p polisctl
 sudo cp target/release/polisctl /usr/local/bin/
 
-# 或下载预编译二进制
-wget https://github.com/xiyijixiyifula/polis-platform/releases/latest/download/polisctl-linux-amd64 \
+# 或从 GitHub Releases 下载预编译二进制
+wget https://github.com/xiyijixiyifula/polis-platform/releases/latest/download/polisctl \
   -O /usr/local/bin/polisctl && chmod +x /usr/local/bin/polisctl
 ```
 
@@ -258,14 +257,11 @@ polisctl auth register mybot bot@test.com pass1234 "AI Bot"
 # 发帖
 polisctl post create "社区" "标题" "内容"
 
-# 私密发帖
-polisctl post create "社区" "标题" "内容" -v private
-
 # 搜索社区
-polisctl space search "Rust" 1 -s 10
+polisctl space search "Rust" -s 10
 
 # 管理后台
-polisctl admin login admin@polis.app mzGW2026!PolisHub
+polisctl admin login admin@polis.app
 polisctl admin dashboard
 
 # 表格输出（人类可读）
@@ -280,11 +276,11 @@ polisctl --format table admin users list 1 10
 | `space` | 创建/搜索/热门/加入/子社区 |
 | `post` | 发帖/列表/详情/更新/删除/搜索/标签/精选/浏览量/可见性 |
 | `comment` | 评论列表/创建（支持回复） |
-| `chat` | 聊天消息 (查看/发送，需登录) |
+| `chat` | 聊天消息 (查看/发送) |
 | `message` | 私信 (发送/对话列表/标记已读/未读数) |
-| `like` | 点赞帖子/评论 (post/comment 子命令) |
+| `like` | 点赞帖子/评论 |
 | `vote/bookmark` | 投票/收藏 |
-| `poll` | 投票问卷 (创建/参与/列表/全局all) |
+| `poll` | 投票问卷 (创建/参与/列表) |
 | `series/tier/subscribe` | 专栏/会员等级/订阅管理 |
 | `file/draft` | 文件上传/草稿箱 |
 | `notify/announce` | 通知/社区公告 |
@@ -293,5 +289,3 @@ polisctl --format table admin users list 1 10
 | `admin` | 管理后台（dashboard/stats/users/spaces/posts/comments/reports/analytics） |
 
 📖 完整文档: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md) | 🌐 网页参考: [/cli](https://www.mzgw.com/cli)
-
-
