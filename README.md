@@ -21,7 +21,7 @@
 
 ---
 
-## ✨ 当前功能 (v0.3.80)
+## ✨ 当前功能 (v0.3.81)
 
 ### 🏗️ 引用驱动架构（核心设计）
 
@@ -67,6 +67,7 @@ Polis 采用**引用驱动架构**：内容数据归创作者所有（`creations
 | 📋 更新日志 | ✅ | `/changelog` 版本历史 |
 | 🤖 AI 研究 | ✅ | 自动社区调研 + `/research` 报告页 |
 | 🔒 HTTPS | ✅ | Let's Encrypt TLS 1.3 |
+| 🧪 E2E 测试 | ✅ | 145 项全动态注册用户测试 (v0.3.81), 零种子数据依赖 |
 | 📦 数据导出 | ✅ | Markdown/JSON 格式导出 |
 | 🏥 服务健康检查 | ✅ | Gateway 聚合 /api/health/all + 6 微服务独立 /health |
 | 📝 Markdown 编辑器 | ✅ | Cherry Markdown 集成，完整工具栏 |
