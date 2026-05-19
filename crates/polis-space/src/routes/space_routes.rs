@@ -67,11 +67,11 @@ pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
     public.merge(auth).with_state(handler)
 }
 
-/// URL 解码命名空间，支持中文 slug
+/// URL 解码命名空间，支持中文 slug 和 ~ 占位符（~ → /）
 fn decode_namespace(raw: &str) -> Result<String, AppError> {
     percent_decode_str(raw)
         .decode_utf8()
-        .map(|s| s.to_string())
+        .map(|s| s.to_string().replace('~', "/"))
         .map_err(|_| AppError::Validation("Invalid UTF-8 in namespace".to_string()))
 }
 

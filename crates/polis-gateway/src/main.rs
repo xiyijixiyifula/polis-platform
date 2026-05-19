@@ -280,14 +280,15 @@ async fn proxy_to_content(
     proxy_request(&state.client, &target_url, req).await
 }
 
-/// 代理请求到视频服务
+/// 代理请求到视频服务（650MB 大文件上传支持）
 async fn proxy_to_video(
     State(state): State<Arc<GatewayState>>,
     req: Request,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.video_service_url, path_and_query);
-    proxy_request(&state.client, &target_url, req).await
+    // 视频上传需要支持大文件，使用 650MB 限制
+    proxy_request_with_limit(&state.client, &target_url, req, 650 * 1024 * 1024).await
 }
 
 /// 代理请求到管理后台服务
@@ -300,22 +301,32 @@ async fn proxy_to_admin(
     proxy_request(&state.client, &target_url, req).await
 }
 
-/// 通用代理转发
+/// 通用代理转发 (10MB 默认限制)
 async fn proxy_request(
     client: &reqwest::Client,
     target_url: &str,
     req: Request,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
+    proxy_request_with_limit(client, target_url, req, 10 * 1024 * 1024).await
+}
+
+/// 通用代理转发，支持自定义请求体大小限制
+async fn proxy_request_with_limit(
+    client: &reqwest::Client,
+    target_url: &str,
+    req: Request,
+    limit_bytes: usize,
+) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let method = req.method().clone();
     let headers = req.headers().clone();
 
-    // 读取请求体
-    let body_bytes = axum::body::to_bytes(req.into_body(), 10 * 1024 * 1024) // 10MB 限制
+    // 读取请求体（根据 limit_bytes 限制大小）
+    let body_bytes = axum::body::to_bytes(req.into_body(), limit_bytes)
         .await
         .map_err(|_| {
             (
-                StatusCode::BAD_REQUEST,
-                Json(ApiResponse::error(1400, "Failed to read request body")),
+                StatusCode::PAYLOAD_TOO_LARGE,
+                Json(ApiResponse::error(1413, &format!("Request body exceeds {} MB limit", limit_bytes / 1024 / 1024))),
             )
         })?;
 
