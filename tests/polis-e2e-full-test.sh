@@ -41,6 +41,19 @@ TOKEN_B=""
 POST_ID_B=""
 LIKE_POST_ID=""
 
+# 第三用户（中文空间测试 / 关注目标）
+TEST_USER_C=""
+TEST_EMAIL_C=""
+TOKEN_C=""
+TEST_USER_B_ID=""
+TEST_USER_C_ID=""
+CN_WORLD_SLUG="新的世界"
+CN_INNOV_SLUG="创新"
+INDIE_SLUG="indie-game"
+CN_NS_NEW=""
+CN_NS_INNOV=""
+INDIE_NS=""
+
 # === 工具函数 ===
 
 log_test() {
@@ -235,9 +248,42 @@ TEST_EMAIL_B="${TEST_USER_B}@test.polis"
 R=$(api POST /api/auth/register "{\"username\":\"$TEST_USER_B\",\"email\":\"$TEST_EMAIL_B\",\"password\":\"$TEST_PASS\"}")
 if check_code "$R"; then
     TOKEN_B=$(get_field "$R" "access_token")
+    # 从 JWT token 中提取 user_id (注册返回 id 在 data.user.id 路径，get_field 取不到)
+    TEST_USER_B_ID=$(echo "$TOKEN_B" | python3 -c "import sys,base64,json; t=sys.stdin.read().strip(); p=t.split('.')[1]; p+='='*(4-len(p)%4); print(json.loads(base64.urlsafe_b64decode(p)).get('sub',''))" 2>/dev/null)
     log_test PASS AUTH "注册第二用户(多用户)" "user=$TEST_USER_B"
 else
     log_test FAIL AUTH "注册第二用户(多用户)" "msg=$(get_msg "$R")"
+fi
+
+# 注册第三个用户（中文空间测试 / 关注目标）
+TEST_USER_C="tester_c_${TS}"
+TEST_EMAIL_C="${TEST_USER_C}@test.polis"
+R=$(api POST /api/auth/register "{\"username\":\"$TEST_USER_C\",\"email\":\"$TEST_EMAIL_C\",\"password\":\"$TEST_PASS\"}")
+if check_code "$R"; then
+    TOKEN_C=$(get_field "$R" "access_token")
+    TEST_USER_C_ID=$(echo "$TOKEN_C" | python3 -c "import sys,base64,json; t=sys.stdin.read().strip(); p=t.split('.')[1]; p+='='*(4-len(p)%4); print(json.loads(base64.urlsafe_b64decode(p)).get('sub',''))" 2>/dev/null)
+    log_test PASS AUTH "注册第三用户(中文空间)" "user=$TEST_USER_C"
+else
+    log_test FAIL AUTH "注册第三用户(中文空间)" "msg=$(get_msg "$R")"
+fi
+
+# 创建中文 slug 回归测试空间
+if [ -n "$TOKEN_C" ]; then
+    R=$(api POST /api/spaces "{\"slug\":\"$CN_WORLD_SLUG\",\"title\":\"新的世界\",\"description\":\"中文测试空间\",\"visibility\":\"public\"}" "$TOKEN_C")
+    if check_code "$R"; then
+        CN_NS_NEW=$(get_field "$R" "namespace")
+        log_test PASS AUTH "创建中文空间-新的世界" "ns=$CN_NS_NEW ✅"
+    else
+        log_test FAIL AUTH "创建中文空间-新的世界" "msg=$(get_msg "$R")"
+    fi
+
+    R=$(api POST /api/spaces "{\"slug\":\"$CN_INNOV_SLUG\",\"title\":\"创新空间\",\"description\":\"创新测试空间\",\"visibility\":\"public\"}" "$TOKEN_C")
+    if check_code "$R"; then
+        CN_NS_INNOV=$(get_field "$R" "namespace")
+        log_test PASS AUTH "创建中文空间-创新" "ns=$CN_NS_INNOV ✅"
+    else
+        log_test FAIL AUTH "创建中文空间-创新" "msg=$(get_msg "$R")"
+    fi
 fi
 
 # ==========================================================
@@ -402,6 +448,21 @@ if [ -n "$SPACE_NS" ] && [ -n "$TOKEN" ]; then
     check_code "$R" || log_test FAIL MODULE "恢复全部模块" "恢复失败"
 fi
 
+# 创建 indie-game 空间（用于页面测试和CSS修复回归测试）
+if [ -n "$TOKEN" ]; then
+    R=$(api POST /api/spaces "{\"slug\":\"$INDIE_SLUG\",\"title\":\"独立游戏\",\"description\":\"独立游戏开发\",\"visibility\":\"public\"}" "$TOKEN")
+    if check_code "$R"; then
+        INDIE_NS=$(get_field "$R" "namespace")
+        log_test PASS SPACE "创建indie-game空间" "ns=$INDIE_NS ✅"
+    else
+        log_test FAIL SPACE "创建indie-game空间" "msg=$(get_msg "$R")"
+    fi
+fi
+
+# 预计算中文 URL 编码
+CN_WORLD_ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${CN_WORLD_SLUG}'))" 2>/dev/null || echo "%E6%96%B0%E7%9A%84%E4%B8%96%E7%95%8C")
+CN_INNOV_ENC=$(python3 -c "import urllib.parse; print(urllib.parse.quote('${CN_INNOV_SLUG}'))" 2>/dev/null || echo "%E5%88%9B%E6%96%B0")
+
 # ==========================================================
 # 3. 回归测试: 中文命名空间 (关键!)
 # ==========================================================
@@ -409,62 +470,77 @@ echo ""
 echo "--- 3. REGRESSION 中文路由回归测试 ---"
 
 # v0.2.54: 中文 slug 空间 API
-R=$(api GET "/api/spaces/112233/%E6%96%B0%E7%9A%84%E4%B8%96%E7%95%8C")
-if check_code "$R"; then
-    NS=$(get_field "$R" "namespace")
-    if [ "$NS" = "112233/新的世界" ]; then
-        log_test PASS REGRESSION "中文slug API查询" "ns=$NS ✅"
+if [ -n "$CN_NS_NEW" ] && [ -n "$TEST_USER_C" ]; then
+    R=$(api GET "/api/spaces/${TEST_USER_C}/${CN_WORLD_ENC}")
+    if check_code "$R"; then
+        NS=$(get_field "$R" "namespace")
+        if [ "$NS" = "$CN_NS_NEW" ]; then
+            log_test PASS REGRESSION "中文slug API查询" "ns=$NS ✅"
+        else
+            log_test FAIL REGRESSION "中文slug API查询" "解码错误: ns=$NS (expected $CN_NS_NEW) ❌"
+        fi
     else
-        log_test FAIL REGRESSION "中文slug API查询" "解码错误: ns=$NS ❌"
+        log_test FAIL REGRESSION "中文slug API查询" "404回归! v0.2.54修复回退"
+    fi
+
+    # v0.2.58: 内容服务中文发帖
+    R=$(api POST "/api/spaces/${TEST_USER_C}/${CN_WORLD_ENC}/posts" \
+        "{\"title\":\"回归测试中文发帖\",\"body\":\"验证内容服务URL解码\"}" "$TOKEN")
+    if check_code "$R"; then
+        REG_CN_POST_ID=$(get_field "$R" "id")
+        log_test PASS REGRESSION "中文空间发帖" "code=0 ✅ parse_content_path修复生效"
+        # cleanup
+        [ -n "$REG_CN_POST_ID" ] && api DELETE "/api/spaces/${TEST_USER_C}/${CN_WORLD_ENC}/posts/$REG_CN_POST_ID" "" "$TOKEN" > /dev/null 2>&1
+    else
+        MSG=$(get_msg "$R")
+        log_test FAIL REGRESSION "中文空间发帖" "msg=$MSG ❌ 修复回退!"
+    fi
+
+    # v0.2.57: 中文空间页面
+    if check_http "$BASE_URL/space/${TEST_USER_C}/${CN_WORLD_ENC}"; then
+        log_test PASS REGRESSION "中文空间页面" "200 ✅ URL解码正常"
+    else
+        log_test FAIL REGRESSION "中文空间页面" "页面加载失败 ❌"
     fi
 else
-    log_test FAIL REGRESSION "中文slug API查询" "404回归! v0.2.54修复回退"
+    log_test SKIP REGRESSION "中文slug测试" "中文空间创建失败"
 fi
 
-# v0.2.58: 内容服务中文发帖
-R=$(api POST "/api/spaces/112233/%E6%96%B0%E7%9A%84%E4%B8%96%E7%95%8C/posts" \
-    "{\"title\":\"回归测试中文发帖\",\"body\":\"验证内容服务URL解码\"}" "$TOKEN")
-if check_code "$R"; then
-    log_test PASS REGRESSION "中文空间发帖" "code=0 ✅ parse_content_path修复生效"
+# v0.2.58: 设置按钮 (indie-game 页面测试)
+if [ -n "$INDIE_NS" ]; then
+    INDIE_PATH=$(echo "$INDIE_NS" | tr '/' '/')
+    INDIE_ENC="${TEST_USER}/${INDIE_SLUG}"
+    if check_http "$BASE_URL/space/$INDIE_ENC"; then
+        log_test PASS REGRESSION "设置按钮CSS修复" "页面正常，overflow修复生效"
+    else
+        log_test FAIL REGRESSION "设置按钮CSS修复" "页面加载失败"
+    fi
 else
-    MSG=$(get_msg "$R")
-    log_test FAIL REGRESSION "中文空间发帖" "msg=$MSG ❌ 修复回退!"
-fi
-
-# v0.2.57: 中文空间页面
-if check_http "$BASE_URL/space/112233/%E6%96%B0%E7%9A%84%E4%B8%96%E7%95%8C"; then
-    log_test PASS REGRESSION "中文空间页面" "200 ✅ URL解码正常"
-else
-    log_test FAIL REGRESSION "中文空间页面" "页面加载失败 ❌"
-fi
-
-# v0.2.58: 设置按钮
-if check_http "$BASE_URL/space/wangwu/indie-game"; then
-    log_test PASS REGRESSION "设置按钮CSS修复" "页面正常，overflow修复生效"
-else
-    log_test FAIL REGRESSION "设置按钮CSS修复" "页面加载失败"
+    log_test SKIP REGRESSION "设置按钮CSS修复" "indie-game空间未创建"
 fi
 
 # v0.2.54: 创新空间
-R=$(api GET "/api/spaces/112233/%E5%88%9B%E6%96%B0")
-if check_code "$R"; then
-    log_test PASS REGRESSION "创新空间API" "code=0 ✅"
-else
-    log_test FAIL REGRESSION "创新空间API" "404回归!"
-fi
-
-# v0.2.64: Members API 回归测试
-R=$(api GET "/api/spaces/112233/%E6%96%B0%E7%9A%84%E4%B8%96%E7%95%8C/members")
-if check_code "$R"; then
-    MEMBER_COUNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',[]); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null)
-    if [ "$MEMBER_COUNT" -gt 0 ]; then
-        FIRST_ROLE=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',[]); print(d[0].get('role','') if d else '')" 2>/dev/null)
-        log_test PASS REGRESSION "Members API修复" "count=$MEMBER_COUNT role=$FIRST_ROLE ✅"
+if [ -n "$CN_NS_INNOV" ] && [ -n "$TEST_USER_C" ]; then
+    R=$(api GET "/api/spaces/${TEST_USER_C}/${CN_INNOV_ENC}")
+    if check_code "$R"; then
+        log_test PASS REGRESSION "创新空间API" "code=0 ✅"
     else
-        log_test PASS REGRESSION "Members API修复" "API正常 (空列表)"
+        log_test FAIL REGRESSION "创新空间API" "404回归!"
     fi
-else
-    log_test FAIL REGRESSION "Members API修复" "端点异常 ❌"
+
+    # v0.2.64: Members API 回归测试
+    R=$(api GET "/api/spaces/${TEST_USER_C}/${CN_WORLD_ENC}/members")
+    if check_code "$R"; then
+        MEMBER_COUNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',[]); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null)
+        if [ "$MEMBER_COUNT" -gt 0 ]; then
+            FIRST_ROLE=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',[]); print(d[0].get('role','') if d else '')" 2>/dev/null)
+            log_test PASS REGRESSION "Members API修复" "count=$MEMBER_COUNT role=$FIRST_ROLE ✅"
+        else
+            log_test PASS REGRESSION "Members API修复" "API正常 (空列表)"
+        fi
+    else
+        log_test FAIL REGRESSION "Members API修复" "端点异常 ❌"
+    fi
 fi
 
 # v0.2.63: QA 模块回归测试 — 创建 QA 帖子
@@ -799,7 +875,7 @@ if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
     # TC-SOC-03: User mention in comment (verify @mention is handled)
     if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
         R=$(api POST "/api/spaces/$SPACE_NS/posts/$POST_ID/comments" \
-            "{\"body\":\"@wangwu 测试一下提及功能\"}" "$TOKEN")
+            "{\"body\":\"@${TEST_USER_B} 测试一下提及功能\"}" "$TOKEN")
         if check_code "$R"; then
             MENTION_BODY=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data',{}); print(d.get('body',''))" 2>/dev/null)
             if [ -n "$MENTION_BODY" ]; then
@@ -1044,18 +1120,23 @@ fi
 echo ""
 echo "--- 8. SOCIAL 社交互动 ---"
 
-R=$(api POST /api/follow "{\"followee_type\":\"user\",\"followee_id\":\"a1000000-0000-0000-0000-000000000001\"}" "$TOKEN")
-if check_code "$R"; then
-    log_test PASS SOCIAL "关注用户" "OK"
-else
-    log_test FAIL SOCIAL "关注用户" "failed"
-fi
+# 关注用户C (使用真实动态ID)
+if [ -n "$TEST_USER_C_ID" ]; then
+    R=$(api POST /api/follow "{\"followee_type\":\"user\",\"followee_id\":\"$TEST_USER_C_ID\"}" "$TOKEN")
+    if check_code "$R"; then
+        log_test PASS SOCIAL "关注用户" "OK ✅"
+    else
+        log_test FAIL SOCIAL "关注用户" "msg=$(get_msg "$R")"
+    fi
 
-R=$(api POST /api/follow "{\"followee_type\":\"user\",\"followee_id\":\"a1000000-0000-0000-0000-000000000001\"}" "$TOKEN")
-if check_code "$R"; then
-    log_test PASS SOCIAL "取消关注" "OK"
+    R=$(api POST /api/follow "{\"followee_type\":\"user\",\"followee_id\":\"$TEST_USER_C_ID\"}" "$TOKEN")
+    if check_code "$R"; then
+        log_test PASS SOCIAL "取消关注" "OK ✅"
+    else
+        log_test FAIL SOCIAL "取消关注" "msg=$(get_msg "$R")"
+    fi
 else
-    log_test FAIL SOCIAL "取消关注" "failed"
+    log_test SKIP SOCIAL "关注/取消关注" "缺少用户C ID"
 fi
 
 if [ -n "$POST_ID" ] && [ -n "$SPACE_NS" ]; then
@@ -1183,20 +1264,24 @@ if [ -n "$TOKEN_B" ] && [ -n "$TOKEN" ] && [ -n "$SPACE_NS" ] && [ -n "$SPACE_ID
         api DELETE "/api/spaces/$SPACE_NS/posts/$BM_POST_ID" "" "$TOKEN" > /dev/null 2>&1
     fi
 
-    # 6. User B follows/unfollows wangwu
-    R=$(api POST "/api/follow" "{\"followee_type\":\"user\",\"followee_id\":\"a1000000-0000-0000-0000-000000000001\"}" "$TOKEN_B")
-    if check_code "$R"; then
-        log_test PASS MULTI "B关注用户wangwu" "follow OK ✅"
-        R=$(api GET "/api/users/$TEST_USER_B/following" "" "$TOKEN_B")
+    # 6. User B follows/unfollows User C
+    if [ -n "$TEST_USER_C_ID" ]; then
+        R=$(api POST "/api/follow" "{\"followee_type\":\"user\",\"followee_id\":\"$TEST_USER_C_ID\"}" "$TOKEN_B")
         if check_code "$R"; then
-            log_test PASS MULTI "B的关注列表" "API正常 ✅"
-        fi
-        R=$(api POST "/api/follow" "{\"followee_type\":\"user\",\"followee_id\":\"a1000000-0000-0000-0000-000000000001\"}" "$TOKEN_B")
-        if check_code "$R"; then
-            log_test PASS MULTI "B取消关注" "unfollow OK ✅"
+            log_test PASS MULTI "B关注用户C" "follow OK ✅"
+            R=$(api GET "/api/users/$TEST_USER_B/following" "" "$TOKEN_B")
+            if check_code "$R"; then
+                log_test PASS MULTI "B的关注列表" "API正常 ✅"
+            fi
+            R=$(api POST "/api/follow" "{\"followee_type\":\"user\",\"followee_id\":\"$TEST_USER_C_ID\"}" "$TOKEN_B")
+            if check_code "$R"; then
+                log_test PASS MULTI "B取消关注" "unfollow OK ✅"
+            fi
+        else
+            log_test FAIL MULTI "B关注用户C" "follow失败"
         fi
     else
-        log_test FAIL MULTI "B关注用户wangwu" "follow失败"
+        log_test SKIP MULTI "B关注用户C" "缺少用户C ID"
     fi
 
     # 7. Private post: B should NOT see A's private post
@@ -1260,18 +1345,18 @@ fi
 echo ""
 echo "--- 8.5. USER 用户档案 ---"
 
-# TC-USER-01: View public profile API
-R=$(api GET "/api/users/wangwu")
+# TC-USER-01: View public profile API (使用动态注册用户)
+R=$(api GET "/api/users/$TEST_USER")
 if check_code "$R"; then
     UNAME=$(get_field "$R" "username")
     DISPLAY=$(get_field "$R" "display_name")
-    [ "$UNAME" = "wangwu" ] && log_test PASS USER "查看用户档案" "user=$UNAME display=$DISPLAY ✅" || log_test FAIL USER "查看用户档案" "got username=$UNAME"
+    [ "$UNAME" = "$TEST_USER" ] && log_test PASS USER "查看用户档案" "user=$UNAME display=$DISPLAY ✅" || log_test FAIL USER "查看用户档案" "got username=$UNAME (expected $TEST_USER)"
 else
     log_test FAIL USER "查看用户档案" "API异常"
 fi
 
 # TC-USER-04: Follower list API
-R=$(api GET "/api/users/wangwu/followers")
+R=$(api GET "/api/users/$TEST_USER/followers")
 if check_code "$R"; then
     FCNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data'); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null)
     log_test PASS USER "粉丝列表" "count=$FCNT ✅"
@@ -1280,7 +1365,7 @@ else
 fi
 
 # TC-USER-05: Following list API
-R=$(api GET "/api/users/wangwu/following")
+R=$(api GET "/api/users/$TEST_USER/following")
 if check_code "$R"; then
     FCNT=$(echo "$R" | python3 -c "import sys,json; d=json.load(sys.stdin).get('data'); print(len(d) if isinstance(d,list) else 0)" 2>/dev/null)
     log_test PASS USER "关注列表" "count=$FCNT ✅"
@@ -1288,15 +1373,15 @@ else
     log_test FAIL USER "关注列表" "API异常"
 fi
 
-# Verify multiple profiles return valid data (display_name always present; avatar_letter is chat-only field)
-for PROFILE_USER in wangwu zhangsan; do
+# Verify multiple profiles return valid data (使用动态用户)
+for PROFILE_USER in "$TEST_USER" "$TEST_USER_B"; do
     R=$(api GET "/api/users/$PROFILE_USER")
     if check_code "$R"; then
         DNAME=$(get_field "$R" "display_name")
         UNAME=$(get_field "$R" "username")
-        [ -n "$DNAME" ] && log_test PASS USER "$PROFILE_USER档案" "user=$UNAME name=$DNAME ✅" || log_test FAIL USER "$PROFILE_USER档案" "missing display_name"
+        [ -n "$DNAME" ] && log_test PASS USER "${PROFILE_USER}档案" "user=$UNAME name=$DNAME ✅" || log_test FAIL USER "${PROFILE_USER}档案" "missing display_name"
     else
-        log_test FAIL USER "$PROFILE_USER档案" "API异常"
+        log_test FAIL USER "${PROFILE_USER}档案" "API异常"
     fi
 done
 
@@ -1523,7 +1608,7 @@ else
 fi
 
 # TC-SEARCH-03b: User search
-R=$(api GET "/api/users/search?q=zhang")
+R=$(api GET "/api/users/search?q=tester")
 if check_code "$R"; then
     CNT=$(echo "$R" | python3 -c "import sys,json; print(len(json.load(sys.stdin).get('data',[])))" 2>/dev/null)
     if [ "$CNT" -gt 0 ] 2>/dev/null; then
@@ -1721,17 +1806,29 @@ fi
 echo ""
 echo "--- 20. PAGES 前端页面 ---"
 
+# 动态构建页面测试列表（全部使用测试注册的用户和空间）
 PAGES=(
     "/" "/changelog" "/explore" "/search" "/about" "/login" "/register"
     "/forgot-password" "/trending" "/hot" "/cli" "/research"
     "/drafts" "/notifications" "/saved" "/settings" "/polls" "/polls/new" "/create"
     "/create-center"
-    "/post/new" "/post/new?space=wangwu/indie-game"
-    "/profile/wangwu" "/profile/wangwu/followers" "/profile/wangwu/following"
-    "/space/wangwu/indie-game"
-    "/space/112233/%E6%96%B0%E7%9A%84%E4%B8%96%E7%95%8C"
-    "/space/112233/%E5%88%9B%E6%96%B0"
+    "/post/new"
+    "/profile/${TEST_USER}" "/profile/${TEST_USER}/followers" "/profile/${TEST_USER}/following"
 )
+# 添加 indie-game 空间页面（如果有）
+if [ -n "$INDIE_NS" ]; then
+    PAGES+=("/post/new?space=${TEST_USER}/${INDIE_SLUG}")
+    PAGES+=("/space/${TEST_USER}/${INDIE_SLUG}")
+else
+    log_test SKIP PAGES "indie-game页面" "indie-game空间未创建"
+fi
+# 添加中文空间页面（如果有）
+if [ -n "$CN_NS_NEW" ] && [ -n "$TEST_USER_C" ]; then
+    PAGES+=("/space/${TEST_USER_C}/${CN_WORLD_ENC}")
+fi
+if [ -n "$CN_NS_INNOV" ] && [ -n "$TEST_USER_C" ]; then
+    PAGES+=("/space/${TEST_USER_C}/${CN_INNOV_ENC}")
+fi
 
 PAGE_PASS=0
 PAGE_FAIL=0
