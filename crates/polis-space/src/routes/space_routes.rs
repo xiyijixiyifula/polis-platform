@@ -6,11 +6,12 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use jsonwebtoken::{decode, DecodingKey, Validation};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
-use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct SearchParams {
@@ -87,14 +88,14 @@ async fn handle_public_path(
     }
 
     // 提取 namespace（去掉尾部动作）
-    let ns = remaining
-        .strip_suffix("/members")
-        .or_else(|| remaining.strip_suffix("/join"))
-        .or_else(|| remaining.strip_suffix("/leave"))
-        .or_else(|| remaining.strip_suffix("/posts"))
-        .or_else(|| remaining.strip_suffix("/featured"))
-        .or_else(|| remaining.strip_suffix("/bookmarks"))
-        .unwrap_or(remaining);
+    let actions_suffixes = ["/members", "/join", "/leave", "/posts", "/featured", "/bookmarks", "/join-requests"];
+    let mut ns = remaining;
+    for suffix in &actions_suffixes {
+        if let Some(stripped) = remaining.strip_suffix(suffix) {
+            ns = stripped;
+            break;
+        }
+    }
 
     if remaining.ends_with("/members") {
         let decoded_ns = decode_namespace(ns)?;
@@ -103,10 +104,47 @@ async fn handle_public_path(
         return Ok(Json(serde_json::json!({"code": 0, "data": members})));
     }
 
+    // 需要认证的 GET 端点：从 Authorization header 中提取 user_id
+    if remaining.ends_with("/join-requests") {
+        let user_id = extract_user_id_from_headers(req.headers()).await?;
+        let decoded_ns = decode_namespace(ns)?;
+        let requests = handler.list_join_requests(&decoded_ns, user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": requests})));
+    }
+
     // URL 解码命名空间（支持中文等非 ASCII 字符）
     let decoded_ns = decode_namespace(ns)?;
     let space = handler.get_space(&decoded_ns).await?;
     Ok(Json(serde_json::json!({"code": 0, "data": space})))
+}
+
+/// 从 Authorization header 提取 user_id（用于需要认证的 GET 端点）
+#[derive(Debug, Serialize, Deserialize)]
+struct TokenClaims {
+    pub sub: String,
+    pub exp: usize,
+    pub token_type: String,
+}
+
+async fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Result<Uuid, AppError> {
+    let token = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .ok_or(AppError::Unauthorized)?;
+    let secret = std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+    let token_data = decode::<TokenClaims>(
+        token,
+        &DecodingKey::from_secret(secret.as_bytes()),
+        &Validation::default(),
+    )
+    .map_err(|_| AppError::Unauthorized)?;
+    if token_data.claims.token_type != "access" {
+        return Err(AppError::Unauthorized);
+    }
+    Uuid::parse_str(&token_data.claims.sub)
+        .map_err(|_| AppError::Unauthorized)
 }
 
 /// 处理需要认证的路径
@@ -123,11 +161,19 @@ async fn handle_auth_path(
         return Err(AppError::NotFound("Invalid path".to_string()));
     }
 
-    let ns = remaining
-        .strip_suffix("/join")
-        .or_else(|| remaining.strip_suffix("/leave"))
-        .or_else(|| remaining.strip_suffix("/posts"))
-        .unwrap_or(remaining);
+    // 提取 namespace (去掉尾部动作)
+    let actions = [
+        "/join", "/leave", "/posts",
+        "/members/ban", "/members/role",
+        "/join-requests", "/join-requests/review",
+    ];
+    let mut ns = remaining;
+    for action in &actions {
+        if let Some(stripped) = remaining.strip_suffix(action) {
+            ns = stripped;
+            break;
+        }
+    }
 
     if ns.is_empty() {
         return Err(AppError::NotFound("Invalid namespace".to_string()));
@@ -136,21 +182,68 @@ async fn handle_auth_path(
     // URL 解码命名空间（支持中文等非 ASCII 字符）
     let decoded_ns = decode_namespace(ns)?;
 
-    if remaining.ends_with("/join") {
-        handler.join_space(&decoded_ns, user_id).await?;
-        return Ok(Json(serde_json::json!({"code": 0, "data": null, "message": "ok"})));
+    // 辅助：从 body 中反序列化 JSON
+    async fn read_json_body<T: serde::de::DeserializeOwned>(req: Request) -> Result<T, AppError> {
+        let body_bytes = axum::body::to_bytes(req.into_body(), 1024 * 1024).await
+            .map_err(|_| AppError::Validation("Failed to read body".to_string()))?;
+        serde_json::from_slice(&body_bytes)
+            .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))
     }
 
-    if remaining.ends_with("/leave") {
+    if remaining.ends_with("/join") && method == axum::http::Method::POST {
+        let message: Option<String> = {
+            let body_bytes = axum::body::to_bytes(req.into_body(), 1024 * 1024).await
+                .map_err(|_| AppError::Validation("Failed to read body".to_string()))?;
+            if body_bytes.is_empty() {
+                None
+            } else {
+                #[derive(Deserialize)]
+                struct JoinBody { message: Option<String> }
+                let body: JoinBody = serde_json::from_slice(&body_bytes)
+                    .unwrap_or(JoinBody { message: None });
+                body.message
+            }
+        };
+        let result = handler.join_space(&decoded_ns, user_id, message.as_deref()).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": result, "message": "ok"})));
+    }
+
+    if remaining.ends_with("/leave") && method == axum::http::Method::POST {
         handler.leave_space(&decoded_ns, user_id).await?;
         return Ok(Json(serde_json::json!({"code": 0, "data": null, "message": "ok"})));
     }
 
+    if remaining.ends_with("/members/ban") && method == axum::http::Method::POST {
+        #[derive(Deserialize)]
+        struct BanBody { user_id: Uuid }
+        let body: BanBody = read_json_body(req).await?;
+        handler.ban_member(&decoded_ns, user_id, body.user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": null, "message": "ok"})));
+    }
+
+    if remaining.ends_with("/members/role") && method == axum::http::Method::POST {
+        #[derive(Deserialize)]
+        struct RoleBody { user_id: Uuid, role: String }
+        let body: RoleBody = read_json_body(req).await?;
+        handler.set_member_role(&decoded_ns, user_id, body.user_id, &body.role).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": null, "message": "ok"})));
+    }
+
+    if remaining.ends_with("/join-requests/review") && method == axum::http::Method::POST {
+        #[derive(Deserialize)]
+        struct ReviewBody { user_id: Uuid, approved: bool }
+        let body: ReviewBody = read_json_body(req).await?;
+        let result = handler.review_join_request(&decoded_ns, user_id, body.user_id, body.approved).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": result, "message": "ok"})));
+    }
+
+    if remaining.ends_with("/join-requests") && method == axum::http::Method::GET {
+        let requests = handler.list_join_requests(&decoded_ns, user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": requests})));
+    }
+
     if method == axum::http::Method::PUT {
-        let body_bytes = axum::body::to_bytes(req.into_body(), 1024 * 1024).await
-            .map_err(|_| AppError::Validation("Failed to read body".to_string()))?;
-        let update_req: UpdateSpaceRequest = serde_json::from_slice(&body_bytes)
-            .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
+        let update_req: UpdateSpaceRequest = read_json_body(req).await?;
         let space = handler.update_space(&decoded_ns, user_id, update_req).await?;
         return Ok(Json(serde_json::json!({"code": 0, "data": space})));
     }

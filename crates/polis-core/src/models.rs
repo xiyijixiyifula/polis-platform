@@ -130,6 +130,8 @@ pub struct SpacePublic {
     pub member_count: i64,
     pub post_count: i64,
     pub created_at: DateTime<Utc>,
+    pub level: Option<i32>,
+    pub xp: Option<i32>,
 }
 
 impl From<Space> for SpacePublic {
@@ -151,6 +153,8 @@ impl From<Space> for SpacePublic {
             member_count: s.member_count,
             post_count: s.post_count,
             created_at: s.created_at,
+            level: None,
+            xp: None,
         }
     }
 }

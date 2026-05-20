@@ -171,6 +171,10 @@ impl VideoHandler {
         if video.uploader_id != user_id {
             return Err(AppError::Forbidden("只能投送自己的视频".to_string()));
         }
+        // 验证每个目标社区的权限：模块开启 + 成员资格
+        for &sid in &req.space_ids {
+            self.repo.validate_space_for_video_submission(sid, user_id).await?;
+        }
         self.repo.publish_to_spaces(video_id, &req.space_ids).await
     }
 

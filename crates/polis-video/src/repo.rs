@@ -96,6 +96,38 @@ impl VideoRepo {
 
     // ===== 社区操作 =====
 
+    /// 验证社区是否允许视频投稿
+    /// 条件: 1) 社区存在 2) 开启了视频模块 3) 用户是成员或社区是公开的
+    pub async fn validate_space_for_video_submission(&self, space_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        // 检查社区是否存在且开启了视频模块
+        let space = sqlx::query_as::<_, (serde_json::Value, String)>(
+            "SELECT enabled_modules, visibility FROM spaces WHERE id = $1 AND status = 'active'"
+        ).bind(space_id).fetch_optional(&self.pool).await?
+            .ok_or(AppError::NotFound("目标社区不存在或已关闭".to_string()))?;
+
+        let (enabled_modules, visibility) = space;
+
+        // 检查视频模块是否开启
+        let has_video = enabled_modules.as_array()
+            .map(|m| m.iter().any(|v| v.as_str() == Some("video")))
+            .unwrap_or(false);
+        if !has_video {
+            return Err(AppError::Forbidden("目标社区未开启视频模块".to_string()));
+        }
+
+        // 公开社区任何人可投稿，私有社区需要是成员
+        if visibility != "public" {
+            let is_member = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS(SELECT 1 FROM memberships WHERE space_id = $1 AND user_id = $2 AND role != 'banned')"
+            ).bind(space_id).bind(user_id).fetch_one(&self.pool).await?;
+            if !is_member {
+                return Err(AppError::Forbidden("私有社区需要先加入才能投稿".to_string()));
+            }
+        }
+
+        Ok(())
+    }
+
     /// 提交视频到社区（发布即审核通过，社区管理员可后续驳回）
     pub async fn submit_to_space(&self, space_id: Uuid, video_id: Uuid) -> Result<(), AppError> {
         sqlx::query(

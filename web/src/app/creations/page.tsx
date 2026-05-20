@@ -114,6 +114,26 @@ export default function MyCreationsPage() {
     } catch { /* 静默 */ }
   };
 
+  const handleVisibilityChange = async (id: string, newVis: string) => {
+    try {
+      const token = localStorage.getItem('polis_access_token');
+      const res = await fetch(`/api/creations/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ visibility: newVis }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setCreations((prev) =>
+          prev.map((c) => (c.id === id ? { ...c, visibility: newVis } : c))
+        );
+      }
+    } catch { /* 静默 */ }
+  };
+
   const filters = [
     { value: 'all', label: '全部' },
     { value: 'published', label: '已发布' },
@@ -189,6 +209,7 @@ export default function MyCreationsPage() {
               onLike={handleLike}
               onBookmark={handleBookmark}
               onWithdraw={handleWithdraw}
+              onVisibilityChange={handleVisibilityChange}
             />
           ))}
 

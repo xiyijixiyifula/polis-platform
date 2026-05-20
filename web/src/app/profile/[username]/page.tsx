@@ -631,8 +631,22 @@ export default function UserProfilePage() {
 	                      setRefError('');
 	                      setRefSuccess('');
 	                      setShowRefDialog(true);
-	                    }}
-	                  />
+                    }}
+                    onVisibilityChange={async (id, newVis) => {
+                      const token = localStorage.getItem('polis_access_token');
+                      await fetch(`/api/posts/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: 'Bearer ' + (token || ''),
+                        },
+                        body: JSON.stringify({ visibility: newVis }),
+                      });
+                      setMyContents((prev) =>
+                        prev.map((p) => p.id === id ? { ...p, visibility: newVis } : p)
+                      );
+                    }}
+                  />
 	                </div>
 	              );
 	            })}

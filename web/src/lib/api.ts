@@ -162,8 +162,10 @@ async function request<T>(
   options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   const token = getToken();
+  // FormData 会自带 multipart boundary，不能覆盖 Content-Type
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
 
@@ -250,11 +252,14 @@ export const spaces = {
 
   get: (namespace: string) => request<Space>(`/spaces/${encodeNs(namespace)}`),
 
-  update: (namespace: string, data: { title?: string; description?: string; enabled_modules?: string[] }) =>
+  update: (namespace: string, data: { title?: string; description?: string; enabled_modules?: string[]; visibility?: string; password?: string }) =>
     request<Space>(`/spaces/${encodeNs(namespace)}`, { method: 'PUT', body: JSON.stringify(data) }),
 
-  join: (namespace: string) =>
-    request<void>(`/spaces/${encodeNs(namespace)}/join`, { method: 'POST' }),
+  join: (namespace: string, message?: string) =>
+    request<{ status: string; message: string }>(`/spaces/${encodeNs(namespace)}/join`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    }),
 
   leave: (namespace: string) =>
     request<void>(`/spaces/${encodeNs(namespace)}/leave`, { method: 'POST' }),
@@ -262,6 +267,31 @@ export const spaces = {
   trending: () => request<Space[]>('/spaces/trending'),
 
   members: (namespace: string) => request<SpaceMember[]>('/spaces/' + namespace + '/members'),
+
+  /** 封禁成员 */
+  banMember: (namespace: string, userId: string) =>
+    request<void>(`/spaces/${encodeNs(namespace)}/members/ban`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
+    }),
+
+  /** 设置成员角色 */
+  setMemberRole: (namespace: string, userId: string, role: string) =>
+    request<void>(`/spaces/${encodeNs(namespace)}/members/role`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, role }),
+    }),
+
+  /** 获取加入申请列表 */
+  joinRequests: (namespace: string) =>
+    request<Array<{ user_id: string; username: string; display_name: string; status: string; message: string | null; created_at: string }>>(`/spaces/${encodeNs(namespace)}/join-requests`),
+
+  /** 审批加入申请 */
+  reviewJoinRequest: (namespace: string, userId: string, approved: boolean) =>
+    request<{ status: string; message: string }>(`/spaces/${encodeNs(namespace)}/join-requests/review`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, approved }),
+    }),
 };
 
 export interface SpaceMember {
@@ -731,12 +761,18 @@ export const videos = {
     return request<VideoItem>(`/videos/share/${code}?${params.toString()}`);
   },
 
-  /** 上传视频 */
-  upload: (fileBase64: string, title: string, description?: string, visibility?: string, extension?: string) =>
-    request<VideoItem>(`/videos`, {
+  /** 上传视频 (multipart/form-data) */
+  upload: (file: File, title: string, description?: string, visibility?: string) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('title', title);
+    if (description) fd.append('description', description);
+    fd.append('visibility', visibility || 'public');
+    return request<VideoItem>(`/videos`, {
       method: 'POST',
-      body: JSON.stringify({ file_data: fileBase64, title, description: description || '', visibility: visibility || 'public', extension: extension || 'mp4' }),
-    }),
+      body: fd,
+    });
+  },
 
   /** 更新视频 */
   update: (id: string, data: { title?: string; description?: string; visibility?: string }) =>
@@ -772,4 +808,81 @@ export const videos = {
       method: 'POST',
       body: JSON.stringify({ body, ...(parentId ? { parent_id: parentId } : {}) }),
     }),
+};
+
+// ===== 创作中心 =====
+
+export interface CreationItem {
+  id: string;
+  creator: {
+    id: string;
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  };
+  content_type: string;
+  title: string;
+  body: string;
+  cover_url: string | null;
+  media_urls: string[];
+  visibility: string;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  bookmark_count: number;
+  share_count: number;
+  is_liked: boolean;
+  is_bookmarked: boolean;
+  has_password: boolean;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  submissions?: Array<{
+    ref_id: string;
+    space: { id: string; namespace: string; title: string };
+    module_type: string;
+    display_status: string;
+    is_pinned: boolean;
+    module_views: number;
+    submitted_at: string;
+  }>;
+}
+
+export const creations = {
+  /** 获取我的创作列表 */
+  list: (params?: { page?: number; page_size?: number; content_type?: string; sort?: string }) => {
+    const search = new URLSearchParams();
+    if (params?.page) search.set('page', String(params.page));
+    if (params?.page_size) search.set('page_size', String(params.page_size));
+    if (params?.content_type) search.set('content_type', params.content_type);
+    if (params?.sort) search.set('sort', params.sort);
+    const qs = search.toString();
+    return request<CreationItem[]>(`/creations${qs ? `?${qs}` : ''}`);
+  },
+
+  /** 获取创作详情 */
+  get: (id: string) => request<CreationItem>(`/creations/${id}`),
+
+  /** 更新创作 */
+  update: (id: string, data: { title?: string; body?: string; cover_url?: string; tags?: string[]; visibility?: string }) =>
+    request<CreationItem>(`/creations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  /** 更新创作可见性 */
+  updateVisibility: (id: string, visibility: string) =>
+    request<CreationItem>(`/creations/${id}`, { method: 'PUT', body: JSON.stringify({ visibility }) }),
+
+  /** 删除创作 */
+  delete: (id: string) =>
+    request<void>(`/creations/${id}`, { method: 'DELETE' }),
+
+  /** 投稿到社区 */
+  submit: (creationId: string, spaceId: string, moduleType: string) =>
+    request<any>(`/creations/${creationId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ space_id: spaceId, module_type: moduleType }),
+    }),
+
+  /** 获取创作已投稿的社区列表 */
+  submissions: (creationId: string) =>
+    request<any[]>(`/creations/${creationId}/submissions`),
 };

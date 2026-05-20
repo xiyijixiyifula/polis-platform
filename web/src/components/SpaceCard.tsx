@@ -16,8 +16,18 @@ interface SpaceCardProps {
     is_root?: boolean;
     owner_id?: string | null;
     owner_name?: string;
+    level?: number;
+    xp?: number;
   };
 }
+
+const LEVEL_BADGES: Record<number, { emoji: string; label: string; color: string }> = {
+  1: { emoji: '🥉', label: '新社区', color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' },
+  2: { emoji: '🥈', label: '成长中', color: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' },
+  3: { emoji: '🥇', label: '活跃', color: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' },
+  4: { emoji: '💎', label: '热门', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' },
+  5: { emoji: '👑', label: '顶级', color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' },
+};
 
 // ========== 根据 slug 生成唯一几何图标 ==========
 const SHAPES = [
@@ -152,7 +162,11 @@ export function SpaceCard({ space }: SpaceCardProps) {
               <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors truncate">
                 {space.title}
               </h3>
-              {/* 根社区徽章已移除 */}
+              {space.level && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${LEVEL_BADGES[space.level]?.color || ''}`}>
+                  {LEVEL_BADGES[space.level]?.emoji} Lv{space.level}
+                </span>
+              )}
             </div>
 
             <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">

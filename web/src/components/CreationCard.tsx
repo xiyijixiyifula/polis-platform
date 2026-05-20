@@ -22,6 +22,7 @@ interface CreationCardProps {
   onLike?: (id: string) => void;
   onBookmark?: (id: string) => void;
   onWithdraw?: (refId: string) => void;
+  onVisibilityChange?: (id: string, newVis: string) => void;
 }
 
 export default function CreationCard({
@@ -33,6 +34,7 @@ export default function CreationCard({
   onLike,
   onBookmark,
   onWithdraw,
+  onVisibilityChange,
 }: CreationCardProps) {
   const baseProps = adaptCreationItem(creation);
 
@@ -50,6 +52,7 @@ export default function CreationCard({
         onLike={onLike}
         onBookmark={onBookmark}
         onWithdraw={onWithdraw}
+        onVisibilityChange={onVisibilityChange}
       />
     </div>
   );

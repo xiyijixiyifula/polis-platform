@@ -311,4 +311,110 @@ impl SpaceRepo {
         .await?;
         Ok(())
     }
+
+    /// 封禁/解封成员
+    pub async fn ban_member(&self, space_id: Uuid, user_id: Uuid, _reason: Option<&str>) -> Result<(), AppError> {
+        sqlx::query("UPDATE memberships SET role='banned' WHERE space_id=$1 AND user_id=$2 AND role!='owner'")
+            .bind(space_id).bind(user_id).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 设置成员角色 (admin/moderator)
+    pub async fn set_member_role(&self, space_id: Uuid, user_id: Uuid, role: &str) -> Result<(), AppError> {
+        sqlx::query("UPDATE memberships SET role=$1 WHERE space_id=$2 AND user_id=$3 AND role!='owner'")
+            .bind(role).bind(space_id).bind(user_id).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 加入审批请求
+    pub async fn create_join_request(&self, space_id: Uuid, user_id: Uuid, message: Option<&str>) -> Result<(), AppError> {
+        sqlx::query("INSERT INTO space_join_requests (space_id, user_id, message) VALUES ($1,$2,$3) ON CONFLICT (space_id, user_id) DO UPDATE SET status='pending', message=$3, created_at=NOW()")
+            .bind(space_id).bind(user_id).bind(message).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 获取审批列表
+    pub async fn list_join_requests(&self, space_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows = sqlx::query_as::<_, (Uuid, Uuid, String, Option<String>, chrono::DateTime<chrono::Utc>,)>(
+            "SELECT space_id, user_id, status, message, created_at FROM space_join_requests WHERE space_id=$1 AND status='pending' ORDER BY created_at DESC"
+        ).bind(space_id).fetch_all(&self.pool).await?;
+        let mut result = Vec::new();
+        for (_, uid, status, msg, created) in rows {
+            // Fetch user info
+            let user: Option<(String, String)> = sqlx::query_as(
+                "SELECT username, display_name FROM users WHERE id=$1"
+            ).bind(uid).fetch_optional(&self.pool).await?;
+            result.push(serde_json::json!({
+                "user_id": uid.to_string(),
+                "username": user.as_ref().map(|u| &u.0).unwrap_or(&"unknown".to_string()),
+                "display_name": user.as_ref().map(|u| &u.1).unwrap_or(&"unknown".to_string()),
+                "status": status,
+                "message": msg,
+                "created_at": created.to_rfc3339(),
+            }));
+        }
+        Ok(result)
+    }
+
+    /// 审批加入申请
+    pub async fn review_join_request(&self, space_id: Uuid, user_id: Uuid, approved: bool, reviewer_id: Uuid) -> Result<(), AppError> {
+        let status = if approved { "approved" } else { "rejected" };
+        sqlx::query("UPDATE space_join_requests SET status=$1, reviewed_at=NOW(), reviewed_by=$2 WHERE space_id=$3 AND user_id=$4")
+            .bind(status).bind(reviewer_id).bind(space_id).bind(user_id).execute(&self.pool).await?;
+        if approved {
+            self.add_member(space_id, user_id, "member").await?;
+            self.update_member_count(space_id).await?;
+        }
+        Ok(())
+    }
+
+    /// 计算并返回社区 XP 和等级
+    /// XP = 成员数×10 + 文章数×5 + 每日活跃×3 + 运行天数×1 (上限 200/天)
+    pub async fn compute_space_level(&self, space_id: Uuid) -> Result<(i32, i32), AppError> {
+        // 先尝试从 space_levels 表读取已有值
+        if let Some((xp, level, daily_reset)) = sqlx::query_as::<_, (i32, i32, chrono::DateTime<chrono::Utc>)>(
+            "SELECT xp, level, daily_reset_at FROM space_levels WHERE space_id = $1"
+        ).bind(space_id).fetch_optional(&self.pool).await? {
+            let now = chrono::Utc::now();
+            // 如果今天还没重置，直接返回
+            if daily_reset.date_naive() >= now.date_naive() {
+                return Ok((xp, level));
+            }
+            // 否则重新计算
+        }
+
+        // 计算基础 XP
+        let space = sqlx::query_as::<_, Space>(
+            "SELECT * FROM spaces WHERE id = $1"
+        ).bind(space_id).fetch_optional(&self.pool).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        let days_running = (chrono::Utc::now() - space.created_at).num_days().max(0) as i32;
+        let base_xp = space.member_count as i32 * 10
+            + space.post_count as i32 * 5
+            + days_running * 1;
+
+        // 每日限制 200 XP
+        let today_xp = base_xp.min(200);
+        let level: i32 = sqlx::query_scalar("SELECT calc_space_level($1)").bind(today_xp).fetch_one(&self.pool).await?;
+
+        // Upsert
+        sqlx::query(
+            "INSERT INTO space_levels (space_id, xp, level, daily_xp, daily_reset_at) VALUES ($1,$2,$3,$4,NOW() + INTERVAL '1 day')
+             ON CONFLICT (space_id) DO UPDATE SET xp=$2, level=$3, daily_xp=$4, daily_reset_at=NOW() + INTERVAL '1 day', updated_at=NOW()"
+        ).bind(space_id).bind(today_xp).bind(level).bind(today_xp).execute(&self.pool).await?;
+
+        Ok((today_xp as i32, level))
+    }
+
+    /// 批量获取空间等级
+    pub async fn compute_space_levels_batch(&self, space_ids: &[Uuid]) -> Result<Vec<(Uuid, i32, i32)>, AppError> {
+        let mut results = Vec::new();
+        for &id in space_ids {
+            if let Ok((xp, level)) = self.compute_space_level(id).await {
+                results.push((id, xp, level));
+            }
+        }
+        Ok(results)
+    }
 }

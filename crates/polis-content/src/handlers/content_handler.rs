@@ -750,20 +750,30 @@ impl ContentHandler {
             return Err(AppError::Validation("Cannot reference a deleted post".to_string()));
         }
 
-        // 检查目标社区存在且可见性
-        let visibility: String = sqlx::query_scalar(
-            "SELECT visibility FROM spaces WHERE id = $1 AND status = 'active'"
+        // 检查目标社区存在、可见性、模块开启
+        let space_info: (String, serde_json::Value) = sqlx::query_as(
+            "SELECT visibility, enabled_modules FROM spaces WHERE id = $1 AND status = 'active'"
         )
         .bind(space_id)
         .fetch_optional(&self.pool)
         .await?
         .ok_or(AppError::NotFound("Space not found".to_string()))?;
 
+        let (visibility, enabled_modules) = space_info;
+
+        // 检查社区是否开启了对应模块
+        let has_module = enabled_modules.as_array()
+            .map(|m| m.iter().any(|v| v.as_str() == Some(module_type)))
+            .unwrap_or(false);
+        if !has_module {
+            return Err(AppError::Forbidden(format!("目标社区未开启「{}」模块", module_type)));
+        }
+
         match visibility.as_str() {
             "private" => {
                 // 私有社区：需先加入
                 let is_member: bool = sqlx::query_scalar(
-                    "SELECT EXISTS(SELECT 1 FROM space_members WHERE space_id = $1 AND user_id = $2)"
+                    "SELECT EXISTS(SELECT 1 FROM memberships WHERE space_id = $1 AND user_id = $2 AND role != 'banned')"
                 )
                 .bind(space_id)
                 .bind(submitter_id)

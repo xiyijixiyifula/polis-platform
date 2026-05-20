@@ -101,6 +101,16 @@ impl SpaceHandler {
         Ok(space.into())
     }
 
+    /// 将 Space 转为 SpacePublic，附上等级信息
+    async fn space_to_public(&self, space: polis_core::models::Space) -> SpacePublic {
+        let mut pub_space: SpacePublic = space.into();
+        if let Ok((xp, level)) = self.repo.compute_space_level(pub_space.id).await {
+            pub_space.level = Some(level);
+            pub_space.xp = Some(xp);
+        }
+        pub_space
+    }
+
     /// 获取社区详情
     pub async fn get_space(&self, namespace: &str) -> Result<SpacePublic, AppError> {
         let space = self
@@ -108,7 +118,7 @@ impl SpaceHandler {
             .find_by_namespace(namespace)
             .await?
             .ok_or(AppError::NotFound("Space not found".to_string()))?;
-        Ok(space.into())
+        Ok(self.space_to_public(space).await)
     }
 
     /// 更新社区
@@ -140,7 +150,7 @@ impl SpaceHandler {
         }
 
         let updated = self.repo.update(space.id, &req).await?;
-        Ok(updated.into())
+        Ok(self.space_to_public(updated).await)
     }
 
     /// 获取根社区的子社区列表
@@ -152,34 +162,45 @@ impl SpaceHandler {
             .ok_or(AppError::NotFound("Root space not found".to_string()))?;
 
         let subspaces = self.repo.find_sub_spaces(root.id).await?;
-        Ok(subspaces.into_iter().map(|s| s.into()).collect())
+        let mut result = Vec::new();
+        for s in subspaces { result.push(self.space_to_public(s).await); }
+        Ok(result)
     }
 
     /// 获取用户拥有的社区
     pub async fn get_user_spaces(&self, user_id: Uuid) -> Result<Vec<SpacePublic>, AppError> {
         let spaces = self.repo.find_by_owner(user_id).await?;
-        Ok(spaces.into_iter().map(|s| s.into()).collect())
+        let mut result = Vec::new();
+        for s in spaces { result.push(self.space_to_public(s).await); }
+        Ok(result)
+    }
+
+    /// 搜索社区
+    pub async fn search_spaces(&self, query: &str, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
+        let spaces = self.repo.search(query, limit).await?;
+        let mut result = Vec::new();
+        for s in spaces { result.push(self.space_to_public(s).await); }
+        Ok(result)
     }
 
     /// 获取热门社区
-    pub async fn search_spaces(&self, query: &str, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
-        let spaces = self.repo.search(query, limit).await?;
-        Ok(spaces.into_iter().map(|s| s.into()).collect())
-    }
-
     pub async fn get_trending_spaces(&self, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
         let spaces = self.repo.find_trending(limit).await?;
-        Ok(spaces.into_iter().map(|s| s.into()).collect())
+        let mut result = Vec::new();
+        for s in spaces { result.push(self.space_to_public(s).await); }
+        Ok(result)
     }
 
     /// 分页列出所有公开社区
     pub async fn list_spaces(&self, page: u32, page_size: u32) -> Result<(Vec<SpacePublic>, i64), AppError> {
         let (spaces, total) = self.repo.find_all(page, page_size).await?;
-        Ok((spaces.into_iter().map(|s| s.into()).collect(), total))
+        let mut result = Vec::new();
+        for s in spaces { result.push(self.space_to_public(s).await); }
+        Ok((result, total))
     }
 
     /// 加入社区
-    pub async fn join_space(&self, namespace: &str, user_id: Uuid) -> Result<(), AppError> {
+    pub async fn join_space(&self, namespace: &str, user_id: Uuid, message: Option<&str>) -> Result<serde_json::Value, AppError> {
         let space = self
             .repo
             .find_by_namespace(namespace)
@@ -187,10 +208,12 @@ impl SpaceHandler {
             .ok_or(AppError::NotFound("Space not found".to_string()))?;
 
         if space.visibility == "private" {
-            // 私有社区需要邀请
-            return Err(AppError::Forbidden(
-                "This is a private space. You need an invitation to join.".to_string(),
-            ));
+            // 私有社区需要审批
+            self.repo.create_join_request(space.id, user_id, message).await?;
+            return Ok(serde_json::json!({
+                "status": "pending",
+                "message": "已提交加入申请，等待社区管理员审批"
+            }));
         }
 
         self.repo.add_member(space.id, user_id, "member").await?;
@@ -202,7 +225,10 @@ impl SpaceHandler {
             "role": "member",
         })).await;
 
-        Ok(())
+        Ok(serde_json::json!({
+            "status": "joined",
+            "message": "已加入社区"
+        }))
     }
 
     /// 离开社区
@@ -216,6 +242,108 @@ impl SpaceHandler {
         self.repo.remove_member(space.id, user_id).await?;
         self.repo.update_member_count(space.id).await?;
         Ok(())
+    }
+
+    /// 封禁/解封成员（owner/admin 操作）
+    pub async fn ban_member(&self, namespace: &str, operator_id: Uuid, target_user_id: Uuid) -> Result<(), AppError> {
+        let space = self
+            .repo
+            .find_by_namespace(namespace)
+            .await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        // 检查操作者权限
+        let role = self.repo.get_member_role(space.id, operator_id).await?
+            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+        if role != "owner" && role != "admin" {
+            return Err(AppError::Forbidden("只有社区创建者和管理员可以封禁成员".to_string()));
+        }
+
+        // 不能封禁自己
+        if operator_id == target_user_id {
+            return Err(AppError::Forbidden("不能封禁自己".to_string()));
+        }
+
+        self.repo.ban_member(space.id, target_user_id, None).await?;
+        self.repo.update_member_count(space.id).await?;
+        Ok(())
+    }
+
+    /// 设置成员角色（owner 操作）
+    pub async fn set_member_role(&self, namespace: &str, operator_id: Uuid, target_user_id: Uuid, new_role: &str) -> Result<(), AppError> {
+        let space = self
+            .repo
+            .find_by_namespace(namespace)
+            .await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        // 检查操作者权限
+        let operator_role = self.repo.get_member_role(space.id, operator_id).await?
+            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+        if operator_role != "owner" {
+            return Err(AppError::Forbidden("只有社区创建者可以设置管理员".to_string()));
+        }
+
+        // 验证角色
+        match new_role {
+            "admin" | "moderator" | "member" => {},
+            _ => return Err(AppError::Validation("无效的角色".to_string())),
+        }
+
+        // 不能修改自己的角色
+        if operator_id == target_user_id {
+            return Err(AppError::Forbidden("不能修改自己的角色".to_string()));
+        }
+
+        self.repo.set_member_role(space.id, target_user_id, new_role).await?;
+        Ok(())
+    }
+
+    /// 获取加入申请列表（owner/admin 操作）
+    pub async fn list_join_requests(&self, namespace: &str, operator_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let space = self
+            .repo
+            .find_by_namespace(namespace)
+            .await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        // 检查操作者权限
+        let role = self.repo.get_member_role(space.id, operator_id).await?
+            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+        if role != "owner" && role != "admin" {
+            return Err(AppError::Forbidden("只有社区创建者和管理员可以查看申请列表".to_string()));
+        }
+
+        self.repo.list_join_requests(space.id).await
+    }
+
+    /// 审批加入申请（owner/admin 操作）
+    pub async fn review_join_request(&self, namespace: &str, operator_id: Uuid, target_user_id: Uuid, approved: bool) -> Result<serde_json::Value, AppError> {
+        let space = self
+            .repo
+            .find_by_namespace(namespace)
+            .await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        // 检查操作者权限
+        let role = self.repo.get_member_role(space.id, operator_id).await?
+            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+        if role != "owner" && role != "admin" {
+            return Err(AppError::Forbidden("只有社区创建者和管理员可以审批申请".to_string()));
+        }
+
+        self.repo.review_join_request(space.id, target_user_id, approved, operator_id).await?;
+
+        if approved {
+            self.publish_event(subjects::SPACE_MEMBER_JOINED, serde_json::json!({
+                "space_id": space.id.to_string(),
+                "user_id": target_user_id.to_string(),
+                "role": "member",
+            })).await;
+            Ok(serde_json::json!({"status": "approved", "message": "已通过加入申请"}))
+        } else {
+            Ok(serde_json::json!({"status": "rejected", "message": "已拒绝加入申请"}))
+        }
     }
 
     /// 发布事件

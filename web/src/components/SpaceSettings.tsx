@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import {
   Settings, X, MessageCircle, BarChart3, Megaphone,
   UserCheck, Video, Code, HelpCircle, MessageSquare,
   ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow,
+  Globe, Lock, Key, Eye, EyeOff,
 } from 'lucide-react';
 import { spaces } from '@/lib/api';
 
@@ -95,6 +96,37 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
   const [saving, startSave] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // 社区权限状态
+  const [visibility, setVisibility] = useState<string>('public');
+  const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+  const [visLoading, setVisLoading] = useState(true);
+
+  useEffect(() => {
+    // 加载当前社区可见性
+    (async () => {
+      try {
+        const res = await fetch(`/api/spaces/${encodeURIComponent(namespace)}`);
+        const data = await res.json();
+        if (data.code === 0 && data.data) {
+          setVisibility(data.data.visibility || 'public');
+          if (data.data.has_password) setPassword('••••••••');
+        }
+      } catch {} finally { setVisLoading(false); }
+    })();
+  }, [namespace]);
+
+  const saveVisibility = async (newVis: string, newPwd?: string) => {
+    setVisibility(newVis);
+    try {
+      const body: any = { visibility: newVis };
+      if (newPwd !== undefined) body.password = newPwd;
+      await spaces.update(namespace, body);
+    } catch {
+      setSaveError('保存失败');
+    }
+  };
+
   const persistModules = async (mods: SpaceModules) => {
     const moduleNames = Object.entries(mods)
       .filter(([, enabled]) => enabled)
@@ -161,6 +193,54 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
           </button>
         </div>
       </div>
+
+      {/* 社区权限 */}
+      {!visLoading && (
+        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+          <p className="text-xs text-gray-400 mb-2">社区权限</p>
+          <div className="flex gap-1">
+            {([
+              { key: 'public', label: '公开', icon: Globe, desc: '任何人可访问和发布' },
+              { key: 'private', label: '私有', icon: Lock, desc: '需申请加入' },
+              { key: 'unlisted', label: '不公开', icon: Key, desc: '仅链接/密码访问' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => saveVisibility(opt.key)}
+                className={`flex-1 flex flex-col items-center gap-0.5 px-1.5 py-1.5 rounded-lg text-xs transition-colors ${
+                  visibility === opt.key
+                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-700'
+                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
+                }`}
+                title={opt.desc}
+              >
+                <opt.icon size={14} />
+                <span className="text-[10px] font-medium">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+          {visibility === 'unlisted' && (
+            <div className="mt-2 relative">
+              <input
+                type={showPwd ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onBlur={() => { if (password && password !== '••••••••') saveVisibility('unlisted', password); }}
+                placeholder="设置访问密码（可选）"
+                className="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg
+                           bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white
+                           focus:outline-none focus:ring-1 focus:ring-primary-500"
+              />
+              <button
+                onClick={() => setShowPwd(!showPwd)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPwd ? <EyeOff size={12} /> : <Eye size={12} />}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="py-1">
         {availableModules.map((mod) => {

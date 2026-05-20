@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import {
   Heart, MessageCircle, Bookmark, Eye, Repeat2,
-  Pencil, Trash2, Send, ChevronDown, ChevronUp, Play
+  Pencil, Trash2, Send, ChevronDown, ChevronUp, Play,
+  UserPlus, UserCheck, MessageSquare, Globe, Lock, Key
 } from 'lucide-react';
 import { formatDate, formatCount, stripMarkdown } from '@/lib/utils';
 
@@ -97,6 +98,7 @@ export interface ContentCardProps {
   /** Interactive states */
   isLiked?: boolean;
   isBookmarked?: boolean;
+  isFollowing?: boolean;
 
   /** Links (auto-built if not provided) */
   itemLink?: string;
@@ -105,6 +107,15 @@ export interface ContentCardProps {
 
   /** View mode */
   variant?: 'feed' | 'compact';
+
+  /** Author social actions (non-owner view) */
+  followerCount?: number;
+  authorId?: string;
+  showFollowButton?: boolean;
+  showMessageButton?: boolean;
+  onFollow?: (authorId: string) => void;
+  onMessage?: (authorId: string) => void;
+  onVisibilityChange?: (id: string, newVis: string) => void;
 
   /** Owner actions */
   showOwnerActions?: boolean;
@@ -182,10 +193,18 @@ export default function ContentCard({
   createdAt,
   isLiked = false,
   isBookmarked: initBookmarked = false,
+  isFollowing: initFollowing = false,
   itemLink,
   spaceLink,
   profileLink,
   variant = 'feed',
+  followerCount,
+  authorId,
+  showFollowButton = false,
+  showMessageButton = false,
+  onFollow,
+  onMessage,
+  onVisibilityChange,
   showOwnerActions = false,
   onEdit,
   onDelete,
@@ -198,6 +217,7 @@ export default function ContentCard({
 }: ContentCardProps) {
   const [liked, setLiked] = useState(isLiked);
   const [bookmarked, setBookmarked] = useState(initBookmarked);
+  const [following, setFollowing] = useState(initFollowing);
   const [likes, setLikes] = useState(likeCount);
   const [expandedSubs, setExpandedSubs] = useState(false);
 
@@ -349,12 +369,44 @@ export default function ContentCard({
           {displayAuthorName}
         </span>
 
+        {/* Follower count */}
+        {followerCount !== undefined && (
+          <>
+            <span className="text-gray-300 dark:text-gray-600">·</span>
+            <span className="text-[11px]">{formatCount(followerCount)} 粉丝</span>
+          </>
+        )}
+
         {/* Time */}
         {createdAt && (
           <>
             <span className="text-gray-300 dark:text-gray-600">·</span>
             <span className="text-[11px]">{formatDate(createdAt)}</span>
           </>
+        )}
+
+        {/* Follow button (non-owner) */}
+        {showFollowButton && !isOwner && authorId && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setFollowing(!following); onFollow?.(authorId); }}
+            className={`ml-auto text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+              following
+                ? 'border-gray-300 dark:border-gray-600 text-gray-500 hover:text-red-500'
+                : 'border-primary-300 dark:border-primary-700 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20'
+            }`}
+          >
+            {following ? <><UserCheck size={10} className="inline mr-0.5" />已关注</> : <><UserPlus size={10} className="inline mr-0.5" />关注</>}
+          </button>
+        )}
+
+        {/* Message button (non-owner) */}
+        {showMessageButton && !isOwner && authorId && (
+          <button
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMessage?.(authorId); }}
+            className="text-[11px] px-2 py-0.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+          >
+            <MessageSquare size={10} className="inline mr-0.5" />私信
+          </button>
         )}
 
         {/* Visibility badge */}
@@ -387,7 +439,7 @@ export default function ContentCard({
 
       {/* ===== Owner Actions Bar ===== */}
       {showOwnerActions && isOwner && (
-        <div className="flex items-center gap-3 pl-5 mb-2 pb-2 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-3 pl-5 mb-2 pb-2 border-b border-gray-100 dark:border-gray-800 flex-wrap">
           {onEdit && (
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(id); }}
@@ -396,8 +448,20 @@ export default function ContentCard({
               <Pencil size={12} /> 编辑
             </button>
           )}
-          {visibility && (
-            <span className="text-xs text-gray-400">权限: {visibility}</span>
+          {onVisibilityChange && visibility && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); const next = visibility === 'public' ? 'private' : visibility === 'private' ? 'unlisted' : 'public'; onVisibilityChange(id, next); }}
+              className={`text-xs flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors ${
+                visibility === 'public' ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20' :
+                visibility === 'private' ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' :
+                'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
+              }`}
+              title={`当前: ${visibility === 'public' ? '公开' : visibility === 'private' ? '私密' : '不公开'} (点击切换)`}
+            >
+              {visibility === 'public' ? <><Globe size={11} className="inline mr-0.5" />公开</> :
+               visibility === 'private' ? <><Lock size={11} className="inline mr-0.5" />私密</> :
+               <><Key size={11} className="inline mr-0.5" />不公开</>}
+            </button>
           )}
           {onSubmit && (
             <button
@@ -548,6 +612,9 @@ export function adaptFeedItem(item: any): ContentCardProps {
     authorUsername: author.username || '',
     authorDisplayName: author.display_name || author.username || '',
     authorAvatar: author.avatar_url || null,
+    authorId: author.id || '',
+    followerCount: author.follower_count || 0,
+    isFollowing: item.is_following_author || author.is_following || false,
     tags: item.tags || [],
     thumbnailUrl: item.thumbnail_url || '',
     durationSeconds: item.duration_seconds || 0,
@@ -580,6 +647,9 @@ export function adaptCreationItem(creation: any): ContentCardProps {
     authorUsername: creator.username || '',
     authorDisplayName: creator.display_name || creator.username || '',
     authorAvatar: creator.avatar_url || null,
+    authorId: creator.id || '',
+    followerCount: creator.follower_count || 0,
+    isFollowing: creation.is_following_creator || creator.is_following || false,
     tags: creation.tags || [],
     coverUrl: creation.cover_url || '',
     visibility: creation.visibility || '',

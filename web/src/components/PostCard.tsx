@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Pin, EyeOff } from 'lucide-react';
+import { Pin, EyeOff, Star } from 'lucide-react';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
@@ -32,9 +32,12 @@ interface PostCardProps {
   onToggleHide?: () => void;
   canUnhide?: boolean;
   onToggleUnhide?: () => void;
+  isFeatured?: boolean;
+  canFeature?: boolean;
+  onToggleFeature?: () => void;
 }
 
-export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, canUnhide, onToggleUnhide }: PostCardProps) {
+export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, canUnhide, onToggleUnhide, isFeatured, canFeature, onToggleFeature }: PostCardProps) {
   // Adapt post to ContentCard format
   const cardProps = adaptFeedItem({
     ...post,
@@ -51,6 +54,11 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
       {/* Pinned badge */}
       {post.is_pinned && (
         <div className="absolute top-2 left-4 z-10 text-xs text-primary-600 dark:text-primary-400 font-medium">📌 置顶</div>
+      )}
+
+      {/* Featured badge */}
+      {isFeatured && (
+        <div className="absolute top-2 left-4 z-10 text-xs text-amber-600 dark:text-amber-400 font-medium">⭐ 精选</div>
       )}
 
       {/* Hidden badge */}
@@ -151,6 +159,18 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
               >
                 <Pin className={`h-3.5 w-3.5 ${post.is_pinned ? 'fill-current' : ''}`} />
                 <span>{post.is_pinned ? '已置顶' : '置顶'}</span>
+              </button>
+            )}
+
+            {canFeature && onToggleFeature && (
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFeature(); }}
+                className={`flex items-center gap-1 hover:text-amber-500 transition-colors ${isFeatured ? 'text-amber-500' : ''}`}
+                title={isFeatured ? '取消精选' : '设为精选'}
+              >
+                <Star className={`h-3.5 w-3.5 ${isFeatured ? 'fill-current' : ''}`} />
+                <span>{isFeatured ? '已精选' : '精选'}</span>
               </button>
             )}
 

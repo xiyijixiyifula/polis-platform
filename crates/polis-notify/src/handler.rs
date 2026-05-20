@@ -154,7 +154,7 @@ impl NotifyHandler {
     /// 获取社区成员列表
     pub async fn find_space_members(&self, space_id: Uuid) -> Result<Vec<Uuid>, AppError> {
         let rows: Vec<(Uuid,)> = sqlx::query_as(
-            "SELECT user_id FROM space_members WHERE space_id = $1"
+            "SELECT user_id FROM memberships WHERE space_id = $1 AND role != 'banned'"
         )
         .bind(space_id)
         .fetch_all(&self.pool)
