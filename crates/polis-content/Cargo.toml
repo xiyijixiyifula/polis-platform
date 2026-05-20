@@ -25,3 +25,4 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 async-nats = { workspace = true }
 jsonwebtoken = { workspace = true }
+argon2.workspace = true

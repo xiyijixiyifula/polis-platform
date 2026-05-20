@@ -15,6 +15,7 @@ use sqlx::PgPool;
 use crate::middleware::auth::auth_middleware;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::Deserialize as SerdeDeserialize;
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 
 /// Helper to wrap a value in Json response
 fn json_ok<T: serde::Serialize>(value: T) -> Json<serde_json::Value> {
@@ -256,29 +257,75 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     public.merge(auth).merge(share_routes).merge(creation).with_state(handler)
 }
 
-/// 私有空间公开访问检查：返回 true 表示应拒绝访问
+/// 非公开空间访问检查：block private + unlisted spaces
 async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, headers: &HeaderMap) -> Result<(), AppError> {
-    let visibility: (String,) = sqlx::query_as("SELECT visibility FROM spaces WHERE id = $1")
+    let row: (String, Option<String>) = sqlx::query_as("SELECT visibility, password_hash FROM spaces WHERE id = $1")
         .bind(space_id)
         .fetch_one(pool)
         .await
         .map_err(|_| AppError::NotFound("Space not found".to_string()))?;
-    if visibility.0 != "private" {
+
+    let visibility = &row.0;
+    let has_password = row.1.is_some();
+
+    if visibility == "public" {
         return Ok(());
     }
+
     // 私有空间：检查是否为成员
-    let uid = maybe_extract_user_id(headers)?
-        .ok_or_else(|| AppError::Forbidden("This space is private".to_string()))?;
-    let is_member = sqlx::query_scalar::<_, Option<i32>>(
-        "SELECT 1 FROM memberships WHERE space_id = $1 AND user_id = $2"
-    )
-    .bind(space_id).bind(uid)
-    .fetch_optional(pool).await
-    .map_err(|e| AppError::Database(e))?
-    .is_some();
-    if !is_member {
-        return Err(AppError::Forbidden("This space is private".to_string()));
+    if visibility == "private" {
+        let uid = maybe_extract_user_id(headers)?
+            .ok_or_else(|| AppError::Forbidden("此空间为私有空间".to_string()))?;
+        let is_member = sqlx::query_scalar::<_, Option<i32>>(
+            "SELECT 1 FROM memberships WHERE space_id = $1 AND user_id = $2"
+        )
+        .bind(space_id).bind(uid)
+        .fetch_optional(pool).await
+        .map_err(|e| AppError::Database(e))?
+        .is_some();
+        if !is_member {
+            return Err(AppError::Forbidden("此空间为私有空间，仅成员可访问".to_string()));
+        }
+        return Ok(());
     }
+
+    // 不公开空间：需要密码或已是成员
+    if visibility == "unlisted" {
+        let uid = maybe_extract_user_id(headers)?.unwrap_or(Uuid::nil());
+        let is_member = sqlx::query_scalar::<_, Option<i32>>(
+            "SELECT 1 FROM memberships WHERE space_id = $1 AND user_id = $2"
+        )
+        .bind(space_id).bind(uid)
+        .fetch_optional(pool).await.ok().flatten()
+        .is_some();
+
+        if is_member {
+            return Ok(());
+        }
+
+        if has_password {
+            // 检查 header 中的密码
+            let pwd = headers
+                .get("x-polis-space-password")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("");
+
+            if pwd.is_empty() {
+                return Err(AppError::Forbidden("此空间需要密码访问".to_string()));
+            }
+
+            let hash_str = row.1.as_deref().unwrap_or("");
+            if let Ok(parsed) = PasswordHash::new(hash_str) {
+                if Argon2::default().verify_password(pwd.as_bytes(), &parsed).is_ok() {
+                    return Ok(());
+                }
+            }
+            return Err(AppError::Forbidden("密码错误".to_string()));
+        }
+
+        return Err(AppError::Forbidden("此空间不对外公开".to_string()));
+    }
+
     Ok(())
 }
 

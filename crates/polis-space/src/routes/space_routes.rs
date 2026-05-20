@@ -164,8 +164,9 @@ async fn handle_auth_path(
     // 提取 namespace (去掉尾部动作)
     let actions = [
         "/join", "/leave", "/posts",
-        "/members/ban", "/members/role",
+        "/members/ban", "/members/role", "/members/unban",
         "/join-requests", "/join-requests/review",
+        "/verify-password",
     ];
     let mut ns = remaining;
     for action in &actions {
@@ -215,10 +216,18 @@ async fn handle_auth_path(
 
     if remaining.ends_with("/members/ban") && method == axum::http::Method::POST {
         #[derive(Deserialize)]
-        struct BanBody { user_id: Uuid }
+        struct BanBody { user_id: Uuid, reason: Option<String>, duration_hours: Option<i32> }
         let body: BanBody = read_json_body(req).await?;
-        handler.ban_member(&decoded_ns, user_id, body.user_id).await?;
-        return Ok(Json(serde_json::json!({"code": 0, "data": null, "message": "ok"})));
+        let result = handler.ban_member(&decoded_ns, user_id, body.user_id, body.reason.as_deref(), body.duration_hours).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": result, "message": "ok"})));
+    }
+
+    if remaining.ends_with("/members/unban") && method == axum::http::Method::POST {
+        #[derive(Deserialize)]
+        struct UnbanBody { user_id: Uuid }
+        let body: UnbanBody = read_json_body(req).await?;
+        let result = handler.unban_member(&decoded_ns, user_id, body.user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": result, "message": "ok"})));
     }
 
     if remaining.ends_with("/members/role") && method == axum::http::Method::POST {
@@ -240,6 +249,17 @@ async fn handle_auth_path(
     if remaining.ends_with("/join-requests") && method == axum::http::Method::GET {
         let requests = handler.list_join_requests(&decoded_ns, user_id).await?;
         return Ok(Json(serde_json::json!({"code": 0, "data": requests})));
+    }
+
+    if remaining.ends_with("/verify-password") && method == axum::http::Method::POST {
+        #[derive(Deserialize)]
+        struct PwdBody { password: String }
+        let body: PwdBody = read_json_body(req).await?;
+        let valid = handler.repo.verify_password(
+            handler.get_space(&decoded_ns).await?.id,
+            &body.password,
+        ).await.unwrap_or(false);
+        return Ok(Json(serde_json::json!({"code": 0, "data": {"valid": valid}, "message": "ok"})));
     }
 
     if method == axum::http::Method::PUT {

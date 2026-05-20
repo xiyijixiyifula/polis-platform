@@ -2,6 +2,10 @@ use polis_core::error::AppError;
 use polis_core::models::{Space, Membership, UpdateSpaceRequest};
 use sqlx::PgPool;
 use uuid::Uuid;
+use argon2::{
+    Argon2, PasswordVerifier,
+    password_hash::{PasswordHash, PasswordHasher, SaltString, rand_core::OsRng},
+};
 
 /// 社区数据访问层
 pub struct SpaceRepo {
@@ -75,6 +79,19 @@ impl SpaceRepo {
         id: Uuid,
         req: &UpdateSpaceRequest,
     ) -> Result<Space, AppError> {
+        // Hash password if provided
+        let password_hash: Option<String> = match &req.password {
+            Some(pwd) if !pwd.is_empty() => {
+                let salt = SaltString::generate(&mut OsRng);
+                let hash = Argon2::default()
+                    .hash_password(pwd.as_bytes(), &salt)
+                    .map_err(|_| AppError::Validation("密码哈希失败".to_string()))?
+                    .to_string();
+                Some(hash)
+            }
+            _ => None,
+        };
+
         let space = sqlx::query_as::<_, Space>(
             r#"
             UPDATE spaces
@@ -85,6 +102,7 @@ impl SpaceRepo {
                 visibility = COALESCE($6, visibility),
                 custom_rules = COALESCE($7, custom_rules),
                 enabled_modules = COALESCE($8, enabled_modules),
+                password_hash = COALESCE($9, password_hash),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -98,6 +116,7 @@ impl SpaceRepo {
         .bind(&req.visibility.as_ref().map(|v| v.to_string()))
         .bind(&req.custom_rules)
         .bind(&req.enabled_modules.as_ref().map(|m| serde_json::to_value(m).unwrap_or_default()))
+        .bind(&password_hash)
         .fetch_one(&self.pool)
         .await?;
         Ok(space)
@@ -181,19 +200,24 @@ impl SpaceRepo {
 
     // ===== 成员管理 =====
 
-    /// 添加成员
+    /// 添加成员（如果被封禁且未过期则拒绝）
     pub async fn add_member(
         &self,
         space_id: Uuid,
         user_id: Uuid,
         role: &str,
     ) -> Result<Membership, AppError> {
+        // 检查是否在封禁期
+        if self.is_banned(space_id, user_id).await? {
+            return Err(AppError::Forbidden("你已被该社区封禁，无法加入".to_string()));
+        }
+
         let membership = sqlx::query_as::<_, Membership>(
             r#"
             INSERT INTO memberships (space_id, user_id, role)
             VALUES ($1, $2, $3)
             ON CONFLICT (space_id, user_id)
-            DO UPDATE SET role = $3
+            DO UPDATE SET role = $3, ban_reason = NULL, banned_at = NULL, ban_expires_at = NULL
             RETURNING *
             "#,
         )
@@ -312,11 +336,35 @@ impl SpaceRepo {
         Ok(())
     }
 
-    /// 封禁/解封成员
-    pub async fn ban_member(&self, space_id: Uuid, user_id: Uuid, _reason: Option<&str>) -> Result<(), AppError> {
-        sqlx::query("UPDATE memberships SET role='banned' WHERE space_id=$1 AND user_id=$2 AND role!='owner'")
-            .bind(space_id).bind(user_id).execute(&self.pool).await?;
+    /// 封禁成员（支持定时封禁）
+    pub async fn ban_member(&self, space_id: Uuid, user_id: Uuid, reason: Option<&str>, duration_hours: Option<i32>) -> Result<(), AppError> {
+        let expires_at = duration_hours.map(|h| {
+            let now = chrono::Utc::now();
+            now + chrono::Duration::hours(h as i64)
+        });
+        sqlx::query(
+            "UPDATE memberships SET role='banned', ban_reason=$3, banned_at=NOW(), ban_expires_at=$4 WHERE space_id=$1 AND user_id=$2 AND role!='owner'"
+        )
+        .bind(space_id).bind(user_id).bind(reason).bind(expires_at).execute(&self.pool).await?;
         Ok(())
+    }
+
+    /// 解封成员
+    pub async fn unban_member(&self, space_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        sqlx::query(
+            "UPDATE memberships SET role='member', ban_reason=NULL, banned_at=NULL, ban_expires_at=NULL WHERE space_id=$1 AND user_id=$2 AND role='banned'"
+        )
+        .bind(space_id).bind(user_id).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 检查是否被封禁（含过期检查）
+    pub async fn is_banned(&self, space_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let row: Option<(bool,)> = sqlx::query_as(
+            "SELECT (role='banned' AND (ban_expires_at IS NULL OR ban_expires_at > NOW())) FROM memberships WHERE space_id=$1 AND user_id=$2"
+        )
+        .bind(space_id).bind(user_id).fetch_optional(&self.pool).await?;
+        Ok(row.map(|r| r.0).unwrap_or(false))
     }
 
     /// 设置成员角色 (admin/moderator)
@@ -416,5 +464,53 @@ impl SpaceRepo {
             }
         }
         Ok(results)
+    }
+
+    // ===== 关注统计 =====
+
+    /// 更新社区关注数
+    pub async fn update_follower_count(&self, space_id: Uuid) -> Result<(), AppError> {
+        sqlx::query(
+            "UPDATE spaces SET follower_count = (SELECT COUNT(*) FROM follows WHERE followee_type='space' AND followee_id=$1) WHERE id=$1"
+        )
+        .bind(space_id).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 获取社区关注数
+    pub async fn get_follower_count(&self, space_id: Uuid) -> Result<i64, AppError> {
+        let count: Option<i64> = sqlx::query_scalar(
+            "SELECT follower_count FROM spaces WHERE id = $1"
+        )
+        .bind(space_id).fetch_optional(&self.pool).await?
+        .flatten();
+        Ok(count.unwrap_or(0))
+    }
+
+    /// 获取社区是否有密码
+    pub async fn has_password(&self, space_id: Uuid) -> Result<bool, AppError> {
+        let hash: Option<String> = sqlx::query_scalar(
+            "SELECT password_hash FROM spaces WHERE id = $1"
+        )
+        .bind(space_id).fetch_optional(&self.pool).await?
+        .flatten();
+        Ok(hash.is_some())
+    }
+
+    /// 验证社区访问密码
+    pub async fn verify_password(&self, space_id: Uuid, password: &str) -> Result<bool, AppError> {
+        let hash: Option<String> = sqlx::query_scalar(
+            "SELECT password_hash FROM spaces WHERE id = $1"
+        )
+        .bind(space_id).fetch_optional(&self.pool).await?
+        .flatten();
+        match hash {
+            Some(h) => {
+                let parsed = PasswordHash::new(&h)
+                    .map_err(|_| AppError::Internal("密码验证失败".to_string()))?;
+                Ok(Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok())
+            }
+            None => Ok(false),
+        }
     }
 }

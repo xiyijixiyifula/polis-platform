@@ -7,11 +7,11 @@ import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Bell, BellOff, Star } from 'lucide-react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
-import { spaces as apiSpaces, tiers, subscribe } from '@/lib/api';
+import { spaces as apiSpaces, tiers, subscribe, follow } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
 import { SpaceChat } from '@/components/SpaceChat';
 import { SpaceParticles } from '@/components/SpaceParticles';
@@ -165,6 +165,15 @@ export default function SpacePage() {
  const [tierForm, setTierForm] = useState({ name: '', price_cents: '0', description: '', benefits: '' });
  const [tierSaving, setTierSaving] = useState(false);
 
+ // Follow/unfollow state
+ const [isFollowing, setIsFollowing] = useState(false);
+ const [followLoading, setFollowLoading] = useState(false);
+
+ // Edit community state
+ const [showEditDialog, setShowEditDialog] = useState(false);
+ const [editForm, setEditForm] = useState({ title: '', description: '' });
+ const [editSaving, setEditSaving] = useState(false);
+
  useEffect(() => {
  try {
  const stored = localStorage.getItem('polis_user');
@@ -187,10 +196,22 @@ export default function SpacePage() {
  }
  })
  .catch(() => {});
+
+ // 检查是否已关注
+ if (space.id) {
+ // 从 localStorage 读取关注列表
+ try {
+ const followed = localStorage.getItem('polis_followed_spaces');
+ if (followed) {
+ const ids: string[] = JSON.parse(followed);
+ setIsFollowing(ids.includes(space.id));
+ }
+ } catch (_) {}
  }
  }
- } catch {}
- }, [space?.owner_id, cleanNamespace]);
+ }
+ } catch (_) {}
+ }, [space?.owner_id, space?.id, cleanNamespace]);
 
  const togglePin = useCallback(async (postId: string, isPinned: boolean) => {
  try {
@@ -485,7 +506,31 @@ export default function SpacePage() {
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-3 flex-wrap">
  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{space.title}</h1>
- {/* 根社区徽章已移除 */}
+ {/* 社区等级徽章 */}
+ {space.level && space.level > 0 && (
+ <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+ space.level >= 5 ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white' :
+ space.level >= 4 ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+ space.level >= 3 ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+ space.level >= 2 ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+ 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+ }`}>
+ Lv.{space.level}
+ </span>
+ )}
+ {/* Edit button for owner */}
+ {isOwner && (
+ <button
+ onClick={() => {
+ setEditForm({ title: space.title, description: space.description || '' });
+ setShowEditDialog(true);
+ }}
+ className="p-1 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+ title="编辑社区"
+ >
+ <Pencil className="h-4 w-4" />
+ </button>
+ )}
  </div>
  {/* GitHub-style namespace breadcrumb */}
  <div className="mt-1 flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
@@ -503,8 +548,11 @@ export default function SpacePage() {
  <span className="font-mono text-gray-700 dark:text-gray-300">{communityName}</span>
  </div>
  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{space.description}</p>
- <div className="mt-3 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+ <div className="mt-3 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
  <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {formatCount(space.member_count)} 成员</span>
+ {(space as any).follower_count > 0 && (
+ <span className="flex items-center gap-1"><Bell className="h-4 w-4" /> {formatCount((space as any).follower_count)} 关注</span>
+ )}
  <span>{formatCount(space.post_count)} 帖子</span>
  {announcements.length > 0 && (
  <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
@@ -549,6 +597,39 @@ export default function SpacePage() {
  >
  {isOwner ? '我的社区' : isMember ? '✓ 已加入' : joining ? '加入中...' : '加入社区'}
  </button>
+
+ {/* Follow button */}
+ {!isOwner && (
+ <button
+ onClick={async () => {
+ const token = localStorage.getItem('polis_access_token');
+ if (!token) { alert('请先登录'); return; }
+ setFollowLoading(true);
+ try {
+ if (space?.id) {
+ await follow.toggle('space', space.id);
+ const newState = !isFollowing;
+ setIsFollowing(newState);
+ // 更新本地缓存
+ const cached = localStorage.getItem('polis_followed_spaces');
+ let ids: string[] = cached ? JSON.parse(cached) : [];
+ if (newState) { ids.push(space.id); }
+ else { ids = ids.filter((id: string) => id !== space.id); }
+ localStorage.setItem('polis_followed_spaces', JSON.stringify(ids));
+ }
+ } catch (e: any) { alert(e?.message || '操作失败'); }
+ setFollowLoading(false);
+ }}
+ disabled={followLoading}
+ className={`text-sm px-3 py-2 rounded-lg transition-colors ${
+ isFollowing
+ ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+ : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+ }`}
+ >
+ {followLoading ? '...' : isFollowing ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
+ </button>
+ )}
  {!isOwner && !isMember && showJoinInput && (
  <div className="flex items-center gap-1">
  <input
@@ -651,6 +732,48 @@ export default function SpacePage() {
  onClose={() => setShowSettings(false)}
  />
  )}
+ </div>
+ )}
+
+ {/* Edit Community Dialog */}
+ {showEditDialog && (
+ <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowEditDialog(false)}>
+ <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+ <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">编辑社区</h3>
+ <div className="space-y-3">
+ <div>
+ <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">名称</label>
+ <input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+ className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+ </div>
+ <div>
+ <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">描述</label>
+ <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+ rows={3}
+ className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+ </div>
+ </div>
+ <div className="flex items-center justify-end gap-2 mt-4">
+ <button onClick={() => setShowEditDialog(false)}
+ className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">取消</button>
+ <button onClick={async () => {
+ setEditSaving(true);
+ try {
+ await apiSpaces.update(cleanNamespace, {
+ title: editForm.title.trim() || undefined,
+ description: editForm.description.trim() || undefined,
+ });
+ setSpace((prev: any) => prev ? { ...prev, title: editForm.title, description: editForm.description } : prev);
+ setShowEditDialog(false);
+ } catch (e: any) { alert(e?.message || '保存失败'); }
+ setEditSaving(false);
+ }}
+ disabled={editSaving}
+ className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors">
+ {editSaving ? '保存中...' : '保存'}
+ </button>
+ </div>
+ </div>
  </div>
  )}
  </div>
@@ -1386,7 +1509,7 @@ export default function SpacePage() {
  {members.map((m) => (
  <div
  key={m.user.id}
- className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group"
+ className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group overflow-visible"
  >
  <Link href={`/profile/${m.user.username}`} className="flex items-center gap-3 flex-1 min-w-0">
  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">

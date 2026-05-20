@@ -108,6 +108,12 @@ impl SpaceHandler {
             pub_space.level = Some(level);
             pub_space.xp = Some(xp);
         }
+        if let Ok(count) = self.repo.get_follower_count(pub_space.id).await {
+            pub_space.follower_count = count;
+        }
+        if let Ok(has) = self.repo.has_password(pub_space.id).await {
+            pub_space.has_password = has;
+        }
         pub_space
     }
 
@@ -208,8 +214,13 @@ impl SpaceHandler {
             .ok_or(AppError::NotFound("Space not found".to_string()))?;
 
         if space.visibility == "private" {
-            // 私有社区需要审批
+            // 私有社区需要审批，通知 owner
             self.repo.create_join_request(space.id, user_id, message).await?;
+            if let Some(owner_id) = space.owner_id {
+                if owner_id != user_id {
+                    self.create_notification(owner_id, &space.namespace, user_id, "join_request", message, None).await;
+                }
+            }
             return Ok(serde_json::json!({
                 "status": "pending",
                 "message": "已提交加入申请，等待社区管理员审批"
@@ -218,6 +229,13 @@ impl SpaceHandler {
 
         self.repo.add_member(space.id, user_id, "member").await?;
         self.repo.update_member_count(space.id).await?;
+
+        // 通知 owner
+        if let Some(owner_id) = space.owner_id {
+            if owner_id != user_id {
+                self.create_notification(owner_id, &space.namespace, user_id, "join", None, None).await;
+            }
+        }
 
         self.publish_event(subjects::SPACE_MEMBER_JOINED, serde_json::json!({
             "space_id": space.id.to_string(),
@@ -239,13 +257,20 @@ impl SpaceHandler {
             .await?
             .ok_or(AppError::NotFound("Space not found".to_string()))?;
 
+        // 通知 owner（有人离开了）
+        if let Some(owner_id) = space.owner_id {
+            if owner_id != user_id {
+                self.create_notification(owner_id, &space.namespace, user_id, "leave", None, None).await;
+            }
+        }
+
         self.repo.remove_member(space.id, user_id).await?;
         self.repo.update_member_count(space.id).await?;
         Ok(())
     }
 
-    /// 封禁/解封成员（owner/admin 操作）
-    pub async fn ban_member(&self, namespace: &str, operator_id: Uuid, target_user_id: Uuid) -> Result<(), AppError> {
+    /// 封禁成员（owner/admin 操作，支持时长和原因）
+    pub async fn ban_member(&self, namespace: &str, operator_id: Uuid, target_user_id: Uuid, reason: Option<&str>, duration_hours: Option<i32>) -> Result<serde_json::Value, AppError> {
         let space = self
             .repo
             .find_by_namespace(namespace)
@@ -264,13 +289,40 @@ impl SpaceHandler {
             return Err(AppError::Forbidden("不能封禁自己".to_string()));
         }
 
-        self.repo.ban_member(space.id, target_user_id, None).await?;
+        self.repo.ban_member(space.id, target_user_id, reason, duration_hours).await?;
         self.repo.update_member_count(space.id).await?;
-        Ok(())
+
+        // 创建通知
+        self.create_notification(target_user_id, &space.namespace, operator_id, "ban", reason, duration_hours).await;
+
+        let msg = match duration_hours {
+            Some(h) => format!("已封禁 {} 小时", h),
+            None => "已永久封禁".to_string(),
+        };
+        Ok(serde_json::json!({"status": "banned", "message": msg}))
+    }
+
+    /// 解封成员
+    pub async fn unban_member(&self, namespace: &str, operator_id: Uuid, target_user_id: Uuid) -> Result<serde_json::Value, AppError> {
+        let space = self
+            .repo
+            .find_by_namespace(namespace)
+            .await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        let role = self.repo.get_member_role(space.id, operator_id).await?
+            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+        if role != "owner" && role != "admin" {
+            return Err(AppError::Forbidden("只有社区创建者和管理员可以解封成员".to_string()));
+        }
+
+        self.repo.unban_member(space.id, target_user_id).await?;
+        self.repo.update_member_count(space.id).await?;
+        Ok(serde_json::json!({"status": "unbanned", "message": "已解封"}))
     }
 
     /// 设置成员角色（owner 操作）
-    pub async fn set_member_role(&self, namespace: &str, operator_id: Uuid, target_user_id: Uuid, new_role: &str) -> Result<(), AppError> {
+    pub async fn set_member_role(&self, namespace: &str, operator_id: Uuid, target_user_id: Uuid, new_role: &str) -> Result<serde_json::Value, AppError> {
         let space = self
             .repo
             .find_by_namespace(namespace)
@@ -285,10 +337,12 @@ impl SpaceHandler {
         }
 
         // 验证角色
-        match new_role {
-            "admin" | "moderator" | "member" => {},
+        let role_label = match new_role {
+            "admin" => "管理员",
+            "moderator" => "版主",
+            "member" => "成员",
             _ => return Err(AppError::Validation("无效的角色".to_string())),
-        }
+        };
 
         // 不能修改自己的角色
         if operator_id == target_user_id {
@@ -296,7 +350,11 @@ impl SpaceHandler {
         }
 
         self.repo.set_member_role(space.id, target_user_id, new_role).await?;
-        Ok(())
+
+        // 通知被修改者
+        self.create_notification(target_user_id, &space.namespace, operator_id, "role_change", Some(role_label), None).await;
+
+        Ok(serde_json::json!({"status": "ok", "message": format!("已设为{}", role_label)}))
     }
 
     /// 获取加入申请列表（owner/admin 操作）
@@ -335,6 +393,9 @@ impl SpaceHandler {
         self.repo.review_join_request(space.id, target_user_id, approved, operator_id).await?;
 
         if approved {
+            // 通知申请人
+            self.create_notification(target_user_id, &space.namespace, operator_id, "join_approved", None, None).await;
+
             self.publish_event(subjects::SPACE_MEMBER_JOINED, serde_json::json!({
                 "space_id": space.id.to_string(),
                 "user_id": target_user_id.to_string(),
@@ -342,6 +403,7 @@ impl SpaceHandler {
             })).await;
             Ok(serde_json::json!({"status": "approved", "message": "已通过加入申请"}))
         } else {
+            self.create_notification(target_user_id, &space.namespace, operator_id, "join_rejected", None, None).await;
             Ok(serde_json::json!({"status": "rejected", "message": "已拒绝加入申请"}))
         }
     }
@@ -360,5 +422,49 @@ impl SpaceHandler {
                 let _ = nats.publish(subject.to_string(), data.into()).await;
             }
         }
+    }
+
+    /// 创建空间事件通知
+    async fn create_notification(&self, user_id: Uuid, space_ns: &str, actor_id: Uuid, event_type: &str, extra: Option<&str>, duration_hours: Option<i32>) {
+        if user_id == actor_id { return; }
+
+        let typ = format!("space_{}", event_type);
+        let content = match event_type {
+            "join" => "有人加入了你的社区".to_string(),
+            "leave" => "有人退出了你的社区".to_string(),
+            "join_request" => {
+                let msg = extra.unwrap_or("");
+                if msg.is_empty() {
+                    "有人申请加入你的社区".to_string()
+                } else {
+                    format!("有人申请加入你的社区，留言：{}", msg)
+                }
+            }
+            "join_approved" => "你的加入申请已被通过".to_string(),
+            "join_rejected" => "你的加入申请已被拒绝".to_string(),
+            "ban" => {
+                let reason = extra.unwrap_or("");
+                let dur = match duration_hours {
+                    Some(h) => format!("（{}小时）", h),
+                    None => "（永久）".to_string(),
+                };
+                if reason.is_empty() {
+                    format!("你已被封禁出社区{}", dur)
+                } else {
+                    format!("你已被封禁：{} {}", reason, dur)
+                }
+            }
+            "role_change" => format!("你的社区角色已被设为：{}", extra.unwrap_or("成员")),
+            _ => format!("社区事件：{}", event_type),
+        };
+
+        let _ = sqlx::query(
+            "INSERT INTO notifications (user_id, type, actor_id, target_type, target_id, content) VALUES ($1, $2, $3, $4, $5, $6)"
+        )
+        .bind(user_id).bind(&typ).bind(actor_id)
+        .bind("space").bind(space_ns)
+        .bind(&content)
+        .execute(&self.repo.pool)
+        .await;
     }
 }

@@ -57,8 +57,12 @@ export interface Space {
   status: 'active' | 'archived' | 'suspended';
   member_count: number;
   post_count: number;
+  follower_count: number;
+  has_password: boolean;
   enabled_modules?: string[];
   created_at: string;
+  level?: number;
+  xp?: number;
 }
 
 export interface Post {
@@ -269,15 +273,22 @@ export const spaces = {
   members: (namespace: string) => request<SpaceMember[]>('/spaces/' + namespace + '/members'),
 
   /** 封禁成员 */
-  banMember: (namespace: string, userId: string) =>
-    request<void>(`/spaces/${encodeNs(namespace)}/members/ban`, {
+  banMember: (namespace: string, userId: string, reason?: string, durationHours?: number) =>
+    request<{ status: string; message: string }>(`/spaces/${encodeNs(namespace)}/members/ban`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId, reason, duration_hours: durationHours }),
+    }),
+
+  /** 解封成员 */
+  unbanMember: (namespace: string, userId: string) =>
+    request<{ status: string; message: string }>(`/spaces/${encodeNs(namespace)}/members/unban`, {
       method: 'POST',
       body: JSON.stringify({ user_id: userId }),
     }),
 
   /** 设置成员角色 */
   setMemberRole: (namespace: string, userId: string, role: string) =>
-    request<void>(`/spaces/${encodeNs(namespace)}/members/role`, {
+    request<{ status: string; message: string }>(`/spaces/${encodeNs(namespace)}/members/role`, {
       method: 'POST',
       body: JSON.stringify({ user_id: userId, role }),
     }),
