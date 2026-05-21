@@ -221,8 +221,11 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/files/share", post(create_file_share_route))
         .route("/api/upload", post(upload_file_route))
         .route("/api/import/markdown", post(import_markdown_route))
-        // 评论点赞（仅认证用户）
+        // 评论管理（仅认证用户）
         .route("/api/comments/{id}/like", post(like_comment_route))
+        .route("/api/comments/{id}", delete(delete_comment_route))
+        .route("/api/comments/{id}/pin", post(pin_comment_route))
+        .route("/api/creator/comments", get(list_my_comments_route))
         // RESTful 风格 API 别名 — v0.3.22
         .route("/api/posts/{id}/like", post(like_post_by_id_route))
         .route("/api/posts/{id}/bookmark", post(bookmark_post_by_id_route))
@@ -1366,6 +1369,47 @@ async fn get_subscription_route(
     Ok(json_ok(ApiResponse::success(sub)))
 }
 
+
+// ===== 评论管理（创作者中心） =====
+
+/// DELETE /api/comments/{id} — 删除评论
+async fn delete_comment_route(
+    State(h): State<Arc<ContentHandler>>,
+    Extension(uid): Extension<Uuid>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    h.delete_comment(id, uid).await?;
+    Ok(json_ok(ApiResponse::success(())))
+}
+
+/// POST /api/comments/{id}/pin — 置顶/取消置顶评论
+async fn pin_comment_route(
+    State(h): State<Arc<ContentHandler>>,
+    Extension(uid): Extension<Uuid>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let pinned = h.toggle_comment_pin(id, uid).await?;
+    Ok(json_ok(ApiResponse::success(serde_json::json!({"pinned": pinned}))))
+}
+
+/// GET /api/creator/comments — 创作者中心评论管理列表
+#[derive(Deserialize)]
+struct CreatorCommentsQuery {
+    post_id: Option<Uuid>,
+    page: Option<u32>,
+    page_size: Option<u32>,
+}
+
+async fn list_my_comments_route(
+    State(h): State<Arc<ContentHandler>>,
+    Extension(uid): Extension<Uuid>,
+    Query(q): Query<CreatorCommentsQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let page = q.page.unwrap_or(1);
+    let page_size = q.page_size.unwrap_or(20).min(100);
+    let result = h.get_my_comments(uid, q.post_id, page, page_size).await?;
+    Ok(json_ok(ApiResponse::success(result)))
+}
 
 async fn health_check(State(h): State<Arc<ContentHandler>>) -> Json<ApiResponse<serde_json::Value>> {
     let db_ok = sqlx::query("SELECT 1").fetch_one(&h.pool).await.is_ok();

@@ -443,6 +443,7 @@ pub struct Comment {
     pub parent_id: Option<Uuid>,
     pub body: String,
     pub is_deleted: bool,
+    pub is_pinned: bool,
     pub like_count: i32,
     pub created_at: DateTime<Utc>,
 }
@@ -455,6 +456,7 @@ pub struct CommentPublic {
     pub author: UserPublic,
     pub parent_id: Option<Uuid>,
     pub body: String,
+    pub is_pinned: bool,
     pub like_count: i32,
     pub created_at: DateTime<Utc>,
 }

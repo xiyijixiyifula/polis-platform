@@ -822,7 +822,7 @@ export default function SpacePage() {
  <div className="glass-card py-8 text-center text-gray-400 dark:text-gray-500">
  <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
  <p className="text-sm">还没有内容</p>
- <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
  发布第一篇帖子
  </Link>
  </div>
@@ -875,7 +875,7 @@ export default function SpacePage() {
  {/* === Posts Tab (交流) === */}
  {activeTab === 'posts' && (
  <>
- <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`}
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`}
  className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
  <PenLine className="h-5 w-5" />
@@ -1259,7 +1259,7 @@ export default function SpacePage() {
  {/* === Wiki Tab（知识库 — 所有成员可编辑）=== */}
  {activeTab === 'wiki' && (
  <>
- <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=wiki`}
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=wiki`}
  className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
  <Library className="h-5 w-5" />
@@ -1309,7 +1309,7 @@ export default function SpacePage() {
  {activeTab === 'share' && (
  <>
  {isOwner ? (
- <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=share`}
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=share`}
  className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
  <PenLine className="h-5 w-5" />
@@ -1530,7 +1530,7 @@ export default function SpacePage() {
  {/* === QA Tab（问答 — 提问与回答）=== */}
  {activeTab === 'qa' && (
  <>
- <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=qa`}
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=qa`}
  className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
  <HelpCircle className="h-5 w-5" />
@@ -1579,7 +1579,7 @@ export default function SpacePage() {
  {/* === Novel Tab（小说/阅读 — 章节连载）=== */}
  {activeTab === 'novel' && (
  <>
- <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=novel`}
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=novel`}
  className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
  <BookText className="h-5 w-5" />
@@ -1628,7 +1628,7 @@ export default function SpacePage() {
  {/* === Game Tab（游戏 — 游戏内容讨论与分享）=== */}
  {activeTab === 'game' && (
  <>
- <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=game`}
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=game`}
  className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
  <Gamepad2 className="h-5 w-5" />
@@ -1677,7 +1677,7 @@ export default function SpacePage() {
  {/* === MiniApp Tab（小程序 — 嵌入式小应用）=== */}
  {activeTab === 'mini_app' && (
  <>
- <Link href={`/post/new?space=${encodeURIComponent(cleanNamespace)}&module=mini_app`}
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=mini_app`}
  className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
  <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
  <AppWindow className="h-5 w-5" />

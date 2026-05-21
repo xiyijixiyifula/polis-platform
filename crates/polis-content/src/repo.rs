@@ -331,6 +331,61 @@ impl ContentRepo {
         Ok(())
     }
 
+    pub async fn toggle_comment_pin(&self, id: Uuid) -> Result<bool, AppError> {
+        let row = sqlx::query_as::<_, (bool,)>(
+            "UPDATE comments SET is_pinned = NOT is_pinned WHERE id = $1 RETURNING is_pinned",
+        )
+        .bind(id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(row.0)
+    }
+
+    pub async fn find_comment_by_id(&self, id: Uuid) -> Result<Option<Comment>, AppError> {
+        let c = sqlx::query_as::<_, Comment>(
+            "SELECT * FROM comments WHERE id = $1 AND is_deleted = FALSE",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(c)
+    }
+
+    /// List all non-deleted comments on posts authored by `author_id`, ordered by newest
+    pub async fn find_comments_by_post_author(
+        &self,
+        author_id: Uuid,
+        post_id: Option<Uuid>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<(Vec<Comment>, i64), AppError> {
+        let mut conditions = vec!["c.is_deleted = FALSE".to_string(), "p.author_id = $1".to_string()];
+        if let Some(pid) = post_id {
+            conditions.push(format!("c.post_id = '{}'::uuid", pid));
+        }
+        let where_clause = conditions.join(" AND ");
+
+        let count: (i64,) = sqlx::query_as(&format!(
+            "SELECT COUNT(*) FROM comments c JOIN posts p ON c.post_id = p.id WHERE {}",
+            where_clause
+        ))
+        .bind(author_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        let comments = sqlx::query_as::<_, Comment>(&format!(
+            "SELECT c.* FROM comments c JOIN posts p ON c.post_id = p.id WHERE {} ORDER BY c.is_pinned DESC, c.created_at DESC LIMIT $2 OFFSET $3",
+            where_clause
+        ))
+        .bind(author_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok((comments, count.0))
+    }
+
     // ===== 点赞 =====
 
     pub async fn toggle_like(

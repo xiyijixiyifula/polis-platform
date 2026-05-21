@@ -31,7 +31,7 @@ export default function DraftsPage() {
       ) : (
         <div className="space-y-2">
           {drafts.map((d: any) => (
-            <Link key={d.id} href={`/post/new?draft=${d.id}`}>
+            <Link key={d.id} href={`/creations/new?draft=${d.id}`}>
               <div className="card flex items-center gap-3 py-3 px-4 hover:border-gray-300 transition-colors">
                 <Edit3 className="h-4 w-4 text-gray-400 shrink-0" />
                 <div className="flex-1 min-w-0">

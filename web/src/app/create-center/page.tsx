@@ -86,7 +86,7 @@ export default function CreateCenterPage() {
             <span className="ml-2 text-xs text-gray-400">(已发布 {activeContents.length} 篇)</span>
           </p>
         </div>
-        <Link href="/post/new" className="btn-primary inline-flex items-center gap-1.5 text-sm px-4 py-2">
+        <Link href="/creations/new" className="btn-primary inline-flex items-center gap-1.5 text-sm px-4 py-2">
           <PenLine className="h-4 w-4" /> 新建
         </Link>
       </div>
@@ -104,7 +104,7 @@ export default function CreateCenterPage() {
         <div className="card py-16 text-center">
           <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
           <p className="text-gray-500 dark:text-gray-400">还没有创作任何内容</p>
-          <Link href="/post/new" className="text-sm text-primary-600 hover:underline mt-2 inline-block">
+          <Link href="/creations/new" className="text-sm text-primary-600 hover:underline mt-2 inline-block">
             去写第一篇文章 →
           </Link>
         </div>

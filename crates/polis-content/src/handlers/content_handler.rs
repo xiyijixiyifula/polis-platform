@@ -952,6 +952,136 @@ impl ContentHandler {
         }))
     }
 
+    /// 删除评论（评论作者或帖子作者可删除）
+    pub async fn delete_comment(
+        &self,
+        comment_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<(), AppError> {
+        let comment = self
+            .repo
+            .find_comment_by_id(comment_id)
+            .await?
+            .ok_or(AppError::NotFound("Comment not found".to_string()))?;
+
+        // 评论作者或帖子作者可以删除
+        if comment.author_id == user_id {
+            self.repo.delete_comment(comment_id).await?;
+            return Ok(());
+        }
+
+        // 检查是否是帖子作者
+        let post = self
+            .repo
+            .find_post_by_id(comment.post_id)
+            .await?
+            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+
+        if post.author_id == user_id {
+            self.repo.delete_comment(comment_id).await?;
+            return Ok(());
+        }
+
+        Err(AppError::Forbidden("You can only delete your own comments".to_string()))
+    }
+
+    /// 置顶/取消置顶评论（仅帖子作者可操作）
+    pub async fn toggle_comment_pin(
+        &self,
+        comment_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<bool, AppError> {
+        let comment = self
+            .repo
+            .find_comment_by_id(comment_id)
+            .await?
+            .ok_or(AppError::NotFound("Comment not found".to_string()))?;
+
+        let post = self
+            .repo
+            .find_post_by_id(comment.post_id)
+            .await?
+            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+
+        if post.author_id != user_id {
+            return Err(AppError::Forbidden("Only post author can pin comments".to_string()));
+        }
+
+        let pinned = self.repo.toggle_comment_pin(comment_id).await?;
+
+        if pinned && comment.author_id != user_id {
+            let actor_name = self.find_user_name(user_id).await.unwrap_or_else(|| "作者".to_string());
+            let content = format!("{} 置顶了你的评论", actor_name);
+            self.create_notification(comment.author_id, "comment_pin", Some(user_id), Some("comment"), Some(comment_id), &content).await;
+        }
+
+        Ok(pinned)
+    }
+
+    /// 获取创作者中心的评论管理列表
+    /// 用户Ⓚ OS: 创作中心 → 评论管理（左栏作品，右栏该作品评论）
+    pub async fn get_my_comments(
+        &self,
+        author_id: Uuid,
+        post_id: Option<Uuid>,
+        page: u32,
+        page_size: u32,
+    ) -> Result<serde_json::Value, AppError> {
+        let limit = page_size as i64;
+        let offset = ((page - 1) * page_size) as i64;
+
+        let (comments, total) = self
+            .repo
+            .find_comments_by_post_author(author_id, post_id, limit, offset)
+            .await?;
+
+        let mut user_ids: Vec<Uuid> = comments.iter().map(|c| c.author_id).collect();
+        // 去掉重复
+        user_ids.sort();
+        user_ids.dedup();
+
+        let users = self.repo.find_users_batch(&user_ids).await?;
+
+        // 获取关联的帖子标题
+        let post_ids: Vec<Uuid> = comments.iter().map(|c| c.post_id).collect();
+        let posts_map = if !post_ids.is_empty() {
+            let posts = self.repo.find_posts_by_ids(&post_ids).await.unwrap_or_default();
+            posts.into_iter().map(|p| (p.id, p.title)).collect::<std::collections::HashMap<_, _>>()
+        } else {
+            std::collections::HashMap::new()
+        };
+
+        let items: Vec<serde_json::Value> = comments
+            .into_iter()
+            .map(|c| {
+                let author = users.get(&c.author_id).map(|u| serde_json::json!({
+                    "id": u.id,
+                    "username": u.username,
+                    "display_name": u.display_name,
+                    "avatar_url": u.avatar_url,
+                }));
+                serde_json::json!({
+                    "id": c.id,
+                    "post_id": c.post_id,
+                    "post_title": posts_map.get(&c.post_id).cloned().unwrap_or_else(|| "?".to_string()),
+                    "author": author,
+                    "parent_id": c.parent_id,
+                    "body": c.body,
+                    "like_count": c.like_count,
+                    "is_pinned": c.is_pinned,
+                    "created_at": c.created_at,
+                })
+            })
+            .collect();
+
+        Ok(serde_json::json!({
+            "items": items,
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }))
+    }
+
     /// 获取帖子评论
     pub async fn get_comments(&self, post_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
         let comments = self.repo.find_comments_by_post(post_id).await?;
