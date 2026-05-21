@@ -693,7 +693,9 @@ export default function UserProfilePage() {
                      tab === 'novel' ? '小说' :
                      tab === 'game' ? '游戏' :
                      tab === 'mini_app' ? '小程序' :
-                     tab === 'video' ? '视频' : tab}
+                     tab === 'video' ? '视频' :
+                     tab === 'text' ? '图文' :
+                     tab === 'image' ? '图片' : tab}
                     {' '}
                     ({tab === 'overview'
                       ? myCreations.length
@@ -810,36 +812,7 @@ export default function UserProfilePage() {
                 <CreationCard
                   key={creation.id}
                   creation={creation}
-                  isOwner={true}
-                  onEdit={(id: string) => { window.location.href = `/creations/${id}/edit`; }}
-                  onDelete={async (id: string) => {
-                    if (!confirm('确定要删除这个创作吗？此操作不可撤销。')) return;
-                    try {
-                      const token = localStorage.getItem('polis_access_token');
-                      const res = await fetch(`/api/creations/${id}`, {
-                        method: 'DELETE',
-                        headers: token ? { Authorization: `Bearer ${token}` } : {},
-                      });
-                      const data = await res.json();
-                      if (data.code === 0) {
-                        setMyCreations(prev => prev.filter((c: any) => c.id !== id));
-                        setMyContents(prev => prev.filter((p: any) => p.id !== id));
-                      } else alert(data.message || '删除失败');
-                    } catch { alert('网络错误'); }
-                  }}
-                  onVisibilityChange={async (id: string, newVis: string) => {
-                    try {
-                      const token = localStorage.getItem('polis_access_token');
-                      await fetch(`/api/creations/${id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (token || '') },
-                        body: JSON.stringify({ visibility: newVis }),
-                      });
-                      setMyCreations((prev: any[]) =>
-                        prev.map((c: any) => c.id === id ? { ...c, visibility: newVis } : c)
-                      );
-                    } catch {}
-                  }}
+                  isOwner={false}
                 />
               ))}
             </div>
