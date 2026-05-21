@@ -8,7 +8,7 @@ import {
   ArrowLeft, Globe, Lock, Link2, PenLine, FileText, MessageSquareText,
   Home, Plus, X, Tag, Send, Paperclip, Upload, RotateCcw, Clock,
   Maximize2, Minimize2, Save, LogIn, BookOpen, Image, Video, Film,
-  File as FileIcon, CircleCheck, CloudUpload,
+  File as FileIcon, CircleCheck, CloudUpload, Eye,
 } from 'lucide-react';
 import { series as seriesApi, getToken, type Series } from '@/lib/api';
 
