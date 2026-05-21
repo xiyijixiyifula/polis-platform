@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CherryEditor } from '@/components/CherryEditor';
 import {
   ArrowLeft, Globe, Lock, Link2, PenLine, FileText, MessageSquareText,
   Home, Plus, X, Tag, Send, Paperclip, Upload, RotateCcw, Clock,
-  Maximize2, Minimize2, Save, LogIn, BookOpen, Image, Video,
-  File as FileIcon,
+  Maximize2, Minimize2, Save, LogIn, BookOpen, Image, Video, Film,
+  File as FileIcon, CircleCheck, CloudUpload,
 } from 'lucide-react';
 import { series as seriesApi, getToken, type Series } from '@/lib/api';
 
@@ -20,10 +20,14 @@ const MODULE_TYPES = [
   { value: 'share', label: '分享', icon: Link2 },
   { value: 'wiki', label: '知识库', icon: FileIcon },
   { value: 'qa', label: '问答', icon: MessageSquareText },
-  { value: 'video', label: '视频', icon: Video },
   { value: 'novel', label: '小说', icon: FileText },
   { value: 'game', label: '游戏', icon: Globe },
   { value: 'mini_app', label: '小程序', icon: FileIcon },
+];
+
+const SUBMIT_MODULE_TYPES = [
+  ...MODULE_TYPES,
+  { value: 'video', label: '视频', icon: Video },
 ];
 
 const VISIBILITY_OPTIONS = [
@@ -41,8 +45,12 @@ function NewCreationPageInner() {
   const searchParams = useSearchParams();
   const prefillSpaceNs = searchParams.get('space') || '';
   const prefillModule = searchParams.get('module') || '';
+  const prefillContentType = (searchParams.get('type') === 'video') ? 'video' : 'text';
 
-  // ── Form state ──
+  // ── Content type toggle ──
+  const [contentType, setContentType] = useState<'text' | 'video'>(prefillContentType);
+
+  // ── Form state (text) ──
   const [moduleType, setModuleType] = useState(prefillModule || 'forum');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
@@ -80,6 +88,14 @@ function NewCreationPageInner() {
   const mdFileInputRef = useRef<HTMLInputElement>(null);
   const attachFileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Video mode state ──
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoDesc, setVideoDesc] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadedVideo, setUploadedVideo] = useState<{ id: string; title: string } | null>(null);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
+
   // ── Init ──
   useEffect(() => {
     const token = getToken();
@@ -93,29 +109,31 @@ function NewCreationPageInner() {
       setSelectedSubmitModule(prefillModule);
       (async () => {
         try {
-          const res = await fetch(`/api/spaces/${encodeURIComponent(prefillSpaceNs.replace(/\//g, '~'))}`);
+          const ns = encodeURIComponent(prefillSpaceNs.replace(/\//g, '~'));
+          const res = await fetch(`/api/spaces/${ns}`);
           const data = await res.json();
           if (data.code === 0 && data.data) {
             const s = data.data;
-            setSubmissions([{ spaceId: s.id, spaceNs: s.namespace, spaceTitle: s.title, moduleType: prefillModule }]);
+            const mtype = contentType === 'video' ? 'video' : prefillModule;
+            setSubmissions([{ spaceId: s.id, spaceNs: s.namespace, spaceTitle: s.title, moduleType: mtype }]);
           }
         } catch {}
       })();
     }
-  }, [prefillSpaceNs, prefillModule]);
+  }, [prefillSpaceNs, prefillModule, contentType]);
 
-  // Load series when space is prefilled
+  // Load series when space is prefilled (text mode only)
   useEffect(() => {
-    if (!prefillSpaceNs) return;
+    if (!prefillSpaceNs || contentType !== 'text') return;
     setSeriesLoading(true);
     seriesApi.list(prefillSpaceNs).then(res => {
       if (res.code === 0 && res.data) setSeriesList(res.data.filter((s: Series) => s.is_published));
     }).catch(() => {}).finally(() => setSeriesLoading(false));
-  }, [prefillSpaceNs]);
+  }, [prefillSpaceNs, contentType]);
 
-  // Draft restore
+  // Draft restore (text mode only)
   useEffect(() => {
-    if (draftRestored) return;
+    if (draftRestored || contentType !== 'text') return;
     const draftStr = localStorage.getItem(AUTOSAVE_KEY);
     const draftTime = localStorage.getItem(`${AUTOSAVE_KEY}_time`);
     if (draftStr && draftTime && !body && !title) {
@@ -124,7 +142,7 @@ function NewCreationPageInner() {
       setHasDraft(true);
     }
     setDraftRestored(true);
-  }, [draftRestored, body, title]);
+  }, [draftRestored, body, title, contentType]);
 
   const restoreDraft = () => {
     const draftStr = localStorage.getItem(AUTOSAVE_KEY);
@@ -136,9 +154,7 @@ function NewCreationPageInner() {
         if (parsed.tags) setTags(parsed.tags);
         if (parsed.moduleType) setModuleType(parsed.moduleType);
         if (parsed.visibility) setVisibility(parsed.visibility);
-      } catch {
-        setBody(draftStr);
-      }
+      } catch { setBody(draftStr); }
     }
     setShowDraftRestore(false);
   };
@@ -177,9 +193,7 @@ function NewCreationPageInner() {
           const data = await res.json();
           if (data.code === 0 && data.data?.content) {
             setBody(prev => prev ? prev + '\n\n' + data.data.content : data.data.content);
-          } else {
-            alert('导入失败：' + (data.message || '未知错误'));
-          }
+          } else { alert('导入失败：' + (data.message || '未知错误')); }
         };
         reader.readAsDataURL(file);
       } else {
@@ -213,11 +227,64 @@ function NewCreationPageInner() {
     } catch {}
   };
 
+  // ── Video upload ──
+  const handleVideoUpload = async () => {
+    if (!videoFile) { setError('请选择视频文件'); return; }
+    if (!title.trim()) { setError('请输入视频标题'); return; }
+    setPublishing(true); setError(''); setUploadStatus('uploading'); setUploadProgress(0);
+    try {
+      const token = localStorage.getItem('polis_access_token');
+      const result = await new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        const fd = new FormData();
+        fd.append('file', videoFile);
+        fd.append('title', title.trim());
+        if (videoDesc) fd.append('description', videoDesc.trim());
+        fd.append('visibility', visibility);
+
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+        };
+
+        xhr.onload = () => {
+          try {
+            const d = JSON.parse(xhr.responseText);
+            if (d.code === 0 && d.data) resolve(d.data);
+            else reject(new Error(d.message || '上传失败'));
+          } catch { reject(new Error('解析响应失败')); }
+        };
+
+        xhr.onerror = () => reject(new Error('网络错误'));
+        xhr.open('POST', '/api/videos');
+        if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.send(fd);
+      });
+
+      // Publish to communities
+      if (submissions.length > 0 && result.id) {
+        const spaceIds = submissions.map(s => s.spaceId);
+        const token = localStorage.getItem('polis_access_token');
+        await fetch(`/api/videos/${result.id}/publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({ space_ids: spaceIds }),
+        }).catch(() => {});
+      }
+
+      setUploadStatus('success');
+      setUploadedVideo({ id: result.id, title: result.title || title.trim() });
+    } catch (e: any) {
+      setError(e.message || '上传失败');
+      setUploadStatus('error');
+    } finally { setPublishing(false); }
+  };
+
   // ── Community search ──
   const handleSpaceSearch = (q: string) => {
     setSpaceQuery(q);
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     if (!q.trim()) { setSpaceResults([]); return; }
+    const submitModule = contentType === 'video' ? 'video' : selectedSubmitModule;
     searchTimeoutRef.current = setTimeout(async () => {
       setSpaceLoading(true);
       try {
@@ -227,7 +294,7 @@ function NewCreationPageInner() {
           const filtered = data.data.filter((s: any) => {
             const mods = s.enabled_modules;
             if (!mods || !Array.isArray(mods)) return true;
-            return mods.includes(selectedSubmitModule);
+            return mods.includes(submitModule);
           });
           setSpaceResults(filtered);
           setShowSpaceDropdown(true);
@@ -238,20 +305,21 @@ function NewCreationPageInner() {
   };
 
   const addSubmission = (space: any) => {
-    if (submissions.some(s => s.spaceId === space.id && s.moduleType === selectedSubmitModule)) return;
+    const sm = contentType === 'video' ? 'video' : selectedSubmitModule;
+    if (submissions.some(s => s.spaceId === space.id && s.moduleType === sm)) return;
     setSubmissions(prev => [...prev, {
       spaceId: space.id, spaceNs: space.namespace,
-      spaceTitle: space.title, moduleType: selectedSubmitModule,
+      spaceTitle: space.title, moduleType: sm,
     }]);
     setSpaceQuery(''); setSpaceResults([]); setShowSpaceDropdown(false);
   };
 
-  const removeSubmission = (spaceId: string, moduleType: string) => {
-    setSubmissions(prev => prev.filter(s => !(s.spaceId === spaceId && s.moduleType === moduleType)));
+  const removeSubmission = (spaceId: string, mt: string) => {
+    setSubmissions(prev => prev.filter(s => !(s.spaceId === spaceId && s.moduleType === mt)));
   };
 
-  // ── Submit ──
-  const handleSubmit = async (e?: React.FormEvent) => {
+  // ── Submit (text) ──
+  const handleSubmitText = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!title.trim()) { setError('请输入标题'); return; }
     if (!body.trim()) { setError('请输入内容'); return; }
@@ -292,8 +360,8 @@ function NewCreationPageInner() {
     finally { setPublishing(false); }
   };
 
-  // ── Fullscreen editor ──
-  if (isFullscreen) {
+  // ── Fullscreen editor (text only) ──
+  if (isFullscreen && contentType === 'text') {
     return (
       <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -310,7 +378,7 @@ function NewCreationPageInner() {
             {lastSavedTime && <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1"><Save className="h-3 w-3" />已保存 {lastSavedTime}</span>}
             <button type="button" onClick={() => setIsFullscreen(false)}
               className="rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">退出全屏</button>
-            <button onClick={handleSubmit} disabled={publishing || !title.trim() || !body.trim()}
+            <button onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50">
               <Send className="h-4 w-4" /> {publishing ? '发布中...' : '发布'}
             </button>
@@ -327,6 +395,7 @@ function NewCreationPageInner() {
   // ── Main form ──
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 flex gap-6">
+      {/* Sidebar */}
       <div className="w-56 shrink-0 hidden md:block">
         <div className="glass-card p-4 sticky top-20">
           <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4 px-2 flex items-center gap-2">
@@ -347,25 +416,37 @@ function NewCreationPageInner() {
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-6">
+        {/* Top bar */}
+        <div className="flex items-center justify-between mb-4">
           <Link href="/creations" className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition">
             <ArrowLeft size={18} /> 返回
           </Link>
           <div className="flex items-center gap-2">
-            {lastSavedTime && <span className="hidden sm:flex items-center gap-1 text-xs text-green-600 dark:text-green-400"><Save className="h-3 w-3" />已保存 {lastSavedTime}</span>}
-            <button type="button" onClick={() => setIsFullscreen(true)}
-              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="全屏编辑">
-              <Maximize2 className="h-4 w-4" />
-            </button>
-            <button type="button" onClick={handleSubmit} disabled={publishing || !title.trim() || !body.trim()}
-              className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
-              <Send size={15} /> {publishing ? '发布中...' : '发布'}
-            </button>
+            {contentType === 'text' && lastSavedTime && (
+              <span className="hidden sm:flex items-center gap-1 text-xs text-green-600 dark:text-green-400"><Save className="h-3 w-3" />已保存 {lastSavedTime}</span>
+            )}
+            {contentType === 'text' && (
+              <button type="button" onClick={() => setIsFullscreen(true)}
+                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="全屏编辑">
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            )}
+            {contentType === 'text' ? (
+              <button type="button" onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
+                <Send size={15} /> {publishing ? '发布中...' : '发布'}
+              </button>
+            ) : (
+              <button type="button" onClick={handleVideoUpload} disabled={publishing || !videoFile || !title.trim() || uploadStatus === 'uploading'}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
+                <CloudUpload size={15} /> {uploadStatus === 'uploading' ? `上传中 ${uploadProgress}%` : publishing ? '处理中...' : '上传视频'}
+              </button>
+            )}
           </div>
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          {prefillSpaceNs ? `在 ${prefillSpaceNs.split('/')[1] || prefillSpaceNs} 发布` : '发布新作品'}
+          {prefillSpaceNs ? `在 ${prefillSpaceNs.split('/').slice(-1)[0] || prefillSpaceNs} 发布` : '发布新作品'}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
           创作内容后可以投稿到你的社区或其他创作者的社区
@@ -375,7 +456,7 @@ function NewCreationPageInner() {
         {!isLoggedIn && (
           <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-4 flex items-center justify-between mb-4">
             <span className="text-sm text-amber-700 dark:text-amber-400">请先登录后再发布内容</span>
-            <Link href={`/login?redirect=${encodeURIComponent('/creations/new?space=' + encodeURIComponent(prefillSpaceNs))}`}
+            <Link href={`/login?redirect=${encodeURIComponent('/creations/new?space=' + encodeURIComponent(prefillSpaceNs) + (contentType === 'video' ? '&type=video' : ''))}`}
               className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-medium text-white transition-colors">
               <LogIn className="h-4 w-4" />去登录
             </Link>
@@ -389,8 +470,8 @@ function NewCreationPageInner() {
           </div>
         )}
 
-        {/* Draft restore */}
-        {showDraftRestore && (
+        {/* Draft restore (text only) */}
+        {contentType === 'text' && showDraftRestore && (
           <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3 flex items-center justify-between border border-blue-200 dark:border-blue-800 mb-4">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-blue-500" />
@@ -410,7 +491,30 @@ function NewCreationPageInner() {
           </div>
         )}
 
+        {/* === Content Type Toggle === */}
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-5 w-fit">
+          <button type="button" onClick={() => { setContentType('text'); setError(''); }}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              contentType === 'text'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}>
+            <PenLine size={16} />图文
+          </button>
+          <button type="button" onClick={() => { setContentType('video'); setError(''); }}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              contentType === 'video'
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}>
+            <Film size={16} />视频
+          </button>
+        </div>
+
         <div className="space-y-5">
+          {/* ==================== TEXT MODE ==================== */}
+          {contentType === 'text' && (
+          <>
           {/* Module type */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-gray-500 dark:text-gray-400">模块:</span>
@@ -458,8 +562,10 @@ function NewCreationPageInner() {
               {seriesLoading && <span className="text-xs text-gray-400 animate-pulse">加载系列...</span>}
             </div>
           )}
+          </>
+          )}
 
-          {/* Community submission */}
+          {/* ==================== COMMUNITY SUBMISSION (shared) ==================== */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               投稿到社区 <span className="text-xs text-gray-400 font-normal">(可选，可多选)</span>
@@ -468,17 +574,23 @@ function NewCreationPageInner() {
               <div className="flex flex-wrap gap-2 mb-3">
                 {submissions.map((s, i) => (
                   <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 text-xs rounded-full">
-                    @{s.spaceTitle || s.spaceNs} / {MODULE_TYPES.find(m => m.value === s.moduleType)?.label}
+                    @{s.spaceTitle || s.spaceNs} / {SUBMIT_MODULE_TYPES.find(m => m.value === s.moduleType)?.label || s.moduleType}
                     <button onClick={() => removeSubmission(s.spaceId, s.moduleType)} className="hover:text-red-500"><X size={12} /></button>
                   </span>
                 ))}
               </div>
             )}
             <div className="flex gap-2">
-              <select value={selectedSubmitModule} onChange={(e) => setSelectedSubmitModule(e.target.value)}
-                className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500">
-                {MODULE_TYPES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
+              {contentType === 'text' ? (
+                <select value={selectedSubmitModule} onChange={(e) => setSelectedSubmitModule(e.target.value)}
+                  className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:ring-2 focus:ring-primary-500">
+                  {SUBMIT_MODULE_TYPES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
+              ) : (
+                <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-700">
+                  <Video size={14} /> 视频
+                </div>
+              )}
               <div className="relative flex-1">
                 <input type="text" value={spaceQuery} onChange={(e) => handleSpaceSearch(e.target.value)}
                   onFocus={() => { if (spaceResults.length > 0) setShowSpaceDropdown(true); }}
@@ -502,6 +614,9 @@ function NewCreationPageInner() {
             </div>
           </div>
 
+          {/* ==================== TEXT MODE: Title + Editor + Toolbar ==================== */}
+          {contentType === 'text' && (
+          <>
           {/* Title */}
           <div>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
@@ -541,11 +656,130 @@ function NewCreationPageInner() {
                 </span>
               )}
             </div>
-            <button type="button" onClick={handleSubmit} disabled={publishing || !title.trim() || !body.trim()}
+            <button type="button" onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
               className="flex items-center gap-2 px-8 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
               <Send size={16} />{publishing ? '发布中...' : '发布作品'}
             </button>
           </div>
+          </>
+          )}
+
+          {/* ==================== VIDEO MODE ==================== */}
+          {contentType === 'video' && (
+          <>
+          {/* Success state */}
+          {uploadStatus === 'success' && uploadedVideo && (
+            <div className="rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-6 text-center">
+              <CircleCheck className="h-10 w-10 text-green-500 mx-auto mb-2" />
+              <h3 className="text-lg font-semibold text-green-800 dark:text-green-300">视频上传成功！</h3>
+              <p className="text-sm text-green-600 dark:text-green-400 mt-1 mb-4">
+                {uploadedVideo.title} — 正在后台转码中
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <Link href={`/video/${uploadedVideo.id}`}
+                  className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-5 py-2.5 rounded-lg transition-colors">
+                  <Eye size={16} />查看视频
+                </Link>
+                <button type="button" onClick={() => {
+                  setUploadStatus('idle'); setUploadedVideo(null); setTitle('');
+                  setVideoDesc(''); setVideoFile(null); setSubmissions([]);
+                }}
+                  className="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                  继续上传
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Upload form */}
+          {uploadStatus !== 'success' && (
+          <>
+          {/* File drop zone */}
+          <div
+            onClick={() => videoFileInputRef.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault(); e.stopPropagation();
+              const f = e.dataTransfer.files?.[0];
+              if (f && f.type.startsWith('video/')) setVideoFile(f);
+            }}
+            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+              videoFile
+                ? 'border-primary-400 bg-primary-50/50 dark:bg-primary-900/10'
+                : 'border-gray-300 dark:border-gray-600 hover:border-primary-400'
+            }`}>
+            <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) setVideoFile(f); e.target.value = ''; }} />
+            {videoFile ? (
+              <div>
+                <Video className="h-10 w-10 mx-auto text-primary-500 mb-3" />
+                <p className="text-sm font-medium text-gray-900 dark:text-white">{videoFile.name}</p>
+                <p className="text-xs text-gray-400 mt-1">{(videoFile.size / 1024 / 1024).toFixed(1)} MB</p>
+                <button type="button" onClick={(e) => { e.stopPropagation(); setVideoFile(null); }}
+                  className="text-xs text-red-500 hover:underline mt-2">移除</button>
+              </div>
+            ) : (
+              <div>
+                <CloudUpload className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">点击或拖拽视频文件到此处</p>
+                <p className="text-xs text-gray-400 mt-1">支持 MP4 / MOV / AVI / MKV / WebM，最大 600MB</p>
+              </div>
+            )}
+          </div>
+
+          {/* Title */}
+          <div>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+              placeholder="视频标题..."
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 transition-all" />
+          </div>
+
+          {/* Description */}
+          <div>
+            <textarea value={videoDesc} onChange={(e) => setVideoDesc(e.target.value)}
+              rows={3} placeholder="视频描述（可选）..."
+              className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 transition-all resize-none" />
+          </div>
+
+          {/* Visibility */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm text-gray-500 dark:text-gray-400">可见性:</span>
+            {VISIBILITY_OPTIONS.map(opt => {
+              const Icon = opt.icon;
+              return (
+                <button key={opt.value} type="button" onClick={() => { setVisibility(opt.value); if (opt.value !== 'unlisted') setPassword(''); }}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs border transition-colors ${
+                    visibility === opt.value
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                  }`}>
+                  <Icon size={14} />
+                  <div className="text-left"><div className="font-medium">{opt.label}</div><div className="text-[10px] opacity-70">{opt.desc}</div></div>
+                </button>
+              );
+            })}
+            {visibility === 'unlisted' && (
+              <input type="text" value={password} onChange={(e) => setPassword(e.target.value)}
+                className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent w-40"
+                placeholder="分享密码（可选）" />
+            )}
+          </div>
+
+          {/* Upload progress */}
+          {uploadStatus === 'uploading' && (
+            <div>
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-1.5">
+                <span>上传中...</span><span>{uploadProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                <div className="h-full bg-primary-500 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+              </div>
+            </div>
+          )}
+          </>
+          )}
+          </>
+          )}
         </div>
       </div>
     </div>
