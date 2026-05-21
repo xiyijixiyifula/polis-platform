@@ -266,6 +266,8 @@ impl SpaceRepo {
                 u.verified,
                 COALESCE(u.notification_prefs, '{}'::jsonb) as notification_prefs,
                 u.created_at,
+                0::bigint as total_likes,
+                0::bigint as post_count,
                 m.role,
                 m.joined_at
             FROM memberships m
@@ -296,6 +298,8 @@ impl SpaceRepo {
                     verified: r.get("verified"),
                     notification_prefs: r.get("notification_prefs"),
                     created_at: r.get("created_at"),
+                    total_likes: r.get("total_likes"),
+                    post_count: r.get("post_count"),
                 },
                 role: serde_json::from_value(serde_json::Value::String(role_str)).unwrap_or_default(),
                 joined_at: r.get("joined_at"),
