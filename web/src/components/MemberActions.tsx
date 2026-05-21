@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Ban, Shield, Clock } from 'lucide-react';
+import { Ban, Shield, Clock, X } from 'lucide-react';
 import { spaces } from '@/lib/api';
 
 interface Props {
@@ -13,24 +13,30 @@ interface Props {
 }
 
 const BAN_DURATIONS = [
-  { label: '1 小时', hours: 1 },
-  { label: '24 小时', hours: 24 },
-  { label: '3 天', hours: 72 },
-  { label: '7 天', hours: 168 },
-  { label: '30 天', hours: 720 },
+  { label: '1h', hours: 1 },
+  { label: '24h', hours: 24 },
+  { label: '3d', hours: 72 },
+  { label: '7d', hours: 168 },
+  { label: '30d', hours: 720 },
   { label: '永久', hours: null as any },
 ];
 
+const ROLE_OPTIONS = [
+  { role: 'admin', label: '管理员', color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' },
+  { role: 'moderator', label: '版主', color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+  { role: 'member', label: '成员', color: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' },
+];
+
 export function MemberActions({ namespace, userId, username, currentRole, onAction }: Props) {
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [showBanMenu, setShowBanMenu] = useState(false);
+  const [showRoles, setShowRoles] = useState(false);
+  const [showBan, setShowBan] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleBan = async (reason: string, durationHours: number | null) => {
     setLoading(true);
     try {
       await spaces.banMember(namespace, userId, reason, durationHours ?? undefined);
-      setShowBanMenu(false);
+      setShowBan(false);
       onAction();
     } catch (e: any) {
       alert(e?.message || '操作失败');
@@ -56,7 +62,7 @@ export function MemberActions({ namespace, userId, username, currentRole, onActi
     setLoading(true);
     try {
       await spaces.setMemberRole(namespace, userId, role);
-      setShowDropdown(false);
+      setShowRoles(false);
       onAction();
     } catch (e: any) {
       alert(e?.message || '操作失败');
@@ -65,78 +71,80 @@ export function MemberActions({ namespace, userId, username, currentRole, onActi
     }
   };
 
+  const cancelAll = () => { setShowRoles(false); setShowBan(false); };
+
   return (
     <div className="flex items-center gap-1 shrink-0" onClick={e => e.preventDefault()}>
-      {/* Role dropdown */}
-      <div className="relative">
-        <button
-          onClick={() => { setShowDropdown(!showDropdown); setShowBanMenu(false); }}
-          disabled={loading}
-          className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          title="设置角色"
-        >
-          <Shield className="h-3.5 w-3.5" />
-        </button>
-        {showDropdown && (
-          <div className="absolute right-0 top-full mt-1 w-28 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-[60]">
-            {['admin', 'moderator', 'member'].map(role => (
-              <button
-                key={role}
-                onClick={() => handleSetRole(role)}
-                disabled={currentRole === role}
-                className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                  currentRole === role
-                    ? 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                {{'admin': '管理员', 'moderator': '版主', 'member': '成员'}[role]}
-                {currentRole === role && <span className="ml-1 text-primary-500">✓</span>}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-      {/* Ban button */}
-      <div className="relative">
-        <button
-          onClick={() => { setShowBanMenu(!showBanMenu); setShowDropdown(false); }}
-          disabled={loading}
-          className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-          title={currentRole === 'banned' ? '解封成员' : '封禁成员'}
-        >
-          <Ban className="h-3.5 w-3.5" />
-        </button>
-        {showBanMenu && currentRole !== 'banned' && (
-          <div className="absolute right-0 top-full mt-1 w-32 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg py-1 z-[60]">
-            <p className="px-3 py-1 text-[10px] text-gray-400 font-medium">封禁时长</p>
-            {BAN_DURATIONS.map((d) => (
-              <button
-                key={d.label}
-                onClick={() => handleBan(`被管理员封禁（${d.label}）`, d.hours)}
-                className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
-                  d.hours === null
-                    ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {d.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-        {currentRole === 'banned' && (
-          <button
-            onClick={handleUnban}
-            className="absolute right-0 top-full mt-1 px-2 py-1 text-[10px] bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded hover:bg-green-100 dark:hover:bg-green-900/30 whitespace-nowrap z-[60]"
-          >
-            解封
+      {/* 横向行内角色选择 */}
+      {showRoles ? (
+        <div className="flex items-center gap-1">
+          {ROLE_OPTIONS.map(opt => (
+            <button
+              key={opt.role}
+              onClick={() => handleSetRole(opt.role)}
+              disabled={loading || currentRole === opt.role}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors whitespace-nowrap ${
+                currentRole === opt.role
+                  ? 'ring-1 ring-primary-400 opacity-70'
+                  : 'hover:opacity-80'
+              } ${opt.color}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+          <button onClick={cancelAll} className="p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <X className="h-3 w-3" />
           </button>
-        )}
-      </div>
+        </div>
+      ) : showBan ? (
+        /* 横向行内封禁时长选择 */
+        <div className="flex items-center gap-1">
+          {BAN_DURATIONS.map((d) => (
+            <button
+              key={d.label}
+              onClick={() => handleBan(`被管理员封禁（${d.label}）`, d.hours)}
+              disabled={loading}
+              className={`text-[10px] px-1.5 py-0.5 rounded font-medium transition-colors whitespace-nowrap ${
+                d.hours === null
+                  ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/40'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {d.label}
+            </button>
+          ))}
+          <button onClick={cancelAll} className="p-0.5 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ) : currentRole === 'banned' ? (
+        <button
+          onClick={handleUnban}
+          className="text-[10px] px-2 py-0.5 rounded font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/40 whitespace-nowrap transition-colors"
+        >
+          解封
+        </button>
+      ) : (
+        /* 默认按钮 */
+        <>
+          <button
+            onClick={() => { setShowRoles(true); setShowBan(false); }}
+            disabled={loading}
+            className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            title="设置角色"
+          >
+            <Shield className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => { setShowBan(true); setShowRoles(false); }}
+            disabled={loading}
+            className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            title="封禁成员"
+          >
+            <Ban className="h-3.5 w-3.5" />
+          </button>
+        </>
+      )}
     </div>
   );
 }

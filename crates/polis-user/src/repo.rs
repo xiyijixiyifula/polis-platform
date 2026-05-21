@@ -149,4 +149,26 @@ impl UserRepo {
         .await?;
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
+
+    /// 获取用户所有帖子的获赞总数
+    pub async fn get_user_total_likes(&self, user_id: Uuid) -> Result<i64, AppError> {
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(SUM(like_count), 0) FROM posts WHERE author_id = $1 AND is_deleted = FALSE"
+        )
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(total)
+    }
+
+    /// 获取用户发帖数量
+    pub async fn get_user_post_count(&self, user_id: Uuid) -> Result<i64, AppError> {
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM posts WHERE author_id = $1 AND is_deleted = FALSE"
+        )
+        .bind(user_id)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(count)
+    }
 }

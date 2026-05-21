@@ -872,6 +872,8 @@ impl ContentRepo {
                 verified,
                 notification_prefs,
                 created_at,
+                total_likes: 0,
+                post_count: 0,
             });
         }
         Ok(map)

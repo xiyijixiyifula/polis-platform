@@ -25,6 +25,12 @@ export interface SubmissionInfo {
   is_pinned: boolean;
   module_views: number;
   submitted_at: string;
+  community_member_count?: number;
+  community_post_count?: number;
+  community_level?: number;
+  community_xp?: number;
+  community_like_count?: number;
+  community_comment_count?: number;
 }
 
 export interface ContentCardCreator {
@@ -505,31 +511,51 @@ export default function ContentCard({
             </button>
 
             {expandedSubs && (
-              <div className="mt-2 space-y-1">
+              <div className="mt-2 space-y-1.5">
                 {submissions.map((sub) => (
                   <div key={sub.ref_id}
-                    className="flex items-center justify-between text-xs py-1.5 px-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 transition">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/space/${encodeURIComponent(sub.space.namespace)}`; }}
-                        className="text-primary-600 dark:text-primary-400 hover:underline cursor-pointer truncate"
-                      >
-                        @{sub.space.namespace.split('/')[0]}/{sub.space.title || sub.space.namespace}/{getModuleLabel(sub.module_type)}
-                      </span>
-                      {sub.is_pinned && <span className="text-amber-500 shrink-0">📌置顶</span>}
-                      {sub.display_status === 'hidden' && <span className="text-red-500 shrink-0">已隐藏</span>}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <span className="text-gray-400">
-                        <Eye size={11} className="inline mr-0.5" />{formatCount(sub.module_views)}
-                      </span>
-                      {onWithdraw && (
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onWithdraw(sub.ref_id); }}
-                          className="text-red-500 hover:text-red-700"
+                    className="text-xs py-1.5 px-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/space/${encodeURIComponent(sub.space.namespace)}`; }}
+                          className="text-primary-600 dark:text-primary-400 hover:underline cursor-pointer truncate font-medium"
                         >
-                          撤稿
-                        </button>
+                          @{sub.space.namespace.split('/')[0]}/{sub.space.title || sub.space.namespace}/{getModuleLabel(sub.module_type)}
+                        </span>
+                        {sub.is_pinned && <span className="text-amber-500 shrink-0">📌置顶</span>}
+                        {sub.display_status === 'hidden' && <span className="text-red-500 shrink-0">已隐藏</span>}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="text-gray-400">
+                          <Eye size={11} className="inline mr-0.5" />{formatCount(sub.module_views)}
+                        </span>
+                        {onWithdraw && (
+                          <button
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onWithdraw(sub.ref_id); }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            撤稿
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {/* Community stats row */}
+                    <div className="flex items-center gap-3 mt-1 text-gray-400">
+                      {sub.community_member_count !== undefined && (
+                        <span>👥 {formatCount(sub.community_member_count)} 成员</span>
+                      )}
+                      {sub.community_post_count !== undefined && (
+                        <span>📄 {formatCount(sub.community_post_count)} 帖子</span>
+                      )}
+                      {sub.community_level != null && (
+                        <span className="text-amber-500">⭐ Lv.{sub.community_level}</span>
+                      )}
+                      {sub.community_like_count !== undefined && (
+                        <span>❤️ {formatCount(sub.community_like_count)}</span>
+                      )}
+                      {sub.community_comment_count !== undefined && (
+                        <span>💬 {formatCount(sub.community_comment_count)}</span>
                       )}
                     </div>
                   </div>

@@ -121,6 +121,80 @@ impl CreationHandler {
         Ok((public_list, pagination))
     }
 
+    /// 公开获取某用户的创作列表（无需登录，仅返回公开作品）
+    pub async fn list_user_public_creations(
+        &self,
+        username: &str,
+        query: ListCreationsQuery,
+        current_user_id: Option<Uuid>,
+    ) -> Result<(Vec<CreationPublic>, Pagination), AppError> {
+        // 先查用户
+        let user: polis_core::models::User = sqlx::query_as(
+            "SELECT * FROM users WHERE username = $1",
+        )
+        .bind(username)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?
+        .ok_or(AppError::NotFound("用户不存在".to_string()))?;
+
+        let page = query.page.unwrap_or(1);
+        let page_size = query.page_size.unwrap_or(20);
+        let offset = ((page as i64) - 1) * (page_size as i64);
+
+        let creations = sqlx::query_as::<_, Creation>(
+            r#"
+            SELECT * FROM creations
+            WHERE creator_id = $1
+              AND visibility != 'private'
+              AND ($2::text IS NULL OR content_type = $2)
+              AND ($3::text IS NULL OR status = $3)
+            ORDER BY created_at DESC
+            LIMIT $4 OFFSET $5
+            "#,
+        )
+        .bind(user.id)
+        .bind(&query.content_type)
+        .bind(&query.status)
+        .bind(page_size as i64)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
+        let total: i64 = sqlx::query_scalar(
+            r#"
+            SELECT COUNT(*) FROM creations
+            WHERE creator_id = $1
+              AND visibility != 'private'
+              AND ($2::text IS NULL OR content_type = $2)
+              AND ($3::text IS NULL OR status = $3)
+            "#,
+        )
+        .bind(user.id)
+        .bind(&query.content_type)
+        .bind(&query.status)
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or(0);
+
+        let uid = current_user_id.unwrap_or_default();
+        let mut public_list = Vec::new();
+        for creation in creations {
+            let public = creation_to_public(&self.pool, creation, uid).await?;
+            public_list.push(public);
+        }
+
+        let pagination = Pagination {
+            page,
+            page_size,
+            total: total as u64,
+            total_pages: ((total as f64) / (page_size as f64)).ceil() as u32,
+        };
+
+        Ok((public_list, pagination))
+    }
+
     /// 获取创作详情
     pub async fn get_creation(
         &self,
@@ -336,11 +410,12 @@ impl CreationHandler {
             return Err(AppError::Forbidden("无权查看".to_string()));
         }
 
-        let rows = sqlx::query_as::<_, (Uuid, String, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String)>(
+        let rows = sqlx::query_as::<_, (Uuid, String, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String, i64, i64)>(
             r#"
             SELECT
                 r.id, r.module_type, r.display_status, r.is_pinned,
-                r.module_views, r.created_at, s.id, s.namespace, s.title
+                r.module_views, r.created_at, s.id, s.namespace, s.title,
+                COALESCE(s.member_count, 0), COALESCE(s.post_count, 0)
             FROM community_module_refs r
             JOIN spaces s ON s.id = r.space_id
             WHERE r.creation_id = $1
@@ -354,7 +429,7 @@ impl CreationHandler {
 
         let list: Vec<SubmissionInfo> = rows
             .into_iter()
-            .map(|(ref_id, module_type, display_status, is_pinned, module_views, submitted_at, space_id, ns, title)| {
+            .map(|(ref_id, module_type, display_status, is_pinned, module_views, submitted_at, space_id, ns, title, member_count, post_count)| {
                 SubmissionInfo {
                     ref_id,
                     space: SpaceMini { id: space_id, namespace: ns, title },
@@ -363,6 +438,12 @@ impl CreationHandler {
                     is_pinned,
                     module_views,
                     submitted_at,
+                    community_member_count: member_count,
+                    community_post_count: post_count,
+                    community_level: None,
+                    community_xp: None,
+                    community_like_count: 0,
+                    community_comment_count: 0,
                 }
             })
             .collect();
@@ -596,12 +677,13 @@ async fn creation_to_public(
     .unwrap_or(false);
 
     let submissions = if current_user_id == creation.creator_id {
-        let subs: Vec<(Uuid, String, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String)> =
+        let subs: Vec<(Uuid, String, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String, i64, i64)> =
             sqlx::query_as(
                 r#"
                 SELECT
                     r.id, r.module_type, r.display_status, r.is_pinned,
-                    r.module_views, r.created_at, s.id, s.namespace, s.title
+                    r.module_views, r.created_at, s.id, s.namespace, s.title,
+                    COALESCE(s.member_count, 0), COALESCE(s.post_count, 0)
                 FROM community_module_refs r
                 JOIN spaces s ON s.id = r.space_id
                 WHERE r.creation_id = $1
@@ -614,7 +696,7 @@ async fn creation_to_public(
             .unwrap_or_default();
 
         subs.into_iter()
-            .map(|(ref_id, module_type, display_status, is_pinned, module_views, submitted_at, space_id, ns, title)| {
+            .map(|(ref_id, module_type, display_status, is_pinned, module_views, submitted_at, space_id, ns, title, member_count, post_count)| {
                 SubmissionInfo {
                     ref_id,
                     space: SpaceMini { id: space_id, namespace: ns, title },
@@ -623,6 +705,12 @@ async fn creation_to_public(
                     is_pinned,
                     module_views,
                     submitted_at,
+                    community_member_count: member_count,
+                    community_post_count: post_count,
+                    community_level: None,
+                    community_xp: None,
+                    community_like_count: 0,
+                    community_comment_count: 0,
                 }
             })
             .collect()

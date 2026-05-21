@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Filter } from 'lucide-react';
+import { Plus, Filter, PenLine, FileText, MessageSquareText, Home } from 'lucide-react';
 import CreationCard, { type CreationPublic } from '@/components/CreationCard';
 import SubmitDialog from '@/components/SubmitDialog';
 
+type SidebarSection = 'publish' | 'content' | 'interactions';
+
 export default function MyCreationsPage() {
+  const [activeSection, setActiveSection] = useState<SidebarSection>('content');
   const [creations, setCreations] = useState<CreationPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -134,6 +137,12 @@ export default function MyCreationsPage() {
     } catch { /* 静默 */ }
   };
 
+  const sidebarItems: { key: SidebarSection; label: string; icon: React.ReactNode; href?: string }[] = [
+    { key: 'publish', label: '发布作品', icon: <PenLine size={18} />, href: '/creations/new' },
+    { key: 'content', label: '内容管理', icon: <FileText size={18} /> },
+    { key: 'interactions', label: '互动管理', icon: <MessageSquareText size={18} /> },
+  ];
+
   const filters = [
     { value: 'all', label: '全部' },
     { value: 'published', label: '已发布' },
@@ -142,91 +151,180 @@ export default function MyCreationsPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      {/* 页面头部 */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">我的创作</h1>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <select value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
-                         text-sm rounded-lg px-3 py-2 pr-8 text-gray-700 dark:text-gray-300
-                         focus:outline-none focus:ring-2 focus:ring-primary-500">
-              {filters.map((f) => (
-                <option key={f.value} value={f.value}>{f.label}</option>
-              ))}
-            </select>
-            <Filter size={14}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-
-          <Link href="/creations/new"
-            className="flex items-center gap-1 px-4 py-2 bg-primary-600 text-white text-sm font-medium
-                       rounded-lg hover:bg-primary-700 transition">
-            <Plus size={16} /> 新建创作
-          </Link>
+    <div className="mx-auto max-w-6xl px-4 py-10 flex gap-6">
+      {/* ===== 左侧边栏 ===== */}
+      <div className="w-56 shrink-0 hidden md:block">
+        <div className="glass-card p-4 sticky top-20">
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-4 px-2 flex items-center gap-2">
+            <Home size={16} className="text-primary-500" />
+            创作中心
+          </h2>
+          <nav className="space-y-1">
+            {sidebarItems.map((item) => {
+              const isActive = activeSection === item.key;
+              const className = `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                isActive
+                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200'
+              }`;
+              if (item.href) {
+                return (
+                  <Link key={item.key} href={item.href} className={className}>
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+              return (
+                <button key={item.key} onClick={() => setActiveSection(item.key)} className={className}>
+                  {item.icon}
+                  <span>{item.label}</span>
+                  {item.key === 'content' && <span className="ml-auto text-xs text-gray-400">{creations.length}</span>}
+                </button>
+              );
+            })}
+          </nav>
         </div>
       </div>
 
-      {/* 加载状态 */}
-      {loading && creations.length === 0 && (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="glass-card rounded-xl p-4 animate-pulse">
-              <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-4" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+      {/* ===== 右侧内容区 ===== */}
+      <div className="flex-1 min-w-0">
+        {/* 发布作品（快捷入口） */}
+        {activeSection === 'publish' && (
+          <div className="glass-card p-10 text-center">
+            <PenLine className="h-12 w-12 mx-auto mb-3 text-primary-400" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">发布新作品</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              创作内容后可以投稿到你的社区或其他创作者的社区
+            </p>
+            <Link href="/creations/new"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition shadow-lg shadow-primary-600/20">
+              <Plus size={20} /> 开始创作
+            </Link>
+          </div>
+        )}
+
+        {/* 内容管理 */}
+        {activeSection === 'content' && (
+          <>
+            {/* 顶部操作栏 */}
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">内容管理</h1>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <select value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
+                               text-sm rounded-lg px-3 py-2 pr-8 text-gray-700 dark:text-gray-300
+                               focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    {filters.map((f) => (
+                      <option key={f.value} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                  <Filter size={14}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                </div>
+
+                <Link href="/creations/new"
+                  className="flex items-center gap-1 px-4 py-2 bg-primary-600 text-white text-sm font-medium
+                             rounded-lg hover:bg-primary-700 transition">
+                  <Plus size={16} /> 新建创作
+                </Link>
+              </div>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* 空状态 */}
-      {creations.length === 0 && !loading && (
-        <div className="glass-card py-16 text-center text-gray-400 dark:text-gray-500">
-          <Plus className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="text-lg mb-2">还没有创作内容</p>
-          <p className="text-sm mb-6">创建你的第一篇内容，可以投稿到任意社区</p>
-          <Link href="/creations/new"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
-            <Plus size={18} /> 开始创作
-          </Link>
-        </div>
-      )}
+            {/* 加载状态 */}
+            {loading && creations.length === 0 && (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="glass-card rounded-xl p-4 animate-pulse">
+                    <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-4" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
+                  </div>
+                ))}
+              </div>
+            )}
 
-      {/* 创作列表 */}
-      {creations.length > 0 && (
-        <div className="space-y-4">
-          {creations.map((creation) => (
-            <CreationCard key={creation.id}
-              creation={creation}
-              showSource={true}
-              isOwner={true}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onSubmit={handleSubmit}
-              onLike={handleLike}
-              onBookmark={handleBookmark}
-              onWithdraw={handleWithdraw}
-              onVisibilityChange={handleVisibilityChange}
-            />
-          ))}
+            {/* 空状态 */}
+            {creations.length === 0 && !loading && (
+              <div className="glass-card py-16 text-center text-gray-400 dark:text-gray-500">
+                <Plus className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p className="text-lg mb-2">还没有创作内容</p>
+                <p className="text-sm mb-6">创建你的第一篇内容，可以投稿到任意社区</p>
+                <Link href="/creations/new"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                  <Plus size={18} /> 开始创作
+                </Link>
+              </div>
+            )}
 
-          {/* 加载更多 */}
-          {hasMore && (
-            <div className="text-center pt-4">
-              <button onClick={() => loadCreations(false)}
-                disabled={loading}
-                className="px-6 py-2 text-sm text-primary-600 border border-primary-200
-                           rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20
-                           disabled:opacity-50 transition">
-                {loading ? '加载中...' : '加载更多'}
-              </button>
+            {/* 创作列表 */}
+            {creations.length > 0 && (
+              <div className="space-y-4">
+                {creations.map((creation) => (
+                  <CreationCard key={creation.id}
+                    creation={creation}
+                    showSource={true}
+                    isOwner={true}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onSubmit={handleSubmit}
+                    onLike={handleLike}
+                    onBookmark={handleBookmark}
+                    onWithdraw={handleWithdraw}
+                    onVisibilityChange={handleVisibilityChange}
+                  />
+                ))}
+
+                {/* 加载更多 */}
+                {hasMore && (
+                  <div className="text-center pt-4">
+                    <button onClick={() => loadCreations(false)}
+                      disabled={loading}
+                      className="px-6 py-2 text-sm text-primary-600 border border-primary-200
+                                 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20
+                                 disabled:opacity-50 transition">
+                      {loading ? '加载中...' : '加载更多'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* 互动管理 */}
+        {activeSection === 'interactions' && (
+          <div className="glass-card p-10 text-center">
+            <MessageSquareText className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">互动管理</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              查看和管理你的内容收到的评论、点赞等互动信息
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+              <div className="glass-card p-4 text-center">
+                <p className="text-2xl font-bold text-primary-600">
+                  {creations.reduce((sum: number, c: any) => sum + (c.comment_count || 0), 0)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">总评论数</p>
+              </div>
+              <div className="glass-card p-4 text-center">
+                <p className="text-2xl font-bold text-red-500">
+                  {creations.reduce((sum: number, c: any) => sum + (c.like_count || 0), 0)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">总获赞数</p>
+              </div>
+              <div className="glass-card p-4 text-center">
+                <p className="text-2xl font-bold text-blue-500">
+                  {creations.reduce((sum: number, c: any) => sum + (c.view_count || 0), 0)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">总阅读量</p>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* 投稿弹窗 */}
       {submitDialogOpen && (

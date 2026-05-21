@@ -4,8 +4,60 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.79', date: '2026-05-11', title: '🐛 修复社区帖子列表返回空数据 — enabled_modules 过滤误伤',
+      ver: '0.3.86', date: '2026-05-20', title: '🛡️ 社区增强 — 封禁+密码+等级+编辑+关注+通知',
       isLatest: true,
+      items: [
+        '🔒 **封禁系统**: 时长封禁（1h/24h/3d/7d/30d/永久），到期自动解封（PostgreSQL auto_unban_expired_members 函数），封禁期间禁止重新加入',
+        '🔐 **密码保护社区**: 未公开（unlisted）社区支持 argon2 密码访问，通过 x-polis-space-password HTTP header 验证',
+        '📊 **社区等级系统**: 经验值计算（Lv.1-5），渐变色徽章展示，灵感来自 Discord 等级体系',
+        '✏️ **社区编辑功能**: 创建者可修改社区标题和描述（Modal 弹窗表单）',
+        '🔔 **社区事件通知**: 加入/退出/封禁/角色变更/加入申请审批 — 写入 notifications 表，类型前缀 space_',
+        '👥 **关注/取关社区**: Bell/BellOff 图标一键关注，复用 follows 表（followee_type=space）',
+        '🛡️ **成员角色管理重做**: Shield/Ban 按钮改为行内横向展示，不再使用下拉菜单，避免被 glass-card overflow:hidden 裁切',
+        '🐛 **修复**: Unlisted 社区权限（polos-content 端检查成员资格，支持密码验证），角色按钮 z-index 裁切问题',
+        '🗄️ **数据库迁移 016**: spaces 表增加 password_hash/follower_count，memberships 表增加 ban_reason/banned_at/ban_expires_at',
+      ],
+    },
+    {
+      ver: '0.3.82', date: '2026-05-20', title: '👥 社区成员管理 + 内容可见性 + 精选功能',
+      isLatest: false,
+      items: [
+        '👥 **社区成员管理面板**: 成员列表展示，角色标签（创建者/管理员/版主/成员）带渐变色徽章',
+        '🔍 **内容可见性控制**: 公开（public）/ 私有（private）/ 未公开（unlisted）三种模式 — 私有需审批加入，未公开仅链接访问',
+        '⭐ **精选功能**: 社区可标记帖子为精选，首页热门趋势展示',
+        '🔧 **加入申请审批**: 私有社区支持申请→审批/拒绝流程，申请人可留言',
+      ],
+    },
+    {
+      ver: '0.3.81', date: '2026-05-19', title: '🧪 维护 — E2E测试动态化 + 交叉编译配置',
+      isLatest: false,
+      items: [
+        '🧪 **E2E 测试动态化**: 全部测试使用动态注册用户，移除硬编码种子数据，避免测试数据污染',
+        '📦 **交叉编译支持**: reqwest/sqlx 切换到 rustls（移除 OpenSSL 依赖），本地可交叉编译 x86_64-unknown-linux-gnu',
+        '🔧 **定时任务优化**: 种子数据根除 + 交叉编译说明文档完善',
+        '📄 **部署文档**: 永久化交叉编译配置 + GitHub Releases 部署流程文档',
+      ],
+    },
+    {
+      ver: '0.3.80', date: '2026-05-19', title: '🎬 视频模块 + 引用驱动架构 + 创作中心',
+      isLatest: false,
+      items: [
+        '🎬 **视频模块完整实现**: 后端 Rust 微服务（polis-video，端口 3005）+ 前端 HLS 播放器，支持大文件上传（650MB），/.m3u8 流式播放',
+        '🔗 **引用驱动架构**: Rust 所有权模型应用于内容共享 — 跨社区投稿引用，module_refs 表实现通用引用关系',
+        '🎨 **创作中心前端**: /creations/new（创建）、/creations/[id]（查看）、/creations/[id]/edit（编辑）三个完整页面',
+        '🧩 **ContentCard 统一组件**: 帖子/投票/系列/视频 统一卡片设计，消除重复渲染逻辑',
+        '🔔 **通知系统**: 支持全选/多选删除，批量+单条 API',
+        '📌 **帖子管理**: 置顶/隐藏/取消隐藏功能，空间所有者可查看/恢复已隐藏帖子',
+        '🔍 **帖子密码分享**: 后端支持密码分享可见 + 编辑页可见性选项匹配',
+        '💬 **私信增强**: 私信功能完善 + 毛玻璃 UI 优化',
+        '🏠 **首页修复**: 热门趋势数据显示 + 侧边栏单列布局 + Logo 毛玻璃动效 + 动态预览去除 Markdown 标记',
+        '🍞 **面包屑导航**: 帖子详情页毛玻璃胶囊样式面包屑',
+        '🐛 **修复**: 帖子编辑 namespace URL 编码、创建社区 title 强制等于 slug、视频命名空间中文路径支持',
+      ],
+    },
+    {
+      ver: '0.3.79', date: '2026-05-11', title: '🐛 修复社区帖子列表返回空数据 — enabled_modules 过滤误伤',
+      isLatest: false,
       items: [
         '🔍 **根因定位**: resolve_space_enabled_modules 调用处使用 unwrap_or_default()，当 DB 查询短暂出错时返回空 Vec<String>，导致 get_posts() 的 enabled_modules 过滤器移除全部帖子（COUNT=1 但 SELECT 返回空 → pagination.total=1, data=[]）',
         '🛡️ **修复方案**: 将 unwrap_or_default() 改为 unwrap_or_else(|_| vec!["forum".to_string()]) — 错误兜底为 forum 模块，确保帖子不会被误过滤',

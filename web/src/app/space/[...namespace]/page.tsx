@@ -7,11 +7,11 @@ import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Bell, BellOff, Star } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Star } from 'lucide-react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
-import { spaces as apiSpaces, tiers, subscribe, follow } from '@/lib/api';
+import { spaces as apiSpaces, tiers, subscribe } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
 import { SpaceChat } from '@/components/SpaceChat';
 import { SpaceParticles } from '@/components/SpaceParticles';
@@ -165,10 +165,6 @@ export default function SpacePage() {
  const [tierForm, setTierForm] = useState({ name: '', price_cents: '0', description: '', benefits: '' });
  const [tierSaving, setTierSaving] = useState(false);
 
- // Follow/unfollow state
- const [isFollowing, setIsFollowing] = useState(false);
- const [followLoading, setFollowLoading] = useState(false);
-
  // Edit community state
  const [showEditDialog, setShowEditDialog] = useState(false);
  const [editForm, setEditForm] = useState({ title: '', description: '' });
@@ -197,17 +193,6 @@ export default function SpacePage() {
  })
  .catch(() => {});
 
- // 检查是否已关注
- if (space.id) {
- // 从 localStorage 读取关注列表
- try {
- const followed = localStorage.getItem('polis_followed_spaces');
- if (followed) {
- const ids: string[] = JSON.parse(followed);
- setIsFollowing(ids.includes(space.id));
- }
- } catch (_) {}
- }
  }
  }
  } catch (_) {}
@@ -284,13 +269,7 @@ export default function SpacePage() {
  const data = await res.json();
  if (data.code === 0 && Array.isArray(data.data)) {
  const morePosts = data.data;
- const mtFilter = new Set(['forum', 'article', '']);
- if (modules.share) mtFilter.add('share');
- if (modules.wiki) mtFilter.add('wiki');
- if (modules.qa) mtFilter.add('qa');
- if (modules.novel) mtFilter.add('novel');
- if (modules.game) mtFilter.add('game');
- if (modules.mini_app) mtFilter.add('mini_app');
+ const mtFilter = new Set(['forum', 'article', '', 'share', 'wiki', 'qa', 'novel', 'game', 'mini_app']);
  const filtered = morePosts.filter((p: any) => mtFilter.has(p.module_type || ''));
  setPosts(prev => [...prev, ...filtered]);
  setPostPage(nextPage);
@@ -397,14 +376,8 @@ export default function SpacePage() {
 	 if (postsData.pagination) {
 	 setPostTotalPages(postsData.pagination.total_pages);
 	 }
-	 // Filter posts by enabled module types (consistent with tab bar)
-	 const mtFilter = new Set(['forum', 'article', '']);
-	 if (modules.share) mtFilter.add('share');
-	 if (modules.wiki) mtFilter.add('wiki');
-	 if (modules.qa) mtFilter.add('qa');
-	 if (modules.novel) mtFilter.add('novel');
-	 if (modules.game) mtFilter.add('game');
-	 if (modules.mini_app) mtFilter.add('mini_app');
+	 // Include all module types for client-side tab filtering
+	 const mtFilter = new Set(['forum', 'article', '', 'share', 'wiki', 'qa', 'novel', 'game', 'mini_app']);
 	 setPosts(allPosts.filter((p: any) => mtFilter.has(p.module_type || '')));
 	 }
  if (featuredData.code === 0) setFeatured(featuredData.data || []);
@@ -550,9 +523,6 @@ export default function SpacePage() {
  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{space.description}</p>
  <div className="mt-3 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
  <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {formatCount(space.member_count)} 成员</span>
- {(space as any).follower_count > 0 && (
- <span className="flex items-center gap-1"><Bell className="h-4 w-4" /> {formatCount((space as any).follower_count)} 关注</span>
- )}
  <span>{formatCount(space.post_count)} 帖子</span>
  {announcements.length > 0 && (
  <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
@@ -597,39 +567,6 @@ export default function SpacePage() {
  >
  {isOwner ? '我的社区' : isMember ? '✓ 已加入' : joining ? '加入中...' : '加入社区'}
  </button>
-
- {/* Follow button */}
- {!isOwner && (
- <button
- onClick={async () => {
- const token = localStorage.getItem('polis_access_token');
- if (!token) { alert('请先登录'); return; }
- setFollowLoading(true);
- try {
- if (space?.id) {
- await follow.toggle('space', space.id);
- const newState = !isFollowing;
- setIsFollowing(newState);
- // 更新本地缓存
- const cached = localStorage.getItem('polis_followed_spaces');
- let ids: string[] = cached ? JSON.parse(cached) : [];
- if (newState) { ids.push(space.id); }
- else { ids = ids.filter((id: string) => id !== space.id); }
- localStorage.setItem('polis_followed_spaces', JSON.stringify(ids));
- }
- } catch (e: any) { alert(e?.message || '操作失败'); }
- setFollowLoading(false);
- }}
- disabled={followLoading}
- className={`text-sm px-3 py-2 rounded-lg transition-colors ${
- isFollowing
- ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
- : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
- }`}
- >
- {followLoading ? '...' : isFollowing ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
- </button>
- )}
  {!isOwner && !isMember && showJoinInput && (
  <div className="flex items-center gap-1">
  <input
@@ -656,9 +593,6 @@ export default function SpacePage() {
  </button>
  )}
  </div>
- <button className="btn-secondary p-2 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
- <Share2 className="h-4 w-4" />
- </button>
  </div>
  </div>
  </div>
@@ -997,9 +931,9 @@ export default function SpacePage() {
 
  {postLoading ? (
  <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
- ) : posts.length > 0 ? (
+ ) : posts.filter(p => p.module_type === 'forum' || !p.module_type).length > 0 ? (
  <div className="space-y-3">
- {posts.map((post) => (
+ {posts.filter(p => p.module_type === 'forum' || !p.module_type).map((post) => (
  <PostCard key={post.id} post={{
  id: post.id,
  title: post.title,
@@ -1397,9 +1331,9 @@ export default function SpacePage() {
 
  {postLoading ? (
  <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
- ) : posts.filter(p => p.module_type === 'share' || !p.module_type).length > 0 ? (
+ ) : posts.filter(p => p.module_type === 'share').length > 0 ? (
  <div className="space-y-3">
- {posts.filter(p => p.module_type === 'share' || !p.module_type).map((post) => (
+ {posts.filter(p => p.module_type === 'share').map((post) => (
  <PostCard key={post.id} post={{
  id: post.id,
  title: post.title,
@@ -1529,23 +1463,14 @@ export default function SpacePage() {
  </p>
  </div>
  </Link>
- <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
- m.role === 'owner' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400' :
- m.role === 'moderator' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
- m.role === 'admin' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
- 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
- }`}>
- {{'owner': '创建者', 'moderator': '管理员', 'admin': '管理员', 'member': '成员'}[m.role] || m.role}
- </span>
- {/* Management actions for owner/admin */}
- {isOwner && m.role !== 'owner' && (
+ {/* Role badge + management: inline for owner, static for others */}
+ {isOwner && m.role !== 'owner' ? (
  <MemberActions
  namespace={cleanNamespace}
  userId={m.user.id}
  username={m.user.username}
  currentRole={m.role}
  onAction={() => {
- // Refresh members
  fetch(`/api/spaces/${cleanNamespace}/members`)
  .then(r => r.json())
  .then(data => {
@@ -1556,6 +1481,15 @@ export default function SpacePage() {
  .catch(() => {});
  }}
  />
+ ) : (
+ <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+ m.role === 'owner' ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400' :
+ m.role === 'moderator' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+ m.role === 'admin' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+ 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+ }`}>
+ {{'owner': '创建者', 'moderator': '管理员', 'admin': '管理员', 'member': '成员'}[m.role] || m.role}
+ </span>
  )}
  </div>
  ))}

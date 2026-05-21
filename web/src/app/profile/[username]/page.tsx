@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle, Video, Globe, Lock, Key } from 'lucide-react';
+import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle, Video, Globe, Lock, Key, ThumbsUp } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { users, follow, videos, type User, type FollowUser, type VideoItem } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
 import { FeedItem } from '@/components/FeedItem';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
+import CreationCard from '@/components/CreationCard';
 
 function FollowList({ users: list, loading, emptyText }: {
   users: FollowUser[];
@@ -54,14 +55,20 @@ export default function UserProfilePage() {
   const [listLoading, setListLoading] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
 
-  // isSelf-only tabs: spaces | posts | bookmarks | likes
-  const [activeTab, setActiveTab] = useState('spaces');
+  // isSelf-only tabs: community | works | private | bookmarks | likes
+  const [activeTab, setActiveTab] = useState('community');
+  const [communitySubTab, setCommunitySubTab] = useState<'owned' | 'joined'>('owned');
   const [myContents, setMyContents] = useState<any[]>([]);
   const [contentsLoading, setContentsLoading] = useState(false);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [likedPosts, setLikedPosts] = useState<any[]>([]);
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
   const [likedLoading, setLikedLoading] = useState(false);
+
+  // Works tab (creations + module sub-tabs)
+  const [myCreations, setMyCreations] = useState<any[]>([]);
+  const [creationsLoading, setCreationsLoading] = useState(false);
+  const [worksSubTab, setWorksSubTab] = useState('overview');
 
   // Video states
   const [myVideos, setMyVideos] = useState<VideoItem[]>([]);
@@ -108,6 +115,7 @@ export default function UserProfilePage() {
   // 投稿引用状态
   const [showRefDialog, setShowRefDialog] = useState(false);
   const [refPostId, setRefPostId] = useState('');
+  const [refIsCreation, setRefIsCreation] = useState(false);
   const [refPostModuleType, setRefPostModuleType] = useState('forum'); // 源帖子的模块类型
   const [refSpaceNs, setRefSpaceNs] = useState('');
   const [refModuleType, setRefModuleType] = useState('forum');
@@ -227,6 +235,39 @@ export default function UserProfilePage() {
     })();
   }, [isSelf, username]);
 
+  // isSelf: 加载作品（creations + submissions）
+  useEffect(() => {
+    if (!isSelf) return;
+    setCreationsLoading(true);
+    (async () => {
+      try {
+        const token = localStorage.getItem('polis_access_token');
+        const res = await fetch('/api/creations?page=1&page_size=50', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await res.json();
+        if (data.data) setMyCreations(Array.isArray(data.data) ? data.data : []);
+      } catch {}
+      setCreationsLoading(false);
+    })();
+  }, [isSelf, username]);
+
+  // 非自己：加载公开作品
+  useEffect(() => {
+    if (isSelf || !username) return;
+    setCreationsLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/creations?creator_username=${encodeURIComponent(username)}&page_size=50`);
+        const data = await res.json();
+        if (data.code === 0 && data.data) {
+          setMyCreations(Array.isArray(data.data) ? data.data : []);
+        }
+      } catch {}
+      setCreationsLoading(false);
+    })();
+  }, [isSelf, username]);
+
   // 删除自己的帖子
   const handleDeletePost = async (postId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -298,10 +339,22 @@ export default function UserProfilePage() {
     setRefError('');
     setRefSuccess('');
     try {
-      const res = await fetch('/api/posts/' + refPostId + '/reference', {
+      let apiPath: string;
+      let body: string;
+      if (refIsCreation) {
+        // 从已加载的社区列表中查找 space_id
+        const targetSpace = refUserSpaces.find((s: any) => s.namespace === refSpaceNs.trim());
+        const spaceId = targetSpace?.id || refSpaceNs.trim();
+        apiPath = '/api/creations/' + refPostId + '/submit';
+        body = JSON.stringify({ space_id: spaceId, module_type: refModuleType });
+      } else {
+        apiPath = '/api/posts/' + refPostId + '/reference';
+        body = JSON.stringify({ space_ns: refSpaceNs.trim(), module_type: refModuleType });
+      }
+      const res = await fetch(apiPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
-        body: JSON.stringify({ space_ns: refSpaceNs.trim(), module_type: refModuleType }),
+        body,
       });
       const data = await res.json();
       if (data.code === 0) {
@@ -495,6 +548,10 @@ export default function UserProfilePage() {
                 <Calendar className="h-3.5 w-3.5" />
                 {formatDate(user.created_at)} 加入
               </span>
+              <span className="flex items-center gap-1">
+                <ThumbsUp className="h-3.5 w-3.5" />
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{user.total_likes || 0}</span> 获赞
+              </span>
               <button onClick={loadFollowers} className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer">
                 <Users className="h-3.5 w-3.5" />
                 <span className="font-semibold text-gray-700 dark:text-gray-300">{followerCount}</span> 粉丝
@@ -535,21 +592,34 @@ export default function UserProfilePage() {
         </div>
       )}
 
-      {/* isSelf: 选项卡 */}
-      {isSelf && (
-        <div className="mt-6 mb-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex gap-0 overflow-x-auto">
-            {(['spaces', 'posts', 'videos', 'bookmarks', 'likes'] as const).map((tab) => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}>
-                {{spaces: `社区 (${userSpaces.length})`, posts: `创作 (${myContents.length})`, videos: `视频 (${myVideos.length})`, bookmarks: `收藏 (${bookmarks.length})`, likes: `点赞 (${likedPosts.length})`}[tab]}
-              </button>
-            ))}
-          </div>
+      {/* 选项卡（自己：全部；他人：社区+作品） */}
+      <div className="mt-6 mb-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex gap-0 overflow-x-auto">
+          {isSelf ? (
+            <>
+              {(['community', 'works', 'private', 'bookmarks', 'likes'] as const).map((tab) => (
+                <button key={tab} onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}>
+                  {{community: `社区 (${userSpaces.length})`, works: `作品 (${myCreations.length})`, private: `私密作品 (${myCreations.filter(c => c.visibility === 'private').length})`, bookmarks: `收藏 (${bookmarks.length})`, likes: `点赞 (${likedPosts.length})`}[tab]}
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              {(['community', 'works'] as const).map((tab) => (
+                <button key={tab} onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    activeTab === tab ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}>
+                  {{community: `社区 (${userSpaces.length})`, works: `作品 (${myCreations.length})`}[tab]}
+                </button>
+              ))}
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* isSelf: 收藏 Tab */}
       {isSelf && activeTab === 'bookmarks' && (
@@ -586,183 +656,229 @@ export default function UserProfilePage() {
           </div>
         )
       )}
-
-	      {/* isSelf: 创作 Tab — 自己发布的所有内容 */}
-	      {isSelf && activeTab === 'posts' && (
-	        contentsLoading ? (
-	          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
-	        ) : myContents.length > 0 ? (
-	          <div className="space-y-2">
-	            {myContents.map((post: any) => {
-	              const props = adaptFeedItem(post);
-	              return (
-	                <div key={post.id} className="glass-card rounded-xl overflow-hidden group relative">
-	                  <ContentCard
-	                    {...props}
-	                    isOwner={true}
-	                    showOwnerActions={true}
-	                    onEdit={() => {
-	                      const spaceNs = post.space?.namespace || '';
-	                      window.location.href = `/post/${post.id}${spaceNs ? '?space=' + encodeURIComponent(spaceNs) : ''}`;
-	                    }}
-	                    onDelete={(id) => {
-	                      if (confirm('确定要删除这篇帖子吗？此操作不可撤销。')) {
-	                        const token = localStorage.getItem('polis_access_token');
-	                        fetch(`/api/posts/${id}`, {
-	                          method: 'DELETE',
-	                          headers: { Authorization: 'Bearer ' + (token || '') },
-	                        }).then(r => r.json()).then(data => {
-	                          if (data.code === 0) {
-	                            setMyContents(prev => prev.filter((p: any) => p.id !== id));
-	                          } else alert(data.message || '删除失败');
-	                        }).catch(() => alert('删除失败'));
-	                      }
-	                    }}
-	                    onSubmit={(id) => {
-	                      const mt = post.module_type || 'forum';
-	                      setRefPostId(id);
-	                      setRefPostModuleType(mt);
-	                      setRefModuleType(mt);
-	                      setRefSpaceNs('');
-	                      setRefUserQuery('');
-	                      setRefUserResults([]);
-	                      setRefSelectedUser(null);
-	                      setRefUserSpaces([]);
-	                      setRefError('');
-	                      setRefSuccess('');
-	                      setShowRefDialog(true);
-                    }}
-                    onVisibilityChange={async (id, newVis) => {
-                      const token = localStorage.getItem('polis_access_token');
-                      await fetch(`/api/posts/${id}`, {
-                        method: 'PUT',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Authorization: 'Bearer ' + (token || ''),
-                        },
-                        body: JSON.stringify({ visibility: newVis }),
-                      });
-                      setMyContents((prev) =>
-                        prev.map((p) => p.id === id ? { ...p, visibility: newVis } : p)
-                      );
-                    }}
-                  />
-	                </div>
-	              );
-	            })}
-	          </div>
-	        ) : (
-	          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
-	            <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
-	            <p className="text-sm">还没有发布过内容</p>
-	            <Link href="/post/new" className="text-sm text-primary-600 hover:underline mt-1 inline-block">去发布第一篇</Link>
-	          </div>
-	        )
-	      )}
-
-      {/* isSelf: 视频 Tab */}
-      {isSelf && activeTab === 'videos' && (
-        videosLoading ? (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
-        ) : myVideos.length > 0 ? (
-          <div className="space-y-2">
-            {myVideos.map((v: VideoItem) => (
-              <div key={v.id} className="glass-card p-4 group transition-colors">
-                <div className="flex items-start justify-between gap-4">
-                  <Link href={`/video/${v.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="w-28 h-16 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
-                      {v.thumbnail_url ? (
-                        <img src={v.thumbnail_url} alt={v.title} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
-                          <Video className="h-6 w-6 text-gray-400" />
-                        </div>
-                      )}
-                      {v.duration_seconds && (
-                        <span className="absolute bottom-1 right-1 px-1 rounded bg-black/60 text-white text-xs">
-                          {Math.floor((v.duration_seconds || 0) / 60)}:{String((v.duration_seconds || 0) % 60).padStart(2, '0')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 line-clamp-1">{v.title}</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{v.description || '暂无描述'}</p>
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
-                        <span className={`px-1.5 py-0.5 rounded text-xs ${
-                          v.visibility === 'public' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                          v.visibility === 'unlisted' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
-                          'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                        }`}>
-                          {v.visibility === 'public' ? '公开' : v.visibility === 'unlisted' ? '分享' : '私有'}
-                        </span>
-                        {v.has_password && <span className="flex items-center gap-0.5 text-amber-600"><Key className="h-3 w-3" />加密</span>}
-                        <span className="flex items-center gap-0.5"><Eye className="h-3 w-3" />{v.view_count}</span>
-                        <span className="flex items-center gap-0.5"><Heart className="h-3 w-3" />{v.like_count}</span>
-                      </div>
-                    </div>
-                  </Link>
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowVideoEdit(v.id); setEditVis(v.visibility); setEditPwd(''); }}
-                      className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-500" title="设置">
-                      <Globe className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteVideo(v.id, e)}
-                      className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500" title="删除">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                {/* Edit dropdown */}
-                {showVideoEdit === v.id && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 w-16">可见性：</span>
-                      <div className="flex gap-1">
-                        {['public', 'unlisted', 'private'].map(vis => (
-                          <button key={vis} onClick={() => { handleUpdateVideoVis(v.id, vis); }}
-                            disabled={editVis === vis}
-                            className={`text-xs px-2 py-1 rounded ${editVis === vis ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200'}`}>
-                            {vis === 'public' ? '公开' : vis === 'unlisted' ? '分享' : '私有'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 w-16">分享密码：</span>
-                      <input type="text" value={editPwd} onChange={e => setEditPwd(e.target.value)}
-                        placeholder={v.has_password ? '已设置密码' : '设置密码（可选）'}
-                        className="flex-1 text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
-                        onKeyDown={e => e.key === 'Enter' && handleSetPassword(v.id)} />
-                      <button onClick={() => handleSetPassword(v.id)} disabled={editPublishing}
-                        className="text-xs px-2 py-1 rounded bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50">
-                        {editPublishing ? '...' : '设置'}
-                      </button>
-                    </div>
-                  </div>
-                )}
+      {/* 作品 Tab — 公开可见 */}
+      {activeTab === 'works' && (
+        <>
+          {/* 模块子选项卡 — 动态生成 */}
+          {(() => {
+            const modules = new Set<string>();
+            myCreations.forEach((c: any) => {
+              const mt = c.submissions?.[0]?.module_type || c.content_type || 'forum';
+              modules.add(mt);
+            });
+            const moduleList = Array.from(modules);
+            if (moduleList.length === 0) return null;
+            const allTabs = ['overview', ...moduleList];
+            return (
+              <div className="flex gap-0 mb-4 border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
+                {allTabs.map((tab) => (
+                  <button key={tab} onClick={() => setWorksSubTab(tab)}
+                    className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
+                      worksSubTab === tab
+                        ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400'
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}>
+                    {tab === 'overview' ? '概览' :
+                     tab === 'forum' ? '交流' :
+                     tab === 'share' ? '分享' :
+                     tab === 'article' ? '文章' :
+                     tab === 'wiki' ? '知识库' :
+                     tab === 'qa' ? '问答' :
+                     tab === 'novel' ? '小说' :
+                     tab === 'game' ? '游戏' :
+                     tab === 'mini_app' ? '小程序' :
+                     tab === 'video' ? '视频' : tab}
+                    {' '}
+                    ({tab === 'overview'
+                      ? myCreations.length
+                      : myCreations.filter((c: any) =>
+                          (c.submissions?.[0]?.module_type || c.content_type || 'forum') === tab
+                        ).length})
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
-            <Video className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">还没有上传过视频</p>
-          </div>
-        )
+            );
+          })()}
+
+          {creationsLoading ? (
+            <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+          ) : (() => {
+            const filtered = myCreations.filter((c: any) => {
+              if (worksSubTab === 'overview') return true;
+              const mt = c.submissions?.[0]?.module_type || c.content_type || 'forum';
+              return mt === worksSubTab;
+            });
+            if (filtered.length === 0) return (
+              <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">该模块还没有作品</p>
+              </div>
+            );
+            return (
+              <div className="space-y-2">
+                {filtered.map((creation: any) => (
+                  <CreationCard
+                    key={creation.id}
+                    creation={creation}
+                    isOwner={isSelf}
+                    {...(isSelf ? {
+                      onEdit: (id: string) => { window.location.href = `/creations/${id}/edit`; },
+                      onDelete: async (id: string) => {
+                        if (!confirm('确定要删除这个创作吗？此操作不可撤销。')) return;
+                        try {
+                          const token = localStorage.getItem('polis_access_token');
+                          const res = await fetch(`/api/creations/${id}`, {
+                            method: 'DELETE',
+                            headers: token ? { Authorization: `Bearer ${token}` } : {},
+                          });
+                          const data = await res.json();
+                          if (data.code === 0) {
+                            setMyCreations(prev => prev.filter((c: any) => c.id !== id));
+                            setMyContents(prev => prev.filter((p: any) => p.id !== id));
+                          } else alert(data.message || '删除失败');
+                        } catch { alert('网络错误'); }
+                      },
+                      onSubmit: (id: string) => {
+                        const creation = myCreations.find((c: any) => c.id === id);
+                        const mt = creation?.submissions?.[0]?.module_type || creation?.content_type || 'forum';
+                        setRefPostId(id);
+                        setRefIsCreation(true);
+                        setRefPostModuleType(mt);
+                        setRefModuleType(mt);
+                        setRefSpaceNs('');
+                        setRefUserQuery('');
+                        setRefUserResults([]);
+                        setRefSelectedUser(null);
+                        setRefUserSpaces([]);
+                        setRefError('');
+                        setRefSuccess('');
+                        setShowRefDialog(true);
+                      },
+                      onVisibilityChange: async (id: string, newVis: string) => {
+                        try {
+                          const token = localStorage.getItem('polis_access_token');
+                          await fetch(`/api/creations/${id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (token || '') },
+                            body: JSON.stringify({ visibility: newVis }),
+                          });
+                          setMyCreations((prev: any[]) =>
+                            prev.map((c: any) => c.id === id ? { ...c, visibility: newVis } : c)
+                          );
+                        } catch {}
+                      },
+                    } : {})}
+                  />
+                ))}
+              </div>
+            );
+          })()}
+
+          {myCreations.length === 0 && !creationsLoading && (
+            <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
+              <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">{isSelf ? '还没有发布过作品' : '暂无公开作品'}</p>
+              {isSelf && (
+                <Link href="/creations/new" className="text-sm text-primary-600 hover:underline mt-1 inline-block">去创作第一篇</Link>
+              )}
+            </div>
+          )}
+        </>
       )}
 
+      {/* isSelf: 私密作品 Tab */}
+      {isSelf && activeTab === 'private' && (
+        creationsLoading ? (
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+        ) : (() => {
+          const privateWorks = myCreations.filter((c: any) => c.visibility === 'private');
+          if (privateWorks.length === 0) return (
+            <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
+              <Lock className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">没有私密作品</p>
+            </div>
+          );
+          return (
+            <div className="space-y-2">
+              {privateWorks.map((creation: any) => (
+                <CreationCard
+                  key={creation.id}
+                  creation={creation}
+                  isOwner={true}
+                  onEdit={(id: string) => { window.location.href = `/creations/${id}/edit`; }}
+                  onDelete={async (id: string) => {
+                    if (!confirm('确定要删除这个创作吗？此操作不可撤销。')) return;
+                    try {
+                      const token = localStorage.getItem('polis_access_token');
+                      const res = await fetch(`/api/creations/${id}`, {
+                        method: 'DELETE',
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
+                      });
+                      const data = await res.json();
+                      if (data.code === 0) {
+                        setMyCreations(prev => prev.filter((c: any) => c.id !== id));
+                        setMyContents(prev => prev.filter((p: any) => p.id !== id));
+                      } else alert(data.message || '删除失败');
+                    } catch { alert('网络错误'); }
+                  }}
+                  onVisibilityChange={async (id: string, newVis: string) => {
+                    try {
+                      const token = localStorage.getItem('polis_access_token');
+                      await fetch(`/api/creations/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (token || '') },
+                        body: JSON.stringify({ visibility: newVis }),
+                      });
+                      setMyCreations((prev: any[]) =>
+                        prev.map((c: any) => c.id === id ? { ...c, visibility: newVis } : c)
+                      );
+                    } catch {}
+                  }}
+                />
+              ))}
+            </div>
+          );
+        })()
+      )}
+
+
       {/* 社区列表（自己：Tab模式；他人：直接显示） */}
-      {(isSelf ? activeTab === 'spaces' : true) && (
+      {activeTab === 'community' && (
         <div className="mt-6">
+          {/* isSelf: 社区子选项卡 [我创建的] [我加入的] */}
+          {isSelf && ownedSpaces.length > 0 && joinedSpaces.length > 0 && (
+            <div className="flex gap-0 mb-4 border-b border-gray-100 dark:border-gray-800">
+              <button
+                onClick={() => setCommunitySubTab('owned')}
+                className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${
+                  communitySubTab === 'owned'
+                    ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                我创建的 ({ownedSpaces.length})
+              </button>
+              <button
+                onClick={() => setCommunitySubTab('joined')}
+                className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${
+                  communitySubTab === 'joined'
+                    ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                我加入的 ({joinedSpaces.length})
+              </button>
+            </div>
+          )}
+
           {/* 创建的社区 */}
-          {ownedSpaces.length > 0 && (
+          {(!isSelf || communitySubTab === 'owned') && ownedSpaces.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
-                {isSelf ? '我创建的社区' : `${user.display_name} 创建的社区`} ({ownedSpaces.length})
-              </h3>
+              {!isSelf && (
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
+                  {user.display_name} 创建的社区 ({ownedSpaces.length})
+                </h3>
+              )}
               <div className="space-y-3">
                 {ownedSpaces.map((sp: any) => (
                   <SpaceCard key={sp.id || sp.namespace} space={spaceCardData(sp)} />
@@ -772,11 +888,13 @@ export default function UserProfilePage() {
           )}
 
           {/* 加入的社区 */}
-          {joinedSpaces.length > 0 && (
+          {(!isSelf || communitySubTab === 'joined') && joinedSpaces.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
-                {isSelf ? '我加入的社区' : `${user.display_name} 加入的社区`} ({joinedSpaces.length})
-              </h3>
+              {!isSelf && (
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-2">
+                  {user.display_name} 加入的社区 ({joinedSpaces.length})
+                </h3>
+              )}
               <div className="space-y-3">
                 {joinedSpaces.map((sp: any) => (
                   <div key={sp.id || sp.namespace} className="flex items-center gap-2 group">

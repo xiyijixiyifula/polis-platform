@@ -25,6 +25,8 @@ export interface User {
   bio: string;
   verified: boolean;
   created_at: string;
+  total_likes?: number;
+  post_count?: number;
 }
 
 export interface Series {
@@ -860,7 +862,7 @@ export interface CreationItem {
 }
 
 export const creations = {
-  /** 获取我的创作列表 */
+  /** 获取我的创作列表（需登录） */
   list: (params?: { page?: number; page_size?: number; content_type?: string; sort?: string }) => {
     const search = new URLSearchParams();
     if (params?.page) search.set('page', String(params.page));
@@ -869,6 +871,21 @@ export const creations = {
     if (params?.sort) search.set('sort', params.sort);
     const qs = search.toString();
     return request<CreationItem[]>(`/creations${qs ? `?${qs}` : ''}`);
+  },
+
+  /** 获取某用户的公开作品列表（无需登录） */
+  getUserCreations: async (username: string, params?: { page?: number; page_size?: number; content_type?: string }) => {
+    const search = new URLSearchParams();
+    search.set('creator_username', username);
+    if (params?.page) search.set('page', String(params.page));
+    if (params?.page_size) search.set('page_size', String(params.page_size));
+    if (params?.content_type) search.set('content_type', params.content_type);
+    const qs = search.toString();
+    const response = await fetch(`/api/creations?${qs}`);
+    if (!response.ok) throw new Error('Failed to fetch');
+    const data = await response.json();
+    if (data.code !== 0) throw new Error(data.message || 'Failed to fetch');
+    return data.data || [];
   },
 
   /** 获取创作详情 */

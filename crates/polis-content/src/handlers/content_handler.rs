@@ -176,7 +176,9 @@ impl ContentHandler {
                     verified: false,
                     notification_prefs: serde_json::json!({}),
                     created_at: p.created_at,
-                });
+                    total_likes: 0,
+                    post_count: 0,
+                    });
                 PostPublic {
                     id: p.id,
                     space_id: p.space_id,
@@ -242,7 +244,9 @@ impl ContentHandler {
                     verified: false,
                     notification_prefs: serde_json::json!({}),
                     created_at: p.created_at,
-                });
+                    total_likes: 0,
+                    post_count: 0,
+                    });
                 let mt = format!("\"{}\"", p.module_type);
                 let ct = format!("\"{}\"", p.content_type);
                 let vis = format!("\"{}\"", p.visibility);
@@ -335,7 +339,9 @@ impl ContentHandler {
             let author = authors.get(&s.author_id).cloned().unwrap_or(UserPublic {
                 id: s.author_id, username: String::new(), display_name: String::new(),
                 avatar_url: None, bio: String::new(), verified: false, notification_prefs: serde_json::json!({}), created_at: s.created_at,
-            });
+                total_likes: 0,
+                post_count: 0,
+                });
             SeriesPublic {
                 id: s.id, space_id: s.space_id, author, title: s.title,
                 description: s.description, cover_url: s.cover_url, visibility: s.visibility,
@@ -358,7 +364,9 @@ impl ContentHandler {
         let series_author = authors.get(&series.author_id).cloned().unwrap_or(UserPublic {
             id: series.author_id, username: String::new(), display_name: String::new(),
             avatar_url: None, bio: String::new(), verified: false, notification_prefs: serde_json::json!({}), created_at: series.created_at,
-        });
+            total_likes: 0,
+            post_count: 0,
+            });
         let series_public = SeriesPublic {
             id: series.id, space_id: series.space_id, author: series_author,
             title: series.title, description: series.description, cover_url: series.cover_url,
@@ -376,7 +384,9 @@ impl ContentHandler {
             let author = authors.get(&p.author_id).cloned().unwrap_or(UserPublic {
                 id: p.author_id, username: String::new(), display_name: String::new(),
                 avatar_url: None, bio: String::new(), verified: false, notification_prefs: serde_json::json!({}), created_at: p.created_at,
-            });
+                total_likes: 0,
+                post_count: 0,
+                });
             let mt = serde_json::json!(p.module_type).to_string();
             let ct = serde_json::json!(p.content_type).to_string();
             let vis = serde_json::json!(p.visibility).to_string();
@@ -447,7 +457,9 @@ impl ContentHandler {
             verified: false,
             notification_prefs: serde_json::json!({}),
             created_at: post.created_at,
-        });
+            total_likes: 0,
+            post_count: 0,
+            });
 
         // 查询当前用户的点赞/收藏状态（避免前端额外请求）
         let (is_liked, is_bookmarked) = if let Some(uid) = current_user_id {
@@ -561,7 +573,9 @@ impl ContentHandler {
             verified: false,
             notification_prefs: serde_json::json!({}),
             created_at: post.created_at,
-        });
+            total_likes: 0,
+            post_count: 0,
+            });
 
         let space_ns = self.repo.find_spaces_batch(&[post.space_id])
             .await

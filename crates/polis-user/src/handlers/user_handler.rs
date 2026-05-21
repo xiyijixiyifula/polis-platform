@@ -150,14 +150,27 @@ impl UserHandler {
         })
     }
 
-    /// 获取用户公开信息
+    /// 获取用户公开信息（含获赞数、发帖数）
     pub async fn get_user_profile(&self, username: &str) -> Result<UserPublic, AppError> {
         let user = self
             .repo
             .find_by_username(username)
             .await?
             .ok_or(AppError::NotFound("User not found".to_string()))?;
-        Ok(user.into())
+
+        let user_id = user.id;
+        let mut pub_user: UserPublic = user.into();
+
+        // 统计用户所有帖子的获赞总数
+        if let Ok(total_likes) = self.repo.get_user_total_likes(user_id).await {
+            pub_user.total_likes = total_likes;
+        }
+        // 统计用户发帖数量
+        if let Ok(post_count) = self.repo.get_user_post_count(user_id).await {
+            pub_user.post_count = post_count;
+        }
+
+        Ok(pub_user)
     }
 
     /// 获取用户的社区列表（拥有的 + 加入的）

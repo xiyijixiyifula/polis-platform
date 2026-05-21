@@ -33,6 +33,8 @@ pub struct UserPublic {
     pub verified: bool,
     pub notification_prefs: serde_json::Value,
     pub created_at: DateTime<Utc>,
+    pub total_likes: i64,
+    pub post_count: i64,
 }
 
 impl From<User> for UserPublic {
@@ -46,6 +48,8 @@ impl From<User> for UserPublic {
             verified: u.verified,
             notification_prefs: u.notification_prefs,
             created_at: u.created_at,
+            total_likes: 0,
+            post_count: 0,
         }
     }
 }
@@ -695,6 +699,13 @@ pub struct SubmissionInfo {
     pub is_pinned: bool,
     pub module_views: i32,
     pub submitted_at: DateTime<Utc>,
+    /// 社区统计数据
+    pub community_member_count: i64,
+    pub community_post_count: i64,
+    pub community_level: Option<i32>,
+    pub community_xp: Option<i32>,
+    pub community_like_count: i64,
+    pub community_comment_count: i64,
 }
 
 /// 社区简要信息（用于嵌入展示）
@@ -888,6 +899,7 @@ pub struct ListCreationsQuery {
     pub content_type: Option<String>,
     pub status: Option<String>,
     pub visibility: Option<String>,
+    pub creator_username: Option<String>,
     pub page: Option<u32>,
     pub page_size: Option<u32>,
 }
