@@ -534,6 +534,12 @@ export default function UserProfilePage() {
               )}
               {isSelf && (
                 <div className="flex items-center gap-2">
+                  <Link href="/creations" className="inline-flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg font-medium transition-all bg-primary-600 text-white hover:bg-primary-700 shadow-lg shadow-primary-600/20">
+                    <PenLine className="h-4 w-4" /> 创作者中心
+                  </Link>
+                  <Link href="/creations/new" className="btn-secondary text-sm px-4 py-1.5 flex items-center gap-1">
+                    投稿
+                  </Link>
                   <Link href="/settings" className="btn-secondary text-sm px-4 py-1.5">
                     编辑资料
                   </Link>

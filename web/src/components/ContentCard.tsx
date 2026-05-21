@@ -140,7 +140,7 @@ export interface ContentCardProps {
 // ========== Module Labels ==========
 
 const MODULE_LABELS: Record<string, string> = {
-  forum: '交流', article: '交流', share: '分享', wiki: '知识库',
+  forum: '交流', article: '文章', share: '分享', wiki: '知识库',
   series: '系列', membership: '会员', video: '视频',
   code_repo: '代码仓库', qa: '问答', polls: '投票',
   announcements: '公告', chat: '聊天', store: '商城',
@@ -149,6 +149,7 @@ const MODULE_LABELS: Record<string, string> = {
   poll: '投票', announcement: '公告',
   discussion: '讨论', activity: '活动',
   knowledge: '知识库', resource: '资源',
+  text: '图文', image: '图片',
 };
 
 export function getModuleLabel(moduleType?: string): string {
