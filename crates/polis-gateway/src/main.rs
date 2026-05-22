@@ -35,7 +35,9 @@ async fn main() -> anyhow::Result<()> {
     let config = GatewayConfig::from_env();
     let state = Arc::new(GatewayState {
         client: reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(30))
+            .http1_only()
+            .pool_max_idle_per_host(0)
+            .timeout(std::time::Duration::from_secs(300))
             .build()?,
         config: config.clone(),
     });
@@ -47,6 +49,13 @@ async fn main() -> anyhow::Result<()> {
         .allow_headers(Any);
 
     // 路由
+    // 代理路由 - 视频服务 (需要 650MB body limit 支持大文件上传)
+    let video_routes = Router::new()
+        .route("/api/videos/{*path}", any(proxy_to_video))
+        .route("/api/videos", any(proxy_to_video))
+        .route("/hls/{*path}", any(proxy_to_video))
+        .layer(axum::extract::DefaultBodyLimit::max(650 * 1024 * 1024));
+
     let app = Router::new()
         // 代理路由 - 用户服务
         .route("/api/auth/{*path}", any(proxy_to_user))
@@ -76,10 +85,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/notifications/read", any(proxy_to_content))
         .route("/api/notifications/read-all", any(proxy_to_content))
         .route("/api/notifications/delete", any(proxy_to_content))
-        .route("/api/notifications/{id}", any(proxy_to_content))
-        .route("/api/bookmarks", any(proxy_to_content))
-        .route("/api/liked-posts", any(proxy_to_content))
-        // File sharing
+        // 代理路由 - 收藏
+        .route("/api/bookmarks/{*path}", any(proxy_to_content))
+        // 代理路由 - 文件
         .route("/api/files/{*path}", any(proxy_to_content))
         .route("/api/share/{*path}", any(proxy_to_content))
         .route("/api/announcements/{*path}", any(proxy_to_content))
@@ -94,10 +102,8 @@ async fn main() -> anyhow::Result<()> {
         // 代理路由 - 私信
         .route("/api/messages", any(proxy_to_content))
         .route("/api/messages/{*path}", any(proxy_to_content))
-        // 代理路由 - 视频服务
-        .route("/api/videos/{*path}", any(proxy_to_video))
-        .route("/api/videos", any(proxy_to_video))
-        .route("/hls/{*path}", any(proxy_to_video))
+        // 代理路由 - 视频服务 (650MB body limit)
+        .merge(video_routes)
         // 代理路由 - 管理后台服务
         .route("/api/admin/{*path}", any(proxy_to_admin))
         .route("/api/admin", any(proxy_to_admin))
@@ -339,12 +345,15 @@ async fn proxy_request_with_limit(
     // 读取请求体（根据 limit_bytes 限制大小）
     let body_bytes = axum::body::to_bytes(req.into_body(), limit_bytes)
         .await
-        .map_err(|_| {
+        .map_err(|e| {
+            tracing::error!("Body read error (limit={}MB): {}", limit_bytes / 1024 / 1024, e);
             (
                 StatusCode::PAYLOAD_TOO_LARGE,
                 Json(ApiResponse::error(1413, &format!("Request body exceeds {} MB limit", limit_bytes / 1024 / 1024))),
             )
         })?;
+
+    tracing::info!("Proxying {} to {} (body: {} bytes)", method, target_url, body_bytes.len());
 
     // 构建代理请求
     let proxy_req = client
@@ -369,7 +378,8 @@ async fn proxy_request_with_limit(
             Ok(response)
         }
         Err(e) => {
-            tracing::error!("Proxy error: {}", e);
+            tracing::error!("Proxy error: {} (is_connect={}, is_timeout={}, is_body={}, is_decode={})",
+                e, e.is_connect(), e.is_timeout(), e.is_body(), e.is_decode());
             Err((
                 StatusCode::BAD_GATEWAY,
                 Json(ApiResponse::error(1502, &format!("Service unavailable: {}", e))),
