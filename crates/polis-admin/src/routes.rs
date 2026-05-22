@@ -45,6 +45,10 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
         .route("/api/admin/posts/{id}/delete", post(delete_post))
         .route("/api/admin/posts/{id}/feature", post(feature_post))
         .route("/api/admin/posts/{id}/unfeature", post(unfeature_post))
+        .route("/api/admin/posts/{id}/approve", post(approve_post))
+        .route("/api/admin/posts/{id}/reject", post(reject_post))
+        .route("/api/admin/posts/{id}/hide", post(hide_post))
+        .route("/api/admin/posts/{id}/unhide", post(unhide_post))
         .route("/api/admin/reports", get(get_reports))
         .route("/api/admin/reports/{id}/resolve", post(resolve_report))
         .route("/api/admin/dashboard", get(get_dashboard))
@@ -194,6 +198,44 @@ async fn unfeature_post(
     Path(id): Path<Uuid>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
     handler.unfeature_post(id).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn approve_post(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.approve_post(id).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+#[derive(Deserialize)]
+pub struct RejectRequest {
+    pub reason: Option<String>,
+}
+
+async fn reject_post(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<RejectRequest>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.reject_post(id, body.reason.as_deref().unwrap_or("violation")).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn hide_post(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.hide_post(id).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn unhide_post(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.unhide_post(id).await?;
     Ok(Json(ApiResponse::success(())))
 }
 

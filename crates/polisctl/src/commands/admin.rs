@@ -190,6 +190,61 @@ pub async fn transactions(
     Ok(())
 }
 
+pub async fn posts_approve(
+    config: &Config, client: &HttpClient, post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let _resp = client.post(&format!("/api/admin/posts/{}/approve", post_id), Some(&token), &json!({})).await?;
+    print_success(&format!("Post {} approved", post_id));
+    Ok(())
+}
+
+pub async fn posts_reject(
+    config: &Config, client: &HttpClient, post_id: &str, reason: Option<&str>,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let body = json!({"reason": reason.unwrap_or("violation")});
+    let _resp = client.post(&format!("/api/admin/posts/{}/reject", post_id), Some(&token), &body).await?;
+    print_success(&format!("Post {} rejected", post_id));
+    Ok(())
+}
+
+pub async fn posts_hide(
+    config: &Config, client: &HttpClient, post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let _resp = client.post(&format!("/api/admin/posts/{}/hide", post_id), Some(&token), &json!({})).await?;
+    print_success(&format!("Post {} hidden", post_id));
+    Ok(())
+}
+
+pub async fn posts_unhide(
+    config: &Config, client: &HttpClient, post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let _resp = client.post(&format!("/api/admin/posts/{}/unhide", post_id), Some(&token), &json!({})).await?;
+    print_success(&format!("Post {} unhidden", post_id));
+    Ok(())
+}
+
+pub async fn posts_feature(
+    config: &Config, client: &HttpClient, post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let _resp = client.post(&format!("/api/admin/posts/{}/feature", post_id), Some(&token), &json!({})).await?;
+    print_success(&format!("Post {} featured", post_id));
+    Ok(())
+}
+
+pub async fn posts_unfeature(
+    config: &Config, client: &HttpClient, post_id: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let _resp = client.post(&format!("/api/admin/posts/{}/unfeature", post_id), Some(&token), &json!({})).await?;
+    print_success(&format!("Post {} unfeatured", post_id));
+    Ok(())
+}
+
 pub async fn analytics(
     config: &Config, client: &HttpClient, analytics_type: &str, days: u32,
 ) -> Result<(), anyhow::Error> {

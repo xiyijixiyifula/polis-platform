@@ -870,6 +870,33 @@ enum AdminPostsAction {
     Delete {
         post_id: String,
     },
+    /// Approve a post (pending → approved)
+    Approve {
+        post_id: String,
+    },
+    /// Reject a post (pending → rejected, soft-deleted)
+    Reject {
+        post_id: String,
+        /// Rejection reason
+        #[arg(short, long)]
+        reason: Option<String>,
+    },
+    /// Admin hide a post
+    Hide {
+        post_id: String,
+    },
+    /// Admin unhide a post
+    Unhide {
+        post_id: String,
+    },
+    /// Feature a post
+    Feature {
+        post_id: String,
+    },
+    /// Unfeature a post
+    Unfeature {
+        post_id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1158,6 +1185,12 @@ async fn main() -> Result<(), anyhow::Error> {
                 AdminPostsAction::List { page, size } => commands::admin::posts_list(&config, &client, page, size).await,
                 AdminPostsAction::Get { post_id } => commands::admin::posts_get(&config, &client, &post_id).await,
                 AdminPostsAction::Delete { post_id } => commands::admin::posts_delete(&config, &client, &post_id).await,
+                AdminPostsAction::Approve { post_id } => commands::admin::posts_approve(&config, &client, &post_id).await,
+                AdminPostsAction::Reject { post_id, reason } => commands::admin::posts_reject(&config, &client, &post_id, reason.as_deref()).await,
+                AdminPostsAction::Hide { post_id } => commands::admin::posts_hide(&config, &client, &post_id).await,
+                AdminPostsAction::Unhide { post_id } => commands::admin::posts_unhide(&config, &client, &post_id).await,
+                AdminPostsAction::Feature { post_id } => commands::admin::posts_feature(&config, &client, &post_id).await,
+                AdminPostsAction::Unfeature { post_id } => commands::admin::posts_unfeature(&config, &client, &post_id).await,
             },
             AdminAction::Comments(sub) => match sub {
                 AdminCommentsAction::List { page, size } => commands::admin::comments_list(&config, &client, page, size).await,

@@ -135,6 +135,46 @@ impl AdminHandler {
         Ok(())
     }
 
+    /// 审核通过帖子 (status: pending → approved)
+    pub async fn approve_post(&self, post_id: Uuid) -> Result<(), AppError> {
+        sqlx::query("UPDATE posts SET status = 'approved', is_deleted = FALSE WHERE id = $1")
+            .bind(post_id)
+            .execute(&self.pool)
+            .await?;
+        tracing::info!("Admin approved post: {}", post_id);
+        Ok(())
+    }
+
+    /// 审核拒绝帖子 (status: pending → rejected, 软删除)
+    pub async fn reject_post(&self, post_id: Uuid, reason: &str) -> Result<(), AppError> {
+        sqlx::query("UPDATE posts SET status = 'rejected', is_deleted = TRUE WHERE id = $1")
+            .bind(post_id)
+            .execute(&self.pool)
+            .await?;
+        tracing::info!("Admin rejected post {}: {}", post_id, reason);
+        Ok(())
+    }
+
+    /// 管理员隐藏帖子 (不影响 post 本身状态，设置visibility)
+    pub async fn hide_post(&self, post_id: Uuid) -> Result<(), AppError> {
+        sqlx::query("UPDATE posts SET visibility = 'hidden' WHERE id = $1")
+            .bind(post_id)
+            .execute(&self.pool)
+            .await?;
+        tracing::info!("Admin hidden post: {}", post_id);
+        Ok(())
+    }
+
+    /// 管理员取消隐藏帖子
+    pub async fn unhide_post(&self, post_id: Uuid) -> Result<(), AppError> {
+        sqlx::query("UPDATE posts SET visibility = 'public' WHERE id = $1")
+            .bind(post_id)
+            .execute(&self.pool)
+            .await?;
+        tracing::info!("Admin unhidden post: {}", post_id);
+        Ok(())
+    }
+
     /// 获取举报列表
     pub async fn get_reports(&self, page: u32, page_size: u32) -> Result<(Vec<serde_json::Value>, i64), AppError> {
         let offset = ((page - 1) * page_size) as i64;
