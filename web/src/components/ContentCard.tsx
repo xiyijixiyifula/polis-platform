@@ -149,11 +149,13 @@ const MODULE_LABELS: Record<string, string> = {
   poll: '投票', announcement: '公告',
   discussion: '讨论', activity: '活动',
   knowledge: '知识库', resource: '资源',
-  text: '图文', image: '图片',
 };
 
 export function getModuleLabel(moduleType?: string): string {
-  if (!moduleType) return '帖子';
+  if (!moduleType) return '交流';
+  // 非标准内容类型统一归入交流模块
+  const validModules = ['forum', 'article', 'share', 'wiki', 'video', 'qa', 'polls', 'series', 'chat', 'course', 'novel', 'game', 'mini_app'];
+  if (!validModules.includes(moduleType)) return '交流';
   return MODULE_LABELS[moduleType] || moduleType;
 }
 
@@ -161,6 +163,8 @@ export function getModuleLabelByContentType(type?: string, moduleType?: string):
   if (type === 'poll') return '投票';
   if (type === 'announcement') return '公告';
   if (type === 'video') return '视频';
+  // 图文、图片等非标准 content_type 统一按 forum 显示为交流
+  if (type === 'text' || type === 'image') return '交流';
   return getModuleLabel(moduleType);
 }
 

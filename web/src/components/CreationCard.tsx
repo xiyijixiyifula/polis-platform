@@ -16,6 +16,8 @@ interface CreationCardProps {
   creation: CreationPublic;
   showSource?: boolean;
   isOwner?: boolean;
+  /** 仅展示投稿索引（社区/模块），不显示编辑/删除等管理按钮 */
+  showSubmissionsOnly?: boolean;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onSubmit?: (id: string) => void;
@@ -28,6 +30,7 @@ interface CreationCardProps {
 export default function CreationCard({
   creation,
   isOwner = false,
+  showSubmissionsOnly = false,
   onEdit,
   onDelete,
   onSubmit,
@@ -44,8 +47,8 @@ export default function CreationCard({
         {...baseProps}
         isOwner={isOwner}
         variant="feed"
-        showOwnerActions={isOwner}
-        showSubmissionsPanel={isOwner}
+        showOwnerActions={isOwner && !showSubmissionsOnly}
+        showSubmissionsPanel={isOwner || showSubmissionsOnly}
         onEdit={onEdit}
         onDelete={onDelete}
         onSubmit={onSubmit}

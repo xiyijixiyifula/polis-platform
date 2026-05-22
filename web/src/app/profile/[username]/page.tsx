@@ -662,13 +662,18 @@ export default function UserProfilePage() {
       {/* 作品 Tab — 公开可见 */}
       {activeTab === 'works' && (
         <>
-          {/* 模块子选项卡 — 动态生成 */}
+          {/* 模块子选项卡 — 仅显示实际有效模块：交流/视频 */}
           {(() => {
-            const modules = new Set<string>();
-            myCreations.forEach((c: any) => {
+            // 规范化：非标准 content_type 统一归为 forum
+            const normType = (c: any) => {
               const mt = c.submissions?.[0]?.module_type || c.content_type || 'forum';
-              modules.add(mt);
-            });
+              // 只有 forum 和 video 是当前有效模块，其余均归入 forum
+              if (mt === 'forum' || mt === 'video') return mt;
+              return 'forum';
+            };
+            const moduleLabels: Record<string, string> = { forum: '交流', video: '视频' };
+            const modules = new Set<string>();
+            myCreations.forEach((c: any) => modules.add(normType(c)));
             const moduleList = Array.from(modules);
             if (moduleList.length === 0) return null;
             const allTabs = ['overview', ...moduleList];
@@ -681,24 +686,11 @@ export default function UserProfilePage() {
                         ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}>
-                    {tab === 'overview' ? '概览' :
-                     tab === 'forum' ? '交流' :
-                     tab === 'share' ? '分享' :
-                     tab === 'article' ? '文章' :
-                     tab === 'wiki' ? '知识库' :
-                     tab === 'qa' ? '问答' :
-                     tab === 'novel' ? '小说' :
-                     tab === 'game' ? '游戏' :
-                     tab === 'mini_app' ? '小程序' :
-                     tab === 'video' ? '视频' :
-                     tab === 'text' ? '图文' :
-                     tab === 'image' ? '图片' : tab}
+                    {tab === 'overview' ? '概览' : (moduleLabels[tab] || tab)}
                     {' '}
                     ({tab === 'overview'
                       ? myCreations.length
-                      : myCreations.filter((c: any) =>
-                          (c.submissions?.[0]?.module_type || c.content_type || 'forum') === tab
-                        ).length})
+                      : myCreations.filter((c: any) => normType(c) === tab).length})
                   </button>
                 ))}
               </div>
@@ -708,10 +700,13 @@ export default function UserProfilePage() {
           {creationsLoading ? (
             <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
           ) : (() => {
+            const normType = (c: any) => {
+              const mt = c.submissions?.[0]?.module_type || c.content_type || 'forum';
+              return (mt === 'forum' || mt === 'video') ? mt : 'forum';
+            };
             const filtered = myCreations.filter((c: any) => {
               if (worksSubTab === 'overview') return true;
-              const mt = c.submissions?.[0]?.module_type || c.content_type || 'forum';
-              return mt === worksSubTab;
+              return normType(c) === worksSubTab;
             });
             if (filtered.length === 0) return (
               <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
@@ -726,6 +721,7 @@ export default function UserProfilePage() {
                     key={creation.id}
                     creation={creation}
                     isOwner={false}
+                    showSubmissionsOnly={true}
                   />
                 ))}
               </div>
