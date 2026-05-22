@@ -765,7 +765,7 @@ enum AdminAction {
         #[arg(default_value = "admin@polis.app")]
         email: String,
         /// Admin code
-        #[arg(default_value = "polis2024")]
+        #[arg(default_value = "mzGW2026!PolisHub")]
         code: String,
     },
     /// Dashboard overview
