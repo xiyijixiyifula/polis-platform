@@ -4,10 +4,11 @@ import './globals.css';
 
 import { Header } from '@/components/Header';
 import { ClientLayoutWrapper } from '@/components/ClientLayoutWrapper';
+import { IntlClientProvider } from '@/components/IntlClientProvider';
 
 export const metadata: Metadata = {
   title: { default: 'Polis - 未来社区平台', template: '%s | Polis' },
-  description: 'Polis 是一个去中心化的个人社区创造与管理系统。让创建社区像创建 GitHub 仓库一样简单。支持论坛、视频、商城、代码仓库、WASM 插件。数据归你所有。',
+  description: 'Polis 是一个去中心化的个人社区创造与管理系统。让创建社区像创建 GitHub 仓库一样简单。',
   keywords: ['社区平台', '开源社区', 'Rust', '去中心化', 'Polis', '创建社区', '论坛', '知识社区'],
   authors: [{ name: 'Polis Team' }],
   openGraph: {
@@ -28,8 +29,9 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="zh" suppressHydrationWarning>
       <head>
         {/* 深色模式防闪烁：在页面渲染前从 localStorage 读取偏好并设置 dark class */}
         <script dangerouslySetInnerHTML={{
@@ -124,10 +126,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/* 主内容层 — z-index 提升到装饰层之上 */}
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <Header />
-          <ClientLayoutWrapper>
-            {children}
-          </ClientLayoutWrapper>
+          <IntlClientProvider>
+            <Header />
+            <ClientLayoutWrapper>
+              {children}
+            </ClientLayoutWrapper>
+          </IntlClientProvider>
         </div>
       </body>
     </html>

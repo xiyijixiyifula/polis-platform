@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import Hls from 'hls.js';
 import { Heart, MessageCircle, Eye, Share2, ArrowLeft, Bookmark, Globe, Lock, Link2 } from 'lucide-react';
 import { videos, type VideoItem, type VideoComment } from '@/lib/api';
 import { formatCount, formatDate } from '@/lib/utils';
@@ -40,32 +39,39 @@ export default function VideoPage() {
     }).catch(() => setLoading(false));
   }, [videoId]);
 
-  // HLS.js 初始化
+  // HLS.js 初始化 — 动态导入避免 SSR 中 window is not defined
   useEffect(() => {
     if (!video?.hls_url || !videoRef.current) return;
+    let cancelled = false;
+    const videoEl = videoRef.current;
     const src = video.hls_url;
-    if (Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: false });
-      hls.loadSource(src);
-      hls.attachMedia(videoRef.current);
-      hls.on(Hls.Events.ERROR, (_event, data) => {
-        if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              hls.startLoad();
-              break;
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              hls.recoverMediaError();
-              break;
-            default:
-              break;
+
+    import('hls.js').then(({ default: Hls }) => {
+      if (cancelled || !videoEl) return;
+      if (Hls.isSupported()) {
+        const hls = new Hls({ enableWorker: false });
+        hls.loadSource(src);
+        hls.attachMedia(videoEl);
+        hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                break;
+            }
           }
-        }
-      });
-      return () => { hls.destroy(); };
-    } else if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
-      videoRef.current.src = src;
-    }
+        });
+      } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+        videoEl.src = src;
+      }
+    }).catch(() => {});
+
+    return () => { cancelled = true; };
   }, [video?.hls_url]);
 
   const handleLike = async () => {

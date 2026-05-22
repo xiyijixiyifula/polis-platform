@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { BarChart3, FileText, Eye, Heart, MessageCircle, Vote, BookOpen, TrendingUp } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
+import { buildPostLink } from '@/lib/module-config';
 
 interface AnalyticsData {
   space_id: string;
@@ -116,7 +117,7 @@ export function SpaceAnalytics({ namespace, spaceTitle }: SpaceAnalyticsProps) {
             {data.top_viewed_posts.map((post, i) => (
               <Link
                 key={post.id}
-                href={`/post/${post.id}?space=${encodeURIComponent(namespace)}`}
+                href={buildPostLink(post.id, namespace)}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors group"
               >
                 <span className={`text-xs font-bold w-5 h-5 rounded flex items-center justify-center shrink-0 ${
@@ -151,7 +152,7 @@ export function SpaceAnalytics({ namespace, spaceTitle }: SpaceAnalyticsProps) {
             {data.top_liked_posts.map((post, i) => (
               <Link
                 key={post.id}
-                href={`/post/${post.id}?space=${encodeURIComponent(namespace)}`}
+                href={buildPostLink(post.id, namespace)}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors group"
               >
                 <span className={`text-xs font-bold w-5 h-5 rounded flex items-center justify-center shrink-0 ${

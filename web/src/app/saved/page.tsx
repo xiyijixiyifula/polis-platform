@@ -18,7 +18,7 @@ export default function SavedPage() {
     fetch('/api/bookmarks', { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((d) => { if (d.code === 0) setBookmarks(d.data || []); })
-      .catch(console.error);
+      .catch(() => {});
   };
 
   const removeBookmark = async (bookmark: any) => {

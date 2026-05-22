@@ -13,7 +13,7 @@ export default function DraftsPage() {
     fetch('/api/drafts', { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((d) => { if (d.code === 0) setDrafts(d.data || []); })
-      .catch(console.error);
+      .catch(() => {});
   }, []);
 
   return (

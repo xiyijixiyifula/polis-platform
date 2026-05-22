@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle, Video, Globe, Lock, Key, ThumbsUp } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { getModuleLabel, normalizeModuleType } from '@/lib/module-config';
 import { users, follow, videos, type User, type FollowUser, type VideoItem } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
 import { FeedItem } from '@/components/FeedItem';
@@ -417,7 +418,7 @@ export default function UserProfilePage() {
         setFollowerCount(prev => nowFollowing ? prev + 1 : Math.max(0, prev - 1));
       }
     } catch (e) {
-      console.error('Follow toggle failed:', e);
+      if (process.env.NODE_ENV === 'development') if (process.env.NODE_ENV === 'development') console.error('Follow toggle failed:', e);
     }
     setFollowLoading(false);
   };
@@ -662,18 +663,12 @@ export default function UserProfilePage() {
       {/* 作品 Tab — 公开可见 */}
       {activeTab === 'works' && (
         <>
-          {/* 模块子选项卡 — 仅显示实际有效模块：交流/视频 */}
+          {/* 模块子选项卡 — 按作品实际模块类型分类 */}
           {(() => {
-            // 规范化：非标准 content_type 统一归为 forum
-            const normType = (c: any) => {
-              const mt = c.submissions?.[0]?.module_type || c.content_type || 'forum';
-              // 只有 forum 和 video 是当前有效模块，其余均归入 forum
-              if (mt === 'forum' || mt === 'video') return mt;
-              return 'forum';
-            };
-            const moduleLabels: Record<string, string> = { forum: '交流', video: '视频' };
+            // 规范化模块类型并收集实际出现的模块
+            const ntype = (c: any) => normalizeModuleType(c.submissions?.[0]?.module_type || c.content_type);
             const modules = new Set<string>();
-            myCreations.forEach((c: any) => modules.add(normType(c)));
+            myCreations.forEach((c: any) => modules.add(ntype(c)));
             const moduleList = Array.from(modules);
             if (moduleList.length === 0) return null;
             const allTabs = ['overview', ...moduleList];
@@ -686,11 +681,11 @@ export default function UserProfilePage() {
                         ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}>
-                    {tab === 'overview' ? '概览' : (moduleLabels[tab] || tab)}
+                    {tab === 'overview' ? '概览' : getModuleLabel(tab)}
                     {' '}
                     ({tab === 'overview'
                       ? myCreations.length
-                      : myCreations.filter((c: any) => normType(c) === tab).length})
+                      : myCreations.filter((c: any) => ntype(c) === tab).length})
                   </button>
                 ))}
               </div>
@@ -700,13 +695,10 @@ export default function UserProfilePage() {
           {creationsLoading ? (
             <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
           ) : (() => {
-            const normType = (c: any) => {
-              const mt = c.submissions?.[0]?.module_type || c.content_type || 'forum';
-              return (mt === 'forum' || mt === 'video') ? mt : 'forum';
-            };
+            const ntype = (c: any) => normalizeModuleType(c.submissions?.[0]?.module_type || c.content_type);
             const filtered = myCreations.filter((c: any) => {
               if (worksSubTab === 'overview') return true;
-              return normType(c) === worksSubTab;
+              return ntype(c) === worksSubTab;
             });
             if (filtered.length === 0) return (
               <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">

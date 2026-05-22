@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { PostCard } from '@/components/PostCard';
 import { BookOpen, ArrowLeft, FileText, Users, Calendar } from 'lucide-react';
 import type { Series, Post } from '@/lib/api';
@@ -87,7 +88,7 @@ export default function SeriesDetailPage() {
           {/* Cover */}
           <div className="h-20 w-20 shrink-0 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white">
             {series.cover_url ? (
-              <img src={series.cover_url} alt="" className="h-full w-full rounded-xl object-cover" />
+              <Image src={series.cover_url!} alt="" width={80} height={80} className="h-full w-full rounded-xl object-cover" unoptimized />
             ) : (
               <BookOpen className="h-10 w-10" />
             )}

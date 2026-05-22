@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
@@ -10,6 +11,7 @@ import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/co
 import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Star } from 'lucide-react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
+import { getModuleLabel, getModuleEmoji, buildPostLink } from '@/lib/module-config';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
 import { spaces as apiSpaces, tiers, subscribe } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
@@ -43,7 +45,8 @@ export default function SpacePage() {
 
  // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
  const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
- 'members', 'settings', 'video', 'code_repo', 'qa', 'files', 'series', 'membership', 'novel', 'game', 'mini_app']);
+ 'members', 'video', 'code_repo', 'qa', 'files', 'series', 'membership', 'novel', 'game', 'mini_app',
+ 'share', 'wiki', 'chat', 'store', 'course']);
 
  // 从原始命名空间中剥离子路由后缀，得到纯社区命名空间
  const cleanNamespace = useMemo(() => {
@@ -752,7 +755,7 @@ export default function SpacePage() {
  </div>
  <div className="space-y-2">
  {featured.slice(0, 4).map((post) => (
- <Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(cleanNamespace)}`}
+ <Link key={post.id} href={buildPostLink(post.id, cleanNamespace)}
  className="glass-card block hover:border-primary-400 dark:hover:border-primary-600 transition-colors group py-3 px-4">
  <div className="flex items-center gap-2">
  <Pin className="h-3.5 w-3.5 text-amber-500 shrink-0" />
@@ -780,8 +783,8 @@ export default function SpacePage() {
  ) : posts.length > 0 ? (
  <div className="space-y-1">
  {posts.slice(0, 20).map((post) => {
- const moduleIcon = post.module_type === 'share' ? '🔖' : post.module_type === 'wiki' ? '📚' : post.module_type === 'qa' ? '❓' : post.module_type === 'novel' ? '📖' : post.module_type === 'game' ? '🎮' : post.module_type === 'mini_app' ? '🧩' : '📄';
- const moduleLabel = post.module_type === 'share' ? '分享' : post.module_type === 'wiki' ? '知识库' : post.module_type === 'qa' ? '问答' : post.module_type === 'novel' ? '小说' : post.module_type === 'game' ? '游戏' : post.module_type === 'mini_app' ? '小程序' : '交流';
+ const moduleIcon = getModuleEmoji(post.module_type);
+ const moduleLabel = getModuleLabel(post.module_type);
  const author = (post.author || {}) as any;
  const authorUsername = author.username || '';
  const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
@@ -845,7 +848,7 @@ export default function SpacePage() {
  className="group block">
  <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
  {v.thumbnail_url ? (
- <img src={v.thumbnail_url} alt={v.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+ <Image src={v.thumbnail_url!} alt={v.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
  ) : (
  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
  <Video className="h-8 w-8 text-gray-400" />

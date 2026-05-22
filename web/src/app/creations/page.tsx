@@ -348,6 +348,14 @@ export default function MyCreationsPage() {
     novel: { label: '\u5c0f\u8bf4', color: '#ec4899' },
     game: { label: '\u6e38\u620f', color: '#f97316' },
     mini_app: { label: '\u5c0f\u7a0b\u5e8f', color: '#84cc16' },
+    series: { label: '\u7cfb\u5217', color: '#a855f7' },
+    membership: { label: '\u4f1a\u5458', color: '#eab308' },
+    code_repo: { label: '\u4ee3\u7801\u4ed3\u5e93', color: '#64748b' },
+    polls: { label: '\u6295\u7968', color: '#f43f5e' },
+    announcements: { label: '\u516c\u544a', color: '#f97316' },
+    chat: { label: '\u804a\u5929', color: '#0ea5e9' },
+    store: { label: '\u5546\u57ce', color: '#14b8a6' },
+    course: { label: '\u8bfe\u7a0b', color: '#6366f1' },
     other: { label: '\u5176\u4ed6', color: '#94a3b8' },
   };
 

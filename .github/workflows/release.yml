@@ -1,0 +1,95 @@
+name: Build & Release
+
+on:
+  push:
+    tags: ['v*']
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-backend:
+    name: Build Rust Backend (x86_64-linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+
+      - name: Build Backend
+        run: |
+          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video; do
+            cargo build -p $svc --release --target x86_64-unknown-linux-gnu
+          done
+
+      - name: Package Backend
+        run: |
+          mkdir -p release-binaries
+          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video; do
+            cp target/x86_64-unknown-linux-gnu/release/$svc release-binaries/
+          done
+          tar -czf release-binaries.tar.gz release-binaries/
+
+      - name: Upload Backend Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-linux
+          path: release-binaries.tar.gz
+
+  build-frontend:
+    name: Build Next.js Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Frontend
+        run: npm run build
+
+      - name: Package Frontend
+        run: tar -czf release-web.tar.gz .next/standalone next.config.js package.json
+
+      - name: Upload Frontend Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend
+          path: web/release-web.tar.gz
+
+  release:
+    name: Create Release
+    needs: [build-backend, build-frontend]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            backend-linux/release-binaries.tar.gz
+            frontend/release-web.tar.gz
+          generate_release_notes: true

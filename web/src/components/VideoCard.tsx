@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Play, Eye, Heart, Clock } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import type { VideoItem } from '@/lib/api';
@@ -29,8 +30,8 @@ export function VideoCard({ video, namespace, size = 'sm' }: VideoCardProps) {
       <Link href={linkHref} className="group block">
         <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
           {video.thumbnail_url ? (
-            <img src={video.thumbnail_url} alt={video.title}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            <Image src={video.thumbnail_url!} alt={video.title} fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
               <Play className="h-8 w-8 text-gray-400" />
@@ -65,8 +66,8 @@ export function VideoCard({ video, namespace, size = 'sm' }: VideoCardProps) {
     <Link href={linkHref} className="group card flex gap-3 hover:shadow-md transition-all">
       <div className="relative w-40 h-24 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
         {video.thumbnail_url ? (
-          <img src={video.thumbnail_url} alt={video.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+          <Image src={video.thumbnail_url!} alt={video.title} fill
+            className="object-cover group-hover:scale-105 transition-transform" unoptimized />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <Play className="h-8 w-8 text-gray-400" />

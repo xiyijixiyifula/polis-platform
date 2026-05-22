@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, MessageSquare, User, Trash2, BellOff, Search, X, Users, MessageCircle, CheckSquare, Square } from 'lucide-react';
 import { messages, contacts, type ConversationSummary } from '@/lib/api';
 
@@ -250,7 +251,7 @@ export default function MessagesPage() {
                     <div className="relative shrink-0">
                       <div className="w-12 h-12 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center overflow-hidden">
                         {conv.other_user.avatar_url ? (
-                          <img src={conv.other_user.avatar_url} alt="" className="w-full h-full object-cover" />
+                          <Image src={conv.other_user.avatar_url!} alt="" width={48} height={48} className="w-full h-full object-cover" unoptimized />
                         ) : (
                           <span className="text-primary-500 font-bold text-lg">
                             {(conv.other_user.display_name || conv.other_user.username || '?').charAt(0)}

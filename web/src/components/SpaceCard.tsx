@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Users, FileText } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 
@@ -149,7 +150,7 @@ export function SpaceCard({ space }: SpaceCardProps) {
             style={{ background: visual.gradient }}
           >
             {space.icon_url ? (
-              <img src={space.icon_url} alt="" className="h-full w-full rounded-xl object-cover" />
+              <Image src={space.icon_url!} alt="" width={48} height={48} className="h-full w-full rounded-xl object-cover" unoptimized />
             ) : (
               <div className="w-7 h-7">
                 {visual.shape('white')}

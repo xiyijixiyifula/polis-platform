@@ -36,7 +36,7 @@ impl AdminHandler {
 
     /// 获取当前 admin_code
     pub fn get_admin_code(&self) -> String {
-        self.admin_code.read().unwrap().clone()
+        self.admin_code.read().map(|s| s.clone()).unwrap_or_default()
     }
 
     /// 更新 admin_code 并持久化到文件
@@ -48,7 +48,8 @@ impl AdminHandler {
         fs::write(ADMIN_CODE_FILE, new_code)
             .map_err(|e| AppError::Internal(format!("Failed to save admin code: {}", e)))?;
         // 更新内存
-        *self.admin_code.write().unwrap() = new_code.to_string();
+        let mut code = self.admin_code.write().map_err(|e| AppError::Internal(format!("Lock error: {}", e)))?;
+        *code = new_code.to_string();
         tracing::info!("Admin code updated and persisted");
         Ok(())
     }

@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatCount } from '@/lib/utils';
+import { buildPostLink } from '@/lib/module-config';
 import {
   Home, Compass, Bell, Mail, Bookmark, User, Settings,
   Search, TrendingUp, MessageCircle, Eye,
@@ -98,7 +100,7 @@ function FeedLayout() {
         setHasMore(false);
       }
     } catch (e) {
-      console.error('Failed to fetch feed:', e);
+      if (process.env.NODE_ENV === 'development') console.error('Failed to fetch feed:', e);
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -411,7 +413,7 @@ function FeedLayout() {
               {trendingPosts.length > 0 ? (
                 <div className="divide-y divide-black/5 dark:divide-white/5">
                   {trendingPosts.map((post: any, i: number) => (
-                    <Link key={post.id} href={'/post/' + post.id} className="flex items-start gap-3 px-2 py-2.5 hover:bg-white/30 dark:hover:bg-white/5 transition-colors rounded-lg">
+                    <Link key={post.id} href={buildPostLink(post.id, post.space?.namespace || post.space_ns)} className="flex items-start gap-3 px-2 py-2.5 hover:bg-white/30 dark:hover:bg-white/5 transition-colors rounded-lg">
                       <span className="text-lg font-bold text-gray-300 dark:text-gray-600 shrink-0 w-6 text-center">
                         {i + 1}
                       </span>
@@ -454,7 +456,7 @@ function FeedLayout() {
                     <Link key={space.id} href={'/space/' + space.namespace} className="flex items-center gap-3 px-2 py-3 hover:bg-white/30 dark:hover:bg-white/5 transition-colors rounded-lg">
                       <div className="h-10 w-10 shrink-0 rounded-xl flex items-center justify-center overflow-hidden" style={{ background: vis.gradient }}>
                         {space.icon_url ? (
-                          <img src={space.icon_url} alt="" className="h-full w-full rounded-xl object-cover" />
+                          <Image src={space.icon_url!} alt="" width={40} height={40} className="h-full w-full rounded-xl object-cover" unoptimized />
                         ) : (
                           <div className="w-5 h-5">{vis.shape('white')}</div>
                         )}

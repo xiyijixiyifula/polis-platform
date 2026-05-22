@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { BookOpen, FileText } from 'lucide-react';
 import type { Series } from '@/lib/api';
 
@@ -19,7 +20,7 @@ export function SeriesCard({ series, namespace }: SeriesCardProps) {
         {/* Cover or icon */}
         <div className="h-12 w-12 shrink-0 rounded-lg bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
           {series.cover_url ? (
-            <img src={series.cover_url} alt="" className="h-full w-full rounded-lg object-cover" />
+            <Image src={series.cover_url!} alt="" width={48} height={48} className="h-full w-full rounded-lg object-cover" unoptimized />
           ) : (
             <BookOpen className="h-5 w-5" />
           )}

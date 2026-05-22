@@ -2,12 +2,15 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Heart, MessageCircle, Bookmark, Eye, Repeat2,
   Pencil, Trash2, Send, ChevronDown, ChevronUp, Play,
   UserPlus, UserCheck, MessageSquare, Globe, Lock, Key
 } from 'lucide-react';
 import { formatDate, formatCount, stripMarkdown } from '@/lib/utils';
+import { useTranslations } from 'next-intl';
+import { getModuleLabel, getModuleLabelByContentType, normalizeModuleType, buildPostLink } from '@/lib/module-config';
 
 // ========== Types ==========
 
@@ -138,35 +141,8 @@ export interface ContentCardProps {
 }
 
 // ========== Module Labels ==========
-
-const MODULE_LABELS: Record<string, string> = {
-  forum: '交流', article: '文章', share: '分享', wiki: '知识库',
-  series: '系列', membership: '会员', video: '视频',
-  code_repo: '代码仓库', qa: '问答', polls: '投票',
-  announcements: '公告', chat: '聊天', store: '商城',
-  course: '课程', novel: '小说', game: '游戏',
-  mini_app: '小程序', members: '成员', post: '帖子',
-  poll: '投票', announcement: '公告',
-  discussion: '讨论', activity: '活动',
-  knowledge: '知识库', resource: '资源',
-};
-
-export function getModuleLabel(moduleType?: string): string {
-  if (!moduleType) return '交流';
-  // 非标准内容类型统一归入交流模块
-  const validModules = ['forum', 'article', 'share', 'wiki', 'video', 'qa', 'polls', 'series', 'chat', 'course', 'novel', 'game', 'mini_app'];
-  if (!validModules.includes(moduleType)) return '交流';
-  return MODULE_LABELS[moduleType] || moduleType;
-}
-
-export function getModuleLabelByContentType(type?: string, moduleType?: string): string {
-  if (type === 'poll') return '投票';
-  if (type === 'announcement') return '公告';
-  if (type === 'video') return '视频';
-  // 图文、图片等非标准 content_type 统一按 forum 显示为交流
-  if (type === 'text' || type === 'image') return '交流';
-  return getModuleLabel(moduleType);
-}
+// Re-export from unified module-config
+export { getModuleLabel, getModuleLabelByContentType, getModuleEmoji, normalizeModuleType, MODULE_CONFIG, VALID_MODULE_KEYS } from '@/lib/module-config';
 
 function getTypeEmoji(type?: string): string {
   if (type === 'poll') return '📊';
@@ -226,6 +202,7 @@ export default function ContentCard({
   submissions,
   showSubmissionsPanel = false,
 }: ContentCardProps) {
+  const t = useTranslations();
   const [liked, setLiked] = useState(isLiked);
   const [bookmarked, setBookmarked] = useState(initBookmarked);
   const [following, setFollowing] = useState(initFollowing);
@@ -256,15 +233,13 @@ export default function ContentCard({
     if (contentType === 'video') return `/video/${id}?space=${encodeURIComponent(spaceNs || '')}`;
     if (contentType === 'poll' && spaceNs) return `/space/${spaceNs}/polls`;
     if (contentType === 'poll') return '/explore';
-    const base = `/post/${id}`;
-    if (spaceNs) return `${base}?space=${encodeURIComponent(spaceNs)}`;
-    return base;
+    return buildPostLink(id, spaceNs);
   })();
 
   const builtSpaceLink = spaceLink || (spaceNs ? `/space/${encodeURIComponent(spaceNs)}` : '#');
   const builtProfileLink = profileLink || (spaceOwner ? `/profile/${encodeURIComponent(spaceOwner)}` : (authorUsername ? `/profile/${encodeURIComponent(authorUsername)}` : '#'));
 
-  const displayAuthorName = authorDisplayName || authorUsername || spaceOwner || '匿名';
+  const displayAuthorName = authorDisplayName || authorUsername || spaceOwner || 'Anonymous';
   const displayAuthorUsername = authorUsername || spaceOwner || '';
   const displaySpaceName = spaceName || spaceNs || '';
   const displaySpaceOwner = spaceOwner || (spaceNs ? spaceNs.split('/')[0] : '');
@@ -321,7 +296,7 @@ export default function ContentCard({
 
         {/* 标题 */}
         <span className="text-gray-900 dark:text-white font-semibold truncate">
-          {title || '无标题'}
+          {title || t('common.noContent')}
         </span>
       </div>
 
@@ -329,8 +304,8 @@ export default function ContentCard({
       {isVideo && hasThumbnail && (
         <div className="mt-2 mb-2 pl-5">
           <div className="relative rounded-xl overflow-hidden max-h-80 bg-gray-100 dark:bg-gray-800">
-            <img src={thumbUrl} alt={title}
-              className="w-full object-cover" style={{ maxHeight: '320px' }} />
+            <Image src={thumbUrl || '/placeholder.png'} alt={title} width={640} height={360}
+              className="w-full object-cover" style={{ maxHeight: '320px' }} unoptimized />
             <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-black/20 transition-colors">
               <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
                 <Play className="h-6 w-6 text-gray-900 ml-0.5" />
@@ -361,8 +336,8 @@ export default function ContentCard({
       <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 pl-5 mb-1.5">
         {/* Avatar */}
         {authorAvatar ? (
-          <img src={authorAvatar} alt={displayAuthorName}
-            className="w-5 h-5 rounded-full object-cover shrink-0" />
+          <Image src={authorAvatar || '/placeholder.png'} alt={displayAuthorName} width={20} height={20}
+            className="w-5 h-5 rounded-full object-cover shrink-0" unoptimized />
         ) : (
           <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
             {displayAuthorName.charAt(0)}
@@ -384,7 +359,7 @@ export default function ContentCard({
         {followerCount !== undefined && (
           <>
             <span className="text-gray-300 dark:text-gray-600">·</span>
-            <span className="text-[11px]">{formatCount(followerCount)} 粉丝</span>
+            <span className="text-[11px]">{formatCount(followerCount)} {t('common.followers')}</span>
           </>
         )}
 
@@ -406,7 +381,7 @@ export default function ContentCard({
                 : 'border-primary-300 dark:border-primary-700 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20'
             }`}
           >
-            {following ? <><UserCheck size={10} className="inline mr-0.5" />已关注</> : <><UserPlus size={10} className="inline mr-0.5" />关注</>}
+            {following ? <><UserCheck size={10} className="inline mr-0.5" />{t('common.following')}</> : <><UserPlus size={10} className="inline mr-0.5" />{t('common.follow')}</>}
           </button>
         )}
 
@@ -416,7 +391,7 @@ export default function ContentCard({
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onMessage?.(authorId); }}
             className="text-[11px] px-2 py-0.5 rounded-full border border-gray-300 dark:border-gray-600 text-gray-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
           >
-            <MessageSquare size={10} className="inline mr-0.5" />私信
+            <MessageSquare size={10} className="inline mr-0.5" />{t('nav.messagesDm')}
           </button>
         )}
 
@@ -429,7 +404,7 @@ export default function ContentCard({
                 ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
                 : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
             }`}>
-              {visibility === 'private' ? '🔒 私密' : '🔗 不公开'}
+              {visibility === 'private' ? `🔒 ${t('space.private')}` : `🔗 ${t('space.unlisted')}`}
             </span>
           </>
         )}
@@ -456,7 +431,7 @@ export default function ContentCard({
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit(id); }}
               className="text-xs flex items-center gap-1 text-gray-500 hover:text-primary-600 transition-colors"
             >
-              <Pencil size={12} /> 编辑
+              <Pencil size={12} /> {t('common.edit')}
             </button>
           )}
           {onVisibilityChange && visibility && (
@@ -467,11 +442,10 @@ export default function ContentCard({
                 visibility === 'private' ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20' :
                 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20'
               }`}
-              title={`当前: ${visibility === 'public' ? '公开' : visibility === 'private' ? '私密' : '不公开'} (点击切换)`}
             >
-              {visibility === 'public' ? <><Globe size={11} className="inline mr-0.5" />公开</> :
-               visibility === 'private' ? <><Lock size={11} className="inline mr-0.5" />私密</> :
-               <><Key size={11} className="inline mr-0.5" />不公开</>}
+              {visibility === 'public' ? <><Globe size={11} className="inline mr-0.5" />{t('space.public')}</> :
+               visibility === 'private' ? <><Lock size={11} className="inline mr-0.5" />{t('space.private')}</> :
+               <><Key size={11} className="inline mr-0.5" />{t('space.unlisted')}</>}
             </button>
           )}
           {onSubmit && (
@@ -479,7 +453,7 @@ export default function ContentCard({
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onSubmit(id); }}
               className="text-xs flex items-center gap-1 text-primary-600 hover:text-primary-700 transition-colors ml-auto"
             >
-              <Send size={12} /> 投稿
+              <Send size={12} /> {t('creation.submitToSpace')}
             </button>
           )}
           {onDelete && (
@@ -487,7 +461,7 @@ export default function ContentCard({
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(id); }}
               className="text-xs flex items-center gap-1 text-red-500 hover:text-red-700 transition-colors"
             >
-              <Trash2 size={12} /> 删除
+              <Trash2 size={12} /> {t('common.delete')}
             </button>
           )}
         </div>
@@ -503,7 +477,7 @@ export default function ContentCard({
             >
               {expandedSubs ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               <span>
-                投稿社区 ({submissions.length})
+                {t('creation.submissions')} ({submissions.length})
                 {!expandedSubs && submissions.length > 1 && (
                   <span className="text-gray-400 ml-1">+{submissions.length - 1}个</span>
                 )}
@@ -528,8 +502,8 @@ export default function ContentCard({
                         >
                           @{sub.space.namespace.split('/')[0]}/{sub.space.title || sub.space.namespace}/{getModuleLabel(sub.module_type)}
                         </span>
-                        {sub.is_pinned && <span className="text-amber-500 shrink-0">📌置顶</span>}
-                        {sub.display_status === 'hidden' && <span className="text-red-500 shrink-0">已隐藏</span>}
+                        {sub.is_pinned && <span className="text-amber-500 shrink-0">📌{t('space.pinned')}</span>}
+                        {sub.display_status === 'hidden' && <span className="text-red-500 shrink-0">{t('post.hidden')}</span>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0 ml-2">
                         <span className="text-gray-400">
@@ -540,7 +514,7 @@ export default function ContentCard({
                             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onWithdraw(sub.ref_id); }}
                             className="text-red-500 hover:text-red-700"
                           >
-                            撤稿
+                            {t('creation.withdraw')}
                           </button>
                         )}
                       </div>
@@ -548,10 +522,10 @@ export default function ContentCard({
                     {/* Community stats row */}
                     <div className="flex items-center gap-3 mt-1 text-gray-400">
                       {sub.community_member_count !== undefined && (
-                        <span>👥 {formatCount(sub.community_member_count)} 成员</span>
+                        <span>👥 {formatCount(sub.community_member_count)} {t('common.members')}</span>
                       )}
                       {sub.community_post_count !== undefined && (
-                        <span>📄 {formatCount(sub.community_post_count)} 帖子</span>
+                        <span>📄 {formatCount(sub.community_post_count)} {t('module.post')}</span>
                       )}
                       {sub.community_level != null && (
                         <span className="text-amber-500">⭐ Lv.{sub.community_level}</span>
@@ -665,10 +639,8 @@ export function adaptFeedItem(item: any): ContentCardProps {
 export function adaptCreationItem(creation: any): ContentCardProps {
   const creator = creation.creator || {};
   const firstSub = creation.submissions?.[0];
-  // 规范化模块类型：非标准 content_type 统一归入 forum
   const rawType = firstSub?.module_type || creation.content_type || 'forum';
-  const validModules = ['forum', 'article', 'share', 'wiki', 'video', 'qa', 'polls', 'series', 'chat', 'course', 'novel', 'game', 'mini_app'];
-  const normModuleType = validModules.includes(rawType) ? rawType : 'forum';
+  const normModuleType = normalizeModuleType(rawType);
 
   return {
     id: creation.id,

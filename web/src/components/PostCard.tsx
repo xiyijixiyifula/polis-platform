@@ -5,6 +5,7 @@ import { Pin, EyeOff, Star } from 'lucide-react';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
+import { buildPostLink } from '@/lib/module-config';
 
 interface PostCardProps {
   post: {
@@ -47,7 +48,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
     module_type: 'forum',
   });
 
-  const spaceLink = post.space_ns || post.space_id || '';
+  const postLink = buildPostLink(post.id, post.space_ns);
 
   return (
     <div className="relative group">
@@ -130,13 +131,13 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
 
           {/* Stats row + management buttons */}
           <div className="mt-3 flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 flex-wrap">
-            <Link href={`/post/${post.id}${spaceLink ? '?space=' + encodeURIComponent(spaceLink) : ''}`}
+            <Link href={postLink}
               className={`flex items-center gap-1 hover:text-red-500 transition-colors ${post.is_liked ? 'text-red-500' : ''}`}>
               <span>❤️</span>
               <span>{post.like_count || 0}</span>
             </Link>
 
-            <Link href={`/post/${post.id}${spaceLink ? '?space=' + encodeURIComponent(spaceLink) : ''}`}
+            <Link href={postLink}
               className="flex items-center gap-1 hover:text-primary-600 transition-colors">
               <span>💬</span>
               <span>{post.comment_count || 0}</span>
@@ -199,7 +200,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
             )}
 
             <div className="ml-auto flex items-center gap-1">
-              <ShareButton url={`/post/${post.id}${spaceLink ? '?space=' + encodeURIComponent(spaceLink) : ''}`} title={post.title} />
+              <ShareButton url={postLink} title={post.title} />
             </div>
           </div>
         </div>

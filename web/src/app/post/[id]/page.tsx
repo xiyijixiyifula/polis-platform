@@ -5,7 +5,8 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen, UserPlus, UserCheck, MessageSquare } from 'lucide-react';
 import { formatDate, formatCount, estimateReadTime, stripMarkdown } from '@/lib/utils';
-import { posts, series, Comment, Post, type Series } from '@/lib/api';
+import { buildPostLink } from '@/lib/module-config';
+import { posts, series, creations, Comment, Post, type Series } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
 
@@ -18,6 +19,57 @@ function getCurrentUserId(): string | null {
     const decoded = JSON.parse(atob(payload));
     return decoded.sub || null;
   } catch { return null; }
+}
+
+/** 将 Creation 数据适配为 Post 格式，用于降级显示无投稿的创作 */
+function adaptCreationToPost(c: any): Post {
+  return {
+    id: c.id,
+    space_id: '',
+    module_type: c.content_type || 'forum',
+    author: c.creator || null,
+    author_id: c.creator?.id,
+    title: c.title || '',
+    body: c.body || '',
+    content_type: c.content_type || 'forum',
+    tags: c.tags || [],
+    media_urls: c.media_urls || [],
+    visibility: c.visibility,
+    is_pinned: false,
+    is_featured: false,
+    view_count: c.view_count || 0,
+    like_count: c.like_count || 0,
+    comment_count: c.comment_count || 0,
+    is_liked: c.is_liked,
+    is_bookmarked: c.is_bookmarked,
+    has_password: c.has_password,
+    created_at: c.created_at || '',
+    updated_at: c.updated_at || '',
+  };
+}
+
+/** 尝试作为 Creation 加载，成功则设置状态并返回 true */
+async function tryLoadAsCreation(
+  postId: string,
+  setters: {
+    setPost: (p: Post) => void;
+    setLikeCount: (n: number) => void;
+    setLiked: (b: boolean) => void;
+    setBookmarked: (b: boolean) => void;
+  }
+): Promise<boolean> {
+  try {
+    const creationRes = await creations.get(postId);
+    if (creationRes.code === 0 && creationRes.data) {
+      const c = creationRes.data;
+      setters.setPost(adaptCreationToPost(c));
+      setters.setLikeCount(c.like_count || 0);
+      setters.setLiked(c.is_liked || false);
+      setters.setBookmarked(c.is_bookmarked || false);
+      return true;
+    }
+  } catch {}
+  return false;
 }
 
 function PostDetailContent() {
@@ -94,6 +146,9 @@ function PostDetailContent() {
             setLoading(false);
             return;
           }
+          // 降级查询：帖子不存在时尝试作为创作（creation）显示
+          const loaded = await tryLoadAsCreation(postId, { setPost, setLikeCount, setLiked, setBookmarked });
+          if (loaded) { setLoading(false); return; }
           setError('帖子不存在或已被删除');
           setLoading(false);
           return;
@@ -115,6 +170,9 @@ function PostDetailContent() {
             }
           } catch {}
         } else {
+          // 降级查询：帖子/空间不存在时尝试作为创作（creation）显示
+          const loaded = await tryLoadAsCreation(postId, { setPost, setLikeCount, setLiked, setBookmarked });
+          if (loaded) { setLoading(false); return; }
           setError(res.message || '帖子不存在或已被删除');
         }
       } catch {
@@ -813,7 +871,7 @@ function PostDetailContent() {
           <h3 className="font-semibold text-gray-900 dark:text-white mb-4">同社区更多帖子</h3>
           <div className="space-y-3">
             {relatedPosts.map((p) => (
-              <Link key={p.id} href={`/post/${p.id}?space=${encodeURIComponent(currentNs)}`} className="block p-3 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-colors border-b border-gray-100/50 dark:border-gray-700/30 last:border-b-0">
+              <Link key={p.id} href={buildPostLink(p.id, currentNs)} className="block p-3 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-colors border-b border-gray-100/50 dark:border-gray-700/30 last:border-b-0">
                 <h4 className="font-medium text-gray-900 mb-1">{p.title}</h4>
                 <p className="text-sm text-gray-500 line-clamp-2">{stripMarkdown(p.summary || p.body)}</p>
                 <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">

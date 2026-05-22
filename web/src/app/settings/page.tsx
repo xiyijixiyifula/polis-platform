@@ -46,7 +46,7 @@ export default function SettingsPage() {
           }
         }
       } catch (e) {
-        console.error('Failed to load profile', e);
+        if (process.env.NODE_ENV === 'development') console.error('Failed to load profile', e);
       } finally {
         setLoading(false);
       }

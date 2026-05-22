@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { ArrowLeft, Send } from 'lucide-react';
 import Link from 'next/link';
@@ -14,6 +14,21 @@ export default function ViewCreationPage() {
   const [creation, setCreation] = useState<CreationPublic | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitOpen, setSubmitOpen] = useState(false);
+
+  // 动态返回链接：优先使用来源页面，兜底为创作中心
+  const returnUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '/creations';
+    try {
+      const ref = document.referrer;
+      if (ref) {
+        const refUrl = new URL(ref);
+        if (refUrl.origin === window.location.origin && !refUrl.pathname.startsWith('/creations/')) {
+          return ref;
+        }
+      }
+    } catch {}
+    return '/creations';
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -44,7 +59,7 @@ export default function ViewCreationPage() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 text-center">
         <p className="text-gray-500 dark:text-gray-400">创作不存在或已删除</p>
-        <Link href="/creations" className="text-primary-600 hover:underline text-sm mt-2 inline-block">
+        <Link href={returnUrl} className="text-primary-600 hover:underline text-sm mt-2 inline-block">
           返回我的创作
         </Link>
       </div>
@@ -55,9 +70,9 @@ export default function ViewCreationPage() {
     <div className="mx-auto max-w-5xl px-4 py-10">
       {/* 导航 */}
       <div className="flex items-center justify-between mb-6">
-        <Link href="/creations"
+        <Link href={returnUrl}
           className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition">
-          <ArrowLeft size={18} /> 返回我的创作
+          <ArrowLeft size={18} /> 返回
         </Link>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => setSubmitOpen(true)}

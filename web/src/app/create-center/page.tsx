@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PenLine, FileText, Eye, Trash2, ExternalLink, Home, MessageCircle } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
+import { getModuleLabel, buildPostLink } from '@/lib/module-config';
 
 interface ContentItem {
   id: string;
@@ -19,14 +20,6 @@ interface ContentItem {
   created_at: string;
   space: { namespace: string; title: string };
 }
-
-const moduleLabels: Record<string, string> = {
-  forum: '交流', share: '分享', wiki: '知识库',
-  qa: '问答', polls: '投票', announcements: '公告',
-  novel: '小说', game: '游戏', mini_app: '小程序',
-};
-
-function getModuleLabel(mt: string) { return moduleLabels[mt] || mt; }
 
 export default function CreateCenterPage() {
   const [contents, setContents] = useState<ContentItem[]>([]);
@@ -126,7 +119,7 @@ export default function CreateCenterPage() {
                   <span className="text-xs text-gray-400">{formatDate(item.created_at)}</span>
                 </div>
 
-                <Link href={`/post/${item.id}`}
+                <Link href={buildPostLink(item.id, item.space?.namespace)}
                   className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 dark:hover:text-primary-400 line-clamp-1">
                   {item.title || '(无标题)'}
                 </Link>
@@ -146,7 +139,7 @@ export default function CreateCenterPage() {
                   className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20" title="编辑">
                   <PenLine className="h-4 w-4" />
                 </Link>
-                <Link href={`/post/${item.id}`}
+                <Link href={buildPostLink(item.id, item.space?.namespace)}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700" title="查看">
                   <ExternalLink className="h-4 w-4" />
                 </Link>

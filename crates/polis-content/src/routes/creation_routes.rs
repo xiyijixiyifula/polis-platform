@@ -78,7 +78,7 @@ async fn list_my_creations(
 ) -> Result<Json<JVal>, AppError> {
     // 公开访问：通过 creator_username 查询某用户的公开作品
     if q.creator_username.is_some() {
-        let username = q.creator_username.as_ref().unwrap().clone();
+        let username = q.creator_username.clone().unwrap_or_default();
         let uid = extract_user_id(&headers)?;
         let (creations, pagination) = make_handler(&h.pool).list_user_public_creations(&username, q, uid).await?;
         return Ok(Json(JVal { code: 0, message: "ok".to_string(), data: Some(serde_json::to_value(creations).unwrap_or_default()), pagination: Some(pagination) }));

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, User, Send, Pin, Trash2, Search, X, Eraser } from 'lucide-react';
 import { messages, users, type DirectMessage } from '@/lib/api';
 
@@ -47,7 +48,7 @@ export default function ConversationPage() {
         await messages.markRead(userId);
       }
     } catch (e: any) {
-      console.error(e);
+      if (process.env.NODE_ENV === 'development') if (process.env.NODE_ENV === 'development') console.error(e);
     } finally {
       setLoading(false);
     }
@@ -184,7 +185,7 @@ export default function ConversationPage() {
         <div className="flex items-center gap-2 flex-1">
           <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center overflow-hidden">
             {otherUser?.avatar_url ? (
-              <img src={otherUser.avatar_url} alt="" className="w-full h-full object-cover" />
+              <Image src={otherUser.avatar_url!} alt="" width={32} height={32} className="w-full h-full object-cover" unoptimized />
             ) : (
               <User className="h-4 w-4 text-primary-500" />
             )}

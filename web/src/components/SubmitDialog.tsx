@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Search, Check } from 'lucide-react';
+import { getModuleLabel } from '@/lib/module-config';
 
 interface Space {
   id: string;
@@ -15,15 +16,6 @@ interface SubmitDialogProps {
   onClose: () => void;
   onSubmit: (spaceNs: string, moduleType: string) => void;
 }
-
-const MODULE_LABELS: Record<string, string> = {
-  forum: '交流',
-  qa: '问答',
-  video: '视频',
-  wiki: '知识库',
-  share: '分享',
-  poll: '投票',
-};
 
 export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDialogProps) {
   const [spaces, setSpaces] = useState<Space[]>([]);
@@ -151,7 +143,7 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
                       ? 'bg-primary-600 text-white border-primary-600'
                       : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary-400'
                   }`}>
-                  {MODULE_LABELS[mod] || mod}
+                  {getModuleLabel(mod)}
                 </button>
               ))}
             </div>
