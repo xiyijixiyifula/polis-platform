@@ -331,7 +331,7 @@ function NewCreationPageInner() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
-          module_type: moduleType, title: title.trim(), body: body,
+          content_type: moduleType, title: title.trim(), body: body,
           tags: tagList.length > 0 ? tagList : undefined,
           visibility, password: visibility === 'unlisted' && password ? password : undefined,
         }),
