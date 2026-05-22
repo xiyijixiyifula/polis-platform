@@ -665,6 +665,10 @@ export function adaptFeedItem(item: any): ContentCardProps {
 export function adaptCreationItem(creation: any): ContentCardProps {
   const creator = creation.creator || {};
   const firstSub = creation.submissions?.[0];
+  // 规范化模块类型：非标准 content_type 统一归入 forum
+  const rawType = firstSub?.module_type || creation.content_type || 'forum';
+  const validModules = ['forum', 'article', 'share', 'wiki', 'video', 'qa', 'polls', 'series', 'chat', 'course', 'novel', 'game', 'mini_app'];
+  const normModuleType = validModules.includes(rawType) ? rawType : 'forum';
 
   return {
     id: creation.id,
@@ -673,7 +677,7 @@ export function adaptCreationItem(creation: any): ContentCardProps {
     spaceOwner: firstSub?.space?.namespace?.split('/')[0] || creator.username || '',
     spaceName: firstSub?.space?.title || '',
     spaceNs: firstSub?.space?.namespace || '',
-    moduleType: firstSub?.module_type || creation.content_type || '',
+    moduleType: normModuleType,
     contentType: creation.content_type || 'post',
     authorUsername: creator.username || '',
     authorDisplayName: creator.display_name || creator.username || '',
