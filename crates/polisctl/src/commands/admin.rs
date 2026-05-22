@@ -194,10 +194,11 @@ pub async fn analytics(
     config: &Config, client: &HttpClient, analytics_type: &str, days: u32,
 ) -> Result<(), anyhow::Error> {
     let token = config.require_admin()?;
-    let resp = client.get(
-        &format!("/api/admin/analytics/{}?days={}", analytics_type, days),
-        Some(&token),
-    ).await?;
+    let path = match analytics_type {
+        "posts" => format!("/api/admin/analytics/posts?days={}", days),
+        _ => format!("/api/admin/analytics/users?days={}", days),
+    };
+    let resp = client.get(&path, Some(&token)).await?;
     print_output(extract_data(&resp), config.format);
     Ok(())
 }
