@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { PenLine, FileText, Eye, Trash2, ExternalLink, Home, MessageCircle, LogIn } from 'lucide-react';
+import { PenLine, FileText, Eye, Trash2, ExternalLink, Home, MessageCircle, LogIn, Send, X, Search, Plus, Check } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
 import { getModuleLabel, buildPostLink } from '@/lib/module-config';
+import { getToken } from '@/lib/api';
 
 interface ContentItem {
   id: string;
@@ -21,12 +22,35 @@ interface ContentItem {
   space: { namespace: string; title: string };
 }
 
+const SUBMIT_MODULE_TYPES = [
+  { value: 'forum', label: '交流' },
+  { value: 'article', label: '文章' },
+  { value: 'share', label: '分享' },
+  { value: 'wiki', label: '知识库' },
+  { value: 'qa', label: '问答' },
+  { value: 'novel', label: '小说' },
+  { value: 'game', label: '游戏' },
+  { value: 'mini_app', label: '小程序' },
+  { value: 'video', label: '视频' },
+];
+
 export default function CreateCenterPage() {
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // null = 检测中
   const [pagination, setPagination] = useState({ page: 1, page_size: 50, total: 0, total_pages: 0 });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // ── 一键投稿 ──
+  const [submitModal, setSubmitModal] = useState<{ creationId: string; creationTitle: string } | null>(null);
+  const [submitSearch, setSubmitSearch] = useState('');
+  const [submitResults, setSubmitResults] = useState<any[]>([]);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitModule, setSubmitModule] = useState('forum');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState('');
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('polis_access_token');
@@ -71,6 +95,52 @@ export default function CreateCenterPage() {
   };
 
   const activeContents = contents.filter(c => !c.is_deleted);
+
+  // ── 社区搜索（一键投稿) ──
+  const handleSubmitSearch = (q: string) => {
+    setSubmitSearch(q);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!q.trim()) { setSubmitResults([]); return; }
+    searchTimerRef.current = setTimeout(async () => {
+      setSubmitLoading(true);
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&page_size=8`);
+        const data = await res.json();
+        if (data.code === 0 && Array.isArray(data.data)) setSubmitResults(data.data);
+      } catch {}
+      setSubmitLoading(false);
+    }, 300);
+  };
+
+  const handleSubmitToSpace = async (creationId: string, spaceNs: string) => {
+    setSubmitting(true); setSubmitError(''); setSubmitSuccess('');
+    try {
+      const token = getToken();
+      const res = await fetch(`/api/creations/${creationId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ creation_id: creationId, space_ns: spaceNs, module_type: submitModule }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setSubmitSuccess(`已投稿到 ${spaceNs}`);
+        setTimeout(() => setSubmitModal(null), 1200);
+      } else {
+        setSubmitError(data.message || '投稿失败');
+      }
+    } catch {
+      setSubmitError('网络错误');
+    } finally { setSubmitting(false); }
+  };
+
+  const openSubmitModal = (item: ContentItem) => {
+    setSubmitModal({ creationId: item.id, creationTitle: item.title || '(无标题)' });
+    setSubmitModule(item.module_type || 'forum');
+    setSubmitSearch('');
+    setSubmitResults([]);
+    setSubmitError('');
+    setSubmitSuccess('');
+  };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
@@ -157,6 +227,10 @@ export default function CreateCenterPage() {
               </div>
 
               <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); openSubmitModal(item); }}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20" title="投稿到社区">
+                  <Send className="h-4 w-4" />
+                </button>
                 <Link href={`/post/${item.id}/edit`}
                   className="p-1.5 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20" title="编辑">
                   <PenLine className="h-4 w-4" />
@@ -187,6 +261,85 @@ export default function CreateCenterPage() {
               {p}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* ===== 一键投稿模态框 ===== */}
+      {submitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setSubmitModal(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white">投稿到社区</h3>
+                <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[280px]">「{submitModal.creationTitle}」</p>
+              </div>
+              <button onClick={() => setSubmitModal(null)}
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              {/* 模块选择 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">投稿到哪个模块</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {SUBMIT_MODULE_TYPES.map(m => (
+                    <button key={m.value} type="button" onClick={() => setSubmitModule(m.value)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                        submitModule === m.value
+                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
+                      }`}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 社区搜索 */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">搜索目标社区</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input type="text" value={submitSearch} onChange={(e) => handleSubmitSearch(e.target.value)}
+                    placeholder="输入社区名称..." autoFocus
+                    className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                  {submitLoading && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 animate-pulse">搜索...</span>}
+                </div>
+              </div>
+
+              {/* 搜索结果 */}
+              {submitResults.length > 0 && (
+                <div className="max-h-48 overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-xl divide-y divide-gray-100 dark:divide-gray-700">
+                  {submitResults.map((s: any) => (
+                    <button key={s.id} type="button" onClick={() => handleSubmitToSpace(submitModal.creationId, s.namespace)}
+                      disabled={submitting}
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-750 flex items-center justify-between transition-colors disabled:opacity-50">
+                      <div className="min-w-0">
+                        <span className="font-medium text-gray-900 dark:text-white block truncate">{s.title || s.namespace}</span>
+                        <span className="text-xs text-gray-400">@{s.namespace}</span>
+                      </div>
+                      <Plus className="h-4 w-4 text-primary-500 shrink-0 ml-2" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 错误/成功提示 */}
+              {submitError && (
+                <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">{submitError}</div>
+              )}
+              {submitSuccess && (
+                <div className="text-sm text-green-600 bg-green-50 dark:bg-green-900/20 rounded-lg px-3 py-2 flex items-center gap-1.5">
+                  <Check className="h-4 w-4" />{submitSuccess}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
