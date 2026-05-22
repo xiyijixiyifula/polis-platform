@@ -155,10 +155,11 @@ impl SpaceRepo {
         Ok(spaces)
     }
 
-    /// 获取热门社区
+    /// 获取热门社区 — 综合热度排序
+    /// 算法: member_count(权重0.3) + post_count(权重0.5) + 近期活跃加分(7天内权重+1)
     pub async fn find_trending(&self, limit: u32) -> Result<Vec<Space>, AppError> {
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY member_count DESC LIMIT $1",
+            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY (member_count * 0.3 + post_count * 0.5 + CASE WHEN updated_at > NOW() - INTERVAL '7 days' THEN 1.5 ELSE 0 END) DESC, created_at DESC LIMIT $1",
         )
         .bind(limit as i64)
         .fetch_all(&self.pool)
@@ -166,7 +167,8 @@ impl SpaceRepo {
         Ok(spaces)
     }
 
-    /// 分页列出所有公开活跃社区
+    /// 分页列出所有公开活跃社区 — 综合热度排序
+    /// 算法: member_count + post_count + 近期活跃衰减因子
     pub async fn find_all(&self, page: u32, page_size: u32) -> Result<(Vec<Space>, i64), AppError> {
         let offset = ((page - 1) * page_size) as i64;
         let limit = page_size as i64;
@@ -176,7 +178,7 @@ impl SpaceRepo {
         .fetch_one(&self.pool)
         .await?;
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY (member_count * 0.3 + post_count * 0.5 + 1.0 / GREATEST(EXTRACT(EPOCH FROM (NOW() - updated_at)) / 86400.0, 1.0) * 2.0) DESC, created_at DESC LIMIT $1 OFFSET $2"
         )
         .bind(limit)
         .bind(offset)

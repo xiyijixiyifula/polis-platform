@@ -517,6 +517,8 @@ pub struct Follow {
 pub struct PaginationParams {
     pub page: Option<u32>,
     pub page_size: Option<u32>,
+    /// 排序方式: "latest" | "hot" | "following"
+    pub sort: Option<String>,
 }
 
 impl Default for PaginationParams {
@@ -524,6 +526,7 @@ impl Default for PaginationParams {
         Self {
             page: Some(1),
             page_size: Some(20),
+            sort: None,
         }
     }
 }

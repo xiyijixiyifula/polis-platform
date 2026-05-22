@@ -75,7 +75,8 @@ function FeedLayout() {
 
   const getSortParam = (tab: string) => {
     if (tab === 'hot') return '&sort=hot';
-    return '';
+    if (tab === 'following') return '&sort=following';
+    return '&sort=latest';
   };
 
   const fetchFeed = useCallback(async (pageNum: number, append: boolean = false, tab: string = 'all') => {

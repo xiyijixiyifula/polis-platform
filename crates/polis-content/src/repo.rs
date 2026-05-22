@@ -1131,9 +1131,72 @@ impl ContentRepo {
     }
 
 
-    /// Get unified feed across all spaces (posts + polls + announcements + videos)
-    pub async fn get_feed(&self, page: u32, page_size: u32) -> Result<(Vec<serde_json::Value>, u64), AppError> {
-        // 先获取总数
+    /// 获取全站信息流 (支持按排序算法拉取)
+    ///
+    /// sort:
+    /// - "latest" (默认): 按发布时间倒序
+    /// - "hot": 热度加权排序，公式 = (观看*0.5 + 点赞*2 + 评论*3) / 小时衰减
+    /// - "following": 仅展示关注用户的公开内容，按时间倒序
+    pub async fn get_feed(
+        &self, page: u32, page_size: u32, sort: Option<&str>, user_id: Option<Uuid>,
+    ) -> Result<(Vec<serde_json::Value>, u64), AppError> {
+        let offset = ((page.saturating_sub(1)) * page_size) as i64;
+        let limit = page_size as i64;
+
+        // 关注的人模式: 查询关注列表
+        let following_ids: Option<Vec<Uuid>> = if sort == Some("following") {
+            if let Some(uid) = user_id {
+                let rows: Vec<(Uuid,)> = sqlx::query_as(
+                    "SELECT following_id FROM follows WHERE follower_id = $1"
+                ).bind(uid).fetch_all(&self.pool).await?;
+                if rows.is_empty() {
+                    return Ok((Vec::new(), 0));
+                }
+                Some(rows.into_iter().map(|r| r.0).collect())
+            } else {
+                return Ok((Vec::new(), 0));
+            }
+        } else {
+            None
+        };
+
+        // 帖子查询 (按模式分 SQL)
+        type PostRow = (Uuid, Uuid, String, Uuid, String, String, String, i64, i64, i64, chrono::DateTime<chrono::Utc>);
+
+        let posts: Vec<PostRow> = match &following_ids {
+            Some(ids) => {
+                sqlx::query_as::<_, PostRow>(
+                    "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at FROM posts p WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' AND p.author_id = ANY($1::uuid[]) ORDER BY p.created_at DESC LIMIT $2 OFFSET $3"
+                ).bind(ids).bind(limit).bind(offset).fetch_all(&self.pool).await?
+            }
+            None => match sort {
+                Some("hot") => {
+                    sqlx::query_as::<_, PostRow>(
+                        "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at FROM posts p WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' ORDER BY (p.view_count * 0.5 + p.like_count * 2.0 + p.comment_count * 3.0) / GREATEST(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600.0, 1.0) DESC, p.created_at DESC LIMIT $1 OFFSET $2"
+                    ).bind(limit).bind(offset).fetch_all(&self.pool).await?
+                }
+                _ => {
+                    sqlx::query_as::<_, PostRow>(
+                        "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at FROM posts p WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
+                    ).bind(limit).bind(offset).fetch_all(&self.pool).await?
+                }
+            },
+        };
+
+        // 投票/公告/视频 (对 following 模式不过滤，因为总量小且通常由社区创建)
+        let polls = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, chrono::DateTime<chrono::Utc>,)>(
+            "SELECT id, space_id, author_id, title, COALESCE(description, ''), created_at FROM polls WHERE status = 'active' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+
+        let announcements = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, String, chrono::DateTime<chrono::Utc>,)>(
+            "SELECT id, space_id, author_id, title, LEFT(body, 200), importance, created_at FROM announcements ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+
+        let videos = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, i64, i64, i64, Option<String>, Option<i32>, chrono::DateTime<chrono::Utc>,)>(
+            "SELECT v.id, sv.space_id, v.uploader_id, v.title, COALESCE(v.description, ''), v.comment_count, v.like_count, v.view_count, v.thumbnail_url, v.duration_seconds, v.created_at FROM videos v INNER JOIN space_videos sv ON v.id = sv.video_id WHERE v.visibility = 'public' AND sv.review_status = 'approved' ORDER BY v.created_at DESC LIMIT $1 OFFSET $2"
+        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+
+        // 总数
         let post_total: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM posts WHERE is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'"
         ).fetch_one(&self.pool).await?;
@@ -1148,20 +1211,7 @@ impl ContentRepo {
         ).fetch_one(&self.pool).await?;
         let total = (post_total + poll_total + ann_total + video_total) as u64;
 
-        let offset = ((page.saturating_sub(1)) * page_size) as i64;
-        let limit = page_size as i64;
-        let posts = sqlx::query_as::<_, (Uuid, Uuid, String, Uuid, String, String, String, i64, i64, i64, chrono::DateTime<chrono::Utc>,)>(
-            "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at FROM posts p WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
-        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
-        let polls = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, chrono::DateTime<chrono::Utc>,)>(
-            "SELECT id, space_id, author_id, title, COALESCE(description, ''), created_at FROM polls WHERE status = 'active' ORDER BY created_at DESC LIMIT $1 OFFSET $2"
-        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
-        let announcements = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, String, chrono::DateTime<chrono::Utc>,)>(
-            "SELECT id, space_id, author_id, title, LEFT(body, 200), importance, created_at FROM announcements ORDER By created_at DESC LIMIT $1 OFFSET $2"
-        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
-        let videos = sqlx::query_as::<_, (Uuid, Uuid, Uuid, String, String, i64, i64, i64, Option<String>, Option<i32>, chrono::DateTime<chrono::Utc>,)>(
-            "SELECT v.id, sv.space_id, v.uploader_id, v.title, COALESCE(v.description, ''), v.comment_count, v.like_count, v.view_count, v.thumbnail_url, v.duration_seconds, v.created_at FROM videos v INNER JOIN space_videos sv ON v.id = sv.video_id WHERE v.visibility = 'public' AND sv.review_status = 'approved' ORDER BY v.created_at DESC LIMIT $1 OFFSET $2"
-        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+        // 批量查找作者和空间
         let mut user_ids: Vec<Uuid> = Vec::new();
         let mut space_ids: Vec<Uuid> = Vec::new();
         for (_, sid, _, aid, _, _, _, _, _, _, _) in &posts { user_ids.push(*aid); space_ids.push(*sid); }
@@ -1170,6 +1220,8 @@ impl ContentRepo {
         for (_, sid, aid, _, _, _, _, _, _, _, _) in &videos { user_ids.push(*aid); space_ids.push(*sid); }
         let users = self.find_users_batch(&user_ids).await?;
         let spaces = self.find_spaces_batch(&space_ids).await?;
+
+        // 组装结果
         let mut items: Vec<serde_json::Value> = Vec::new();
         for (id, space_id, module_type, author_id, title, body_preview, _content_type, comment_count, like_count, view_count, created_at) in &posts {
             let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));
@@ -1191,6 +1243,8 @@ impl ContentRepo {
             let space_info = spaces.get(space_id);
             items.push(serde_json::json!({"id": id, "type": "video", "module_type": "video", "title": title, "preview": desc, "thumbnail_url": thumbnail_url, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "duration_seconds": duration_seconds, "author": author, "space": space_info}));
         }
+
+        // 全量排序: 不同来源的混合内容再按整体时间排序
         items.sort_by(|a, b| {
             let ta = a["created_at"].as_str().unwrap_or("");
             let tb = b["created_at"].as_str().unwrap_or("");

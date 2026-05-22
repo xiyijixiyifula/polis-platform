@@ -348,7 +348,7 @@ async fn handle_public_content(
             // GET /api/spaces/{ns}/posts - list posts
             let query = parse_query_params::<ListPostsQuery>(req.uri().query());
             let q = query.unwrap_or(ListPostsQuery {
-                pagination: PaginationParams { page: Some(1), page_size: Some(20) },
+                pagination: PaginationParams { page: Some(1), page_size: Some(20), sort: None },
                 module: None,
                 sort: None,
                 include_hidden: None,
@@ -1351,11 +1351,14 @@ async fn withdraw_reference_route(
 
 async fn feed_route(
     State(h): State<Arc<ContentHandler>>,
+    headers: HeaderMap,
     Query(q): Query<PaginationParams>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let page = q.page.unwrap_or(1);
     let page_size = q.page_size.unwrap_or(20).min(50);
-    let (items, total) = h.get_feed(page, page_size).await?;
+    let sort = q.sort.as_deref();
+    let uid = maybe_extract_user_id(&headers).unwrap_or(None);
+    let (items, total) = h.get_feed(page, page_size, sort, uid).await?;
     Ok(Json(serde_json::json!({"code": 0, "data": items, "pagination": {"page": page, "page_size": page_size, "total": total}})))
 }
 
