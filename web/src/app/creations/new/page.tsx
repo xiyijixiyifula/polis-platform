@@ -346,7 +346,7 @@ function NewCreationPageInner() {
           await Promise.all(submissions.map(sub =>
             fetch(`/api/creations/${creationId}/submit`, {
               method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-              body: JSON.stringify({ space_id: sub.spaceId, module_type: sub.moduleType }),
+              body: JSON.stringify({ creation_id: creationId, space_ns: sub.spaceNs, module_type: sub.moduleType }),
             }).catch(() => {})
           ));
         }

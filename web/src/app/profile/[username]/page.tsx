@@ -342,11 +342,8 @@ export default function UserProfilePage() {
       let apiPath: string;
       let body: string;
       if (refIsCreation) {
-        // 从已加载的社区列表中查找 space_id
-        const targetSpace = refUserSpaces.find((s: any) => s.namespace === refSpaceNs.trim());
-        const spaceId = targetSpace?.id || refSpaceNs.trim();
         apiPath = '/api/creations/' + refPostId + '/submit';
-        body = JSON.stringify({ space_id: spaceId, module_type: refModuleType });
+        body = JSON.stringify({ creation_id: refPostId, space_ns: refSpaceNs.trim(), module_type: refModuleType });
       } else {
         apiPath = '/api/posts/' + refPostId + '/reference';
         body = JSON.stringify({ space_ns: refSpaceNs.trim(), module_type: refModuleType });
@@ -728,54 +725,7 @@ export default function UserProfilePage() {
                   <CreationCard
                     key={creation.id}
                     creation={creation}
-                    isOwner={isSelf}
-                    {...(isSelf ? {
-                      onEdit: (id: string) => { window.location.href = `/creations/${id}/edit`; },
-                      onDelete: async (id: string) => {
-                        if (!confirm('确定要删除这个创作吗？此操作不可撤销。')) return;
-                        try {
-                          const token = localStorage.getItem('polis_access_token');
-                          const res = await fetch(`/api/creations/${id}`, {
-                            method: 'DELETE',
-                            headers: token ? { Authorization: `Bearer ${token}` } : {},
-                          });
-                          const data = await res.json();
-                          if (data.code === 0) {
-                            setMyCreations(prev => prev.filter((c: any) => c.id !== id));
-                            setMyContents(prev => prev.filter((p: any) => p.id !== id));
-                          } else alert(data.message || '删除失败');
-                        } catch { alert('网络错误'); }
-                      },
-                      onSubmit: (id: string) => {
-                        const creation = myCreations.find((c: any) => c.id === id);
-                        const mt = creation?.submissions?.[0]?.module_type || creation?.content_type || 'forum';
-                        setRefPostId(id);
-                        setRefIsCreation(true);
-                        setRefPostModuleType(mt);
-                        setRefModuleType(mt);
-                        setRefSpaceNs('');
-                        setRefUserQuery('');
-                        setRefUserResults([]);
-                        setRefSelectedUser(null);
-                        setRefUserSpaces([]);
-                        setRefError('');
-                        setRefSuccess('');
-                        setShowRefDialog(true);
-                      },
-                      onVisibilityChange: async (id: string, newVis: string) => {
-                        try {
-                          const token = localStorage.getItem('polis_access_token');
-                          await fetch(`/api/creations/${id}`, {
-                            method: 'PUT',
-                            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (token || '') },
-                            body: JSON.stringify({ visibility: newVis }),
-                          });
-                          setMyCreations((prev: any[]) =>
-                            prev.map((c: any) => c.id === id ? { ...c, visibility: newVis } : c)
-                          );
-                        } catch {}
-                      },
-                    } : {})}
+                    isOwner={false}
                   />
                 ))}
               </div>
