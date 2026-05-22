@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
-import { Search, Bell, User, Plus, Menu, X, Info, FileText, MessageSquare, Globe, Shield as ShieldIcon } from 'lucide-react';
+import { Search, Bell, User, Plus, Menu, X, Info, FileText, MessageSquare, Globe, PenLine, Shield as ShieldIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -195,6 +195,10 @@ export function Header() {
 
           {isLoggedIn ? (
             <>
+              <Link href="/creations" className="hidden sm:inline-flex items-center gap-1 text-xs px-3 py-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
+                <PenLine className="h-3.5 w-3.5" />
+                创作
+              </Link>
               <Link href="/create" className="hidden sm:inline-flex btn-primary gap-1 text-xs px-3 py-1.5">
                 <Plus className="h-3.5 w-3.5" />
                 {t('home.createSpace')}
@@ -224,6 +228,7 @@ export function Header() {
                   <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50"
                     onMouseLeave={() => setShowUserMenu(false)}>
                     <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{t('nav.myProfile')}</Link>
+                    <Link href="/create-center" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">创作中心</Link>
                     <Link href="/drafts" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{t('drafts.title')}</Link>
                     <Link href="/saved" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{t('saved.title')}</Link>
                     <Link href="/settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{t('nav.settings')}</Link>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { PenLine, FileText, Eye, Trash2, ExternalLink, Home, MessageCircle } from 'lucide-react';
+import { PenLine, FileText, Eye, Trash2, ExternalLink, Home, MessageCircle, LogIn } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
 import { getModuleLabel, buildPostLink } from '@/lib/module-config';
 
@@ -24,8 +24,16 @@ interface ContentItem {
 export default function CreateCenterPage() {
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null); // null = 检测中
   const [pagination, setPagination] = useState({ page: 1, page_size: 50, total: 0, total_pages: 0 });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('polis_access_token');
+    if (!token) { setIsLoggedIn(false); setLoading(false); return; }
+    setIsLoggedIn(true);
+    loadContents();
+  }, []);
 
   const loadContents = async (page = 1) => {
     setLoading(true);
@@ -42,8 +50,6 @@ export default function CreateCenterPage() {
     } catch {}
     setLoading(false);
   };
-
-  useEffect(() => { loadContents(); }, []);
 
   const handleDelete = async (id: string) => {
     const token = localStorage.getItem('polis_access_token');
@@ -84,7 +90,23 @@ export default function CreateCenterPage() {
         </Link>
       </div>
 
-      {loading ? (
+      {isLoggedIn === false ? (
+        <div className="card py-16 text-center">
+          <PenLine className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+          <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">登录后开始创作</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-sm mx-auto">
+            登录 Polis 账户，即可发布文章、视频、分享知识，管理你的全部原创内容
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <Link href="/login?redirect=/create-center" className="btn-primary inline-flex items-center gap-1.5 text-sm px-5 py-2">
+              <LogIn className="h-4 w-4" /> 登录
+            </Link>
+            <Link href="/register" className="btn-secondary text-sm px-5 py-2">
+              注册
+            </Link>
+          </div>
+        </div>
+      ) : loading ? (
         <div className="space-y-3">
           {[1,2,3].map(i => (
             <div key={i} className="card py-4 px-5 animate-pulse">
