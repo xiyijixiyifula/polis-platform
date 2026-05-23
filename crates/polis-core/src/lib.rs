@@ -4,3 +4,4 @@ pub mod events;
 pub mod types;
 pub mod resolver;
 pub mod admin;
+pub mod auth;

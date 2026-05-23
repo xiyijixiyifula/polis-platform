@@ -27,7 +27,7 @@ export default function AdminSpacesPage() {
       });
       const data = await res.json();
       if (data.code === 0) setSpaces(data.data || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[Admin Spaces]', e); }
     finally { setLoading(false); }
   };
 

@@ -13,4 +13,6 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 sqlx = { workspace = true }
 axum = { workspace = true }
+jsonwebtoken = { workspace = true }
+http = "1"
 tokio = { workspace = true }

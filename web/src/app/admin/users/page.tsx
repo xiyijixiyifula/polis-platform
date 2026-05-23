@@ -26,7 +26,7 @@ export default function AdminUsersPage() {
       });
       const data = await res.json();
       if (data.code === 0) setUsers(data.data || []);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[Admin Users]', e); }
     finally { setLoading(false); }
   };
 
@@ -44,7 +44,7 @@ export default function AdminUsersPage() {
         body: body ? JSON.stringify(body) : undefined,
       });
       fetchUsers();
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[Admin Users]', e); }
   };
 
   const filtered = users.filter((u) =>

@@ -52,7 +52,7 @@ export default function AdminReportsPage() {
         setReports(all);
         setTotal(t);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[Admin Reports]', e); }
     finally { setLoading(false); }
   };
 
@@ -67,7 +67,7 @@ export default function AdminReportsPage() {
       const data = await res.json();
       if (data.code === 0) fetchReports();
       else alert('操作失败: ' + data.message);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[Admin Reports]', e); }
   };
 
   const filtered = statusFilter === 'all'

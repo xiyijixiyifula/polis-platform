@@ -85,14 +85,17 @@ impl WebhookDispatcher {
         // 构建请求
         let mut req = client.post(&wh.url).json(&event_payload);
 
-        // 添加 HMAC 签名
+        // 添加 HMAC 签名（如果 secret 可用且有效）
         if let Some(ref secret) = wh.secret {
             use hmac::{Hmac, Mac};
             use sha2::Sha256;
-            let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
-            mac.update(&serde_json::to_vec(&event_payload).unwrap_or_default());
-            let signature = hex::encode(mac.finalize().into_bytes());
-            req = req.header("X-Polis-Signature", signature);
+            if let Ok(mut mac) = Hmac::<Sha256>::new_from_slice(secret.as_bytes()) {
+                mac.update(&serde_json::to_vec(&event_payload).unwrap_or_default());
+                let signature = hex::encode(mac.finalize().into_bytes());
+                req = req.header("X-Polis-Signature", signature);
+            } else {
+                tracing::warn!("[webhook] Invalid secret for webhook {}, skipping HMAC signature", wh.id);
+            }
         }
 
         req = req.header("X-Polis-Event", event_type);

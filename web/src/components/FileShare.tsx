@@ -21,16 +21,22 @@ export function FileShare({ spaceId }: { spaceId: string }) {
   };
 
   const handleShare = async (fileId: string) => {
-    const token = localStorage.getItem('polis_access_token');
-    const res = await fetch('/api/files/share', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ file_id: fileId, expires_hours: 168 }),
-    });
-    const data = await res.json();
-    if (data.code === 0) {
-      setShareResult(data.data);
-      setShowShareModal(true);
+    try {
+      const token = localStorage.getItem('polis_access_token');
+      const res = await fetch('/api/files/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ file_id: fileId, expires_hours: 168 }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setShareResult(data.data);
+        setShowShareModal(true);
+      } else {
+        alert(data.message || '生成分享链接失败');
+      }
+    } catch {
+      alert('网络错误，请稍后重试');
     }
   };
 

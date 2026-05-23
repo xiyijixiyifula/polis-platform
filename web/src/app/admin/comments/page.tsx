@@ -39,7 +39,7 @@ export default function AdminCommentsPage() {
         setComments(items);
         setTotal(t);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[Admin Comments]', e); }
     finally { setLoading(false); }
   };
 
@@ -54,7 +54,7 @@ export default function AdminCommentsPage() {
       const data = await res.json();
       if (data.code === 0) fetchComments();
       else alert('删除失败: ' + data.message);
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[Admin Comments]', e); }
   };
 
   const filtered = search

@@ -8,19 +8,28 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const res = await fetch('/api/auth/forgot-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    const data = await res.json();
-    if (data.code === 0) {
-      setSent(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.code === 0) {
+        setSent(true);
+      } else {
+        setError(data.message || '发送失败，请稍后重试');
+      }
+    } catch {
+      setError('网络错误，请检查网络连接后重试');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -49,6 +58,9 @@ export default function ForgotPasswordPage() {
             <button type="submit" className="btn-primary w-full py-2.5" disabled={loading}>
               {loading ? '发送中...' : '发送重置链接'}
             </button>
+            {error && (
+              <p className="text-sm text-red-500 text-center">{error}</p>
+            )}
             <Link href="/login" className="flex items-center justify-center gap-1 text-sm text-gray-500 hover:text-gray-700">
               <ArrowLeft className="h-3.5 w-3.5" /> 返回登录
             </Link>

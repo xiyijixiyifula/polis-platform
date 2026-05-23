@@ -1726,14 +1726,6 @@ export default function SpacePage() {
  </>
  )}
 
- {activeTab === 'chat' && (
- <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
- <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
- <p>聊天模块</p>
- <p className="text-sm mt-1">即将推出即时通讯功能</p>
- </div>
- )}
-
  {activeTab === 'store' && (
  <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
  <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />

@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
+    http::HeaderMap,
     routing::{get, post},
     Json, Router,
 };
 use serde::Deserialize;
 use uuid::Uuid;
 
+use polis_core::auth;
 use polis_core::error::AppError;
 use polis_core::models::{ApiResponse, PaginationParams};
 
@@ -33,11 +35,13 @@ pub fn store_routes(handler: Arc<StoreHandler>) -> Router {
 
 async fn create_product(
     State(handler): State<Arc<StoreHandler>>,
+    headers: HeaderMap,
     Path(_namespace): Path<String>,
     Json(req): Json<CreateProductRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let space_id = Uuid::new_v4(); // TODO: resolve namespace
-    let seller_id = Uuid::new_v4(); // TODO: from auth
+    // TODO: resolve namespace → space_id via database query
+    let space_id = Uuid::new_v4();
+    let seller_id = auth::require_user(&headers)?;
     let product = handler.create_product(
         space_id, seller_id, &req.title,
         &req.description.unwrap_or_default(),
@@ -52,27 +56,30 @@ async fn list_products(
     Path(_namespace): Path<String>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
-    let space_id = Uuid::new_v4(); // TODO: resolve namespace
+    // TODO: resolve namespace → space_id via database query
+    let space_id = Uuid::new_v4();
     let products = handler.list_products(space_id, params.page.unwrap_or(1), params.page_size.unwrap_or(20)).await?;
     Ok(Json(ApiResponse::success(products)))
 }
 
 async fn create_order(
     State(handler): State<Arc<StoreHandler>>,
+    headers: HeaderMap,
     Json(req): Json<serde_json::Value>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
     let product_id = Uuid::parse_str(req["product_id"].as_str().ok_or(AppError::Validation("product_id required".to_string()))?)
         .map_err(|_| AppError::Validation("Invalid product_id".to_string()))?;
-    let buyer_id = Uuid::new_v4(); // TODO: from auth
+    let buyer_id = auth::require_user(&headers)?;
     let order = handler.create_order(product_id, buyer_id).await?;
     Ok(Json(ApiResponse::success(order)))
 }
 
 async fn list_orders(
     State(handler): State<Arc<StoreHandler>>,
+    headers: HeaderMap,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
-    let user_id = Uuid::new_v4(); // TODO: from auth
+    let user_id = auth::require_user(&headers)?;
     let orders = handler.list_orders(user_id, params.page.unwrap_or(1), params.page_size.unwrap_or(20)).await?;
     Ok(Json(ApiResponse::success(orders)))
 }

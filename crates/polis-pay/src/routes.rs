@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, Query, State},
+    http::HeaderMap,
     routing::{get, post},
     Json, Router,
 };
 use serde::Deserialize;
 use uuid::Uuid;
 
+use polis_core::auth;
 use polis_core::error::AppError;
 use polis_core::models::ApiResponse;
 
@@ -35,9 +37,10 @@ pub fn pay_routes(handler: Arc<PayHandler>) -> Router {
 
 async fn create_tip(
     State(handler): State<Arc<PayHandler>>,
+    headers: HeaderMap,
     Json(req): Json<TipRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let from_user_id = Uuid::new_v4(); // TODO: from auth
+    let from_user_id = auth::require_user(&headers)?;
     let result = handler.create_tip(
         from_user_id, req.to_user_id, req.amount_cents,
         &req.provider.unwrap_or_else(|| "balance".to_string()),
@@ -56,9 +59,10 @@ async fn confirm_payment(
 
 async fn get_transactions(
     State(handler): State<Arc<PayHandler>>,
+    headers: HeaderMap,
     Query(params): Query<polis_core::models::PaginationParams>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
-    let user_id = Uuid::new_v4(); // TODO: from auth
+    let user_id = auth::require_user(&headers)?;
     let page = params.page.unwrap_or(1);
     let page_size = params.page_size.unwrap_or(20);
     let txs = handler.get_transactions(user_id, page, page_size).await?;

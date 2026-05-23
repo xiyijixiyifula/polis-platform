@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Path, State},
+    http::HeaderMap,
     routing::{delete, get, post},
     Json, Router,
 };
 use serde::Deserialize;
 use uuid::Uuid;
 
+use polis_core::auth;
 use polis_core::error::AppError;
 use polis_core::models::ApiResponse;
 
@@ -30,11 +32,13 @@ pub fn plugin_routes(handler: Arc<PluginHandler>) -> Router {
 
 async fn install_plugin(
     State(handler): State<Arc<PluginHandler>>,
+    headers: HeaderMap,
     Path(_namespace): Path<String>,
     Json(req): Json<InstallPluginRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let space_id = Uuid::new_v4(); // TODO: resolve namespace
-    let author_id = Uuid::new_v4(); // TODO: from auth
+    // TODO: resolve namespace → space_id via database query
+    let space_id = Uuid::new_v4();
+    let author_id = auth::require_user(&headers)?;
 
     // Decode base64 WASM bytes
     use base64::Engine as _;
@@ -55,7 +59,8 @@ async fn list_plugins(
     State(handler): State<Arc<PluginHandler>>,
     Path(_namespace): Path<String>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
-    let space_id = Uuid::new_v4(); // TODO: resolve namespace
+    // TODO: resolve namespace → space_id via database query
+    let space_id = Uuid::new_v4();
     let plugins = handler.list_plugins(space_id).await?;
     Ok(Json(ApiResponse::success(plugins)))
 }

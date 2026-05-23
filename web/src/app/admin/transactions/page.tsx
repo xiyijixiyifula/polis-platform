@@ -56,7 +56,7 @@ export default function AdminTransactionsPage() {
         setTransactions(items);
         setTotal(t);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('[Admin Transactions]', e); }
     finally { setLoading(false); }
   };
 
