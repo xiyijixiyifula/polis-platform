@@ -50,7 +50,9 @@ export default function MyCreationsPage() {
       const data = await res.json();
 
       if (data.data) {
-        const items = Array.isArray(data.data) ? data.data : [];
+        // 防御性处理：API 可能返回纯数组或分页对象 { items: [...] }
+        const items = Array.isArray(data.data) ? data.data
+          : (Array.isArray(data.data.items) ? data.data.items : []);
         if (reset) {
           setCreations(items);
           setPage(2);

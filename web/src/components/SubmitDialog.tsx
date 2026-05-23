@@ -53,7 +53,13 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
-      if (data.data) { setSpaces(data.data); setFiltered(data.data); }
+      // 防御性处理：API 可能返回纯数组或分页对象 { items: [...] }
+      if (data.data) {
+        const spaces = Array.isArray(data.data) ? data.data
+          : (Array.isArray(data.data.items) ? data.data.items : []);
+        setSpaces(spaces);
+        setFiltered(spaces);
+      }
     } catch { /* 静默失败 */ } finally { setFetching(false); }
   };
 
