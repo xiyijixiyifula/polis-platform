@@ -53,6 +53,8 @@ pub fn creation_routes() -> Router<Arc<ContentHandler>> {
         // 社区模块引用
         .route("/api/module-refs/{ns}/{module_type}", get(list_module_refs))
         .route("/api/refs/{id}", patch(manage_ref).delete(withdraw_submission))
+        // 引用地图：查看某个创作被哪些社区引用
+        .route("/api/creations/{id}/refs", get(get_creation_refs))
 }
 
 fn make_handler(pool: &sqlx::PgPool) -> CreationHandler {
@@ -175,4 +177,13 @@ async fn manage_ref(
     let uid = require_user(&headers)?;
     let module_ref = make_handler(&h.pool).manage_ref(id, uid, req).await?;
     Ok(ok(serde_json::to_value(module_ref).unwrap_or_default()))
+}
+
+/// GET /api/creations/{id}/refs — 引用地图：查看创作被哪些社区引用
+async fn get_creation_refs(
+    State(h): State<Arc<ContentHandler>>,
+    Path(creation_id): Path<Uuid>,
+) -> Result<Json<JVal>, AppError> {
+    let refs = make_handler(&h.pool).get_creation_refs(creation_id).await?;
+    Ok(ok(serde_json::to_value(refs).unwrap_or_default()))
 }

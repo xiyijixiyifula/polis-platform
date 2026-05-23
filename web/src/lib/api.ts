@@ -913,4 +913,8 @@ export const creations = {
   /** 获取创作已投稿的社区列表 */
   submissions: (creationId: string) =>
     request<any[]>(`/creations/${creationId}/submissions`),
+
+  /** 获取创作用引用地图（哪些社区展示了该创作） */
+  getRefs: (creationId: string) =>
+    request<any[]>(`/creations/${creationId}/refs`),
 };

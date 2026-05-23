@@ -94,6 +94,8 @@ export interface ContentCardProps {
   thumbnailUrl?: string;
   durationSeconds?: number;
   visibility?: string;
+  /** 被多少个社区引用（>1 时展示徽章） */
+  submissionCount?: number;
   hasPassword?: boolean;
 
   /** Stats */
@@ -201,6 +203,7 @@ export default function ContentCard({
   onWithdraw,
   submissions,
   showSubmissionsPanel = false,
+  submissionCount,
 }: ContentCardProps) {
   const t = useTranslations();
   const [liked, setLiked] = useState(isLiked);
@@ -291,6 +294,14 @@ export default function ContentCard({
         >
           {moduleLabel}
         </span>
+
+        {/* 引用徽章：展示该作品被多少个社区引用 */}
+        {submissionCount !== undefined && submissionCount > 1 && (
+          <span className="text-[10px] px-1.5 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full shrink-0 flex items-center gap-0.5">
+            <Repeat2 className="h-2.5 w-2.5" />
+            {submissionCount} 个社区
+          </span>
+        )}
 
         <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
 
@@ -632,6 +643,7 @@ export function adaptFeedItem(item: any): ContentCardProps {
     createdAt: item.created_at || '',
     isLiked: item.is_liked || false,
     isBookmarked: item.is_bookmarked || false,
+    submissionCount: item.submission_count || 1,
   };
 }
 

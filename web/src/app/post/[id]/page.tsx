@@ -96,6 +96,7 @@ function PostDetailContent() {
   const [relatedPosts, setRelatedPosts] = useState<any[]>([]);
   const [relatedLoading, setRelatedLoading] = useState(false);
   const [likedComments, setLikedComments] = useState<Set<string>>(new Set());
+  const [creationRefs, setCreationRefs] = useState<any[]>([]);
 
   // Edit state
   const [isEditing, setIsEditing] = useState(false);
@@ -196,6 +197,19 @@ function PostDetailContent() {
       } catch {}
     })();
   }, [post?.id]);
+
+  // Fetch creation refs (which communities reference this creation)
+  useEffect(() => {
+    if (!postId) return;
+    (async () => {
+      try {
+        const refs = await creations.getRefs(postId);
+        if (Array.isArray(refs)) {
+          setCreationRefs(refs);
+        }
+      } catch {}
+    })();
+  }, [postId]);
 
   useEffect(() => {
     if (!post || !currentNs || currentNs === '_') return;
@@ -865,6 +879,56 @@ function PostDetailContent() {
           })()
         )}
       </div>
+
+      {/* Creation Refs — 引用地图：创作被哪些社区引用 */}
+      {creationRefs.length > 0 && (
+        <div className="mt-6 post-glass">
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span>📌 同时也在这里</span>
+            <span className="text-xs font-normal text-gray-400 dark:text-gray-500">
+              该作品已发布至 {creationRefs.length} 个社区
+            </span>
+          </h3>
+          <div className="space-y-2">
+            {creationRefs.map((ref, idx) => (
+              <Link
+                key={idx}
+                href={`/space/${ref.namespace}`}
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/50 dark:hover:bg-white/5 transition-colors border-b border-gray-100/50 dark:border-gray-700/30 last:border-b-0 group"
+              >
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                  {(ref.title || ref.namespace).charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                      {ref.title || ref.namespace}
+                    </span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 font-mono">
+                      /{ref.namespace}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700/50">
+                      {ref.module_type === 'forum' ? '💬 论坛' :
+                       ref.module_type === 'wiki' ? '📖 百科' :
+                       ref.module_type === 'blog' ? '📝 博客' :
+                       ref.module_type === 'docs' ? '📄 文档' :
+                       ref.module_type === 'news' ? '📰 资讯' : ref.module_type}
+                    </span>
+                    <span>👥 {ref.member_count || 0} 成员</span>
+                    <span>📄 {ref.post_count || 0} 帖子</span>
+                    <span className={ref.visibility === 'public' ? 'text-emerald-500' : 'text-amber-500'}>
+                      {ref.visibility === 'public' ? '🌐 公开' : '🔒 私密'}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600 group-hover:text-primary-500 transition-colors shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {relatedPosts.length > 0 && (
         <div className="mt-6 post-glass">

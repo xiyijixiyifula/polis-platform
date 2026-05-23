@@ -553,6 +553,39 @@ impl CreationHandler {
         Ok((public_list, pagination))
     }
 
+    /// 引用地图：查看某个创作被哪些社区引用（公开接口）
+    pub async fn get_creation_refs(
+        &self,
+        creation_id: Uuid,
+    ) -> Result<Vec<serde_json::Value>, AppError> {
+        let refs: Vec<(String, String, Uuid, String, String, i64, i64, String)> = sqlx::query_as(
+            r#"
+            SELECT r.module_type, r.display_status, s.id, s.namespace, s.title,
+                   COALESCE(s.member_count, 0), COALESCE(s.post_count, 0), s.visibility
+            FROM community_module_refs r
+            JOIN spaces s ON s.id = r.space_id
+            WHERE r.creation_id = $1 AND r.display_status = 'visible'
+            ORDER BY r.created_at DESC
+            "#,
+        )
+        .bind(creation_id)
+        .fetch_all(&self.pool)
+        .await
+        .unwrap_or_default();
+
+        Ok(refs.into_iter().map(|(module_type, _status, space_id, namespace, title, member_count, post_count, visibility)| {
+            serde_json::json!({
+                "space_id": space_id,
+                "namespace": namespace,
+                "title": title,
+                "module_type": module_type,
+                "visibility": visibility,
+                "member_count": member_count,
+                "post_count": post_count
+            })
+        }).collect())
+    }
+
     /// 审核/管理引用（模块管理者）
     pub async fn manage_ref(
         &self,
