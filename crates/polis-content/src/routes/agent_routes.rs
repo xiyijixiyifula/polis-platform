@@ -51,7 +51,7 @@ pub fn agent_routes() -> Router<Arc<ContentHandler>> {
         .route("/api/agents/mine/{id}/status", post(update_agent_status))
         .route("/api/agents/{id}", get(get_agent))
         // 社区 Agent 目录
-        .route("/api/spaces/{space_id}/agents", get(list_space_agents).post(register_space_agent))
+        .route("/api/communities/{space_id}/agents", get(list_space_agents).post(register_space_agent))
 }
 
 async fn register_agent(
