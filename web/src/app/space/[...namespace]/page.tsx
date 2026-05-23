@@ -7,7 +7,10 @@ import Image from 'next/image';
 import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
+import GameCard from '@/components/GameCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
+import SpaceCodeRepo from '@/components/SpaceCodeRepo';
+import SpaceStore from '@/components/SpaceStore';
 import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Star, Grid3X3, List, Filter } from 'lucide-react';
 import NovelCard, { adaptPostToNovel } from '@/components/NovelCard';
 import QACard from '@/components/QACard';
@@ -1207,7 +1210,6 @@ export default function SpacePage() {
  <Trash2 className="h-3.5 w-3.5" />
  </button>
  </div>)}
- 
  <div className="flex items-start justify-between">
  <div className="flex-1">
  <div className="flex items-center gap-2">
@@ -1525,11 +1527,7 @@ export default function SpacePage() {
  )}
 
  {activeTab === 'code_repo' && (
- <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
- <Code className="h-10 w-10 mx-auto mb-3 opacity-30" />
- <p>代码仓库</p>
- <p className="text-sm mt-1">即将推出 Git 代码托管功能</p>
- </div>
+ <SpaceCodeRepo namespace={cleanNamespace} />
  )}
 
  {/* === QA Tab（问答 — 提问与回答）=== */}
@@ -1708,21 +1706,18 @@ export default function SpacePage() {
  ) : posts.filter(p => p.module_type === 'game').length > 0 ? (
  <div className="space-y-3">
  {posts.filter(p => p.module_type === 'game').map((post) => (
- <PostCard key={post.id} post={{
+ <GameCard key={post.id} post={{
  id: post.id,
  title: post.title,
  body: post.body,
  author: post.author,
- space_id: post.space_id,
- space_ns: cleanNamespace,
- space_name: space.title,
  like_count: post.like_count,
  comment_count: post.comment_count,
  view_count: post.view_count,
  created_at: post.created_at,
  tags: post.tags,
  is_pinned: post.is_pinned,
- }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} isFeatured={post.is_featured} canFeature={isOwner && !post.is_hidden} onToggleFeature={() => toggleFeature(post.id, post.is_featured)} />
+ }} spaceNs={cleanNamespace} spaceName={space.title} />
  ))}
  </div>
  ) : (
@@ -1785,18 +1780,21 @@ export default function SpacePage() {
  )}
 
  {activeTab === 'store' && (
- <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
- <ShoppingBag className="h-10 w-10 mx-auto mb-3 opacity-30" />
- <p>商城模块</p>
- <p className="text-sm mt-1">即将推出商品交易功能</p>
- </div>
+ <SpaceStore namespace={cleanNamespace} isOwner={isOwner} />
  )}
 
  {activeTab === 'course' && (
- <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
- <GraduationCap className="h-10 w-10 mx-auto mb-3 opacity-30" />
- <p>课程模块</p>
- <p className="text-sm mt-1">即将推出在线课程功能</p>
+ <div className="glass-card py-10 text-center rounded-2xl">
+ <div className="h-16 w-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center">
+ <GraduationCap className="h-8 w-8 text-white" />
+ </div>
+ <p className="text-base font-semibold text-gray-700 dark:text-gray-300">课程模块</p>
+ <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">在线课程功能即将上线</p>
+ <div className="mt-5 grid grid-cols-3 gap-2 max-w-xs mx-auto">
+ {['视频课程', '图文教程', '互动测验'].map(f => (
+ <span key={f} className="text-[11px] px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">{f}</span>
+ ))}
+ </div>
  </div>
  )}
 
