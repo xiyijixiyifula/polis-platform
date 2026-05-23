@@ -8,7 +8,9 @@ import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Star } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Star, Grid3X3, List, Filter } from 'lucide-react';
+import NovelCard, { adaptPostToNovel } from '@/components/NovelCard';
+import QACard from '@/components/QACard';
 import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import { getModuleLabel, getModuleEmoji, buildPostLink } from '@/lib/module-config';
@@ -1533,96 +1535,152 @@ export default function SpacePage() {
  {/* === QA Tab（问答 — 提问与回答）=== */}
  {activeTab === 'qa' && (
  <>
+ {/* 顶部操作栏 */}
+ <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
  <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=qa`}
- className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
- <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
- <HelpCircle className="h-5 w-5" />
- </div>
- <div className="flex-1">
- <p className="text-sm font-medium text-gray-900 dark:text-white">提出问题</p>
- <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法，描述问题详情</p>
- </div>
- <div className="btn-primary text-xs px-4 py-1.5 gap-1">
- <Plus className="h-3.5 w-3.5" /> 提问
- </div>
+ className="btn-primary text-xs px-4 py-1.5 gap-1.5 flex items-center">
+ <Plus className="h-3.5 w-3.5" /> 提出问题
  </Link>
+ {/* 状态筛选 */}
+ <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+ {[
+ { value: 'all', label: '全部' },
+ { value: 'unsolved', label: '待回答' },
+ { value: 'solved', label: '已解决' },
+ ].map((btn) => (
+ <button key={btn.value}
+ onClick={() => {/* 后续：状态筛选 */}}
+ className={`text-xs px-3 py-1 rounded-md transition-colors ${
+ btn.value === 'all'
+ ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+ : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+ }`}>
+ {btn.label}
+ </button>
+ ))}
+ </div>
+ </div>
+
+ {/* 排序 */}
+ <div className="flex items-center gap-2 mb-4 text-xs">
+ <span className="text-gray-400">排序:</span>
+ <select className="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-primary-500">
+ <option value="newest">最新提问</option>
+ <option value="votes">最多投票</option>
+ <option value="answers">最多回答</option>
+ <option value="unanswered">尚未回答</option>
+ </select>
+ </div>
 
  {postLoading ? (
- <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
- ) : posts.filter(p => p.module_type === 'qa').length > 0 ? (
  <div className="space-y-3">
+ {[...Array(3)].map((_, i) => (
+ <div key={i} className="glass-card p-4 animate-pulse">
+ <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16 mb-3" />
+ <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-2" />
+ <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-3" />
+ <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3" />
+ </div>
+ ))}
+ </div>
+ ) : posts.filter(p => p.module_type === 'qa').length > 0 ? (
+ <div className="space-y-2">
  {posts.filter(p => p.module_type === 'qa').map((post) => (
- <PostCard key={post.id} post={{
+ <QACard
+ key={post.id}
+ post={{
  id: post.id,
  title: post.title,
  body: post.body,
  author: post.author,
- space_id: post.space_id,
- space_ns: cleanNamespace,
- space_name: space.title,
+ tags: post.tags,
  like_count: post.like_count,
  comment_count: post.comment_count,
  view_count: post.view_count,
  created_at: post.created_at,
- tags: post.tags,
  is_pinned: post.is_pinned,
- }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} isFeatured={post.is_featured} canFeature={isOwner && !post.is_hidden} onToggleFeature={() => toggleFeature(post.id, post.is_featured)} />
+ }}
+ spaceNs={cleanNamespace}
+ spaceName={space.title}
+ />
  ))}
  </div>
  ) : (
- <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
- <HelpCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
- <p>暂无问答</p>
- <p className="text-sm mt-1">提出第一个问题吧！</p>
+ <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500 rounded-2xl">
+ <HelpCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
+ <p className="text-base font-medium text-gray-500 dark:text-gray-400">暂无问答</p>
+ <p className="text-sm mt-1">提出第一个问题，开启社区讨论</p>
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=qa`}
+ className="btn-primary inline-flex items-center gap-1.5 mt-4 px-5 py-2 text-sm">
+ <Plus className="h-4 w-4" /> 提出问题
+ </Link>
  </div>
  )}
  </>
  )}
 
- {/* === Novel Tab（小说/阅读 — 章节连载）=== */}
+ {/* === Novel Tab（小说/阅读 — 书架展示）=== */}
  {activeTab === 'novel' && (
  <>
+ {/* 顶部操作栏 */}
+ <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
  <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=novel`}
- className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
- <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-indigo-400 to-purple-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
- <BookText className="h-5 w-5" />
- </div>
- <div className="flex-1">
- <p className="text-sm font-medium text-gray-900 dark:text-white">发布新章节</p>
- <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法，可创建小说章节和系列</p>
- </div>
- <div className="btn-primary text-xs px-4 py-1.5 gap-1">
- <Plus className="h-3.5 w-3.5" /> 发布
- </div>
+ className="btn-primary text-xs px-4 py-1.5 gap-1.5 flex items-center">
+ <Plus className="h-3.5 w-3.5" /> 发布小说
  </Link>
+ <div className="flex items-center gap-1.5">
+ <button onClick={() => {/* 后续: 列表模式切换 */}}
+ className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 transition-colors" title="书架视图">
+ <Grid3X3 className="h-4 w-4" />
+ </button>
+ <button onClick={() => {/* 后续: 列表模式切换 */}}
+ className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" title="列表视图">
+ <List className="h-4 w-4" />
+ </button>
+ </div>
+ </div>
+
+ {/* 排序 + 筛选 */}
+ <div className="flex items-center gap-2 mb-4 text-xs">
+ <span className="text-gray-400">排序:</span>
+ <select className="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-primary-500">
+ <option value="updated">最近更新</option>
+ <option value="views">最多阅读</option>
+ <option value="likes">最多点赞</option>
+ <option value="newest">最新发布</option>
+ </select>
+ </div>
 
  {postLoading ? (
- <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+ <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+ {[...Array(5)].map((_, i) => (
+ <div key={i} className="glass-card rounded-2xl overflow-hidden animate-pulse">
+ <div className="aspect-[3/4] bg-gray-200 dark:bg-gray-700" />
+ <div className="p-3 space-y-2">
+ <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+ <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2" />
+ </div>
+ </div>
+ ))}
+ </div>
  ) : posts.filter(p => p.module_type === 'novel').length > 0 ? (
- <div className="space-y-3">
+ <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
  {posts.filter(p => p.module_type === 'novel').map((post) => (
- <PostCard key={post.id} post={{
- id: post.id,
- title: post.title,
- body: post.body,
- author: post.author,
- space_id: post.space_id,
- space_ns: cleanNamespace,
- space_name: space.title,
- like_count: post.like_count,
- comment_count: post.comment_count,
- view_count: post.view_count,
- created_at: post.created_at,
- tags: post.tags,
- is_pinned: post.is_pinned,
- }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} isFeatured={post.is_featured} canFeature={isOwner && !post.is_hidden} onToggleFeature={() => toggleFeature(post.id, post.is_featured)} />
+ <NovelCard
+ key={post.id}
+ novel={adaptPostToNovel(post, cleanNamespace, space.title)}
+ />
  ))}
  </div>
  ) : (
- <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
- <BookText className="h-10 w-10 mx-auto mb-3 opacity-30" />
- <p>暂无小说内容</p>
- <p className="text-sm mt-1">发布你的第一篇小说章节吧！</p>
+ <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500 rounded-2xl">
+ <BookText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+ <p className="text-base font-medium text-gray-500 dark:text-gray-400">暂无小说内容</p>
+ <p className="text-sm mt-1">发布你的第一篇作品，开启创作之旅</p>
+ <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=novel`}
+ className="btn-primary inline-flex items-center gap-1.5 mt-4 px-5 py-2 text-sm">
+ <Plus className="h-4 w-4" /> 开始创作
+ </Link>
  </div>
  )}
  </>
