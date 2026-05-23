@@ -58,8 +58,19 @@ export function getModuleEmoji(moduleType?: string): string {
   return MODULE_CONFIG[moduleType]?.emoji || '📄';
 }
 
+/** 模块类型别名组 — 这些类型在显示上应合并为同一模块 */
+const MODULE_ALIASES: Record<string, string> = {
+  text: 'forum',
+  image: 'forum',
+  article: 'forum',
+  post: 'forum',
+  discussion: 'forum',
+};
+
 export function normalizeModuleType(rawType?: string): string {
   if (!rawType) return 'forum';
+  // 先查别名表，再查模块配置，最后降级到 forum
+  if (MODULE_ALIASES[rawType]) return MODULE_ALIASES[rawType];
   return MODULE_CONFIG[rawType] ? rawType : 'forum';
 }
 
