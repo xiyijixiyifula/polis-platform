@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  async redirects() {
+    return [
+      { source: '/create-center', destination: '/creations', permanent: true },
+    ];
+  },
   async rewrites() {
     const apiUrl = process.env.POLIS_API_URL || 'http://localhost:8080';
     return [

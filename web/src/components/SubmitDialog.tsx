@@ -8,7 +8,16 @@ interface Space {
   id: string;
   namespace: string;
   title: string;
-  enabled_modules: string[];
+  enabled_modules: string[] | string; // API 可能返回 JSON 字符串
+}
+
+/** 安全地将 enabled_modules 转为数组 */
+function safeModules(raw: string[] | string | any): string[] {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try { const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  }
+  return [];
 }
 
 interface SubmitDialogProps {
@@ -136,7 +145,7 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
           <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
             <div className="text-xs text-gray-500 mb-2">选择模块：</div>
             <div className="flex flex-wrap gap-2">
-              {selectedSpace.enabled_modules.map((mod) => (
+              {safeModules(selectedSpace.enabled_modules).map((mod) => (
                 <button key={mod} onClick={() => setSelectedModule(mod)}
                   className={`px-3 py-1.5 text-xs rounded-full border transition ${
                     selectedModule === mod

@@ -19,4 +19,5 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 dotenvy = { workspace = true }
 jsonwebtoken = { workspace = true }
+argon2 = { workspace = true }
 anyhow = { workspace = true }

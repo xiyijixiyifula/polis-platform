@@ -1,6 +1,8 @@
 //! 管理后台业务处理器
+//! 支持人类管理员 + AI Agent 管理员双通道
 use polis_core::admin::*;
 use polis_core::error::AppError;
+use polis_core::models::{AuditLogQuery, ReviewQueueQuery, BatchReviewRequest, AgentAdminLoginRequest, CreateReviewRuleRequest};
 use sqlx::PgPool;
 use std::fs;
 use std::sync::RwLock;
@@ -8,10 +10,10 @@ use uuid::Uuid;
 
 use crate::config::AdminConfig;
 use crate::stats;
+use crate::audit::AuditLogger;
 
 const ADMIN_CODE_FILE: &str = "/root/polis/admin_code.txt";
 
-/// 启动时从文件读取 admin_code，文件不存在则用环境变量
 fn load_admin_code(env_code: &str) -> String {
     fs::read_to_string(ADMIN_CODE_FILE)
         .ok()
@@ -24,188 +26,164 @@ pub struct AdminHandler {
     pub pool: PgPool,
     pub config: AdminConfig,
     pub admin_code: RwLock<String>,
+    pub audit: AuditLogger,
 }
 
 impl AdminHandler {
     pub fn new(pool: PgPool, config: AdminConfig) -> Self {
         let admin_code = load_admin_code(&config.admin_code);
-        // 确保文件存在
         let _ = fs::write(ADMIN_CODE_FILE, &admin_code);
-        Self { pool, config, admin_code: RwLock::new(admin_code) }
+        let audit = AuditLogger::new(pool.clone());
+        Self { pool, config, admin_code: RwLock::new(admin_code), audit }
     }
 
-    /// 获取当前 admin_code
     pub fn get_admin_code(&self) -> String {
         self.admin_code.read().map(|s| s.clone()).unwrap_or_default()
     }
 
-    /// 更新 admin_code 并持久化到文件
     pub fn update_admin_code(&self, new_code: &str) -> Result<(), AppError> {
         if new_code.len() < 8 {
             return Err(AppError::Validation("Admin code must be at least 8 characters".to_string()));
         }
-        // 写入文件持久化
         fs::write(ADMIN_CODE_FILE, new_code)
             .map_err(|e| AppError::Internal(format!("Failed to save admin code: {}", e)))?;
-        // 更新内存
         let mut code = self.admin_code.write().map_err(|e| AppError::Internal(format!("Lock error: {}", e)))?;
         *code = new_code.to_string();
         tracing::info!("Admin code updated and persisted");
         Ok(())
     }
 
-    /// 获取平台统计
+    /// 记录审计日志的快捷方法
+    async fn audit_log(&self, actor_id: Uuid, actor_type: &str, target_type: &str, target_id: Uuid, action: &str, old_state: Option<&str>, new_state: Option<&str>, reason: Option<&str>) {
+        self.audit.log(actor_id, actor_type, target_type, target_id, action, old_state, new_state, reason).await;
+    }
+
+    // ==================== 统计分析 ====================
+
     pub async fn get_stats(&self) -> Result<PlatformStats, AppError> {
         stats::get_platform_stats(&self.pool).await
     }
 
-    /// 获取用户列表
+    // ==================== 用户管理 ====================
+
     pub async fn get_users(&self, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
         stats::list_users(&self.pool, page, page_size).await
     }
 
-    /// 封禁用户
-    pub async fn ban_user(&self, user_id: Uuid, reason: &str) -> Result<(), AppError> {
+    pub async fn ban_user(&self, admin_id: Uuid, user_id: Uuid, reason: &str) -> Result<(), AppError> {
         sqlx::query("UPDATE users SET verified = FALSE, bio = CONCAT('[已封禁] ', $2) WHERE id = $1")
-            .bind(user_id)
-            .bind(reason)
-            .execute(&self.pool)
-            .await?;
-        tracing::info!("Admin banned user {}: {}", user_id, reason);
+            .bind(user_id).bind(reason).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "user", user_id, "ban", Some("active"), Some("banned"), Some(reason)).await;
+        tracing::info!("Admin {} banned user {}: {}", admin_id, user_id, reason);
         Ok(())
     }
 
-    /// 解封用户
-    pub async fn unban_user(&self, user_id: Uuid) -> Result<(), AppError> {
+    pub async fn unban_user(&self, admin_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE users SET verified = TRUE WHERE id = $1")
-            .bind(user_id)
-            .execute(&self.pool)
-            .await?;
+            .bind(user_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "user", user_id, "unban", Some("banned"), Some("active"), None).await;
         Ok(())
     }
 
-    /// 认证用户 (企业/个人)
     pub async fn verify_user(&self, user_id: Uuid, vtype: &str) -> Result<(), AppError> {
         sqlx::query("UPDATE users SET verified = TRUE, verified_type = $2 WHERE id = $1")
-            .bind(user_id)
-            .bind(vtype)
-            .execute(&self.pool)
-            .await?;
+            .bind(user_id).bind(vtype).execute(&self.pool).await?;
         Ok(())
     }
 
-    /// 获取社区列表
+    // ==================== 社区管理 ====================
+
     pub async fn get_spaces(&self, page: u32, page_size: u32) -> Result<Vec<serde_json::Value>, AppError> {
         stats::list_spaces(&self.pool, page, page_size).await
     }
 
-    /// 归档社区
-    pub async fn archive_space(&self, space_id: Uuid) -> Result<(), AppError> {
+    pub async fn archive_space(&self, admin_id: Uuid, space_id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE spaces SET status = 'archived' WHERE id = $1")
-            .bind(space_id)
-            .execute(&self.pool)
-            .await?;
+            .bind(space_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "space", space_id, "archive", Some("active"), Some("archived"), None).await;
         Ok(())
     }
 
-    /// 删除帖子
-    pub async fn delete_post(&self, post_id: Uuid) -> Result<(), AppError> {
+    // ==================== 帖子管理 ====================
+
+    pub async fn delete_post(&self, admin_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE posts SET is_deleted = TRUE WHERE id = $1")
-            .bind(post_id)
-            .execute(&self.pool)
-            .await?;
+            .bind(post_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "post", post_id, "delete", Some("visible"), Some("deleted"), None).await;
         Ok(())
     }
 
-    /// 标记精选
-    pub async fn feature_post(&self, post_id: Uuid) -> Result<(), AppError> {
+    pub async fn feature_post(&self, admin_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE posts SET is_featured = TRUE WHERE id = $1")
-            .bind(post_id)
-            .execute(&self.pool)
-            .await?;
+            .bind(post_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "post", post_id, "feature", Some("normal"), Some("featured"), None).await;
         Ok(())
     }
 
-    /// 取消精选
-    pub async fn unfeature_post(&self, post_id: Uuid) -> Result<(), AppError> {
+    pub async fn unfeature_post(&self, admin_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE posts SET is_featured = FALSE WHERE id = $1")
-            .bind(post_id)
-            .execute(&self.pool)
-            .await?;
+            .bind(post_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "post", post_id, "unfeature", Some("featured"), Some("normal"), None).await;
         Ok(())
     }
 
-    /// 审核通过帖子 (status: pending → approved)
-    pub async fn approve_post(&self, post_id: Uuid) -> Result<(), AppError> {
-        sqlx::query("UPDATE posts SET status = 'approved', is_deleted = FALSE WHERE id = $1")
-            .bind(post_id)
-            .execute(&self.pool)
-            .await?;
-        tracing::info!("Admin approved post: {}", post_id);
+    pub async fn approve_post(&self, admin_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
+        sqlx::query("UPDATE posts SET is_deleted = FALSE, visibility = 'public' WHERE id = $1")
+            .bind(post_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "post", post_id, "approve", Some("hidden"), Some("visible"), None).await;
         Ok(())
     }
 
-    /// 审核拒绝帖子 (status: pending → rejected, 软删除)
-    pub async fn reject_post(&self, post_id: Uuid, reason: &str) -> Result<(), AppError> {
-        sqlx::query("UPDATE posts SET status = 'rejected', is_deleted = TRUE WHERE id = $1")
-            .bind(post_id)
-            .execute(&self.pool)
-            .await?;
-        tracing::info!("Admin rejected post {}: {}", post_id, reason);
+    pub async fn reject_post(&self, admin_id: Uuid, post_id: Uuid, reason: &str) -> Result<(), AppError> {
+        sqlx::query("UPDATE posts SET is_deleted = TRUE, visibility = 'hidden' WHERE id = $1")
+            .bind(post_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "post", post_id, "reject", Some("visible"), Some("rejected"), Some(reason)).await;
         Ok(())
     }
 
-    /// 管理员隐藏帖子 (不影响 post 本身状态，设置visibility)
-    pub async fn hide_post(&self, post_id: Uuid) -> Result<(), AppError> {
+    pub async fn hide_post(&self, admin_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE posts SET visibility = 'hidden' WHERE id = $1")
-            .bind(post_id)
-            .execute(&self.pool)
-            .await?;
-        tracing::info!("Admin hidden post: {}", post_id);
+            .bind(post_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "post", post_id, "hide", Some("public"), Some("hidden"), None).await;
         Ok(())
     }
 
-    /// 管理员取消隐藏帖子
-    pub async fn unhide_post(&self, post_id: Uuid) -> Result<(), AppError> {
+    pub async fn unhide_post(&self, admin_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
         sqlx::query("UPDATE posts SET visibility = 'public' WHERE id = $1")
-            .bind(post_id)
-            .execute(&self.pool)
-            .await?;
-        tracing::info!("Admin unhidden post: {}", post_id);
+            .bind(post_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "post", post_id, "unhide", Some("hidden"), Some("public"), None).await;
         Ok(())
     }
 
-    /// 获取举报列表
+    // ==================== 举报管理 (增强版：联动审核) ====================
+
     pub async fn get_reports(&self, page: u32, page_size: u32) -> Result<(Vec<serde_json::Value>, i64), AppError> {
         let offset = ((page - 1) * page_size) as i64;
         let limit = page_size as i64;
-
-        let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM reports")
-            .fetch_one(&self.pool).await?;
-
+        let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM reports").fetch_one(&self.pool).await?;
         let rows = sqlx::query_as::<_, (serde_json::Value,)>(
             r#"SELECT json_build_object(
-                'id', r.id,
-                'reporter_id', r.reporter_id,
-                'reporter_username', ru.username,
-                'target_type', r.target_type,
-                'target_id', r.target_id,
-                'reason', r.reason,
-                'status', r.status,
-                'created_at', r.created_at,
-                'resolved_at', r.resolved_at
+                'id', r.id, 'reporter_id', r.reporter_id, 'reporter_username', ru.username,
+                'target_type', r.target_type, 'target_id', r.target_id,
+                'reason', r.reason, 'status', r.status,
+                'created_at', r.created_at, 'resolved_at', r.resolved_at
             ) FROM reports r
             LEFT JOIN users ru ON r.reporter_id = ru.id
             ORDER BY r.created_at DESC LIMIT $1 OFFSET $2"#
-        )
-        .bind(limit).bind(offset)
-        .fetch_all(&self.pool).await?;
-
+        ).bind(limit).bind(offset).fetch_all(&self.pool).await?;
         Ok((rows.into_iter().map(|r| r.0).collect(), total.0))
     }
 
-    /// 处理举报
-    pub async fn resolve_report(&self, report_id: Uuid, action: &str, handled_by: Uuid) -> Result<(), AppError> {
+    /// 处理举报 — 增强版：支持联动审核目标
+    pub async fn resolve_report_with_action(
+        &self,
+        report_id: Uuid,
+        action: &str,
+        target_action: Option<&str>,
+        target_action_reason: Option<&str>,
+        handled_by: Uuid,
+        actor_type: &str,
+    ) -> Result<serde_json::Value, AppError> {
         let new_status = match action {
             "resolve" => "resolved",
             "dismiss" => "dismissed",
@@ -214,6 +192,236 @@ impl AdminHandler {
         sqlx::query("UPDATE reports SET status = $1, handled_by = $2, resolved_at = NOW() WHERE id = $3")
             .bind(new_status).bind(handled_by).bind(report_id)
             .execute(&self.pool).await?;
+
+        self.audit_log(handled_by, actor_type, "report", report_id, action, Some("pending"), Some(new_status), None).await;
+
+        // 举报联动审核：自动对被举报目标执行操作
+        let mut linked_actions: Vec<String> = Vec::new();
+        if let Some(ta) = target_action {
+            // 获取被举报目标的类型和 ID
+            let report_target: Option<(String, Uuid)> = sqlx::query_as(
+                "SELECT target_type, target_id FROM reports WHERE id = $1"
+            ).bind(report_id).fetch_optional(&self.pool).await?;
+
+            if let Some((target_type, target_id)) = report_target {
+                let reason = target_action_reason.unwrap_or("举报联动处理");
+                match (target_type.as_str(), ta) {
+                    ("post", "hide") => {
+                        self.hide_post(handled_by, target_id).await?;
+                        linked_actions.push("post.hide".to_string());
+                    }
+                    ("post", "delete") => {
+                        self.delete_post(handled_by, target_id).await?;
+                        linked_actions.push("post.delete".to_string());
+                    }
+                    ("post", "approve") => {
+                        self.approve_post(handled_by, target_id).await?;
+                        linked_actions.push("post.approve".to_string());
+                    }
+                    ("post", "reject") => {
+                        self.reject_post(handled_by, target_id, reason).await?;
+                        linked_actions.push("post.reject".to_string());
+                    }
+                    ("user", "ban") => {
+                        self.ban_user(handled_by, target_id, reason).await?;
+                        linked_actions.push("user.ban".to_string());
+                    }
+                    ("comment", "delete") => {
+                        sqlx::query("UPDATE comments SET is_deleted = TRUE WHERE id = $1")
+                            .bind(target_id).execute(&self.pool).await?;
+                        self.audit_log(handled_by, actor_type, "comment", target_id, "delete", Some("visible"), Some("deleted"), Some(reason)).await;
+                        linked_actions.push("comment.delete".to_string());
+                    }
+                    _ => {
+                        linked_actions.push(format!("{}._noop", target_type));
+                    }
+                }
+            }
+        }
+
+        Ok(serde_json::json!({
+            "report_id": report_id,
+            "status": new_status,
+            "linked_actions": linked_actions,
+        }))
+    }
+
+    // ==================== 审核队列 ====================
+
+    pub async fn get_review_queue(&self, query: ReviewQueueQuery) -> Result<(Vec<serde_json::Value>, i64), AppError> {
+        let (items, total) = self.audit.review_queue(
+            query.status.as_deref(),
+            query.r#type.as_deref(),
+            query.page.unwrap_or(1),
+            query.page_size.unwrap_or(50),
+        ).await?;
+        Ok((items, total))
+    }
+
+    // ==================== 批量审核 ====================
+
+    pub async fn batch_review(&self, admin_id: Uuid, actor_type: &str, req: BatchReviewRequest) -> Result<serde_json::Value, AppError> {
+        let mut results = Vec::new();
+        for item in &req.items {
+            let result = match (item.target_type.as_str(), req.action.as_str()) {
+                ("post", "approve") => {
+                    self.approve_post(admin_id, item.target_id).await.map(|_| "approved").unwrap_or("error").to_string()
+                }
+                ("post", "reject") => {
+                    self.reject_post(admin_id, item.target_id, req.reason.as_deref().unwrap_or("批量审核")).await.map(|_| "rejected").unwrap_or("error").to_string()
+                }
+                ("post", "hide") => {
+                    self.hide_post(admin_id, item.target_id).await.map(|_| "hidden").unwrap_or("error").to_string()
+                }
+                ("post", "delete") => {
+                    self.delete_post(admin_id, item.target_id).await.map(|_| "deleted").unwrap_or("error").to_string()
+                }
+                ("comment", "delete") => {
+                    sqlx::query("UPDATE comments SET is_deleted = TRUE WHERE id = $1")
+                        .bind(item.target_id).execute(&self.pool).await
+                        .map(|_| "deleted").unwrap_or("error").to_string()
+                }
+                _ => "unknown_target_type".to_string(),
+            };
+            results.push(serde_json::json!({
+                "target_type": item.target_type,
+                "target_id": item.target_id,
+                "result": result,
+            }));
+        }
+
+        self.audit_log(admin_id, actor_type, "system", Uuid::nil(), "batch_review", None, None, Some(&format!("{} items, action={}", req.items.len(), req.action))).await;
+
+        Ok(serde_json::json!({
+            "total": req.items.len(),
+            "action": req.action,
+            "results": results,
+        }))
+    }
+
+    // ==================== Agent 管理员登录 ====================
+
+    pub async fn agent_admin_login(&self, req: AgentAdminLoginRequest) -> Result<String, AppError> {
+        // 验证 agent 的 admin_agents 权限
+        let perm: Option<(Uuid, String, serde_json::Value)> = sqlx::query_as(
+            r#"SELECT aa.agent_id, aa.role, aa.permissions FROM admin_agents aa
+               WHERE aa.agent_id = $1 AND aa.is_active = TRUE"#
+        ).bind(req.agent_id).fetch_optional(&self.pool).await?;
+
+        let (agent_id, role, _permissions) = perm.ok_or(AppError::Forbidden("Agent 无管理员权限".to_string()))?;
+
+        // 验证 API Key
+        let agent: Option<(Uuid, String)> = sqlx::query_as(
+            "SELECT user_id, api_key_hash FROM agents WHERE id = $1 AND is_active = TRUE"
+        ).bind(agent_id).fetch_optional(&self.pool).await?;
+
+        let (user_id, api_key_hash) = agent.ok_or(AppError::Forbidden("Agent 不存在".to_string()))?;
+
+        use argon2::{Argon2, PasswordHash, PasswordVerifier};
+        let parsed = PasswordHash::new(&api_key_hash).map_err(|_| AppError::Forbidden("认证失败".to_string()))?;
+        Argon2::default().verify_password(req.api_key.as_bytes(), &parsed)
+            .map_err(|_| AppError::Forbidden("API Key 无效".to_string()))?;
+
+        // 更新最后活跃
+        let _ = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")
+            .bind(agent_id).execute(&self.pool).await;
+
+        // 生成 admin JWT
+        let token = crate::auth::generate_admin_token(user_id, &role, &self.config)
+            .map_err(|e| AppError::Internal(format!("JWT: {}", e)))?;
+
+        self.audit_log(user_id, "agent", "system", Uuid::nil(), "agent_admin_login", None, Some("logged_in"), None).await;
+
+        Ok(token)
+    }
+
+    // ==================== 审核规则配置 ====================
+
+    pub async fn create_review_rule(&self, admin_id: Uuid, req: CreateReviewRuleRequest) -> Result<serde_json::Value, AppError> {
+        use sqlx::Row;
+        let target_types = serde_json::to_value(req.target_types).unwrap_or_default();
+        let row = sqlx::query(
+            r#"INSERT INTO review_rules (name, description, rule_type, config, target_types, priority, is_active, created_by)
+               VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
+               RETURNING id, name, rule_type, priority, created_at"#
+        ).bind(&req.name).bind(req.description.as_deref()).bind(&req.rule_type)
+         .bind(&req.config).bind(&target_types).bind(req.priority.unwrap_or(0)).bind(admin_id)
+         .fetch_one(&self.pool).await?;
+
+        let rule_id: Uuid = row.get("id");
+        self.audit_log(admin_id, "admin", "system", rule_id, "create_review_rule", None, None, Some(&req.name)).await;
+
+        Ok(serde_json::json!({
+            "id": rule_id,
+            "name": req.name,
+            "rule_type": req.rule_type,
+            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at"),
+        }))
+    }
+
+    pub async fn list_review_rules(&self) -> Result<Vec<serde_json::Value>, AppError> {
+        use sqlx::Row;
+        let rows = sqlx::query(
+            "SELECT json_build_object('id', id, 'name', name, 'description', description, 'rule_type', rule_type, 'config', config, 'target_types', target_types, 'priority', priority, 'is_active', is_active, 'created_at', created_at) FROM review_rules ORDER BY priority DESC, created_at DESC"
+        ).fetch_all(&self.pool).await?;
+        Ok(rows.into_iter().map(|r| r.get(0)).collect())
+    }
+
+    pub async fn toggle_review_rule(&self, rule_id: Uuid, is_active: bool) -> Result<(), AppError> {
+        sqlx::query("UPDATE review_rules SET is_active = $1, updated_at = NOW() WHERE id = $2")
+            .bind(is_active).bind(rule_id).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    // ==================== 审计日志查询 ====================
+
+    pub async fn get_audit_logs(&self, query: AuditLogQuery) -> Result<(Vec<serde_json::Value>, i64), AppError> {
+        let (items, total) = self.audit.query(
+            query.actor_id, query.target_type.as_deref(), query.action.as_deref(),
+            query.actor_type.as_deref(),
+            query.page.unwrap_or(1), query.page_size.unwrap_or(50),
+        ).await?;
+        Ok((items, total))
+    }
+
+    // ==================== 社区引用全局审核（管理员直接管理跨社区引用） ====================
+
+    pub async fn list_refs(&self, status: Option<&str>, page: u32, page_size: u32) -> Result<(Vec<serde_json::Value>, i64), AppError> {
+        use sqlx::Row;
+        let offset = ((page - 1) * page_size) as i64;
+        let limit = page_size as i64;
+
+        let rows = sqlx::query(
+            r#"SELECT json_build_object(
+                'id', r.id, 'creation_id', r.creation_id, 'creator_id', r.creator_id,
+                'creator_username', u.username,
+                'space_id', r.space_id, 'space_title', s.title, 'space_namespace', s.namespace,
+                'module_type', r.module_type, 'display_status', r.display_status,
+                'is_pinned', r.is_pinned, 'created_at', r.created_at
+            ) FROM community_module_refs r
+            LEFT JOIN users u ON r.creator_id = u.id
+            LEFT JOIN spaces s ON r.space_id = s.id
+            WHERE (r.display_status = $1 OR $1 IS NULL)
+            ORDER BY r.created_at DESC LIMIT $2 OFFSET $3"#
+        ).bind(status).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+
+        let total: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM community_module_refs WHERE (display_status = $1 OR $1 IS NULL)"
+        ).bind(status).fetch_one(&self.pool).await?;
+
+        Ok((rows.into_iter().map(|r| r.get(0)).collect(), total.0))
+    }
+
+    pub async fn review_ref(&self, admin_id: Uuid, ref_id: Uuid, action: &str) -> Result<(), AppError> {
+        let new_status = match action {
+            "approve" | "show" => "visible",
+            "reject" => "rejected",
+            "hide" => "hidden",
+            _ => return Err(AppError::Validation("Invalid action for ref review".to_string())),
+        };
+        sqlx::query("UPDATE community_module_refs SET display_status = $1 WHERE id = $2")
+            .bind(new_status).bind(ref_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "ref", ref_id, action, None, Some(new_status), None).await;
         Ok(())
     }
 

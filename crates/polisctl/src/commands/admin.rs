@@ -164,9 +164,11 @@ pub async fn reports_list(
 
 pub async fn reports_resolve(
     config: &Config, client: &HttpClient, report_id: &str,
+    target_action: Option<&str>, target_reason: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     let token = config.require_admin()?;
-    let _resp = client.post(&format!("/api/admin/reports/{}/resolve", report_id), Some(&token), &json!({})).await?;
+    let body = json!({"action": "resolve", "target_action": target_action, "target_action_reason": target_reason});
+    let _resp = client.post(&format!("/api/admin/reports/{}/resolve", report_id), Some(&token), &body).await?;
     print_success(&format!("Report {} resolved", report_id));
     Ok(())
 }
@@ -175,7 +177,7 @@ pub async fn reports_dismiss(
     config: &Config, client: &HttpClient, report_id: &str,
 ) -> Result<(), anyhow::Error> {
     let token = config.require_admin()?;
-    let _resp = client.post(&format!("/api/admin/reports/{}/dismiss", report_id), Some(&token), &json!({})).await?;
+    let _resp = client.post(&format!("/api/admin/reports/{}/resolve", report_id), Some(&token), &json!({"action": "dismiss"})).await?;
     print_success(&format!("Report {} dismissed", report_id));
     Ok(())
 }
@@ -255,5 +257,125 @@ pub async fn analytics(
     };
     let resp = client.get(&path, Some(&token)).await?;
     print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
+// ==================== 审核队列 ====================
+
+pub async fn review_queue(
+    config: &Config, client: &HttpClient,
+    status: Option<&str>, queue_type: Option<&str>,
+    page: u32, size: u32,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let mut path = format!("/api/admin/review-queue?page={}&page_size={}", page, size);
+    if let Some(s) = status { path.push_str(&format!("&status={}", s)); }
+    if let Some(t) = queue_type { path.push_str(&format!("&type={}", t)); }
+    let resp = client.get(&path, Some(&token)).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
+pub async fn batch_review(
+    config: &Config, client: &HttpClient,
+    action: &str, targets: &str, reason: Option<&str>,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let items: Vec<_> = targets.split(',')
+        .map(|pair| {
+            let parts: Vec<&str> = pair.splitn(2, ':').collect();
+            json!({"target_type": parts[0], "target_id": parts[1]})
+        })
+        .collect();
+    let body = json!({"items": items, "action": action, "reason": reason});
+    let resp = client.post("/api/admin/review-queue/batch", Some(&token), &body).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
+// ==================== 审核规则 ====================
+
+pub async fn rules_list(
+    config: &Config, client: &HttpClient,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let resp = client.get("/api/admin/review-rules", Some(&token)).await?;
+    let items: Vec<_> = extract_data_array(&resp).into_iter().cloned().collect();
+    print_output(&json!(items), config.format);
+    Ok(())
+}
+
+pub async fn rules_create(
+    config: &Config, client: &HttpClient,
+    name: &str, rule_type: &str, config_str: &str,
+    target_types: &str, priority: i32, description: Option<&str>,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let config_val: serde_json::Value = serde_json::from_str(config_str)
+        .unwrap_or(json!({}));
+    let target_list: Vec<&str> = target_types.split(',').map(|s| s.trim()).collect();
+    let body = json!({
+        "name": name,
+        "description": description,
+        "rule_type": rule_type,
+        "config": config_val,
+        "target_types": target_list,
+        "priority": priority,
+    });
+    let resp = client.post("/api/admin/review-rules", Some(&token), &body).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
+pub async fn rules_toggle(
+    config: &Config, client: &HttpClient,
+    rule_id: &str, is_active: bool,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let body = json!({"is_active": is_active});
+    let _resp = client.post(&format!("/api/admin/review-rules/{}/toggle", rule_id), Some(&token), &body).await?;
+    print_success(&format!("Rule {} {}", rule_id, if is_active { "enabled" } else { "disabled" }));
+    Ok(())
+}
+
+// ==================== 审计日志 ====================
+
+pub async fn audit_logs(
+    config: &Config, client: &HttpClient,
+    actor_type: Option<&str>, target_type: Option<&str>,
+    action: Option<&str>, page: u32, size: u32,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let mut path = format!("/api/admin/audit-logs?page={}&page_size={}", page, size);
+    if let Some(a) = actor_type { path.push_str(&format!("&actor_type={}", a)); }
+    if let Some(t) = target_type { path.push_str(&format!("&target_type={}", t)); }
+    if let Some(a) = action { path.push_str(&format!("&action={}", a)); }
+    let resp = client.get(&path, Some(&token)).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
+// ==================== 跨社区引用管理 ====================
+
+pub async fn refs_list(
+    config: &Config, client: &HttpClient,
+    status: Option<&str>, page: u32, size: u32,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let mut path = format!("/api/admin/refs?page={}&page_size={}", page, size);
+    if let Some(s) = status { path.push_str(&format!("&status={}", s)); }
+    let resp = client.get(&path, Some(&token)).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
+pub async fn refs_review(
+    config: &Config, client: &HttpClient,
+    ref_id: &str, action: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let body = json!({"action": action});
+    let _resp = client.post(&format!("/api/admin/refs/{}/review", ref_id), Some(&token), &body).await?;
+    print_success(&format!("Ref {} {}", ref_id, action));
     Ok(())
 }

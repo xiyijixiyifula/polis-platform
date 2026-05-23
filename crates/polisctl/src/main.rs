@@ -805,6 +805,33 @@ enum AdminAction {
         #[arg(default_value = "30")]
         days: u32,
     },
+    /// Review queue: list items pending review
+    #[command(subcommand)]
+    Review(AdminReviewAction),
+    /// Review rules management
+    #[command(subcommand)]
+    Rules(AdminRulesAction),
+    /// Cross-community refs management
+    #[command(subcommand)]
+    Refs(AdminRefsAction),
+    /// Audit logs query
+    Audit {
+        /// Filter by actor type (admin/agent)
+        #[arg(short = 'A', long)]
+        actor_type: Option<String>,
+        /// Filter by target type (post/user/space/comment)
+        #[arg(short = 'T', long)]
+        target_type: Option<String>,
+        /// Filter by action (approve/reject/hide/ban/etc.)
+        #[arg(short = 'a', long)]
+        action: Option<String>,
+        /// Page number
+        #[arg(default_value = "1")]
+        page: u32,
+        /// Page size
+        #[arg(short = 's', long, default_value = "50")]
+        size: u32,
+    },
 }
 
 #[derive(Subcommand)]
@@ -923,13 +950,105 @@ enum AdminReportsAction {
         #[arg(short, long, default_value = "20")]
         size: u32,
     },
-    /// Resolve a report
+    /// Resolve a report (optionally with linked moderation action)
     Resolve {
         report_id: String,
+        /// Linked target action: hide, delete, ban
+        #[arg(short, long)]
+        target_action: Option<String>,
+        /// Reason for linked action
+        #[arg(short, long)]
+        target_reason: Option<String>,
     },
     /// Dismiss a report
     Dismiss {
         report_id: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum AdminReviewAction {
+    /// List review queue items
+    List {
+        /// Filter by status
+        #[arg(short = 'S', long)]
+        status: Option<String>,
+        /// Filter by type (ref/report)
+        #[arg(short = 't', long)]
+        queue_type: Option<String>,
+        /// Page number
+        #[arg(default_value = "1")]
+        page: u32,
+        /// Page size
+        #[arg(short = 's', long, default_value = "50")]
+        size: u32,
+    },
+    /// Batch review: approve/reject/hide/delete multiple items
+    Batch {
+        /// Action: approve, reject, hide, delete
+        action: String,
+        /// Comma-separated list of target_type:target_id pairs (e.g. "post:UUID1,post:UUID2")
+        targets: String,
+        /// Optional reason
+        #[arg(short, long)]
+        reason: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum AdminRulesAction {
+    /// List all review rules
+    List,
+    /// Create a review rule
+    Create {
+        /// Rule name
+        name: String,
+        /// Rule type (keyword_filter, regex_filter, rate_limit, etc.)
+        #[arg(short, long)]
+        rule_type: String,
+        /// JSON config
+        #[arg(short, long, default_value = "{}")]
+        config: String,
+        /// Comma-separated target types (post, comment, user)
+        #[arg(short = 'T', long, default_value = "post")]
+        target_types: String,
+        /// Priority (higher = runs first)
+        #[arg(short, long, default_value = "0")]
+        priority: i32,
+        /// Description
+        #[arg(short, long)]
+        description: Option<String>,
+    },
+    /// Toggle a review rule on/off
+    Toggle {
+        /// Rule ID
+        rule_id: String,
+        /// Disable the rule (default: enable)
+        #[arg(short, long)]
+        disable: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum AdminRefsAction {
+    /// List cross-community refs
+    List {
+        /// Filter by display status
+        #[arg(short = 'S', long)]
+        status: Option<String>,
+        /// Page number
+        #[arg(default_value = "1")]
+        page: u32,
+        /// Page size
+        #[arg(short = 's', long, default_value = "50")]
+        size: u32,
+    },
+    /// Review a cross-community ref
+    Review {
+        /// Ref ID
+        ref_id: String,
+        /// Action: approve, reject, hide
+        action: String,
     },
 }
 
@@ -1198,11 +1317,41 @@ async fn main() -> Result<(), anyhow::Error> {
             },
             AdminAction::Reports(sub) => match sub {
                 AdminReportsAction::List { page, size } => commands::admin::reports_list(&config, &client, page, size).await,
-                AdminReportsAction::Resolve { report_id } => commands::admin::reports_resolve(&config, &client, &report_id).await,
+                AdminReportsAction::Resolve { report_id, target_action, target_reason } => {
+                    commands::admin::reports_resolve(&config, &client, &report_id, target_action.as_deref(), target_reason.as_deref()).await
+                }
                 AdminReportsAction::Dismiss { report_id } => commands::admin::reports_dismiss(&config, &client, &report_id).await,
             },
             AdminAction::Transactions { page, size } => commands::admin::transactions(&config, &client, page, size).await,
             AdminAction::Analytics { analytics_type, days } => commands::admin::analytics(&config, &client, &analytics_type, days).await,
+            AdminAction::Review(sub) => match sub {
+                AdminReviewAction::List { status, queue_type, page, size } => {
+                    commands::admin::review_queue(&config, &client, status.as_deref(), queue_type.as_deref(), page, size).await
+                }
+                AdminReviewAction::Batch { action, targets, reason } => {
+                    commands::admin::batch_review(&config, &client, &action, &targets, reason.as_deref()).await
+                }
+            },
+            AdminAction::Rules(sub) => match sub {
+                AdminRulesAction::List => commands::admin::rules_list(&config, &client).await,
+                AdminRulesAction::Create { name, rule_type, config: config_str, target_types, priority, description } => {
+                    commands::admin::rules_create(&config, &client, &name, &rule_type, &config_str, &target_types, priority, description.as_deref()).await
+                }
+                AdminRulesAction::Toggle { rule_id, disable } => {
+                    commands::admin::rules_toggle(&config, &client, &rule_id, !disable).await
+                }
+            },
+            AdminAction::Refs(sub) => match sub {
+                AdminRefsAction::List { status, page, size } => {
+                    commands::admin::refs_list(&config, &client, status.as_deref(), page, size).await
+                }
+                AdminRefsAction::Review { ref_id, action } => {
+                    commands::admin::refs_review(&config, &client, &ref_id, &action).await
+                }
+            },
+            AdminAction::Audit { actor_type, target_type, action, page, size } => {
+                commands::admin::audit_logs(&config, &client, actor_type.as_deref(), target_type.as_deref(), action.as_deref(), page, size).await
+            },
         },
 
         // === QA ===

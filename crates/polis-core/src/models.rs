@@ -1148,6 +1148,124 @@ pub struct PublishThreadRequest {
     pub spaces: Option<Vec<String>>, // namespace 列表
 }
 
+// ==================== 审核审计系统 ====================
+
+/// 审核审计日志
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AuditLog {
+    pub id: Uuid,
+    pub actor_id: Uuid,
+    pub actor_type: String,
+    pub target_type: String,
+    pub target_id: Uuid,
+    pub action: String,
+    pub old_state: Option<String>,
+    pub new_state: Option<String>,
+    pub reason: Option<String>,
+    pub metadata: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 管理员用户
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AdminUser {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub role: String,
+    pub granted_by: Option<Uuid>,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Agent 管理员关联
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AdminAgent {
+    pub id: Uuid,
+    pub agent_id: Uuid,
+    pub user_id: Uuid,
+    pub role: String,
+    pub permissions: serde_json::Value,
+    pub is_active: bool,
+    pub granted_by: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 审核规则
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ReviewRule {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub rule_type: String,
+    pub config: serde_json::Value,
+    pub target_types: serde_json::Value,
+    pub priority: i32,
+    pub is_active: bool,
+    pub created_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// 审核队列查询参数
+#[derive(Debug, Deserialize)]
+pub struct ReviewQueueQuery {
+    pub status: Option<String>,
+    pub r#type: Option<String>,
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+}
+
+/// 批量审核请求
+#[derive(Debug, Deserialize)]
+pub struct BatchReviewRequest {
+    pub items: Vec<BatchReviewItem>,
+    pub action: String,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BatchReviewItem {
+    pub target_type: String,
+    pub target_id: Uuid,
+}
+
+/// 举报联动审核
+#[derive(Debug, Deserialize)]
+pub struct ResolveReportWithActionRequest {
+    pub action: String,
+    pub target_action: Option<String>,  // 对举报目标执行的联动操作
+    pub target_action_reason: Option<String>,
+}
+
+/// Agent Admin 登录请求
+#[derive(Debug, Deserialize)]
+pub struct AgentAdminLoginRequest {
+    pub agent_id: Uuid,
+    pub api_key: String,
+}
+
+/// 创建/更新审核规则请求
+#[derive(Debug, Deserialize)]
+pub struct CreateReviewRuleRequest {
+    pub name: String,
+    pub description: Option<String>,
+    pub rule_type: String,
+    pub config: serde_json::Value,
+    pub target_types: Vec<String>,
+    pub priority: Option<i32>,
+}
+
+/// 审计日志查询
+#[derive(Debug, Deserialize)]
+pub struct AuditLogQuery {
+    pub actor_id: Option<Uuid>,
+    pub target_type: Option<String>,
+    pub action: Option<String>,
+    pub actor_type: Option<String>,
+    pub page: Option<u32>,
+    pub page_size: Option<u32>,
+}
+
 // Re-export commonly used types
 pub use crate::types::{
     Visibility, SpaceStatus, MemberRole, ModuleType, ContentType, VerifiedType,
