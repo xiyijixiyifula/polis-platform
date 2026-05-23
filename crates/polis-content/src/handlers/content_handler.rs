@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
 use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscription, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, Pagination, Post, PostPublic, PostReference, SeriesPublic, UpdatePostRequest, UnlockPostRequest, UserPublic, PaginationParams,
@@ -8,21 +9,25 @@ use uuid::Uuid;
 
 use crate::config::ContentServiceConfig;
 use crate::repo::ContentRepo;
+use crate::handlers::webhook_handler::WebhookDispatcher;
 
 pub struct ContentHandler {
     pub repo: ContentRepo,
     pub pool: PgPool,
     pub config: ContentServiceConfig,
     pub nats: Option<NatsClient>,
+    pub webhook: Arc<WebhookDispatcher>,
 }
 
 impl ContentHandler {
     pub fn new(pool: PgPool, config: ContentServiceConfig, nats: Option<NatsClient>) -> Self {
+        let webhook = Arc::new(WebhookDispatcher::new(pool.clone()));
         Self {
             repo: ContentRepo::new(pool.clone()),
             pool,
             config,
             nats,
+            webhook,
         }
     }
 
@@ -865,6 +870,13 @@ impl ContentHandler {
                 "user_id": user_id.to_string(),
             })).await;
 
+            // Webhook: content.liked
+            self.webhook.dispatch("content.liked", serde_json::json!({
+                "target_type": target_type,
+                "target_id": target_id,
+                "user_id": user_id,
+            }), None);
+
             // Create notification for post author (if post is liked by someone else)
             if target_type == "post" {
                 if let Ok(Some(post)) = self.repo.find_post_by_id(target_id).await {
@@ -918,6 +930,13 @@ impl ContentHandler {
             "post_id": post_id.to_string(),
             "author_id": author_id.to_string(),
         })).await;
+
+        // Webhook: content.commented
+        self.webhook.dispatch("content.commented", serde_json::json!({
+            "comment_id": comment.id,
+            "post_id": post_id,
+            "author_id": author_id,
+        }), None);
 
         // Create notification for post author (if comment is by someone else)
         if let Ok(Some(post)) = self.repo.find_post_by_id(post_id).await {

@@ -300,18 +300,15 @@ impl CreationHandler {
         req: SubmitToCommunityRequest,
     ) -> Result<CommunityModuleRef, AppError> {
         // 验证创作所有权
-        let creation: Option<Creation> = sqlx::query_as(
+        let creation = sqlx::query_as::<_, Creation>(
             "SELECT * FROM creations WHERE id = $1 AND creator_id = $2",
         )
         .bind(creation_id)
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
-
-        if creation.is_none() {
-            return Err(AppError::Forbidden("无权操作此创作".to_string()));
-        }
+        .map_err(|e| AppError::Internal(e.to_string()))?
+        .ok_or(AppError::Forbidden("无权操作此创作".to_string()))?;
 
         // 获取社区 ID
         let space_id: Option<Uuid> = sqlx::query_scalar(
@@ -369,23 +366,58 @@ impl CreationHandler {
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
+        // 同步创建 posts 记录，让社区动态可直接展示该作品
+        sqlx::query(
+            r#"INSERT INTO posts (space_id, module_type, author_id, title, body, content_type, tags, visibility, creation_id)
+               SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9
+               WHERE NOT EXISTS (SELECT 1 FROM posts WHERE creation_id = $9 AND space_id = $1 AND module_type = $2)"#,
+        )
+        .bind(space_id)
+        .bind(&req.module_type)
+        .bind(user_id)
+        .bind(&creation.title)
+        .bind(&creation.body)
+        .bind(&creation.content_type)
+        .bind(&creation.tags)
+        .bind(&creation.visibility)
+        .bind(creation_id)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
         Ok(module_ref)
     }
 
     /// 撤稿（删除引用）
     pub async fn withdraw_submission(&self, id: Uuid, user_id: Uuid) -> Result<(), AppError> {
-        let result = sqlx::query(
-            "DELETE FROM community_module_refs WHERE id = $1 AND creator_id = $2",
+        // 先查出引用信息用于清理 posts
+        let ref_info: Option<(Uuid, Uuid, String)> = sqlx::query_as(
+            "SELECT creation_id, space_id, module_type FROM community_module_refs WHERE id = $1 AND creator_id = $2",
         )
         .bind(id)
         .bind(user_id)
-        .execute(&self.pool)
+        .fetch_optional(&self.pool)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
-        if result.rows_affected() == 0 {
-            return Err(AppError::NotFound("引用不存在".to_string()));
-        }
+        let (creation_id, space_id, module_type) = ref_info.ok_or(AppError::NotFound("引用不存在".to_string()))?;
+
+        // 删除引用
+        sqlx::query("DELETE FROM community_module_refs WHERE id = $1")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+
+        // 同步软删除对应的 posts 记录
+        let _ = sqlx::query(
+            "UPDATE posts SET is_deleted = TRUE WHERE creation_id = $1 AND space_id = $2 AND module_type = $3",
+        )
+        .bind(creation_id)
+        .bind(space_id)
+        .bind(&module_type)
+        .execute(&self.pool)
+        .await;
 
         Ok(())
     }

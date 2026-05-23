@@ -257,7 +257,10 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/share/{code}/download", get(download_share_route));
 
     let creation = super::creation_routes::creation_routes();
-    public.merge(auth).merge(share_routes).merge(creation).with_state(handler)
+    let webhooks = super::webhook_routes::webhook_routes();
+    let agents = super::agent_routes::agent_routes();
+    let threads = super::thread_routes::thread_routes();
+    public.merge(auth).merge(share_routes).merge(creation).merge(webhooks).merge(agents).merge(threads).with_state(handler)
 }
 
 /// 非公开空间访问检查：block private + unlisted spaces

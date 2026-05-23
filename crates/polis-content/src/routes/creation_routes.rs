@@ -132,6 +132,15 @@ async fn submit_to_community(
 ) -> Result<Json<JVal>, AppError> {
     let uid = require_user(&headers)?;
     let module_ref = make_handler(&h.pool).submit_to_community(creation_id, uid, req).await?;
+
+    // Webhook: content.submitted
+    h.webhook.dispatch("content.submitted", serde_json::json!({
+        "creation_id": module_ref.creation_id,
+        "space_id": module_ref.space_id,
+        "module_type": module_ref.module_type,
+        "creator_id": uid,
+    }), Some(module_ref.space_id));
+
     Ok(ok(serde_json::to_value(module_ref).unwrap_or_default()))
 }
 

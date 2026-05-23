@@ -9,6 +9,7 @@ import { buildPostLink } from '@/lib/module-config';
 import { posts, series, creations, Comment, Post, type Series } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
+import { StructuredDataRender } from '@/components/StructuredDataRender';
 
 /** Decode JWT payload to extract user ID */
 function getCurrentUserId(): string | null {
@@ -653,7 +654,11 @@ function PostDetailContent() {
                 </div>
               </div>
             ) : (
-              <CherryRender markdown={post.body} />
+              (post.content_type === 'json_data' || post.content_type === 'table_data') ? (
+                <StructuredDataRender content_type={post.content_type} body={post.body!} />
+              ) : (
+                <CherryRender markdown={post.body} />
+              )
             )}
           </>
         )}

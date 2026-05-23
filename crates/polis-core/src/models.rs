@@ -933,6 +933,221 @@ pub struct LevelConfig {
     pub perks: Option<serde_json::Value>,
 }
 
+// ==================== Webhook 事件系统 ====================
+
+/// Webhook 订阅
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Webhook {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub space_id: Option<Uuid>,
+    pub events: serde_json::Value,
+    pub url: String,
+    pub secret: Option<String>,
+    pub is_active: bool,
+    pub last_delivery_at: Option<DateTime<Utc>>,
+    pub last_delivery_status: Option<i32>,
+    pub delivery_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Webhook 推送日志
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct WebhookDelivery {
+    pub id: Uuid,
+    pub webhook_id: Uuid,
+    pub event_type: String,
+    pub payload: serde_json::Value,
+    pub status_code: Option<i32>,
+    pub response_body: Option<String>,
+    pub error_message: Option<String>,
+    pub duration_ms: Option<i32>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 创建 Webhook 订阅请求
+#[derive(Debug, Deserialize)]
+pub struct CreateWebhookRequest {
+    pub space_id: Option<Uuid>,
+    pub events: Vec<String>,
+    pub url: String,
+    pub secret: Option<String>,
+}
+
+/// 更新 Webhook 订阅请求
+#[derive(Debug, Deserialize)]
+pub struct UpdateWebhookRequest {
+    pub events: Option<Vec<String>>,
+    pub url: Option<String>,
+    pub secret: Option<String>,
+    pub is_active: Option<bool>,
+}
+
+/// Webhook 事件类型常量
+pub mod webhook_events {
+    pub const CONTENT_CREATED: &str = "content.created";
+    pub const CONTENT_UPDATED: &str = "content.updated";
+    pub const CONTENT_SUBMITTED: &str = "content.submitted";
+    pub const CONTENT_LIKED: &str = "content.liked";
+    pub const CONTENT_COMMENTED: &str = "content.commented";
+    pub const CONTENT_BOOKMARKED: &str = "content.bookmarked";
+    pub const SPACE_JOINED: &str = "space.joined";
+    pub const AGENT_MENTIONED: &str = "agent.mentioned";
+}
+
+// ==================== Agent 身份系统 ====================
+
+/// Agent 扩展信息
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Agent {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub owner_user_id: Uuid,
+    pub agent_type: String,
+    pub capabilities: serde_json::Value,
+    pub api_key_hash: Option<String>,
+    pub api_key_prefix: Option<String>,
+    pub is_active: bool,
+    pub status: String,
+    pub last_active_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Agent 公开信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentPublic {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub agent_type: String,
+    pub capabilities: Vec<String>,
+    pub is_active: bool,
+    pub status: String,
+    pub last_active_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 社区 Agent 注册
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SpaceAgent {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub agent_id: Uuid,
+    pub registered_by: Uuid,
+    pub is_active: bool,
+    pub trigger_words: serde_json::Value,
+    pub auto_trigger: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 社区 Agent 公开信息（含 Agent 基础信息 + 社区配置）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpaceAgentPublic {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub agent: AgentPublic,
+    pub trigger_words: Vec<String>,
+    pub auto_trigger: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 注册 Agent 请求
+#[derive(Debug, Deserialize)]
+pub struct RegisterAgentRequest {
+    pub username: String,
+    pub display_name: String,
+    pub agent_type: String,
+    pub capabilities: Vec<String>,
+    pub password: String, // Agent 登录密码（可选，优先用 API Key）
+}
+
+/// Agent API Key 登录请求
+#[derive(Debug, Deserialize)]
+pub struct AgentApiKeyLoginRequest {
+    pub agent_id: Uuid,
+    pub api_key: String,
+}
+
+/// Agent JWT 登录请求
+#[derive(Debug, Deserialize)]
+pub struct AgentLoginRequest {
+    pub username: String,
+    pub password: String,
+}
+
+/// 社区注册 Agent 请求
+#[derive(Debug, Deserialize)]
+pub struct RegisterSpaceAgentRequest {
+    pub agent_id: Uuid,
+    pub trigger_words: Option<Vec<String>>,
+    pub auto_trigger: Option<serde_json::Value>,
+}
+
+/// Agent 设置状态请求
+#[derive(Debug, Deserialize)]
+pub struct UpdateAgentStatusRequest {
+    pub status: String,
+}
+
+// ==================== Thread 对话流 ====================
+
+/// 对话流
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Thread {
+    pub id: Uuid,
+    pub title: String,
+    pub creator_id: Uuid,
+    pub community_id: Option<Uuid>,
+    pub participants: serde_json::Value,
+    pub status: String,
+    pub creation_id: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// 对话消息
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct ThreadMessage {
+    pub id: Uuid,
+    pub thread_id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub agent_id: Option<Uuid>,
+    pub role: String,
+    pub content: String,
+    pub content_type: String,
+    pub message_order: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 创建对话流请求
+#[derive(Debug, Deserialize)]
+pub struct CreateThreadRequest {
+    pub title: String,
+    pub community_id: Option<Uuid>,
+    pub participants: Option<serde_json::Value>,
+}
+
+/// 添加消息请求
+#[derive(Debug, Deserialize)]
+pub struct AddThreadMessageRequest {
+    pub role: String,
+    pub content: String,
+    pub content_type: Option<String>,
+    pub agent_id: Option<Uuid>,
+}
+
+/// 发布对话流为作品请求
+#[derive(Debug, Deserialize)]
+pub struct PublishThreadRequest {
+    pub title: String,
+    pub module_type: String,
+    pub visibility: Option<String>,
+    pub spaces: Option<Vec<String>>, // namespace 列表
+}
+
 // Re-export commonly used types
 pub use crate::types::{
     Visibility, SpaceStatus, MemberRole, ModuleType, ContentType, VerifiedType,
