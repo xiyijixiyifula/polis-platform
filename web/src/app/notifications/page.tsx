@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, ChevronRight, Pin, Star, Send, Trash2, Square, CheckSquare } from 'lucide-react';
+import Link from 'next/link';
+import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, ChevronRight, Pin, Star, Send, Trash2, Square, CheckSquare, Compass } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
@@ -184,7 +185,13 @@ export default function NotificationsPage() {
       {notifs.length === 0 ? (
         <div className="glass-card p-6 py-16 text-center">
           <Bell className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">暂无通知</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">暂无通知</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            关注社区或与他人互动后，相关通知会显示在这里
+          </p>
+          <Link href="/explore" className="btn-primary text-sm mt-4 inline-flex items-center gap-1.5 px-5 py-2 rounded-full">
+            <Compass className="h-3.5 w-3.5" /> 探索社区
+          </Link>
         </div>
       ) : (
         <div className="space-y-2">

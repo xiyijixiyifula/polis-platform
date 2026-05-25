@@ -151,8 +151,14 @@ export function setToken(token: string | null) {
   accessToken = token;
   if (token) {
     localStorage.setItem('polis_access_token', token);
+    if (typeof document !== 'undefined') {
+      document.cookie = `polis_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+    }
   } else {
     localStorage.removeItem('polis_access_token');
+    if (typeof document !== 'undefined') {
+      document.cookie = 'polis_token=; path=/; max-age=0; SameSite=Lax';
+    }
   }
 }
 

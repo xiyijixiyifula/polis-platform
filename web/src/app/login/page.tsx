@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { setToken } from '@/lib/api';
 
 export default function LoginPage() {
   const [redirect, setRedirect] = useState('/');
@@ -30,7 +31,7 @@ export default function LoginPage() {
       if (!res.ok) {
         setError(data.message || '登录失败');
       } else {
-        localStorage.setItem('polis_access_token', data.data.access_token);
+        setToken(data.data.access_token);
         if (data.data.user) {
           localStorage.setItem('polis_user', JSON.stringify(data.data.user));
         }

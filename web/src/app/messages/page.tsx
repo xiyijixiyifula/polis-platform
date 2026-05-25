@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, MessageSquare, User, Trash2, BellOff, Search, X, Users, MessageCircle, CheckSquare, Square } from 'lucide-react';
+import { ArrowLeft, MessageSquare, User, Trash2, BellOff, Search, X, Users, MessageCircle, CheckSquare, Square, Compass } from 'lucide-react';
 import { messages, contacts, type ConversationSummary } from '@/lib/api';
 
 type Contact = { id: string; username: string; display_name: string; is_mutual: boolean };
@@ -207,6 +207,9 @@ export default function MessagesPage() {
               <MessageSquare className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
               <p className="text-gray-500 dark:text-gray-400">暂无私信会话</p>
               <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">访问其他用户的个人主页，点击"发送私信"开始对话</p>
+              <Link href="/explore" className="btn-primary text-sm mt-4 inline-flex items-center gap-1.5 px-5 py-2 rounded-full">
+                <Compass className="h-3.5 w-3.5" /> 探索社区
+              </Link>
             </div>
           ) : (
             <>

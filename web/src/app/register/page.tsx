@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { setToken } from '@/lib/api';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -26,11 +27,11 @@ export default function RegisterPage() {
       if (!res.ok) {
         setError(data.message || '注册失败');
       } else {
-        localStorage.setItem('polis_access_token', data.data.access_token);
+        setToken(data.data.access_token);
         if (data.data.user) {
           localStorage.setItem('polis_user', JSON.stringify(data.data.user));
         }
-        window.location.href = '/';
+        window.location.href = '/onboarding';
       }
     } catch {
       setError('网络错误，请重试');
