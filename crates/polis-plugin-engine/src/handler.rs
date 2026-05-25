@@ -6,7 +6,7 @@ use crate::runtime::PluginEngine;
 
 /// 插件管理器 (HTTP API 层)
 pub struct PluginHandler {
-    pool: PgPool,
+    pub(crate) pool: PgPool,
     engine: PluginEngine,
 }
 

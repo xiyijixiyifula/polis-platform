@@ -3,7 +3,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub struct StoreHandler {
-    pool: PgPool,
+    pub(crate) pool: PgPool,
 }
 
 impl StoreHandler {

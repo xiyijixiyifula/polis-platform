@@ -11,6 +11,7 @@ use uuid::Uuid;
 use polis_core::auth;
 use polis_core::error::AppError;
 use polis_core::models::ApiResponse;
+use polis_core::resolver::resolve::resolve_space_id;
 use serde::Deserialize;
 
 use crate::handler::CodeHandler;
@@ -34,12 +35,11 @@ pub fn code_routes(handler: Arc<CodeHandler>) -> Router {
 async fn create_repo(
     State(handler): State<Arc<CodeHandler>>,
     headers: HeaderMap,
-    Path(_namespace): Path<String>,
+    Path(namespace): Path<String>,
     Json(req): Json<CreateRepoRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
     let user_id = auth::require_user(&headers)?;
-    // TODO: 通过 namespace 查询数据库获取 space_id
-    let space_id = Uuid::new_v4();
+    let space_id = resolve_space_id(&handler.pool, &namespace).await?;
     let repo = handler.create_repo(
         space_id, user_id, &req.name,
         &req.description.unwrap_or_default(),

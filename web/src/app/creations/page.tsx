@@ -174,7 +174,7 @@ export default function MyCreationsPage() {
       const data = await res.json();
       if (data.code === 0) {
         setCreations((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, visibility: newVis } : c))
+          Array.isArray(prev) ? prev.map((c) => (c.id === id ? { ...c, visibility: newVis } : c)) : prev
         );
       }
     } catch { /* */ }
@@ -272,9 +272,9 @@ export default function MyCreationsPage() {
       const data = await res.json();
       if (data.code === 0) {
         setComments((prev) =>
-          prev.map((c) =>
+          Array.isArray(prev) ? prev.map((c) =>
             c.id === commentId ? { ...c, is_pinned: data.data?.pinned ?? !c.is_pinned } : c
-          )
+          ) : prev
         );
       }
     } catch { alert('网络错误'); }

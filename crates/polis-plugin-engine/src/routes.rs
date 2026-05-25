@@ -12,6 +12,7 @@ use uuid::Uuid;
 use polis_core::auth;
 use polis_core::error::AppError;
 use polis_core::models::ApiResponse;
+use polis_core::resolver::resolve::resolve_space_id;
 
 use crate::handler::PluginHandler;
 
@@ -33,11 +34,10 @@ pub fn plugin_routes(handler: Arc<PluginHandler>) -> Router {
 async fn install_plugin(
     State(handler): State<Arc<PluginHandler>>,
     headers: HeaderMap,
-    Path(_namespace): Path<String>,
+    Path(namespace): Path<String>,
     Json(req): Json<InstallPluginRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    // TODO: resolve namespace → space_id via database query
-    let space_id = Uuid::new_v4();
+    let space_id = resolve_space_id(&handler.pool, &namespace).await?;
     let author_id = auth::require_user(&headers)?;
 
     // Decode base64 WASM bytes
@@ -57,10 +57,9 @@ async fn install_plugin(
 
 async fn list_plugins(
     State(handler): State<Arc<PluginHandler>>,
-    Path(_namespace): Path<String>,
+    Path(namespace): Path<String>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
-    // TODO: resolve namespace → space_id via database query
-    let space_id = Uuid::new_v4();
+    let space_id = resolve_space_id(&handler.pool, &namespace).await?;
     let plugins = handler.list_plugins(space_id).await?;
     Ok(Json(ApiResponse::success(plugins)))
 }

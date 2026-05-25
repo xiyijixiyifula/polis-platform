@@ -50,6 +50,8 @@ jobs:
   build-frontend:
     name: Build Next.js Frontend
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     defaults:
       run:
         working-directory: web
@@ -70,7 +72,7 @@ jobs:
         run: npm run build
 
       - name: Package Frontend
-        run: tar -czf release-web.tar.gz .next/standalone next.config.js package.json
+        run: tar -czf release-web.tar.gz .next next.config.js package.json
 
       - name: Upload Frontend Artifact
         uses: actions/upload-artifact@v4

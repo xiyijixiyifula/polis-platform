@@ -12,6 +12,7 @@ use uuid::Uuid;
 use polis_core::auth;
 use polis_core::error::AppError;
 use polis_core::models::{ApiResponse, PaginationParams};
+use polis_core::resolver::resolve::resolve_space_id;
 
 use crate::handler::StoreHandler;
 
@@ -36,11 +37,10 @@ pub fn store_routes(handler: Arc<StoreHandler>) -> Router {
 async fn create_product(
     State(handler): State<Arc<StoreHandler>>,
     headers: HeaderMap,
-    Path(_namespace): Path<String>,
+    Path(namespace): Path<String>,
     Json(req): Json<CreateProductRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    // TODO: resolve namespace → space_id via database query
-    let space_id = Uuid::new_v4();
+    let space_id = resolve_space_id(&handler.pool, &namespace).await?;
     let seller_id = auth::require_user(&headers)?;
     let product = handler.create_product(
         space_id, seller_id, &req.title,
@@ -53,11 +53,10 @@ async fn create_product(
 
 async fn list_products(
     State(handler): State<Arc<StoreHandler>>,
-    Path(_namespace): Path<String>,
+    Path(namespace): Path<String>,
     Query(params): Query<PaginationParams>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
-    // TODO: resolve namespace → space_id via database query
-    let space_id = Uuid::new_v4();
+    let space_id = resolve_space_id(&handler.pool, &namespace).await?;
     let products = handler.list_products(space_id, params.page.unwrap_or(1), params.page_size.unwrap_or(20)).await?;
     Ok(Json(ApiResponse::success(products)))
 }

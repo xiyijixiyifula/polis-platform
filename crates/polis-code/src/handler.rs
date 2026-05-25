@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::config::CodeServiceConfig;
 
 pub struct CodeHandler {
-    pool: PgPool,
+    pub(crate) pool: PgPool,
     config: CodeServiceConfig,
 }
 

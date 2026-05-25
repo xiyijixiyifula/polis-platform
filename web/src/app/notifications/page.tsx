@@ -33,7 +33,7 @@ export default function NotificationsPage() {
     await fetch('/api/notifications/read-all', {
       method: 'POST', headers: { Authorization: `Bearer ${token()}` },
     });
-    setNotifs(notifs.map((n) => ({ ...n, is_read: true })));
+    setNotifs(Array.isArray(notifs) ? notifs.map((n) => ({ ...n, is_read: true })) : notifs);
     setUnreadCount(0);
   };
 
@@ -46,7 +46,7 @@ export default function NotificationsPage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
         body: JSON.stringify({ notification_id: notifId }),
       });
-      setNotifs((prev) => prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)));
+      setNotifs((prev) => Array.isArray(prev) ? prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)) : prev);
       fetchUnread();
     } catch {}
     finally {
@@ -72,7 +72,7 @@ export default function NotificationsPage() {
     if (selectedIds.size === notifs.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(notifs.map((n) => n.id)));
+      setSelectedIds(new Set(Array.isArray(notifs) ? notifs.map((n) => n.id) : []));
     }
   };
 

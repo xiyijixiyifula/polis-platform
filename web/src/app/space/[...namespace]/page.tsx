@@ -214,8 +214,8 @@ export default function SpacePage() {
  const data = await res.json();
  if (data.code === 0) {
  const newPinned = data.data?.pinned;
- setPosts(prev => prev.map(p => p.id === postId ? { ...p, is_pinned: newPinned } : p));
- setFeatured(prev => prev.map(p => p.id === postId ? { ...p, is_pinned: newPinned } : p));
+ setPosts(prev => Array.isArray(prev) ? prev.map(p => p.id === postId ? { ...p, is_pinned: newPinned } : p) : prev);
+ setFeatured(prev => Array.isArray(prev) ? prev.map(p => p.id === postId ? { ...p, is_pinned: newPinned } : p) : prev);
  }
  } catch {}
  }, [cleanNamespace]);
