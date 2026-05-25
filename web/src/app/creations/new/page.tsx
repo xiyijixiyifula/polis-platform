@@ -7,11 +7,11 @@ import { CherryEditor } from '@/components/CherryEditor';
 import {
   ArrowLeft, Globe, Lock, Link2, PenLine, FileText, MessageSquareText,
   Home, Plus, X, Tag, Send, Paperclip, Upload, RotateCcw, Clock,
-  Maximize2, Minimize2, Save, LogIn, BookOpen, Video, Film, HelpCircle,
-  Share2, Library,
+  Maximize2, Minimize2, Save, Loader2, LogIn, BookOpen, Video, Film, HelpCircle,
+  Share2, Library, Bot, MessageSquare,
   File as FileIcon, CircleCheck, CloudUpload, Eye,
 } from 'lucide-react';
-import { series as seriesApi, getToken, type Series } from '@/lib/api';
+import { series as seriesApi, getToken, threads as threadsApi, type Series } from '@/lib/api';
 import { normalizeModuleType, getModuleLabel } from '@/lib/module-config';
 
 const AUTOSAVE_KEY = 'polis_creation_draft';
@@ -21,7 +21,7 @@ interface ModuleDef {
   value: string;
   label: string;
   icon: React.ElementType;
-  editor: 'markdown' | 'video' | 'qa';  // 创作方案类型
+  editor: 'markdown' | 'video' | 'qa' | 'thread';  // 创作方案类型
   desc: string;
 }
 
@@ -32,6 +32,7 @@ const MODULE_TYPES: ModuleDef[] = [
   { value: 'share', label: '分享', icon: Share2, editor: 'markdown', desc: '分享链接、资源或心得体会' },
   { value: 'wiki', label: '知识库', icon: Library, editor: 'markdown', desc: '编写知识库文档，成员可协作编辑' },
   { value: 'qa', label: '问答', icon: HelpCircle, editor: 'qa', desc: '提出问题，等待社区成员回答' },
+  { value: 'thread', label: 'AI 对话', icon: Bot, editor: 'thread', desc: '与 AI 多轮对话后发布为作品' },
 ];
 
 const VISIBILITY_OPTIONS = [
@@ -145,6 +146,9 @@ function NewCreationPageInner() {
   const [uploadedVideo, setUploadedVideo] = useState<{ id: string; title: string } | null>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Thread 模式 ──
+  const [threadFirstMessage, setThreadFirstMessage] = useState('');
+
   // ── Init ──
   useEffect(() => {
     const token = getToken();
@@ -171,7 +175,7 @@ function NewCreationPageInner() {
 
   // 加载系列
   useEffect(() => {
-    if (!prefillSpaceNs || currentModule.editor === 'video') return;
+    if (!prefillSpaceNs || currentModule.editor === 'video' || currentModule.editor === 'thread') return;
     setSeriesLoading(true);
     seriesApi.list(prefillSpaceNs).then(res => {
       if (res.code === 0 && res.data) setSeriesList(res.data.filter((s: Series) => s.is_published));
@@ -180,7 +184,7 @@ function NewCreationPageInner() {
 
   // 草稿恢复（仅 markdown 和 qa 编辑器，非编辑模式）
   useEffect(() => {
-    if (draftRestored || currentModule.editor === 'video' || isEditMode) return;
+    if (draftRestored || currentModule.editor === 'video' || currentModule.editor === 'thread' || isEditMode) return;
     const draftStr = localStorage.getItem(AUTOSAVE_KEY);
     const draftTime = localStorage.getItem(`${AUTOSAVE_KEY}_time`);
     if (draftStr && draftTime && !body && !title) {
@@ -408,6 +412,24 @@ function NewCreationPageInner() {
     finally { setPublishing(false); }
   };
 
+  // ── 创建 Thread ──
+  const handleCreateThread = async () => {
+    if (!title.trim()) { setError('请输入对话标题'); return; }
+    if (!threadFirstMessage.trim()) { setError('请输入首条消息'); return; }
+    setPublishing(true); setError('');
+    try {
+      const result = await threadsApi.create({ title: title.trim() });
+      if (result.code === 0 && result.data) {
+        const threadId = result.data.id;
+        await threadsApi.addMessage(threadId, { role: 'user', content: threadFirstMessage.trim() });
+        router.push(`/creations/new/thread?threadId=${threadId}`);
+      } else {
+        setError(result.message || '创建对话失败');
+      }
+    } catch { setError('网络错误，请重试'); }
+    finally { setPublishing(false); }
+  };
+
   // ── 切换模块（编辑模式下不允许切换） ──
   const handleModuleChange = (val: string) => {
     if (isEditMode) return;
@@ -425,6 +447,7 @@ function NewCreationPageInner() {
   }, [isFullscreen]);
 
   const isMarkdownEditor = currentModule.editor === 'markdown' || currentModule.editor === 'qa';
+  const isThreadEditor = currentModule.editor === 'thread';
 
   // ── 全屏编辑器 ──
   if (isFullscreen && isMarkdownEditor) {
@@ -494,12 +517,19 @@ function NewCreationPageInner() {
                 <Maximize2 className="h-4 w-4" />
               </button>
             )}
-            {isMarkdownEditor ? (
+            {isMarkdownEditor && (
               <button type="button" onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
                 className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
                 {isEditMode ? <><Save size={15} /> {publishing ? '保存中...' : '保存修改'}</> : <><Send size={15} /> {publishing ? '发布中...' : '发布'}</>}
               </button>
-            ) : (
+            )}
+            {isThreadEditor && (
+              <button type="button" onClick={handleCreateThread} disabled={publishing || !title.trim() || !threadFirstMessage.trim()}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
+                <Send size={15} /> {publishing ? '创建中...' : '开始对话'}
+              </button>
+            )}
+            {currentModule.editor === 'video' && (
               <button type="button" onClick={handleVideoUpload} disabled={publishing || !videoFile || !title.trim() || uploadStatus === 'uploading'}
                 className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
                 <CloudUpload size={15} /> {uploadStatus === 'uploading' ? `上传中 ${uploadProgress}%` : publishing ? '处理中...' : '上传视频'}
@@ -641,7 +671,7 @@ function NewCreationPageInner() {
           </div>
 
           {/* Series */}
-          {prefillSpaceNs && seriesList.length > 0 && currentModule.editor !== 'video' && (
+          {prefillSpaceNs && seriesList.length > 0 && currentModule.editor !== 'video' && currentModule.editor !== 'thread' && (
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-gray-400" />
               <span className="text-xs text-gray-500 dark:text-gray-400">收录到系列:</span>
@@ -752,6 +782,43 @@ function NewCreationPageInner() {
               <button type="button" onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
                 className="flex items-center gap-2 px-8 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
                 {isEditMode ? <><Save size={16} />{publishing ? '保存中...' : '保存修改'}</> : <><Send size={16} />{publishing ? '发布中...' : '发布作品'}</>}
+              </button>
+            </div>
+          </>
+          )}
+
+          {/* ========== Thread 编辑器（AI 对话） ========== */}
+          {isThreadEditor && (
+          <>
+            <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-4 flex items-start gap-3 mb-1">
+              <Bot className="h-5 w-5 text-purple-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-purple-700 dark:text-purple-300">AI 对话模式</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                  创建一个标题，输入首条消息。之后可继续与 AI 多轮对话，最终将完整对话发布为作品。
+                </p>
+              </div>
+            </div>
+
+            {/* Title */}
+            <div>
+              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+                placeholder="对话标题，例如：帮我设计一个社区规则..."
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all" />
+            </div>
+
+            {/* First Message */}
+            <div>
+              <textarea value={threadFirstMessage} onChange={(e) => setThreadFirstMessage(e.target.value)}
+                rows={5} placeholder="输入你的第一条消息，开启与 AI 的对话..."
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all resize-none" />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-400 dark:text-gray-500">创建后可在对话页面继续与 AI 交流，满意后发布</p>
+              <button type="button" onClick={handleCreateThread} disabled={publishing || !title.trim() || !threadFirstMessage.trim()}
+                className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition shadow-lg shadow-purple-600/20">
+                {publishing ? <><Loader2 size={16} className="animate-spin" />创建中...</> : <><MessageSquare size={16} />开始对话</>}
               </button>
             </div>
           </>
