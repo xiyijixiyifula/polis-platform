@@ -5,14 +5,14 @@ import Link from 'next/link';
 import {
   Plus, Filter, PenLine, FileText, MessageSquareText, Home, Heart, Eye, Users,
   MessageCircle, TrendingUp, TrendingDown, UserCheck, UserPlus, UserMinus, Clock, BarChart3,
-  Trash2, Pin, PinOff, ChevronRight, AlertCircle,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import CreationCard, { type CreationPublic } from '@/components/CreationCard';
 import SubmitDialog from '@/components/SubmitDialog';
-import { follow, type FollowUser } from '@/lib/api';
+import CommentsSection from './components/CommentsSection';
+import { follow, getToken, type FollowUser } from '@/lib/api';
 
 type SidebarSection = 'dashboard' | 'publish' | 'content' | 'interactions' | 'comments';
 
@@ -43,7 +43,7 @@ export default function MyCreationsPage() {
       params.set('page_size', '20');
       if (filter !== 'all') params.set('status', filter);
 
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const res = await fetch(`/api/creations?${params.toString()}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -100,7 +100,7 @@ export default function MyCreationsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('确定要删除这个创作吗？所有社区中的引用也会被移除。')) return;
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const res = await fetch(`/api/creations/${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -126,7 +126,7 @@ export default function MyCreationsPage() {
   const handleWithdraw = async (refId: string) => {
     if (!confirm('确定要撤稿吗？该社区将不再展示此内容。')) return;
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const res = await fetch(`/api/refs/${refId}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -142,7 +142,7 @@ export default function MyCreationsPage() {
 
   const handleLike = async (id: string) => {
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       await fetch(`/api/creations/${id}/like`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -152,7 +152,7 @@ export default function MyCreationsPage() {
 
   const handleBookmark = async (id: string) => {
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       await fetch(`/api/creations/${id}/bookmark`, {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -162,7 +162,7 @@ export default function MyCreationsPage() {
 
   const handleVisibilityChange = async (id: string, newVis: string) => {
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const res = await fetch(`/api/creations/${id}`, {
         method: 'PUT',
         headers: {
@@ -179,112 +179,6 @@ export default function MyCreationsPage() {
       }
     } catch { /* */ }
   };
-
-  // ===== 评论管理状态 =====
-  const [commentPosts, setCommentPosts] = useState<any[]>([]);
-  const [commentPostsLoading, setCommentPostsLoading] = useState(false);
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [comments, setComments] = useState<any[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [commentsPage, setCommentsPage] = useState(1);
-  const [commentsTotal, setCommentsTotal] = useState(0);
-  const [commentsPostFilter, setCommentsPostFilter] = useState<string>('');
-
-  useEffect(() => {
-    if (activeSection === 'comments') {
-      loadCommentPosts();
-      setSelectedPostId(null);
-      setComments([]);
-    }
-  }, [activeSection]);
-
-  useEffect(() => {
-    if (activeSection === 'comments' && selectedPostId) {
-      loadComments(true);
-    }
-  }, [selectedPostId]);
-
-  const loadCommentPosts = async () => {
-    setCommentPostsLoading(true);
-    try {
-      const token = localStorage.getItem('polis_access_token');
-      const res = await fetch('/api/my/contents?page=1&page_size=100', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      if (data.code === 0 && data.data?.items) {
-        setCommentPosts(data.data.items);
-      }
-    } catch {}
-    setCommentPostsLoading(false);
-  };
-
-  const loadComments = async (reset = false) => {
-    if (!selectedPostId) return;
-    setCommentsLoading(true);
-    try {
-      const token = localStorage.getItem('polis_access_token');
-      const p = reset ? 1 : commentsPage;
-      const params = new URLSearchParams();
-      params.set('page', String(p));
-      params.set('page_size', '30');
-      params.set('post_id', selectedPostId);
-
-      const res = await fetch(`/api/creator/comments?${params.toString()}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      if (data.code === 0 && data.data) {
-        const items = data.data.items || [];
-        setComments(reset ? items : (prev) => [...prev, ...items]);
-        setCommentsTotal(data.data.total || 0);
-        setCommentsPage(reset ? 2 : p + 1);
-      }
-    } catch {}
-    setCommentsLoading(false);
-  };
-
-  const handleDeleteComment = async (commentId: string) => {
-    if (!confirm('确定要删除这条评论吗？')) return;
-    try {
-      const token = localStorage.getItem('polis_access_token');
-      const res = await fetch(`/api/comments/${commentId}`, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      if (data.code === 0) {
-        setComments((prev) => prev.filter((c) => c.id !== commentId));
-        setCommentsTotal((prev) => prev - 1);
-      } else {
-        alert(data.message || '删除失败');
-      }
-    } catch { alert('网络错误'); }
-  };
-
-  const handlePinComment = async (commentId: string) => {
-    try {
-      const token = localStorage.getItem('polis_access_token');
-      const res = await fetch(`/api/comments/${commentId}/pin`, {
-        method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      const data = await res.json();
-      if (data.code === 0) {
-        setComments((prev) =>
-          Array.isArray(prev) ? prev.map((c) =>
-            c.id === commentId ? { ...c, is_pinned: data.data?.pinned ?? !c.is_pinned } : c
-          ) : prev
-        );
-      }
-    } catch { alert('网络错误'); }
-  };
-
-  const filteredCommentPosts = commentsPostFilter
-    ? commentPosts.filter((p) =>
-        p.title?.toLowerCase().includes(commentsPostFilter.toLowerCase())
-      )
-    : commentPosts;
 
   const sidebarItems: { key: SidebarSection; label: string; icon: React.ReactNode; href?: string }[] = [
     { key: 'dashboard', label: '\u4eea\u8868\u76d8', icon: <BarChart3 size={18} /> },
@@ -719,172 +613,9 @@ export default function MyCreationsPage() {
             )}
           </div>
         )}
+
+      {activeSection === 'comments' && <CommentsSection />}
       </div>
-
-      {/* ===== 评论管理 ===== */}
-      {activeSection === 'comments' && (
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">评论管理</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-            管理你作品下的所有评论，支持置顶和删除
-          </p>
-
-          <div className="flex gap-6">
-            {/* 左侧：作品列表 */}
-            <div className="w-72 shrink-0">
-              <div className="glass-card p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">我的作品</h3>
-                  <span className="text-xs text-gray-400">{commentPosts.length}篇</span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="搜索作品标题..."
-                  value={commentsPostFilter}
-                  onChange={(e) => setCommentsPostFilter(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 mb-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
-                {commentPostsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                    <span className="text-xs text-gray-400">加载中...</span>
-                  </div>
-                ) : filteredCommentPosts.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-xs text-gray-400">暂无作品</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1 max-h-[60vh] overflow-y-auto">
-                    {filteredCommentPosts.map((post) => (
-                      <button
-                        key={post.id}
-                        onClick={() => setSelectedPostId(post.id)}
-                        className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all ${
-                          selectedPostId === post.id
-                            ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-medium shadow-sm'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="truncate block flex-1">{post.title || '无标题'}</span>
-                          <ChevronRight size={14} className={`shrink-0 ml-1 transition-opacity ${selectedPostId === post.id ? 'opacity-100 text-primary-500' : 'opacity-0 group-hover:opacity-50'}`} />
-                        </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                          <span className="flex items-center gap-0.5">
-                            <MessageCircle size={10} /> {post.comment_count || 0}
-                          </span>
-                          <span className="flex items-center gap-0.5">
-                            <Eye size={10} /> {post.view_count || 0}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 右侧：评论详情 */}
-            <div className="flex-1 min-w-0">
-              {!selectedPostId ? (
-                <div className="glass-card p-12 text-center">
-                  <MessageCircle size={48} className="mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-2">选择左侧作品查看评论</h3>
-                  <p className="text-sm text-gray-500">点击左侧任意作品，查看并管理该作品下的所有评论</p>
-                </div>
-              ) : commentsLoading && comments.length === 0 ? (
-                <div className="glass-card p-12 text-center">
-                  <div className="h-6 w-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                  <span className="text-sm text-gray-400">加载评论中...</span>
-                </div>
-              ) : comments.length === 0 ? (
-                <div className="glass-card p-12 text-center">
-                  <MessageCircle size={40} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                  <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">暂无评论</h3>
-                  <p className="text-sm text-gray-500">这件作品还没有收到评论</p>
-                </div>
-              ) : (
-                <div className="glass-card overflow-hidden rounded-xl">
-                  <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                      评论列表
-                      <span className="ml-2 text-xs font-normal text-gray-400">共 {commentsTotal} 条</span>
-                    </h3>
-                  </div>
-                  <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    {comments.map((comment) => (
-                      <div key={comment.id} className={`p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${comment.is_pinned ? 'bg-amber-50 dark:bg-amber-900/10' : ''}`}>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <Link href={`/profile/${comment.author?.username || '#'}`} className="shrink-0">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-500 flex items-center justify-center text-white text-xs font-bold">
-                                {comment.author?.display_name?.charAt(0) || '?'}
-                              </div>
-                            </Link>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <Link href={`/profile/${comment.author?.username || '#'}`} className="text-sm font-medium text-gray-900 dark:text-white hover:text-primary-600 transition">
-                                  {comment.author?.display_name || '匿名'}
-                                </Link>
-                                {comment.is_pinned && (
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium flex items-center gap-1">
-                                    <Pin size={10} /> 已置顶
-                                  </span>
-                                )}
-                                <span className="text-xs text-gray-400">
-                                  {new Date(comment.created_at).toLocaleDateString('zh-CN', {
-                                    month: 'numeric', day: 'numeric',
-                                    hour: '2-digit', minute: '2-digit',
-                                  })}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap break-words">
-                                {comment.body}
-                              </p>
-                              <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                                <span className="flex items-center gap-1">
-                                  <Heart size={11} /> {comment.like_count || 0}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => handlePinComment(comment.id)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                              title={comment.is_pinned ? '取消置顶' : '置顶评论'}
-                            >
-                              {comment.is_pinned ? <PinOff size={15} /> : <Pin size={15} />}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                              title="删除评论"
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {comments.length < commentsTotal && (
-                      <div className="p-4 text-center">
-                        <button
-                          onClick={() => loadComments(false)}
-                          disabled={commentsLoading}
-                          className="px-5 py-2 text-sm text-primary-600 border border-primary-200 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 disabled:opacity-50 transition"
-                        >
-                          {commentsLoading ? '加载中...' : '加载更多评论'}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 投稿弹窗 */}
       {submitDialogOpen && (

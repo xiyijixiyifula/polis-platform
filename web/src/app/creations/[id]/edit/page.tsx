@@ -8,6 +8,7 @@ import {
   Maximize2, Minimize2, Paperclip, Upload,
 } from 'lucide-react';
 import Link from 'next/link';
+import { getToken } from '@/lib/api';
 
 const VISIBILITY_OPTIONS = [
   { value: 'public', label: '公开', icon: Globe, desc: '所有人可见' },
@@ -40,7 +41,7 @@ function EditCreationPageInner() {
 
   useEffect(() => {
     if (!id) return;
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken() || '';
     fetch(`/api/creations/${id}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then((r) => r.json())
       .then((data) => {
@@ -61,7 +62,7 @@ function EditCreationPageInner() {
     if (!title.trim()) { setError('请输入标题'); return; }
     setSaving(true); setError('');
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const tagList = tags.split(/[,，、\s]+/).filter(Boolean);
       const pwd = password || undefined;
       const res = await fetch(`/api/creations/${id}`, {
@@ -82,7 +83,7 @@ function EditCreationPageInner() {
   const handleDelete = async () => {
     if (!confirm('确定要删除这个创作吗？所有引用也会被移除。')) return;
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const res = await fetch(`/api/creations/${id}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
       const data = await res.json();
       if (data.code === 0) window.location.href = '/creations';
@@ -93,7 +94,7 @@ function EditCreationPageInner() {
   const handleAttachmentUpload = async (file: File) => {
     if (file.size > 8 * 1024 * 1024) { alert('文件大小不能超过 8MB'); return; }
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = 'Bearer ' + token;
       const reader = new FileReader();
@@ -118,7 +119,7 @@ function EditCreationPageInner() {
         reader.onload = async (e) => {
           const base64 = (e.target?.result as string)?.split(',')[1];
           if (!base64) return;
-          const token = localStorage.getItem('polis_access_token');
+          const token = getToken() || '';
           const headers: Record<string, string> = { 'Content-Type': 'application/json' };
           if (token) headers['Authorization'] = 'Bearer ' + token;
           const res = await fetch('/api/import/markdown', { method: 'POST', headers, body: JSON.stringify({ filename: file.name, data_base64: base64, mime_type: file.type || 'application/octet-stream' }) });

@@ -149,11 +149,14 @@ function NewCreationPageInner() {
   // ── Thread 模式 ──
   const [threadFirstMessage, setThreadFirstMessage] = useState('');
 
-  // ── Init ──
+  // ── 离开确认（非编辑模式且有内容时） ──
+  const hasUnsavedContent = !isEditMode && (title.trim() || body.trim() || threadFirstMessage.trim());
   useEffect(() => {
-    const token = getToken();
-    setIsLoggedIn(!!token);
-  }, []);
+    if (!hasUnsavedContent) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasUnsavedContent]);
 
   // 从社区链接来的预填充
   useEffect(() => {
@@ -235,7 +238,7 @@ function NewCreationPageInner() {
         reader.onload = async (e) => {
           const base64 = (e.target?.result as string)?.split(',')[1];
           if (!base64) return;
-          const token = localStorage.getItem('polis_access_token');
+          const token = getToken() || '';
           const headers: Record<string, string> = { 'Content-Type': 'application/json' };
           if (token) headers['Authorization'] = 'Bearer ' + token;
           const res = await fetch('/api/import/markdown', {
@@ -258,7 +261,7 @@ function NewCreationPageInner() {
   const handleAttachmentUpload = async (file: File) => {
     if (file.size > 8 * 1024 * 1024) { alert('文件大小不能超过 8MB'); return; }
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = 'Bearer ' + token;
       const reader = new FileReader();
@@ -285,7 +288,7 @@ function NewCreationPageInner() {
     if (!title.trim()) { setError('请输入视频标题'); return; }
     setPublishing(true); setError(''); setUploadStatus('uploading'); setUploadProgress(0);
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const result = await new Promise<any>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         const fd = new FormData();
@@ -314,12 +317,18 @@ function NewCreationPageInner() {
 
       if (submissions.length > 0 && result.id) {
         const spaceIds = submissions.map(s => s.spaceId);
-        const token = localStorage.getItem('polis_access_token');
-        await fetch(`/api/videos/${result.id}/publish`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-          body: JSON.stringify({ space_ids: spaceIds }),
-        }).catch(() => {});
+        const token = getToken() || '';
+        for (let retry = 0; retry < 3; retry++) {
+          try {
+            const pubRes = await fetch(`/api/videos/${result.id}/publish`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+              body: JSON.stringify({ space_ids: spaceIds }),
+            });
+            if (pubRes.ok) break;
+          } catch {}
+          if (retry < 2) await new Promise(r => setTimeout(r, 2000));
+        }
       }
 
       setUploadStatus('success');
@@ -374,7 +383,7 @@ function NewCreationPageInner() {
     if (!body.trim()) { setError('请输入内容'); return; }
     setPublishing(true); setError('');
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken() || '';
       const tagList = tags.split(/[,，、\s]+/).filter(Boolean);
       const payload = {
         content_type: moduleType, title: title.trim(), body,
@@ -433,9 +442,10 @@ function NewCreationPageInner() {
   // ── 切换模块（编辑模式下不允许切换） ──
   const handleModuleChange = (val: string) => {
     if (isEditMode) return;
+    if (submissions.length > 0 && !confirm('切换模块类型将清空已选择的投稿社区，是否继续？')) return;
     setModuleType(val);
     setError('');
-    setSubmissions(prev => []);
+    setSubmissions([]);
   };
 
   // ── ESC ──

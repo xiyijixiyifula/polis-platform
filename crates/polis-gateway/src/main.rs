@@ -90,6 +90,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/bookmarks/{*path}", any(proxy_to_content))
         // 点赞列表
         .route("/api/liked-posts", any(proxy_to_content))
+        // 创作者中心评论管理
+        .route("/api/creator/{*path}", any(proxy_to_content))
+        .route("/api/creator", any(proxy_to_content))
         // 代理路由 - 文件
         .route("/api/files/{*path}", any(proxy_to_content))
         .route("/api/share/{*path}", any(proxy_to_content))

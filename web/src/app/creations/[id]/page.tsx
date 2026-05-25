@@ -6,6 +6,7 @@ import { ArrowLeft, Send } from 'lucide-react';
 import Link from 'next/link';
 import CreationCard, { type CreationPublic } from '@/components/CreationCard';
 import SubmitDialog from '@/components/SubmitDialog';
+import { getToken } from '@/lib/api';
 
 export default function ViewCreationPage() {
   const params = useParams();
@@ -32,7 +33,7 @@ export default function ViewCreationPage() {
 
   useEffect(() => {
     if (!id) return;
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken() || '';
     fetch(`/api/creations/${id}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
