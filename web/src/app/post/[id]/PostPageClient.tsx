@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen, UserPlus, UserCheck, MessageSquare } from 'lucide-react';
 import { formatDate, formatCount, estimateReadTime, stripMarkdown } from '@/lib/utils';
 import { buildPostLink } from '@/lib/module-config';
-import { posts, series, creations, Comment, Post, type Series } from '@/lib/api';
+import { posts, series, creations, getToken, Comment, Post, type Series } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
 import { StructuredDataRender } from '@/components/StructuredDataRender';
@@ -14,7 +14,7 @@ import { StructuredDataRender } from '@/components/StructuredDataRender';
 /** Decode JWT payload to extract user ID */
 function getCurrentUserId(): string | null {
   try {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) return null;
     const payload = token.split('.')[1];
     const decoded = JSON.parse(atob(payload));
@@ -249,7 +249,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
     const authorUsername = post.author.username;
     if (!authorUsername) return;
     fetch(`/api/users/${authorUsername}/followers`, {
-      headers: { Authorization: 'Bearer ' + localStorage.getItem('polis_access_token') },
+      headers: { Authorization: 'Bearer ' + getToken() },
     })
       .then(r => r.json())
       .then(d => {
@@ -263,7 +263,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
   // Handle follow/unfollow author
   const handleFollowAuthor = async () => {
     if (!post?.author?.id) return;
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) { window.location.href = '/login'; return; }
     setAuthorFollowLoading(true);
     try {

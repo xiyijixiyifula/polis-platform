@@ -17,7 +17,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import { getModuleLabel, getModuleEmoji, buildPostLink } from '@/lib/module-config';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
-import { spaces as apiSpaces, tiers, subscribe } from '@/lib/api';
+import { spaces as apiSpaces, tiers, subscribe, getToken } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
 import { SpaceChat } from '@/components/SpaceChat';
 import { SpaceParticles } from '@/components/SpaceParticles';
@@ -181,7 +181,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  const me = JSON.parse(stored);
  setIsOwner(me.id === space.owner_id);
  // 检查当前用户是否已是成员
- const token = localStorage.getItem('polis_access_token');
+ const token = getToken();
  if (token && cleanNamespace) {
  fetch(`/api/spaces/${cleanNamespace}/members`, {
  headers: { Authorization: `Bearer ${token}` },
@@ -204,7 +204,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
 
  const togglePin = useCallback(async (postId: string, isPinned: boolean) => {
  try {
- const token = localStorage.getItem('polis_access_token');
+ const token = getToken();
  if (!token) { alert('请先登录'); return; }
  const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/pin`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
  const data = await res.json();
@@ -219,7 +219,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  const toggleHide = useCallback(async (postId: string) => {
  if (!confirm('确定要隐藏这篇帖子吗？隐藏后将从空间索引中移除，但内容不会删除。')) return;
  try {
- const token = localStorage.getItem('polis_access_token');
+ const token = getToken();
  if (!token) { alert('请先登录'); return; }
  const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/hide`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
  const data = await res.json();
@@ -233,7 +233,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
 
  const toggleUnhide = useCallback(async (postId: string) => {
  try {
- const token = localStorage.getItem('polis_access_token');
+ const token = getToken();
  if (!token) { alert('请先登录'); return; }
  const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/unhide`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
  const data = await res.json();
@@ -246,7 +246,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
 
  const toggleFeature = useCallback(async (postId: string, isFeatured: boolean) => {
  try {
- const token = localStorage.getItem('polis_access_token');
+ const token = getToken();
  if (!token) { alert('请先登录'); return; }
  const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/featured`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
  const data = await res.json();
@@ -269,7 +269,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  setLoadingMore(true);
  try {
  const nextPage = postPage + 1;
- const res = await fetch(`/api/spaces/${cleanNamespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`, showHiddenPosts ? { headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` } } : undefined);
+ const res = await fetch(`/api/spaces/${cleanNamespace}/posts?page=${nextPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`, showHiddenPosts ? { headers: { Authorization: `Bearer ${getToken()}` } } : undefined);
  const data = await res.json();
  if (data.code === 0 && Array.isArray(data.data)) {
  const morePosts = data.data;
@@ -351,7 +351,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  setPostLoading(true);
 
  const fetchers: Promise<any>[] = [
- fetch(`/api/spaces/${cleanNamespace}/posts?page=${postPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`, showHiddenPosts ? { headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` } } : undefined).then(r => r.json()),
+ fetch(`/api/spaces/${cleanNamespace}/posts?page=${postPage}&page_size=10&sort=${postSort}${showHiddenPosts ? '&include_hidden=true' : ''}`, showHiddenPosts ? { headers: { Authorization: `Bearer ${getToken()}` } } : undefined).then(r => r.json()),
  fetch(`/api/spaces/${cleanNamespace}/featured`).then(r => r.json()).catch(() => ({ code: 0, data: [] })),
  ];
 
@@ -427,7 +427,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  }, [cleanNamespace, activeTab, modules.membership]);
 
  const handleCreateSeries = async () => {
- const token = localStorage.getItem('polis_access_token');
+ const token = getToken();
  if (!token) { alert('请先登录'); return; }
  if (!newSeriesTitle.trim()) { alert('请输入系列标题'); return; }
  setSeriesCreating(true);
@@ -546,7 +546,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  disabled={isOwner || isMember || joining}
  onClick={async () => {
  if (isOwner || isMember) return;
- const token = localStorage.getItem('polis_access_token');
+ const token = getToken();
  if (!token) { alert('请先登录'); return; }
  setJoining(true);
  try {
@@ -1222,7 +1222,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  </div>
  <button
  onClick={async () => {
- const token = localStorage.getItem('polis_access_token');
+ const token = getToken();
  if (!token) { alert('请先登录'); return; }
  if (isMyTier) {
  if (!confirm('确定要取消订阅吗？')) return;

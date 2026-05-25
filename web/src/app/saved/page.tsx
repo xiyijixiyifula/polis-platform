@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Bookmark, BookOpen, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { FeedItem } from '@/components/FeedItem';
+import { getToken } from '@/lib/api';
 
 export default function SavedPage() {
   const [bookmarks, setBookmarks] = useState<any[]>([]);
@@ -14,8 +15,10 @@ export default function SavedPage() {
   }, []);
 
   const fetchBookmarks = () => {
-    const token = localStorage.getItem('polis_access_token');
-    fetch('/api/bookmarks', { headers: { Authorization: `Bearer ${token}` } })
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    fetch('/api/bookmarks', { headers })
       .then((r) => r.json())
       .then((d) => { if (d.code === 0) setBookmarks(d.data || []); })
       .catch(() => {});
@@ -28,7 +31,7 @@ export default function SavedPage() {
 
     // For video: prevent removing if we don't know it's a video
     if (itemType !== 'post') {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       if (itemType === 'video') {
         setRemovingId(itemId);
         try {
@@ -53,7 +56,7 @@ export default function SavedPage() {
 
     setRemovingId(itemId);
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const res = await fetch(`/api/spaces/${namespace}/posts/${itemId}/bookmark`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },

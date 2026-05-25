@@ -166,6 +166,15 @@ export function getToken(): string | null {
   if (!accessToken) {
     accessToken = localStorage.getItem('polis_access_token');
   }
+  // fallback: read from cookie (set by setToken) in case localStorage was cleared
+  if (!accessToken && typeof document !== 'undefined') {
+    const match = document.cookie.match(/(?:^|;\s*)polis_token=([^;]*)/);
+    if (match) {
+      accessToken = match[1];
+      // restore to localStorage so future reads are fast
+      if (accessToken) localStorage.setItem('polis_access_token', accessToken);
+    }
+  }
   return accessToken;
 }
 
@@ -190,14 +199,9 @@ async function request<T>(
     headers,
   });
 
-  // Auto-logout on expired/invalid token (401 Unauthorized)
+  // Clear expired/invalid token silently — each page decides its own redirect behavior
   if (response.status === 401) {
     setToken(null);
-    // Redirect to login, preserving current URL for return after login
-    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-      const redirect = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/login?redirect=${redirect}`;
-    }
     throw new Error('登录已过期，请重新登录');
   }
 

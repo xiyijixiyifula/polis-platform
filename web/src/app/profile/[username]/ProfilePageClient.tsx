@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle, Video, Globe, Lock, Key, ThumbsUp } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { getModuleLabel, normalizeModuleType } from '@/lib/module-config';
-import { users, follow, videos, type User, type FollowUser, type VideoItem } from '@/lib/api';
+import { users, follow, videos, getToken, type User, type FollowUser, type VideoItem } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
 import { FeedItem } from '@/components/FeedItem';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
@@ -130,7 +130,7 @@ export default function UserProfilePage({ username }: { username: string }) {
   const [refShowUserDropdown, setRefShowUserDropdown] = useState(false);
 
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     return {
       Authorization: token ? 'Bearer ' + token : '',
       'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ export default function UserProfilePage({ username }: { username: string }) {
       }
 
       try {
-        const token = localStorage.getItem('polis_access_token');
+        const token = getToken();
         const spRes = await fetch('/api/users/' + username + '/spaces', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
@@ -239,7 +239,7 @@ export default function UserProfilePage({ username }: { username: string }) {
     setCreationsLoading(true);
     (async () => {
       try {
-        const token = localStorage.getItem('polis_access_token');
+        const token = getToken();
         const res = await fetch('/api/creations?page=1&page_size=50', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
@@ -274,7 +274,7 @@ export default function UserProfilePage({ username }: { username: string }) {
     try {
       const res = await fetch('/api/posts/' + postId, {
         method: 'DELETE',
-        headers: { Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
+        headers: { Authorization: 'Bearer ' + (getToken() || '') },
       });
       const data = await res.json();
       if (data.code === 0) {
@@ -348,7 +348,7 @@ export default function UserProfilePage({ username }: { username: string }) {
       }
       const res = await fetch(apiPath, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (getToken() || '') },
         body,
       });
       const data = await res.json();
@@ -401,7 +401,7 @@ export default function UserProfilePage({ username }: { username: string }) {
 
   const handleFollow = async () => {
     if (!user || !user.id) return;
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) {
       window.location.href = '/login';
       return;
@@ -428,7 +428,7 @@ export default function UserProfilePage({ username }: { username: string }) {
     try {
       const res = await fetch('/api/spaces/' + encodeURIComponent(namespace) + '/leave', {
         method: 'POST',
-        headers: { Authorization: 'Bearer ' + (localStorage.getItem('polis_access_token') || '') },
+        headers: { Authorization: 'Bearer ' + (getToken() || '') },
       });
       const data = await res.json();
       if (data.code === 0) {

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Heart, MessageCircle, UserPlus, Bell, CheckCheck, ChevronRight, Pin, Star, Send, Trash2, Square, CheckSquare, Compass } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { getToken } from '@/lib/api';
 
 export default function NotificationsPage() {
   const [notifs, setNotifs] = useState<any[]>([]);
@@ -16,7 +17,7 @@ export default function NotificationsPage() {
 
   useEffect(() => { fetchNotifs(); fetchUnread(); }, []);
 
-  const token = () => localStorage.getItem('polis_access_token');
+  const token = () => getToken();
 
   const fetchNotifs = async () => {
     const res = await fetch('/api/notifications', { headers: { Authorization: `Bearer ${token()}` } });

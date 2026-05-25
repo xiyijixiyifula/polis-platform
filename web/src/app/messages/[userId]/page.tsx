@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, User, Send, Pin, Trash2, Search, X, Eraser } from 'lucide-react';
-import { messages, users, type DirectMessage } from '@/lib/api';
+import { messages, users, getToken, type DirectMessage } from '@/lib/api';
 
 export default function ConversationPage() {
   const params = useParams();
@@ -24,7 +24,7 @@ export default function ConversationPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) { setLoading(false); return; }
     setIsLoggedIn(true);
 

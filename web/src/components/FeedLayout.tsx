@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { getSpaceVisual } from '@/components/SpaceCard';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
+import { getToken } from '@/lib/api';
 
 export default function FeedLayout() {
   const [items, setItems] = useState<any[]>([]);
@@ -35,7 +36,7 @@ export default function FeedLayout() {
     if (stored) {
       try { setCurrentUser(JSON.parse(stored)); } catch {}
     }
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (token) {
       fetch('/api/messages/unread-count', { headers: { Authorization: `Bearer ${token}` } })
         .then(r => r.json()).then(d => { if (d.code === 0) setUnreadDm(d.data || 0); }).catch(() => {});
@@ -74,7 +75,7 @@ export default function FeedLayout() {
 
   const fetchFeed = useCallback(async (pageNum: number, append: boolean = false, tab: string = 'all') => {
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const url = '/api/feed?page=' + pageNum + '&page_size=20' + getSortParam(tab);
       const res = await fetch(url, {
         headers: token ? { Authorization: 'Bearer ' + token } : {},

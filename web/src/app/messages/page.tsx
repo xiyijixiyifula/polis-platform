@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, MessageSquare, User, Trash2, BellOff, Search, X, Users, MessageCircle, CheckSquare, Square, Compass } from 'lucide-react';
-import { messages, contacts, type ConversationSummary } from '@/lib/api';
+import { messages, contacts, getToken, type ConversationSummary } from '@/lib/api';
 
 type Contact = { id: string; username: string; display_name: string; is_mutual: boolean };
 
@@ -23,7 +23,7 @@ export default function MessagesPage() {
   const [batchDeleting, setBatchDeleting] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) { setLoading(false); return; }
     setIsLoggedIn(true);
     loadConversations();
