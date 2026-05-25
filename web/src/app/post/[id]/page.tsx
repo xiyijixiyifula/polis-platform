@@ -130,7 +130,16 @@ function PostDetailContent() {
         let res: any;
 
         if (spaceFromUrl) {
-          res = await posts.get(spaceFromUrl, postId);
+          try {
+            res = await posts.get(spaceFromUrl, postId);
+          } catch {
+            // 空间 API 失败时降级为创作（creation）显示
+            const loaded = await tryLoadAsCreation(postId, { setPost, setLikeCount, setLiked, setBookmarked });
+            if (loaded) { setLoading(false); return; }
+            setError('帖子不存在或已被删除');
+            setLoading(false);
+            return;
+          }
         } else {
           const result = await posts.getById(postId);
           if (result) {

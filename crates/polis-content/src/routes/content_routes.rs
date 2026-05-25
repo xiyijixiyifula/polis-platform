@@ -78,11 +78,12 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     if remaining_raw.is_empty() {
         return Err(AppError::NotFound("Invalid path".to_string()));
     }
-    // URL 解码命名空间（支持中文等非 ASCII 字符）
+    // URL 解码命名空间（支持中文等非 ASCII 字符 + ~ → / 转换）
     let remaining = percent_decode_str(remaining_raw)
         .decode_utf8()
         .map_err(|_| AppError::Validation("Invalid UTF-8 in path".to_string()))?
-        .to_string();
+        .to_string()
+        .replace('~', "/");
 
     // 找到 /posts 或 /featured 或 /announcements
     if let Some(pos) = remaining.find("/posts") {

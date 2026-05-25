@@ -94,7 +94,7 @@ export default function MyCreationsPage() {
   };
 
   const handleEdit = (id: string) => {
-    window.location.href = `/creations/${id}/edit`;
+    window.location.href = `/creations/new?edit=${id}`;
   };
 
   const handleDelete = async (id: string) => {

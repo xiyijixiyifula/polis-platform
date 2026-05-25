@@ -52,6 +52,8 @@ function NewCreationPageInner() {
   const prefillSpaceNs = searchParams.get('space') || '';
   const prefillModule = searchParams.get('module') || '';
   const prefillType = searchParams.get('type') || ''; // 兼容旧链接 type=video
+  const editId = searchParams.get('edit') || ''; // 编辑模式：创作 ID
+  const isEditMode = !!editId;
 
   // 根据 URL 参数确定初始模块（视频需特殊处理旧链接）
   const getInitialModule = (): string => {
@@ -73,6 +75,43 @@ function NewCreationPageInner() {
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(true);
+
+  // ── 编辑模式数据加载 ──
+  const [editLoading, setEditLoading] = useState(!!editId);
+  const [editError, setEditError] = useState('');
+
+  // ── Init ──
+  useEffect(() => {
+    const token = getToken();
+    setIsLoggedIn(!!token);
+  }, []);
+
+  // 编辑模式：加载已有创作数据
+  useEffect(() => {
+    if (!editId) return;
+    setEditLoading(true);
+    const token = getToken();
+    fetch(`/api/creations/${editId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.data) {
+          const c = data.data;
+          setTitle(c.title || '');
+          setBody(c.body || '');
+          setTags(Array.isArray(c.tags) ? c.tags.join(', ') : (c.tags || ''));
+          setVisibility(c.visibility || 'public');
+          setModuleType(normalizeModuleType(c.content_type));
+          if (c.password_hash) setPassword('');
+          if (c.space_ns && c.module_type) {
+            setSubmissions([{ spaceId: c.space_id || '', spaceNs: c.space_ns, spaceTitle: c.space_title || c.space_ns, moduleType: normalizeModuleType(c.module_type) }]);
+          }
+        } else {
+          setEditError(data.message || '加载创作数据失败');
+        }
+      })
+      .catch(() => setEditError('网络错误，无法加载创作数据'))
+      .finally(() => setEditLoading(false));
+  }, [editId]);
 
   // ── 草稿 ──
   const [draftRestored, setDraftRestored] = useState(false);
@@ -141,9 +180,9 @@ function NewCreationPageInner() {
     }).catch(() => {}).finally(() => setSeriesLoading(false));
   }, [prefillSpaceNs, moduleType]);
 
-  // 草稿恢复（仅 markdown 和 qa 编辑器）
+  // 草稿恢复（仅 markdown 和 qa 编辑器，非编辑模式）
   useEffect(() => {
-    if (draftRestored || currentModule.editor === 'video') return;
+    if (draftRestored || currentModule.editor === 'video' || isEditMode) return;
     const draftStr = localStorage.getItem(AUTOSAVE_KEY);
     const draftTime = localStorage.getItem(`${AUTOSAVE_KEY}_time`);
     if (draftStr && draftTime && !body && !title) {
@@ -176,14 +215,15 @@ function NewCreationPageInner() {
     setHasDraft(false);
   };
 
-  // 自动保存（仅 markdown/qa 编辑器）
+  // 自动保存（仅 markdown/qa 编辑器，非编辑模式）
   const handleAutoSave = useCallback((markdown: string) => {
+    if (isEditMode) return;
     const now = new Date();
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ title, body: markdown, tags, moduleType, visibility }));
     localStorage.setItem(`${AUTOSAVE_KEY}_time`, now.toISOString());
     setLastSavedTime(now.toLocaleTimeString());
     setHasDraft(true);
-  }, [title, tags, moduleType, visibility]);
+  }, [title, tags, moduleType, visibility, isEditMode]);
 
   // ── 文件上传 ──
   const handleImportMd = async (file: File) => {
@@ -334,18 +374,21 @@ function NewCreationPageInner() {
     try {
       const token = localStorage.getItem('polis_access_token');
       const tagList = tags.split(/[,，、\s]+/).filter(Boolean);
-      const res = await fetch('/api/creations', {
-        method: 'POST',
+      const payload = {
+        content_type: moduleType, title: title.trim(), body,
+        tags: tagList.length > 0 ? tagList : undefined,
+        visibility, password: visibility === 'unlisted' && password ? password : undefined,
+      };
+      const url = isEditMode ? `/api/creations/${editId}` : '/api/creations';
+      const method = isEditMode ? 'PUT' : 'POST';
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({
-          content_type: moduleType, title: title.trim(), body,
-          tags: tagList.length > 0 ? tagList : undefined,
-          visibility, password: visibility === 'unlisted' && password ? password : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.code === 0 && data.data) {
-        const creationId = data.data.id;
+        const creationId = isEditMode ? editId : data.data.id;
         if (selectedSeriesId) {
           try { await seriesApi.addPost(selectedSeriesId, creationId); } catch {}
         }
@@ -361,14 +404,15 @@ function NewCreationPageInner() {
         localStorage.removeItem(`${AUTOSAVE_KEY}_time`);
         router.push('/creations');
       } else {
-        setError(data.message || '创建失败');
+        setError(data.message || (isEditMode ? '保存失败' : '创建失败'));
       }
     } catch { setError('网络错误，请重试'); }
     finally { setPublishing(false); }
   };
 
-  // ── 切换模块 ──
+  // ── 切换模块（编辑模式下不允许切换） ──
   const handleModuleChange = (val: string) => {
+    if (isEditMode) return;
     setModuleType(val);
     setError('');
     setSubmissions(prev => []);
@@ -404,7 +448,7 @@ function NewCreationPageInner() {
               className="rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">退出全屏</button>
             <button onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50">
-              <Send className="h-4 w-4" /> {publishing ? '发布中...' : '发布'}
+              {isEditMode ? <><Save className="h-4 w-4" /> {publishing ? '保存中...' : '保存'}</> : <><Send className="h-4 w-4" /> {publishing ? '发布中...' : '发布'}</>}
             </button>
           </div>
         </div>
@@ -455,7 +499,7 @@ function NewCreationPageInner() {
             {isMarkdownEditor ? (
               <button type="button" onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
                 className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
-                <Send size={15} /> {publishing ? '发布中...' : '发布'}
+                {isEditMode ? <><Save size={15} /> {publishing ? '保存中...' : '保存修改'}</> : <><Send size={15} /> {publishing ? '发布中...' : '发布'}</>}
               </button>
             ) : (
               <button type="button" onClick={handleVideoUpload} disabled={publishing || !videoFile || !title.trim() || uploadStatus === 'uploading'}
@@ -467,10 +511,10 @@ function NewCreationPageInner() {
         </div>
 
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          {prefillSpaceNs ? `在 ${prefillSpaceNs.split('/').slice(-1)[0] || prefillSpaceNs} 发布` : '发布新作品'}
+          {isEditMode ? '编辑作品' : (prefillSpaceNs ? `在 ${prefillSpaceNs.split('/').slice(-1)[0] || prefillSpaceNs} 发布` : '发布新作品')}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          选择你要发布的模块类型，创作内容后可投稿到任意社区
+          {isEditMode ? '修改你的创作内容后保存' : '选择你要发布的模块类型，创作内容后可投稿到任意社区'}
         </p>
 
         {/* Login prompt */}
@@ -490,6 +534,30 @@ function NewCreationPageInner() {
             <X className="h-4 w-4 shrink-0" />{error}
           </div>
         )}
+
+        {/* Edit mode loading */}
+        {isEditMode && editLoading && (
+          <div className="mx-auto max-w-6xl px-4 py-10 text-center">
+            <div className="animate-pulse space-y-4">
+              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mx-auto" />
+              <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded max-w-lg mx-auto" />
+              <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded max-w-2xl mx-auto" />
+            </div>
+          </div>
+        )}
+
+        {/* Edit mode error */}
+        {isEditMode && editError && !editLoading && (
+          <div className="mx-auto max-w-6xl px-4 py-10 text-center">
+            <div className="text-4xl mb-4">😕</div>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">无法加载创作数据</h2>
+            <p className="text-sm text-gray-500 mb-4">{editError}</p>
+            <Link href="/creations" className="text-sm text-primary-600 hover:underline">返回内容管理</Link>
+          </div>
+        )}
+
+        {/* Main form (skip in edit loading/error states) */}
+        {!(isEditMode && editLoading) && !(isEditMode && editError) && (<>
 
         {/* Draft restore */}
         {isMarkdownEditor && showDraftRestore && (
@@ -515,7 +583,10 @@ function NewCreationPageInner() {
         {/* ========== 模块选择（一级 - 决定创作方案） ========== */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            选择发布模块 <span className="text-xs text-gray-400 font-normal">— 模块决定创作方式</span>
+            {isEditMode ? '当前模块' : '选择发布模块'}
+            <span className="text-xs text-gray-400 font-normal">
+              {isEditMode ? ' — 编辑模式下不可更改模块类型' : ' — 模块决定创作方式'}
+            </span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {MODULE_TYPES.map((mod) => {
@@ -682,7 +753,7 @@ function NewCreationPageInner() {
               </div>
               <button type="button" onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
                 className="flex items-center gap-2 px-8 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
-                <Send size={16} />{publishing ? '发布中...' : '发布作品'}
+                {isEditMode ? <><Save size={16} />{publishing ? '保存中...' : '保存修改'}</> : <><Send size={16} />{publishing ? '发布中...' : '发布作品'}</>}
               </button>
             </div>
           </>
@@ -779,6 +850,7 @@ function NewCreationPageInner() {
           </>
           )}
         </div>
+        </>)}
       </div>
     </div>
   );

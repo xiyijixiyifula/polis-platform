@@ -19,6 +19,13 @@ function EditCreationPageInner() {
   const params = useParams();
   const id = params.id as string;
 
+  // 重定向到统一编辑器（/creations/new?edit=id）
+  useEffect(() => {
+    if (id) {
+      window.location.replace(`/creations/new?edit=${id}`);
+    }
+  }, [id]);
+
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
