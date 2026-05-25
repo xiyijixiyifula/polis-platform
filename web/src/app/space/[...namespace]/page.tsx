@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const data = json?.data;
 
     if (data) {
-      const title = data.title ? `${data.title} | Polis` : '社区 | Polis';
+      const title = data.title || '社区';
       const desc = data.description?.slice(0, 200) || `Polis 社区: ${ns}`;
       return {
         title,
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   } catch {}
 
-  return { title: '社区 | Polis' };
+  return { title: '社区' };
 }
 
 export default function SpacePage({ params }: Props) {

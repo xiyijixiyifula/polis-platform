@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const data = json?.data;
 
     if (data) {
-      const title = data.title ? `${data.title} | Polis` : '视频 | Polis';
+      const title = data.title || '视频';
       const desc = data.description?.slice(0, 200) || '';
       return {
         title,
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   } catch {}
 
-  return { title: '视频 | Polis' };
+  return { title: '视频' };
 }
 
 export default function VideoPage({ params, searchParams }: Props) {

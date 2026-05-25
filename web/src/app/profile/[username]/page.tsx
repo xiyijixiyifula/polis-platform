@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (data) {
       const name = data.display_name || data.username || params.username;
-      const title = `${name} (@${data.username || params.username}) | Polis`;
+      const title = `${name} (@${data.username || params.username})`;
       const desc = data.bio?.slice(0, 200) || `${name} 的个人主页`;
       return {
         title,
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   } catch {}
 
-  return { title: '用户主页 | Polis' };
+  return { title: '用户主页' };
 }
 
 export default function ProfilePage({ params }: Props) {

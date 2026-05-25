@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const data = json?.data;
 
     if (data) {
-      const title = data.title ? `${data.title} | Polis` : '系列 | Polis';
+      const title = data.title || '系列';
       const desc = data.description?.slice(0, 200) || '';
       return {
         title,
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   } catch {}
 
-  return { title: '内容系列 | Polis' };
+  return { title: '内容系列' };
 }
 
 export default function SeriesPage({ params }: Props) {

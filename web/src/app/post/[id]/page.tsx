@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const data = json?.data;
 
     if (data) {
-      const title = data.title ? `${data.title} | Polis` : '帖子详情 | Polis';
+      const title = data.title || '帖子详情';
       const desc = data.body?.replace(/<[^>]+>/g, '').slice(0, 200) || '';
       return {
         title,
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     }
   } catch {}
 
-  return { title: '帖子详情 | Polis' };
+  return { title: '帖子详情' };
 }
 
 export default function PostPage({ params, searchParams }: Props) {
