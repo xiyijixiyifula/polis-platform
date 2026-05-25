@@ -914,10 +914,10 @@ export const creations = {
     request<void>(`/creations/${id}`, { method: 'DELETE' }),
 
   /** 投稿到社区 */
-  submit: (creationId: string, spaceId: string, moduleType: string) =>
+  submit: (creationId: string, spaceNs: string, moduleType: string) =>
     request<any>(`/creations/${creationId}/submit`, {
       method: 'POST',
-      body: JSON.stringify({ space_id: spaceId, module_type: moduleType }),
+      body: JSON.stringify({ space_ns: spaceNs, module_type: moduleType }),
     }),
 
   /** 获取创作已投稿的社区列表 */
@@ -927,4 +927,55 @@ export const creations = {
   /** 获取创作用引用地图（哪些社区展示了该创作） */
   getRefs: (creationId: string) =>
     request<any[]>(`/creations/${creationId}/refs`),
+};
+
+// ===== AI 线程 =====
+
+export interface Thread {
+  id: string;
+  title: string;
+  creator_id: string;
+  community_id?: string;
+  status: string;
+  created_at: string;
+  message_count?: number;
+}
+
+export interface ThreadMessage {
+  id: string;
+  thread_id: string;
+  user_id?: string;
+  agent_id?: string;
+  role: string;
+  content: string;
+  content_type: string;
+  message_order: number;
+  created_at: string;
+}
+
+export const threads = {
+  list: (params?: { page?: number; page_size?: number }) => {
+    const search = new URLSearchParams();
+    if (params?.page) search.set('page', String(params.page));
+    if (params?.page_size) search.set('page_size', String(params.page_size));
+    const qs = search.toString();
+    return request<Thread[]>(`/threads${qs ? `?${qs}` : ''}`);
+  },
+
+  create: (data: { title: string; community_id?: string }) =>
+    request<Thread>('/threads', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: string) => request<Thread>(`/threads/${id}`),
+
+  getMessages: (threadId: string) =>
+    request<ThreadMessage[]>(`/threads/${threadId}/messages`),
+
+  addMessage: (threadId: string, data: { role: string; content: string; content_type?: string }) =>
+    request<ThreadMessage>(`/threads/${threadId}/messages`, { method: 'POST', body: JSON.stringify(data) }),
+
+  publish: (threadId: string, data: { title: string; module_type: string; visibility?: string; spaces?: string[] }) =>
+    request<any>(`/threads/${threadId}/publish`, { method: 'POST', body: JSON.stringify(data) }),
+
+  archive: (threadId: string) =>
+    request<any>(`/threads/${threadId}/archive`, { method: 'POST' }),
 };

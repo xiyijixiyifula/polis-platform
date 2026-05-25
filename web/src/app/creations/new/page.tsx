@@ -10,6 +10,7 @@ import {
   Maximize2, Minimize2, Save, LogIn, BookOpen, Video, Film, HelpCircle,
   Share2, Gamepad2, AppWindow, Library, BookText,
   File as FileIcon, CircleCheck, CloudUpload, Eye,
+  Code, GraduationCap, ShoppingBag,
 } from 'lucide-react';
 import { series as seriesApi, getToken, type Series } from '@/lib/api';
 import { normalizeModuleType, getModuleLabel } from '@/lib/module-config';
@@ -27,6 +28,7 @@ interface ModuleDef {
 
 const MODULE_TYPES: ModuleDef[] = [
   { value: 'forum', label: '交流', icon: MessageSquareText, editor: 'markdown', desc: '发布讨论帖，支持 Markdown 格式' },
+  { value: 'article', label: '文章', icon: PenLine, editor: 'markdown', desc: '发布长文章，支持 Markdown 排版' },
   { value: 'video', label: '视频', icon: Film, editor: 'video', desc: '上传视频，支持 MP4/MOV/AVI/MKV/WebM' },
   { value: 'share', label: '分享', icon: Share2, editor: 'markdown', desc: '分享链接、资源或心得体会' },
   { value: 'wiki', label: '知识库', icon: Library, editor: 'markdown', desc: '编写知识库文档，成员可协作编辑' },
@@ -34,6 +36,9 @@ const MODULE_TYPES: ModuleDef[] = [
   { value: 'novel', label: '小说', icon: BookText, editor: 'markdown', desc: '创作小说，支持 Markdown 排版' },
   { value: 'game', label: '游戏', icon: Gamepad2, editor: 'markdown', desc: '发布游戏攻略、评测或资讯' },
   { value: 'mini_app', label: '小程序', icon: AppWindow, editor: 'markdown', desc: '发布小程序介绍与使用说明' },
+  { value: 'code_repo', label: '代码仓库', icon: Code, editor: 'markdown', desc: '分享代码仓库链接与项目说明' },
+  { value: 'course', label: '课程', icon: GraduationCap, editor: 'markdown', desc: '发布课程/教程内容' },
+  { value: 'store', label: '商城', icon: ShoppingBag, editor: 'markdown', desc: '发布商品或服务信息' },
 ];
 
 const VISIBILITY_OPTIONS = [

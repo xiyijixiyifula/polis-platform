@@ -102,6 +102,9 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/creations/{*path}", any(proxy_to_content))
         .route("/api/module-refs/{*path}", any(proxy_to_content))
         .route("/api/refs/{*path}", any(proxy_to_content))
+        // 代理路由 - AI 线程
+        .route("/api/threads", any(proxy_to_content))
+        .route("/api/threads/{*path}", any(proxy_to_content))
         // 代理路由 - 私信
         .route("/api/messages", any(proxy_to_content))
         .route("/api/messages/{*path}", any(proxy_to_content))
