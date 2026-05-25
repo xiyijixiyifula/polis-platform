@@ -86,7 +86,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/notifications/read-all", any(proxy_to_content))
         .route("/api/notifications/delete", any(proxy_to_content))
         // 代理路由 - 收藏
+        .route("/api/bookmarks", any(proxy_to_content))
         .route("/api/bookmarks/{*path}", any(proxy_to_content))
+        // 点赞列表
+        .route("/api/liked-posts", any(proxy_to_content))
         // 代理路由 - 文件
         .route("/api/files/{*path}", any(proxy_to_content))
         .route("/api/share/{*path}", any(proxy_to_content))
