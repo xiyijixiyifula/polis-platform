@@ -49,3 +49,15 @@
 - **管理后台 reported_content SQL Bug** — `get_platform_stats()` 子查询错误使用了 `posts` 表。修复: 改为 `SELECT COUNT(*) FROM reports WHERE status = 'pending'`（v0.3.64）
 
 - **种子数据依赖已根除** — E2E 测试全面重构为动态注册用户/空间模式，移除所有硬编码（v0.3.81）
+
+- **cherry-markdown 编辑器报错 (依赖自动升级)** — `^0.11.1` 允许自动升级到 `0.11.2`，后者与 CodeMirror 6 配置不兼容，报 `Cannot delete property 'toString'`。修复: 锁定 `0.11.0` + 添加 `transpilePackages: ['cherry-markdown']`。教训: 非信任第三方依赖使用精确版本号（v1.0.12）
+
+## 部署前预防清单
+
+> 每次部署前过一遍，防止已知 Bug 回归。详见 [docs/bugs/INDEX.md](bugs/INDEX.md)
+
+- [ ] **URL 编码**: 含中文参数的页面，Network 中 API 请求 URL 不含 `%25`
+- [ ] **xattr 污染**: 服务器 `find /opt/polis-web/.next -name '._*'` 数量为 0
+- [ ] **前端防空**: `grep -rn "\.map(" web/src/ | grep -v "?\."` 无新增非防空调用
+- [ ] **依赖版本**: `npm list cherry-markdown` 与 `package.json` 锁定版本一致
+- [ ] **构建通过**: `npm run build` 无报错

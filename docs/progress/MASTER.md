@@ -27,6 +27,8 @@ LOCAL_ONLY
 - [x] 修复个人主页作品 Tab 为空 — username 双重 URL 编码导致 API 404
 - [x] Bug 追踪系统 — `docs/bugs/` 目录 + Pattern 库 + CLAUDE.md 修复协议
 - [x] README 重写 — 从功能目录升级为产品叙事 (竞品对照+双维度模型+核心差异化)
+- [x] 修复 cherry-markdown 编辑器报错 — 锁定版本 0.11.0 + transpilePackages (v1.0.12)
+- [x] Bug 追踪系统增强 — 回归地图 + 修复配方库 + 依赖升级 Pattern + 预防清单
 
 ### 待处理
 
@@ -39,6 +41,7 @@ LOCAL_ONLY
 
 ## 部署版本
 
+v1.0.12 — cherry-markdown 编辑器修复 + Bug 追踪系统增强
 v1.0.11 — 修复个人主页作品 Tab 为空
 v1.0.10 — changelog 补全 + research roadmap 更新
 v1.0.9 — 首页 Feed 算法修复

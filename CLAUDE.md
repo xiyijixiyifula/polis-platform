@@ -79,18 +79,18 @@
 ## 🐛 Bug 修复流程（每次修 bug 必须执行）
 
 1. **修复代码**
-2. **更新** [docs/bugs/timeline/2026.md](docs/bugs/timeline/2026.md) — 追加一条修复记录
+2. **更新** [docs/bugs/timeline/2026.md](docs/bugs/timeline/2026.md) — 追加一条修复记录（含回归风险列）
 3. **检查 Pattern** — 打开 [docs/bugs/INDEX.md](docs/bugs/INDEX.md) 快速定位表，逐条比对症状，判断是否已有同类：
-   - **已有 Pattern** → 在 Pattern 文件的 `已修复点位` 表格追加一行，更新 `复发次数`
-   - **新类型** → 在 `docs/bugs/patterns/` 下新建文件（参考已有 pattern 模板）
+   - **已有 Pattern** → 在 Pattern 文件的 `已修复点位` 表格追加一行，更新 `复发次数`；如为复发，在 [回归地图](docs/bugs/regression-map.md) 追加因果链
+   - **新类型** → 在 `docs/bugs/patterns/` 下新建 Pattern 文件 + 在 `docs/bugs/fix-recipes/` 下新建配方文件
 4. **更新** [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) — 在 `关键 Bug 修复记录` 中追加条目
-5. **更新** [docs/bugs/INDEX.md](docs/bugs/INDEX.md) 的统计数字和最近更新时间
-6. **如为复发** → 在 commit message 中标注 `复发: [Pattern名称]`，并考虑是否需要从架构层面根除
+5. **更新** [docs/bugs/INDEX.md](docs/bugs/INDEX.md) 的统计数字、快速定位表、最近更新时间
+6. **如为复发** → commit message 标注 `复发: [Pattern名称]`，检查 [回归地图](docs/bugs/regression-map.md) 是否需追加因果链，考虑架构层面根除
 
 ### 诊断优先原则
 
 修 bug 前，先查 [docs/bugs/INDEX.md](docs/bugs/INDEX.md) 的快速定位表，按症状关键词匹配：
-- 匹配到 Pattern → 直接参考该 Pattern 的标准修复代码，复制粘贴即可
+- 匹配到 Pattern → 直接参考该 [修复配方](docs/bugs/fix-recipes/INDEX.md)，复制粘贴即可
 - 未匹配 → 诊断后修复，修复完成后执行分类（步骤 3）
 
 ## 快速参考
@@ -101,6 +101,8 @@
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 微服务架构/权限模型 |
 | [docs/AUTO-DEV.md](docs/AUTO-DEV.md) | AI 开发循环+部署流程 |
 | [docs/DEV-SETUP.md](docs/DEV-SETUP.md) | 本地开发环境 |
-| [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) | 已知Bug+技术债务 |
-| [docs/bugs/INDEX.md](docs/bugs/INDEX.md) | Bug 追踪索引+Pattern 库 |
+| [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) | 已知Bug+技术债务+预防清单 |
+| [docs/bugs/INDEX.md](docs/bugs/INDEX.md) | Bug 追踪索引+统计面板 |
+| [docs/bugs/regression-map.md](docs/bugs/regression-map.md) | 回归因果链+脆弱文件 |
+| [docs/bugs/fix-recipes/INDEX.md](docs/bugs/fix-recipes/INDEX.md) | 修复配方库（复发直接套用） |
 | [docs/progress/MASTER.md](docs/progress/MASTER.md) | 当前任务进度 |
