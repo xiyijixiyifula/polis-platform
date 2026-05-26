@@ -27,7 +27,7 @@ export default function AdminPostsPage() {
       });
       const data = await res.json();
       if (data.code === 0) setPosts(data.data || []);
-    } catch (e) { console.error('[Admin Posts]', e); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Posts]', e); }
     finally { setLoading(false); }
   };
 

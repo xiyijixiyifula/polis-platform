@@ -27,7 +27,7 @@ export default function AdminAnalyticsPage() {
       const [userJson, postJson] = await Promise.all([userRes.json(), postRes.json()]);
       if (userJson.code === 0) setUserData(userJson.data || []);
       if (postJson.code === 0) setPostData(postJson.data || []);
-    } catch (e) { console.error('[Admin Analytics]', e); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Analytics]', e); }
     finally { setLoading(false); }
   };
 

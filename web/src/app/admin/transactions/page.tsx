@@ -56,7 +56,7 @@ export default function AdminTransactionsPage() {
         setTransactions(items);
         setTotal(t);
       }
-    } catch (e) { console.error('[Admin Transactions]', e); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Transactions]', e); }
     finally { setLoading(false); }
   };
 

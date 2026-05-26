@@ -55,7 +55,7 @@ export default function AdminDashboard() {
       });
       const data = await res.json();
       if (data.code === 0) setStats(data.data);
-    } catch (e) { console.error('[Admin Dashboard]', e); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Dashboard]', e); }
     finally { setLoading(false); }
   };
 
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
       const res = await fetch('/api/health/all');
       const data = await res.json();
       if (data.code === 0) setHealth(data.data);
-    } catch (e) { console.error('[Admin Dashboard]', e); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Dashboard]', e); }
   };
 
   const fetchGrowth = async () => {
@@ -78,7 +78,7 @@ export default function AdminDashboard() {
       const postsData = await postsRes.json();
       if (usersData.code === 0) setUserGrowth(usersData.data);
       if (postsData.code === 0) setPostGrowth(postsData.data);
-    } catch (e) { console.error('[Admin Dashboard]', e); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Dashboard]', e); }
   };
 
   const Sparkline = ({ data, color, height = 40 }: { data: GrowthItem[]; color: string; height?: number }) => {
@@ -125,7 +125,7 @@ export default function AdminDashboard() {
         const items = spacesData.data?.items || spacesData.data || [];
         setRecentSpaces(items.slice(0, 5));
       }
-    } catch (e) { console.error('[Admin Dashboard]', e); }
+    } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Dashboard]', e); }
   };
 
   const formatTimeAgo = (dateStr: string) => {

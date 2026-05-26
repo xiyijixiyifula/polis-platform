@@ -121,7 +121,7 @@ export function PollCard({ poll }: PollProps) {
     }
   };
 
-  const maxVotes = Math.max(...results.options.map((o) => o.vote_count), 1);
+  const maxVotes = Math.max(...(Array.isArray(results.options) ? results.options : []).map((o: PollOption) => o.vote_count), 1);
 
   return (
     <div className="card">
@@ -133,7 +133,7 @@ export function PollCard({ poll }: PollProps) {
         )}
       </div>
       <div className="space-y-2">
-        {results.options.map((opt) => {
+        {(Array.isArray(results.options) ? results.options : []).map((opt: PollOption) => {
           const voteCount = opt.vote_count || 0;
           const total = Math.max(results.total_votes || 0, 1);
           const pct = results.total_votes > 0

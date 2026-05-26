@@ -28,6 +28,10 @@ export function FileShare({ spaceId }: { spaceId: string }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ file_id: fileId, expires_hours: 168 }),
       });
+      if (!res.ok) {
+        alert('服务器错误，请稍后重试');
+        return;
+      }
       const data = await res.json();
       if (data.code === 0) {
         setShareResult(data.data);

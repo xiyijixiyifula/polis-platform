@@ -19,6 +19,11 @@ export default function ForgotPasswordPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
+      if (!res.ok) {
+        setError('服务器错误，请稍后重试');
+        setLoading(false);
+        return;
+      }
       const data = await res.json();
       if (data.code === 0) {
         setSent(true);

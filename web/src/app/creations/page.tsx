@@ -73,10 +73,10 @@ export default function MyCreationsPage() {
     try {
       if (interactionTab === 'followers') {
         const res = await follow.followers(me.username);
-        if (res.code === 0 && res.data) setFollowers(res.data);
+        if (res.code === 0 && res.data) setFollowers(Array.isArray(res.data) ? res.data : []);
       } else {
         const res = await follow.following(me.username);
-        if (res.code === 0 && res.data) setFollowingList(res.data);
+        if (res.code === 0 && res.data) setFollowingList(Array.isArray(res.data) ? res.data : []);
       }
     } catch {}
     setInteractionLoading(false);
@@ -570,7 +570,7 @@ export default function MyCreationsPage() {
                 <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
                 加载中...
               </div>
-            ) : (interactionTab === 'followers' ? followers : followingList).length === 0 ? (
+            ) : !Array.isArray(interactionTab === 'followers' ? followers : followingList) || (interactionTab === 'followers' ? followers : followingList).length === 0 ? (
               <div className="glass-card p-12 text-center">
                 <Users size={40} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                 <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
@@ -583,7 +583,7 @@ export default function MyCreationsPage() {
             ) : (
               <div className="glass-card overflow-hidden rounded-xl">
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {(interactionTab === 'followers' ? followers : followingList).map((user) => (
+                  {(Array.isArray(interactionTab === 'followers' ? followers : followingList) ? (interactionTab === 'followers' ? followers : followingList) : []).map((user) => (
                     <div key={user.id} className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <Link href={`/profile/${user.username}`} className="shrink-0">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold">
