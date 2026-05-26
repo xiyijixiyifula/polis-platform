@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  transpilePackages: ['cherry-markdown'],
   async redirects() {
     return [
       { source: '/create-center', destination: '/creations', permanent: true },
