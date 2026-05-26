@@ -4,6 +4,7 @@
 
 | 文件 | 用途 | 读者 |
 |------|------|------|
+| [DESIGN-PHILOSOPHY.md](DESIGN-PHILOSOPHY.md) | 核心设计哲学（作品/引用/双维度模型） | **所有人必读** |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 微服务架构、权限模型、编码规范 | 开发者 |
 | [DEV-SETUP.md](DEV-SETUP.md) | 本地开发环境搭建 | 新开发者 |
 | [AUTO-DEV.md](AUTO-DEV.md) | AI 自驱动开发循环 + 部署流程 | AI Agent |
