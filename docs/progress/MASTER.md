@@ -26,6 +26,7 @@ LOCAL_ONLY
 - [x] 更新 changelog — 补全 v1.0.8 和 v1.0.9 版本记录
 - [x] 修复个人主页作品 Tab 为空 — username 双重 URL 编码导致 API 404
 - [x] Bug 追踪系统 — `docs/bugs/` 目录 + Pattern 库 + CLAUDE.md 修复协议
+- [x] README 重写 — 从功能目录升级为产品叙事 (竞品对照+双维度模型+核心差异化)
 
 ### 待处理
 
