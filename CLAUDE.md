@@ -70,9 +70,30 @@
 
 ## 部署铁律
 
-- **本地编译 → GitHub Releases → 服务器下载部署**，严禁在服务器上编译
-- macOS 打包: `COPYFILE_DISABLE=1 tar -czf ...` 避免 xattr 污染
-- 服务器前端部署: 先 `rm -rf /opt/polis-web/.next` 再复制
+> ⚠️ 违反以下任意一条都可能导致线上事故或部署失败。
+
+### 1. 部署流程（不可更改）
+**本地编译 → GitHub Releases → 服务器下载部署**，严禁在服务器上编译。
+
+### 2. 禁止 SCP（不可违反）
+**严禁使用 `scp` 向服务器传输大文件。** 本地在中国、服务器在美国，跨太平洋 SCP 传输大文件会丢包或卡死。
+
+正确流程：
+```bash
+# 本地打包上传
+gh release create vX.Y.Z release-binaries.tar.gz release-web.tar.gz
+# 服务器下载
+curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/vX.Y.Z/FILE" -o /tmp/FILE
+```
+
+### 3. 禁止服务器编译（不可违反）
+服务器配置低（1.6GB 内存），`npm run build` + `cargo build` 会吃满内存导致 OOM 宕机。所有编译在 macOS 本地完成，通过 zig cc 交叉编译为 x86_64-unknown-linux-gnu。
+
+### 4. macOS 打包规范
+- 打包前: `COPYFILE_DISABLE=1 tar -czf ...` 避免 AppleDouble (`._*`) 和 xattr 污染
+- 前端: 只打 `.next/` 和 `public/`，不打 `node_modules`（standalone 自带）
+- 后端: 从 `target/x86_64-unknown-linux-gnu/release/` 取 Linux 二进制
+- 服务器前端部署: 先 `rm -rf /opt/polis-web/.next` 再解压
 
 ---
 

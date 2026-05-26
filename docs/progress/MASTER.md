@@ -55,3 +55,5 @@ v1.0.8 — 密码重置安全 + Gateway 限流 + JWT_SECRET 强制验证
 - 域名: www.mzgw.com
 - 部署路径: `/root/polis/target/release/` (后端), `/opt/polis-web/` (前端)
 - 服务: polis-gateway, polis-user, polis-space, polis-content, polis-admin, polis-video, polis-web
+- **部署方式**: 本地编译 → GitHub Release → 服务器 `curl` 下载
+- **禁止**: SCP（中美丢包）、服务器编译（OOM）
