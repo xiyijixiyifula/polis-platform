@@ -63,6 +63,14 @@
 
 - **cherry-markdown 编辑器报错 (依赖自动升级)** — `^0.11.1` 允许自动升级到 `0.11.2`，后者与 CodeMirror 6 配置不兼容，报 `Cannot delete property 'toString'`。修复: 锁定 `0.11.0` + 添加 `transpilePackages: ['cherry-markdown']`。教训: 非信任第三方依赖使用精确版本号（v1.0.12）
 
+- **社区空标题创建 + 超长标题无限制** — 创建社区 API 缺少 title 非空验证和长度上限。修复: `space_handler.rs:create_space` 添加 `trim().is_empty()` 拒绝 + 50 字符上限（v1.0.14）
+
+- **社区无法删除 (405 Method Not Allowed)** — DELETE 路由未注册，用户无法清理误创建的社区。修复: 新增 `delete_space` 路由 → `archive_space` handler → `archive` repo 方法，软删除: `status = 'archived'` 仅 owner 可操作（v1.0.14）
+
+- **社区数据统计不准确 (post_count 不同步)** — `spaces.post_count` 仅在 `create_post` 中更新，`submit_to_community` 和 `thread_handler::publish` 两个路径遗漏了 `post_count +1`，导致社区页计数为 0。修复: 两个路径各追加 `UPDATE spaces SET post_count = post_count + 1`。⚠️ 回归风险: 新增任何 INSERT INTO posts 路径必须同步更新。已建立 [Pattern](../docs/bugs/patterns/post-count-sync.md) + [修复配方](../docs/bugs/fix-recipes/post-count-sync.md)（v1.0.14）
+
+- **SpaceSettings members keyMap 缺失** — `persistModules` 映射表缺少 `members: 'members'`，虽通过 fallback 能工作但不一致。修复: 补充 keyMap（v1.0.14）
+
 ## 部署前预防清单
 
 > 每次部署前过一遍，防止已知 Bug 回归。详见 [docs/bugs/INDEX.md](bugs/INDEX.md)

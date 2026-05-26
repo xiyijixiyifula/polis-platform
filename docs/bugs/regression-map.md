@@ -6,10 +6,10 @@
 
 | 指标 | 数值 |
 |------|------|
-| 回归链总数 | 3 |
+| 回归链总数 | 4 |
 | 跨层回归（后端↔前端） | 1 |
-| 同层回归 | 2 |
-| 涉及脆弱文件 | 4 |
+| 同层回归 | 3 |
+| 涉及脆弱文件 | 6 |
 
 ## 回归链
 
@@ -65,6 +65,24 @@ v0.3.72 内容管理页复发  ← 回归 #1
 | **触发条件** | API 返回空数据或异常响应 |
 | **根除方案** | ESLint 规则强制 `?.map()` 或 `(arr ?? []).map()`（尚未实施） |
 
+### Chain #4: post_count 不同步 — 多路径遗漏
+
+```
+v0.2.x content_handler::create_post（更新 post_count）← 唯一正确的路径
+    ↓ 新增加创作中心投稿路径
+v1.0.14 creation::submit_to_community（遗漏 post_count +1）← 回归 #1
+    ↓ 新增加对话流发布路径  
+v1.0.14 thread_handler::publish（遗漏 post_count +1）← 回归 #2
+```
+
+| 属性 | 值 |
+|------|-----|
+| **根因** | spaces.post_count 只在部分 INSERT INTO posts 路径中更新 |
+| **脆弱点** | 所有执行 INSERT INTO posts 的代码路径 |
+| **触发条件** | 新增 posts 创建路径时未复制 post_count +1 逻辑 |
+| **扩散路径** | content_handler → creation → thread_handler |
+| **根除方案** | 数据库触发器或统一抽象层（尚未实施）；修复配方已编写 |
+
 ## 脆弱文件清单
 
 这些文件多次出现在修复记录中，修改时需额外注意：
@@ -75,6 +93,8 @@ v0.3.72 内容管理页复发  ← 回归 #1
 | `web/src/app/users/[username]/...` | Chain #1 | 1 | 同上 |
 | 部署脚本/流程 | Chain #2 | 2 | 必须 `COPYFILE_DISABLE=1` |
 | 所有含 `.map()` 的组件 | Chain #3 | 15+ | 必须 `?.map()` 或 `?? []` |
+| `crates/polis-content/src/handlers/creation.rs` | Chain #4 | 1 | 新增 INSERT INTO posts 必须同步 post_count |
+| `crates/polis-content/src/handlers/thread_handler.rs` | Chain #4 | 1 | 同上 |
 
 ## 如何使用本文件
 

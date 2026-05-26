@@ -6,12 +6,13 @@
 
 | 指标 | 数值 |
 |------|------|
-| 总修复数 | 28 |
-| 已归类 Pattern | 4 |
-| 回归链数 | 3 |
+| 总修复数 | 33 |
+| 已归类 Pattern | 5 |
+| 回归链数 | 4 |
 | 总复发次数 | 5（URL编码 ×3 + xattr ×2 + Array.map ×1） |
-| 复发率 | 17.9%（5/28） |
-| 修复配方数 | 4 |
+| 复发率 | 15.2%（5/33） |
+| 修复配方数 | 5 |
+| 修复点位地图 | [fix-points.md](fix-points.md) |
 | 最近更新 | 2026-05-26 |
 
 ## 快速定位表
@@ -22,6 +23,7 @@
 | 部署后 UI 错乱 / `._*` 文件 / CSS 不一致 | [xattr-contamination](patterns/xattr-contamination.md) | [配方](fix-recipes/xattr-contamination.md) | `md5sum` 对比 CSS |
 | 页面白屏 / `x.map is not a function` | [array-map-null](patterns/array-map-null.md) | [配方](fix-recipes/array-map-null.md) | 搜索 `.map(` 无 `?.` |
 | npm 包升级后编辑器/组件报错 | [dependency-auto-upgrade](patterns/dependency-auto-upgrade.md) | [配方](fix-recipes/dependency-auto-upgrade.md) | `npm list <pkg>` 看版本 |
+| 社区帖子计数不对 / 分析为 0 / 创作中心发帖不计 | [post-count-sync](patterns/post-count-sync.md) | [配方](fix-recipes/post-count-sync.md) | SQL: `SELECT post_count vs COUNT(posts)` |
 
 ## Pattern 列表
 
@@ -31,6 +33,7 @@
 | macOS xattr 部署污染 | 2 | v0.3.95 | 🔴 高 | [xattr-contamination.md](patterns/xattr-contamination.md) |
 | .map() 防空防御 | 多次 | v1.0.8 (2026-05-25) | 🟡 中 | [array-map-null.md](patterns/array-map-null.md) |
 | 依赖自动升级 | 0 | v1.0.12 (2026-05-26) | 🔴 高 | [dependency-auto-upgrade.md](patterns/dependency-auto-upgrade.md) |
+| post_count 不同步 | 0 | v1.0.14 (2026-05-26) | 🔴 高 | [post-count-sync.md](patterns/post-count-sync.md) |
 
 ## 修复配方库
 
@@ -67,3 +70,6 @@
 - [ ] `grep -rn "format!(" crates/*/src/repo.rs` 无 SQL 拼接
 - [ ] 服务器 `curl -sI https://www.mzgw.com | grep -i "server:"` 不显示版本号
 - [ ] Nginx 配置无废弃 `X-XSS-Protection` 头
+- [ ] 新增 INSERT INTO posts 路径：检查是否同步 `UPDATE spaces SET post_count = post_count + 1`
+- [ ] 新增 API 端点：检查 title/name 等必填字段是否有非空验证 + 长度限制
+- [ ] `grep -rn "INSERT INTO posts" crates/` 每个匹配点后是否有 post_count +1

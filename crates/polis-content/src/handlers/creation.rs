@@ -385,6 +385,13 @@ impl CreationHandler {
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
+        // 更新社区帖子计数
+        sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
+            .bind(space_id)
+            .execute(&self.pool)
+            .await
+            .ok();
+
         Ok(module_ref)
     }
 

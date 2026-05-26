@@ -11,6 +11,7 @@
 | 部署后 UI 错乱，CSS 和本地不一致 | [xattr-contamination.md](xattr-contamination.md) | 10 分钟 |
 | 页面白屏，console 报 `x.map is not a function` | [array-map-null.md](array-map-null.md) | 2 分钟/处 |
 | npm 包升级后编辑器/组件报错 | [dependency-auto-upgrade.md](dependency-auto-upgrade.md) | 15 分钟 |
+| 社区帖子计数与实际不符，分析数据为 0 | [post-count-sync.md](post-count-sync.md) | 10 分钟 |
 
 ## 配方结构
 

@@ -254,6 +254,11 @@ impl ThreadHandler {
                         .bind(creation.0)
                         .execute(&self.pool)
                         .await;
+                        // 更新社区帖子计数
+                        let _ = sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
+                            .bind(sid)
+                            .execute(&self.pool)
+                            .await;
                         results.push(ns.clone());
                     }
                 }

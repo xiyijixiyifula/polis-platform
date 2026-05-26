@@ -136,7 +136,7 @@ export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSe
           posts: 'forum', share: 'share', wiki: 'wiki', series: 'series',
           membership: 'membership', video: 'video', code_repo: 'code_repo',
           qa: 'qa', polls: 'polls', announcements: 'announcements',
-          chat: 'chat', store: 'store', course: 'course',
+          chat: 'chat', store: 'store', course: 'course', members: 'members',
           novel: 'novel', game: 'game', mini_app: 'mini_app',
         };
         return mapping[key] || key;

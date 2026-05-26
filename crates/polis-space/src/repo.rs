@@ -122,6 +122,18 @@ impl SpaceRepo {
         Ok(space)
     }
 
+    /// 归档社区（软删除，仅 owner 可操作）
+    pub async fn archive(&self, id: Uuid, owner_id: Uuid) -> Result<bool, AppError> {
+        let result = sqlx::query(
+            "UPDATE spaces SET status = 'archived', updated_at = NOW() WHERE id = $1 AND owner_id = $2 AND status = 'active'",
+        )
+        .bind(id)
+        .bind(owner_id)
+        .execute(&self.pool)
+        .await?;
+        Ok(result.rows_affected() > 0)
+    }
+
     /// 搜索根社区（无 owner_id）
     pub async fn find_root_by_slug(&self, slug: &str) -> Result<Option<Space>, AppError> {
         let space = sqlx::query_as::<_, Space>(

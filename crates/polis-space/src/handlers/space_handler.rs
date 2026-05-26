@@ -32,6 +32,19 @@ impl SpaceHandler {
         username: &str,
         req: CreateSpaceRequest,
     ) -> Result<SpacePublic, AppError> {
+        // 验证 title
+        let title = req.title.trim();
+        if title.is_empty() {
+            return Err(AppError::Validation(
+                "社区名称不能为空".to_string(),
+            ));
+        }
+        if title.chars().count() > 50 {
+            return Err(AppError::Validation(
+                "社区名称不能超过50个字符".to_string(),
+            ));
+        }
+
         // 验证 slug
         if req.slug.len() < 2 || req.slug.len() > 100 {
             return Err(AppError::Validation(
@@ -71,7 +84,7 @@ impl SpaceHandler {
                 Some(user_id),
                 false,
                 None, // 不再关联根社区
-                &req.title,
+                title,
                 &description,
                 &visibility,
                 &enabled_modules,
@@ -157,6 +170,21 @@ impl SpaceHandler {
 
         let updated = self.repo.update(space.id, &req).await?;
         Ok(self.space_to_public(updated).await)
+    }
+
+    /// 归档社区（软删除，仅 owner 可操作）
+    pub async fn archive_space(&self, namespace: &str, user_id: Uuid) -> Result<(), AppError> {
+        let space = self
+            .repo
+            .find_by_namespace(namespace)
+            .await?
+            .ok_or(AppError::NotFound("社区不存在".to_string()))?;
+
+        let archived = self.repo.archive(space.id, user_id).await?;
+        if !archived {
+            return Err(AppError::Forbidden("仅社区创建者可以删除社区".to_string()));
+        }
+        Ok(())
     }
 
     /// 获取根社区的子社区列表

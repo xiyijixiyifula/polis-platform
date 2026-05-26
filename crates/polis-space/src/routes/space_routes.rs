@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, Query, Request, State},
     middleware,
-    routing::{get, post},
+    routing::{delete, get, post},
     Json, Router,
 };
 use jsonwebtoken::{decode, DecodingKey};
@@ -59,7 +59,9 @@ pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
 
     let auth = Router::new()
         .route("/api/spaces", post(create_space))
-        .route("/api/spaces/{*path}", post(handle_auth_path).put(handle_auth_path))
+        .route("/api/spaces/{*path}", post(handle_auth_path)
+            .put(handle_auth_path)
+            .delete(delete_space))
         .route_layer(middleware::from_fn_with_state(
             handler.clone(),
             auth_middleware,
@@ -269,6 +271,30 @@ async fn handle_auth_path(
     }
 
     Err(AppError::NotFound("Route not found".to_string()))
+}
+
+/// DELETE /api/spaces/{namespace} — 归档社区（仅 owner）
+async fn delete_space(
+    State(handler): State<Arc<SpaceHandler>>,
+    axum::Extension(user_id): axum::Extension<Uuid>,
+    req: Request,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let path = req.uri().path().to_string();
+    let remaining = path.strip_prefix("/api/spaces/").unwrap_or("");
+
+    // 去掉尾部动作（如 /members）
+    let actions = ["/members", "/join", "/leave", "/posts", "/featured", "/bookmarks", "/join-requests"];
+    let mut ns = remaining;
+    for suffix in &actions {
+        if let Some(stripped) = remaining.strip_suffix(suffix) {
+            ns = stripped;
+            break;
+        }
+    }
+    let decoded_ns = decode_namespace(ns)?;
+
+    handler.archive_space(&decoded_ns, user_id).await?;
+    Ok(Json(serde_json::json!({"code": 0, "message": "社区已归档"})))
 }
 
 /// POST /api/spaces - 创建社区
