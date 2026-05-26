@@ -256,7 +256,8 @@ export default function UserProfilePage({ username }: { username: string }) {
     setCreationsLoading(true);
     (async () => {
       try {
-        const res = await fetch(`/api/creations?creator_username=${encodeURIComponent(username)}&page_size=50`);
+        const safeUsername = (() => { try { return decodeURIComponent(username); } catch { return username; } })();
+        const res = await fetch(`/api/creations?creator_username=${encodeURIComponent(safeUsername)}&page_size=50`);
         const data = await res.json();
         if (data.code === 0 && data.data) {
           setMyCreations(Array.isArray(data.data) ? data.data : []);
