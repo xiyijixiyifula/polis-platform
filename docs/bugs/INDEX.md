@@ -6,11 +6,11 @@
 
 | 指标 | 数值 |
 |------|------|
-| 总修复数 | 22 |
+| 总修复数 | 28 |
 | 已归类 Pattern | 4 |
 | 回归链数 | 3 |
 | 总复发次数 | 5（URL编码 ×3 + xattr ×2 + Array.map ×1） |
-| 复发率 | 22.7%（5/22） |
+| 复发率 | 17.9%（5/28） |
 | 修复配方数 | 4 |
 | 最近更新 | 2026-05-26 |
 
@@ -63,3 +63,7 @@
 - [ ] `grep -rn "\.map(" web/src/ --include="*.tsx" | grep -v "?\."` 无新结果
 - [ ] `npm list` 所有关键依赖版本与 `package.json` 一致
 - [ ] `npm run build` 通过
+- [ ] `grep -rn "Validation::default()" crates/` 无结果（安全：JWT exp 校验）
+- [ ] `grep -rn "format!(" crates/*/src/repo.rs` 无 SQL 拼接
+- [ ] 服务器 `curl -sI https://www.mzgw.com | grep -i "server:"` 不显示版本号
+- [ ] Nginx 配置无废弃 `X-XSS-Protection` 头
