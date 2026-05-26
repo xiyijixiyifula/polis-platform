@@ -129,7 +129,7 @@ impl AgentHandler {
             .await;
 
         // 生成 JWT
-        let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+        let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
         let claims = serde_json::json!({
             "sub": agent.user_id.to_string(),
             "agent_id": agent.id.to_string(),

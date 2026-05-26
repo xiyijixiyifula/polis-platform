@@ -33,7 +33,7 @@ fn maybe_extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> 
         None => return Ok(None),
     };
     let secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+        .expect("JWT_SECRET environment variable must be set");
     match decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default()) {
         Ok(data) => {
             match Uuid::parse_str(&data.claims.sub) {
@@ -901,7 +901,7 @@ async fn create_comment_by_post_id(
         .strip_prefix("Bearer ")
         .ok_or(AppError::Unauthorized)?;
     let secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+        .expect("JWT_SECRET environment variable must be set");
     let token_data = decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default())
         .map_err(|_| AppError::Unauthorized)?;
     let uid = Uuid::parse_str(&token_data.claims.sub)

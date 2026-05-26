@@ -133,7 +133,7 @@ async fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Result
         .and_then(|v| v.strip_prefix("Bearer "))
         .ok_or(AppError::Unauthorized)?;
     let secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+        .expect("JWT_SECRET environment variable must be set");
     let token_data = decode::<TokenClaims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),

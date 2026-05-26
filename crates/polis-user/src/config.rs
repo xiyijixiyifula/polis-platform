@@ -25,7 +25,7 @@ impl UserServiceConfig {
                 .expect("DATABASE_URL must be set"),
             redis_url: env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
             jwt_secret: env::var("JWT_SECRET")
-                .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string()),
+                .expect("JWT_SECRET environment variable must be set"),
             jwt_access_expiry: env::var("JWT_ACCESS_EXPIRY")
                 .unwrap_or_else(|_| "900".to_string()) // 15分钟
                 .parse()

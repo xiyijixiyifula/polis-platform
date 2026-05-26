@@ -1,15 +1,19 @@
+use std::collections::HashMap;
+use std::net::IpAddr;
 use std::sync::Arc;
+use std::time::Instant;
 
 use axum::{
-    extract::{Request, State},
-    http::{Method, StatusCode},
+    extract::{ConnectInfo, Request, State},
+    http::StatusCode,
+    middleware,
     response::Response,
     routing::{any, get, Router},
     Json,
 };
-use serde_json::{json, Value};
 use polis_core::models::ApiResponse;
-use tower_http::cors::{Any, CorsLayer};
+use serde_json::{json, Value};
+use tokio::sync::Mutex;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
@@ -17,10 +21,18 @@ use crate::config::GatewayConfig;
 
 mod config;
 
+/// 速率限制条目
+#[derive(Debug)]
+struct RateLimitEntry {
+    count: u32,
+    window_start: Instant,
+}
+
 /// API 网关状态
 struct GatewayState {
     config: GatewayConfig,
     client: reqwest::Client,
+    rate_limits: Mutex<HashMap<IpAddr, RateLimitEntry>>,
 }
 
 #[tokio::main]
@@ -40,13 +52,10 @@ async fn main() -> anyhow::Result<()> {
             .timeout(std::time::Duration::from_secs(300))
             .build()?,
         config: config.clone(),
+        rate_limits: Mutex::new(HashMap::new()),
     });
 
-    // CORS
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
-        .allow_headers(Any);
+    // CORS 由 Nginx 统一管理
 
     // 路由
     // 代理路由 - 视频服务 (需要 650MB body limit 支持大文件上传)
@@ -127,17 +136,63 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/health/video", get(proxy_health_video))
         // 健康检查 - 聚合
         .route("/api/health/all", get(health_check_all))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            rate_limit_middleware,
+        ))
         .layer(TraceLayer::new_for_http())
-        .layer(cors)
         .with_state(state);
 
     let addr = format!("{}:{}", config.host, config.port);
     tracing::info!("API Gateway starting on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
+}
+
+/// 速率限制中间件
+async fn rate_limit_middleware(
+    State(state): State<Arc<GatewayState>>,
+    ConnectInfo(addr): ConnectInfo<std::net::SocketAddr>,
+    request: Request,
+    next: axum::middleware::Next,
+) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
+    let ip = addr.ip();
+    let limit = state.config.rate_limit_per_minute;
+
+    let mut limits = state.rate_limits.lock().await;
+    let now = Instant::now();
+    let window = std::time::Duration::from_secs(60);
+
+    let entry = limits.entry(ip).or_insert_with(|| RateLimitEntry {
+        count: 0,
+        window_start: now,
+    });
+
+    // 如果窗口超过 60 秒，重置计数
+    if now.duration_since(entry.window_start) > window {
+        entry.count = 0;
+        entry.window_start = now;
+    }
+
+    entry.count += 1;
+
+    if entry.count > limit {
+        tracing::warn!("Rate limit exceeded for {} ({} req/min)", ip, entry.count);
+        return Err((
+            StatusCode::TOO_MANY_REQUESTS,
+            Json(ApiResponse::error(1429, "请求过于频繁，请稍后再试")),
+        ));
+    }
+
+    drop(limits);
+    Ok(next.run(request).await)
 }
 
 /// 健康检查
@@ -380,9 +435,15 @@ async fn proxy_request_with_limit(
             let mut response = Response::new(axum::body::Body::from(resp_body));
             *response.status_mut() = status;
             for (key, value) in resp_headers.iter() {
-                if key != "transfer-encoding" && key != "content-encoding" {
-                    response.headers_mut().insert(key.clone(), value.clone());
+                // 剥离上游 CORS 头，由 gateway 统一设置
+                let lower = key.as_str().to_lowercase();
+                if lower == "transfer-encoding"
+                    || lower == "content-encoding"
+                    || lower.starts_with("access-control-")
+                {
+                    continue;
                 }
+                response.headers_mut().insert(key.clone(), value.clone());
             }
             Ok(response)
         }

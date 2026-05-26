@@ -42,7 +42,7 @@ pub fn require_user(headers: &HeaderMap) -> Result<Uuid, AppError> {
 /// 解码 JWT token，返回用户 UUID
 fn decode_jwt(token: &str) -> Result<Uuid, AppError> {
     let secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+        .expect("JWT_SECRET environment variable must be set");
 
     match jsonwebtoken::decode::<Claims>(
         token,

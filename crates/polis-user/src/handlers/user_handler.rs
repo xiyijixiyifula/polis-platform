@@ -7,6 +7,8 @@ use async_nats::Client as NatsClient;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use sha2::{Sha256, Digest};
+
 use crate::auth;
 use crate::config::UserServiceConfig;
 use crate::repo::UserRepo;
@@ -290,13 +292,59 @@ impl UserHandler {
         Ok(())
     }
 
-    /// 生成密码重置令牌
+    /// 生成密码重置令牌（随机令牌 + 数据库存储，不直接返回 JWT）
     pub async fn generate_reset_token(&self, email: &str) -> Result<String, AppError> {
         let user = self.repo.find_by_email(email).await?
             .ok_or(AppError::NotFound("Email not found".to_string()))?;
-        let token = crate::auth::generate_access_token(user.id, &user.username, &user.display_name, &self.config.jwt_secret, 3600)
-            .map_err(|e| AppError::Internal(format!("Token error: {}", e)))?;
+
+        // 使旧的未使用令牌失效
+        sqlx::query("UPDATE password_reset_tokens SET used = TRUE WHERE user_id = $1 AND used = FALSE")
+            .bind(user.id).execute(&self.repo.pool).await?;
+
+        // 生成随机令牌
+        let token = Uuid::new_v4().to_string();
+        let mut hasher = Sha256::new();
+        hasher.update(token.as_bytes());
+        let token_hash = hex::encode(hasher.finalize());
+        let expires_at = chrono::Utc::now() + chrono::Duration::hours(1);
+
+        sqlx::query("INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)")
+            .bind(user.id).bind(&token_hash).bind(expires_at)
+            .execute(&self.repo.pool).await?;
+
         Ok(token)
+    }
+
+    /// 使用重置令牌修改密码
+    pub async fn reset_password(&self, token: &str, new_password: &str) -> Result<(), AppError> {
+        if new_password.len() < 8 {
+            return Err(AppError::Validation("Password must be at least 8 characters".to_string()));
+        }
+
+        let mut hasher = Sha256::new();
+        hasher.update(token.as_bytes());
+        let token_hash = hex::encode(hasher.finalize());
+
+        let record = sqlx::query_as::<_, (Uuid, Uuid, chrono::DateTime<chrono::Utc>, bool)>(
+            "SELECT id, user_id, expires_at, used FROM password_reset_tokens WHERE token_hash = $1"
+        ).bind(&token_hash).fetch_optional(&self.repo.pool).await?
+            .ok_or(AppError::Forbidden("无效或已过期的重置令牌".to_string()))?;
+
+        if record.3 || record.2 < chrono::Utc::now() {
+            return Err(AppError::Forbidden("重置令牌已过期或已使用".to_string()));
+        }
+
+        let new_hash = crate::auth::hash_password(new_password)
+            .map_err(|e| AppError::Internal(format!("Hash error: {}", e)))?;
+
+        sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
+            .bind(&new_hash).bind(record.1)
+            .execute(&self.repo.pool).await?;
+
+        sqlx::query("UPDATE password_reset_tokens SET used = TRUE WHERE id = $1")
+            .bind(record.0).execute(&self.repo.pool).await?;
+
+        Ok(())
     }
 
     /// 关注/取消关注

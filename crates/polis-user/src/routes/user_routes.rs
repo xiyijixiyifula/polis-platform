@@ -12,6 +12,8 @@ pub struct ChangePasswordRequest { pub old_password: String, pub new_password: S
 #[derive(Deserialize)]
 pub struct ForgotPasswordRequest { pub email: String }
 #[derive(Deserialize)]
+pub struct ResetPasswordRequest { pub token: String, pub new_password: String }
+#[derive(Deserialize)]
 pub struct FollowRequest { pub followee_type: String, pub followee_id: Uuid }
 
 pub fn user_routes(handler: Arc<UserHandler>) -> Router {
@@ -20,6 +22,7 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/auth/register", post(register))
         .route("/api/auth/login", post(login))
         .route("/api/auth/forgot-password", post(forgot_password))
+        .route("/api/auth/reset-password", post(reset_password))
         .route("/api/users/search", get(search_users))
         .route("/api/users/{username}", get(get_user_profile))
         .route("/api/users/{username}/spaces", get(get_user_spaces))
@@ -60,9 +63,17 @@ async fn change_password(State(h): State<Arc<UserHandler>>, axum::Extension(uid)
     h.change_password(uid, &r.old_password, &r.new_password).await?;
     Ok(Json(ApiResponse::success(())))
 }
-async fn forgot_password(State(h): State<Arc<UserHandler>>, Json(r): Json<ForgotPasswordRequest>) -> Result<Json<ApiResponse<String>>, AppError> {
+async fn forgot_password(State(h): State<Arc<UserHandler>>, Json(r): Json<ForgotPasswordRequest>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
     let token = h.generate_reset_token(&r.email).await?;
-    Ok(Json(ApiResponse::success(token)))
+    Ok(Json(ApiResponse::success(serde_json::json!({
+        "message": "密码重置令牌已生成，有效期1小时",
+        "reset_token": token,
+    }))))
+}
+
+async fn reset_password(State(h): State<Arc<UserHandler>>, Json(r): Json<ResetPasswordRequest>) -> Result<Json<ApiResponse<()>>, AppError> {
+    h.reset_password(&r.token, &r.new_password).await?;
+    Ok(Json(ApiResponse::success(())))
 }
 async fn update_settings(State(_h): State<Arc<UserHandler>>, axum::Extension(_uid): axum::Extension<Uuid>, Json(_r): Json<serde_json::Value>) -> Result<Json<ApiResponse<()>>, AppError> {
     // Settings stored as JSON in user metadata (for future)

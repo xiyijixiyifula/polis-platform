@@ -43,7 +43,7 @@ pub async fn auth_middleware(
             // We need a shared JWT secret across services
             // In production, use a config/env var shared across services
             std::env::var("JWT_SECRET")
-                .unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string())
+                .expect("JWT_SECRET environment variable must be set")
                 .as_bytes(),
         ),
         &Validation::default(),

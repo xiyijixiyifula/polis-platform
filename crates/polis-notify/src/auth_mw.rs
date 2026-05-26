@@ -13,7 +13,7 @@ pub async fn auth_middleware(
     State(_handler): State<Arc<NotifyHandler>>,
     mut req: Request, next: Next,
 ) -> Result<Response, AppError> {
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "polis-dev-jwt-secret-do-not-use-in-prod".to_string());
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
     let auth_header = req.headers().get("Authorization")
         .and_then(|v| v.to_str().ok()).ok_or(AppError::Unauthorized)?;
     let token = auth_header.strip_prefix("Bearer ").ok_or(AppError::Unauthorized)?;
