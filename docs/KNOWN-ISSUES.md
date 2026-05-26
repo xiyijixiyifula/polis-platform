@@ -1,5 +1,7 @@
 # 已知问题与技术债务
 
+> 📊 完整的 Bug Pattern 库 + 统计面板见 [docs/bugs/INDEX.md](bugs/INDEX.md)
+
 ## 已知技术债务
 
 - ~~微服务缺少独立 `/health` 端点~~ → v0.2.84 已为 4 服务添加
@@ -36,7 +38,7 @@
 
 - **模块设置 localStorage key 迁移** — 命名空间编码变更后旧设置丢失。修复: `loadModules` 双 key 回退（v0.2.58）
 
-- **空间页中文路由显示 URL 编码** — `useParams()` 返回未经 URL 解码的 catch-all 参数。修复: 对每个 segment 调用 `decodeURIComponent()`（v0.2.57）
+- **个人主页作品 Tab 双重编码 404** — `params.username` 保留 URL 编码形态，`encodeURIComponent` 二次编码导致 `%` → `%25`，服务器收到乱码返回 404。修复: `decodeURIComponent` → `encodeURIComponent`（v1.0.11）
 
 - **中文 slug 社区 404** — `handle_public_path` 取到 URL 编码后的路径未解码。修复: `decode_namespace()` 用 percent-encoding crate（v0.2.54）
 

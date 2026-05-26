@@ -24,7 +24,8 @@ LOCAL_ONLY
 - [x] 浏览器验证: 首页 Feed 三 tab 全部正常
 - [x] 浏览器验证: 右侧栏"热门趋势"和"推荐社区"正常
 - [x] 更新 changelog — 补全 v1.0.8 和 v1.0.9 版本记录
-- [x] 更新 research roadmap — 同步最新状态（视频/创作中心/Feed/CLI/Gateway 等标记已完成）
+- [x] 修复个人主页作品 Tab 为空 — username 双重 URL 编码导致 API 404
+- [x] Bug 追踪系统 — `docs/bugs/` 目录 + Pattern 库 + CLAUDE.md 修复协议
 
 ### 待处理
 
@@ -37,6 +38,7 @@ LOCAL_ONLY
 
 ## 部署版本
 
+v1.0.11 — 修复个人主页作品 Tab 为空
 v1.0.10 — changelog 补全 + research roadmap 更新
 v1.0.9 — 首页 Feed 算法修复
 v1.0.8 — 密码重置安全 + Gateway 限流 + JWT_SECRET 强制验证
