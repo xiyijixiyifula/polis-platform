@@ -1140,6 +1140,7 @@ impl ContentRepo {
     pub async fn get_feed(
         &self, page: u32, page_size: u32, sort: Option<&str>, user_id: Option<Uuid>,
     ) -> Result<(Vec<serde_json::Value>, u64), AppError> {
+        let is_hot = sort == Some("hot");
         let offset = ((page.saturating_sub(1)) * page_size) as i64;
         let limit = page_size as i64;
 
@@ -1244,12 +1245,14 @@ impl ContentRepo {
             items.push(serde_json::json!({"id": id, "type": "video", "module_type": "video", "title": title, "preview": desc, "thumbnail_url": thumbnail_url, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "duration_seconds": duration_seconds, "author": author, "space": space_info}));
         }
 
-        // 全量排序: 不同来源的混合内容再按整体时间排序
-        items.sort_by(|a, b| {
-            let ta = a["created_at"].as_str().unwrap_or("");
-            let tb = b["created_at"].as_str().unwrap_or("");
-            tb.cmp(ta)
-        });
+        // 全量排序: hot 模式保留 SQL 热榜顺序，非 hot 模式按时间倒序
+        if !is_hot {
+            items.sort_by(|a, b| {
+                let ta = a["created_at"].as_str().unwrap_or("");
+                let tb = b["created_at"].as_str().unwrap_or("");
+                tb.cmp(ta)
+            });
+        }
         let paged: Vec<serde_json::Value> = items.into_iter().take(page_size as usize).collect();
         Ok((paged, total))
     }

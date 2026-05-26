@@ -244,7 +244,7 @@ export default function FeedLayout() {
             <div className="flex">
               {[
                 { key: 'all', label: '全部动态' },
-                { key: 'follow', label: '关注的人' },
+                { key: 'following', label: '关注的人' },
                 { key: 'hot', label: '热门' },
               ].map((tab) => (
                 <button
