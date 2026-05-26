@@ -110,7 +110,7 @@ async fn admin_login(
 
     use sqlx::Row;
     let user_row = sqlx::query(
-        "SELECT id, username, display_name FROM users WHERE email = $1"
+        "SELECT id, username, display_name, password_hash FROM users WHERE email = $1"
     )
     .bind(&req.email)
     .fetch_optional(&handler.pool)
@@ -120,6 +120,17 @@ async fn admin_login(
     let user_id: Uuid = user_row.get("id");
     let username: String = user_row.get("username");
     let display_name: String = user_row.get("display_name");
+    let password_hash: String = user_row.get("password_hash");
+
+    use argon2::{
+        password_hash::{PasswordHash, PasswordVerifier},
+        Argon2,
+    };
+    let parsed_hash = PasswordHash::new(&password_hash)
+        .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
+    Argon2::default()
+        .verify_password(req.password.as_bytes(), &parsed_hash)
+        .map_err(|_| AppError::Unauthorized)?;
 
     let token = crate::auth::generate_admin_token(user_id, "admin", &handler.config)
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;

@@ -13,7 +13,7 @@ use crate::handlers::chat_handler::ChatHandler;
 use crate::handlers::message_handler::MessageHandler;
 use sqlx::PgPool;
 use crate::middleware::auth::auth_middleware;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{decode, DecodingKey};
 use serde::Deserialize as SerdeDeserialize;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 
@@ -34,7 +34,7 @@ fn maybe_extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> 
     };
     let secret = std::env::var("JWT_SECRET")
         .expect("JWT_SECRET environment variable must be set");
-    match decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default()) {
+    match decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation()) {
         Ok(data) => {
             match Uuid::parse_str(&data.claims.sub) {
                 Ok(uid) => Ok(Some(uid)),
@@ -902,7 +902,7 @@ async fn create_comment_by_post_id(
         .ok_or(AppError::Unauthorized)?;
     let secret = std::env::var("JWT_SECRET")
         .expect("JWT_SECRET environment variable must be set");
-    let token_data = decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default())
+    let token_data = decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation())
         .map_err(|_| AppError::Unauthorized)?;
     let uid = Uuid::parse_str(&token_data.claims.sub)
         .map_err(|_| AppError::Unauthorized)?;

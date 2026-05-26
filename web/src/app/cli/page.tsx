@@ -593,7 +593,7 @@ rm -f ~/.polis/token`}
           <FaqItem q="Token 保存在哪里？"
             a="~/.polis/ 目录（0600 权限）：token、user、admin_token。auth logout 清除。" />
           <FaqItem q="Admin 登录参数？"
-            a="仅需 email + admin_code：polisctl admin login admin@polis.app mzGW2026!PolisHub。不需要 password。" />
+            a="需要 email + password + admin_code 三要素，admin_code 由管理员在服务器配置。" />
           <FaqItem q="如何更新？"
             a="Rust 版：git pull && cargo build --release -p polisctl && sudo cp target/release/polisctl /usr/local/bin/。Bash 版：git pull && sudo cp polisctl.sh /usr/local/bin/polisctl。" />
           <FaqItem q="Windows 支持？"

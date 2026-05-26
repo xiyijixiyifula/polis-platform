@@ -233,7 +233,7 @@ export function Header() {
                     <Link href="/saved" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{t('saved.title')}</Link>
                     <Link href="/settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{t('nav.settings')}</Link>
                     <hr className="my-1 border-gray-100 dark:border-gray-700" />
-                    <button onClick={() => { localStorage.removeItem('polis_access_token'); localStorage.removeItem('polis_user'); window.location.href = '/'; }}
+                    <button onClick={() => { import('@/lib/api').then(m => m.setToken(null)); localStorage.removeItem('polis_user'); window.location.href = '/'; }}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50">{t('nav.logout')}</button>
                   </div>
                 )}

@@ -2,7 +2,7 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -90,7 +90,7 @@ pub fn verify_token(
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
+        &polis_core::auth::secure_validation(),
     )?;
     Ok(token_data.claims)
 }

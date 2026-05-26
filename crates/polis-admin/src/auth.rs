@@ -1,5 +1,5 @@
 //! 管理员认证
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -58,7 +58,7 @@ pub fn verify_admin_token(
     let token_data = decode::<AdminClaims>(
         token,
         &DecodingKey::from_secret(config.jwt_secret.as_bytes()),
-        &Validation::default(),
+        &polis_core::auth::secure_validation(),
     )?;
     Ok(token_data.claims)
 }

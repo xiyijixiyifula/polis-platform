@@ -16,6 +16,14 @@ pub struct Claims {
     pub iat: Option<usize>,
 }
 
+/// 创建安全 JWT 验证配置（显式启用 exp 校验 + token_type 默认校验）
+pub fn secure_validation() -> jsonwebtoken::Validation {
+    let mut v = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
+    v.validate_exp = true;
+    v.validate_aud = false;
+    v
+}
+
 /// 从请求头中提取用户 ID（JWT Bearer token 解码）
 ///
 /// # 行为
@@ -47,7 +55,7 @@ fn decode_jwt(token: &str) -> Result<Uuid, AppError> {
     match jsonwebtoken::decode::<Claims>(
         token,
         &jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()),
-        &jsonwebtoken::Validation::default(),
+        &secure_validation(),
     ) {
         Ok(data) => {
             Uuid::parse_str(&data.claims.sub)

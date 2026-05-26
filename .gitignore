@@ -25,6 +25,7 @@ target/
 Thumbs.db
 uploads
 .aionui/
+.aionrs/
 .vscode/
 *.wasm
 web/out/

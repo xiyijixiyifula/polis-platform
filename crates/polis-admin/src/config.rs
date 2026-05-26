@@ -21,13 +21,13 @@ impl AdminConfig {
             database_url: env::var("DATABASE_URL")
                 .expect("DATABASE_URL must be set"),
             jwt_secret: env::var("JWT_SECRET")
-                .unwrap_or_else(|_| "polis-admin-jwt-secret".to_string()),
+                .expect("JWT_SECRET must be set"),
             jwt_access_expiry: env::var("JWT_ACCESS_EXPIRY")
                 .unwrap_or_else(|_| "3600".to_string())
                 .parse()
                 .expect("JWT_ACCESS_EXPIRY must be a number"),
             admin_code: env::var("ADMIN_CODE")
-                .unwrap_or_else(|_| "polis-admin-2026".to_string()),
+                .expect("ADMIN_CODE must be set"),
         }
     }
 }

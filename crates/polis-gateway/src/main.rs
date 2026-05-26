@@ -452,7 +452,7 @@ async fn proxy_request_with_limit(
                 e, e.is_connect(), e.is_timeout(), e.is_body(), e.is_decode());
             Err((
                 StatusCode::BAD_GATEWAY,
-                Json(ApiResponse::error(1502, &format!("Service unavailable: {}", e))),
+                Json(ApiResponse::error(1502, "Service temporarily unavailable")),
             ))
         }
     }

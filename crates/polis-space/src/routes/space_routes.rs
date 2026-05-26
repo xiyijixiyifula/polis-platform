@@ -6,7 +6,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{decode, DecodingKey};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -137,7 +137,7 @@ async fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Result
     let token_data = decode::<TokenClaims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
+        &polis_core::auth::secure_validation(),
     )
     .map_err(|_| AppError::Unauthorized)?;
     if token_data.claims.token_type != "access" {

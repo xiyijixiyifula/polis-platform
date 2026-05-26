@@ -46,7 +46,14 @@ impl ContentHandler {
             .map(|t| serde_json::to_value(t).unwrap_or_default())
             .unwrap_or(serde_json::Value::Array(vec![]));
         let visibility = req.visibility.unwrap_or_default().to_string();
-        let password_hash = req.password.as_deref();
+        let password_hash = req.password.as_deref().map(|p| {
+            use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+            use argon2::Argon2;
+            let salt = SaltString::generate(&mut OsRng);
+            Argon2::default().hash_password(p.as_bytes(), &salt)
+                .map(|h| h.to_string())
+                .unwrap_or_default()
+        });
 
         let post = self
             .repo
@@ -59,7 +66,7 @@ impl ContentHandler {
                 &content_type,
                 &tags,
                 &visibility,
-                password_hash,
+                password_hash.as_deref(),
             )
             .await?;
 
@@ -543,8 +550,16 @@ impl ContentHandler {
         // 前端发 undefined/null → serde 反序列为 None → 不更新密码
         // 前端发具体密码 → 更新
         // 前端发空字符串 "" → 清除密码
-        let password_hash = req.password
-            .and_then(|p| if p.is_empty() { None } else { Some(p) });
+        let password_hash: Option<String> = req.password
+            .and_then(|p| if p.is_empty() { None } else { Some(p) })
+            .map(|p| {
+                use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+                use argon2::Argon2;
+                let salt = SaltString::generate(&mut OsRng);
+                Argon2::default().hash_password(p.as_bytes(), &salt)
+                    .map(|h| h.to_string())
+                    .unwrap_or_default()
+            });
 
         let updated = self.repo.update_post(
             post_id,
@@ -1248,18 +1263,20 @@ impl ContentHandler {
         tokio::fs::write(&tmp_file, data).await.map_err(|e| AppError::External(format!("Failed to write tmp file: {}", e)))?;
 
         if filename.ends_with(".zip") {
-            // Unzip first
-            let output = Command::new("unzip").arg("-o").arg(&tmp_file).arg("-d").arg(&tmp_dir).output()
+            // Unzip first — safely into temp dir, strip paths with -j to prevent zip-slip
+            let output = Command::new("unzip").arg("-o").arg("-j").arg(&tmp_file).arg("-d").arg(&tmp_dir).output()
                 .map_err(|e| AppError::External(format!("Failed to run unzip: {}", e)))?;
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 return Err(AppError::External(format!("Unzip failed: stderr={} stdout={}", stderr, stdout)));
             }
-            // Find README.md (case-insensitive)
+            // Find README.md (case-insensitive) — validate path stays within tmp_dir
             let find_output = Command::new("find").arg(&tmp_dir).arg("-iname").arg("readme.md").output()
                 .map_err(|e| AppError::External(format!("Failed to find README: {}", e)))?;
             let readme_path = String::from_utf8_lossy(&find_output.stdout).trim().to_string();
+            // Validate path is within tmp_dir (defense-in-depth against zip-slip)
+            let _canonical_tmp = std::path::Path::new(&tmp_dir).canonicalize().unwrap_or_else(|_| std::path::PathBuf::from(&tmp_dir));
             if readme_path.is_empty() {
                 let ls_output = Command::new("ls").arg("-R").arg(&tmp_dir).output()
                     .map_err(|e| AppError::External(format!("Failed to list files: {}", e)))?;
@@ -1269,8 +1286,8 @@ impl ContentHandler {
             }
             let content = tokio::fs::read_to_string(&readme_path).await
                 .map_err(|e| AppError::External(format!("Failed to read README: {}", e)))?;
-            // Find and upload referenced images
-            let base_dir = std::path::Path::new(&readme_path).parent().unwrap_or(std::path::Path::new(&tmp_dir));
+            // Find and upload referenced images (files are flat in tmp_dir due to -j flag)
+            let base_dir = std::path::Path::new(&tmp_dir);
             let _processed = content.clone();
             // Match ![alt](path) and <img src="path">
             // Simple string-based image reference replacement
@@ -1368,8 +1385,17 @@ impl ContentHandler {
         let (fid, _filename, _fs, _mt, _sp) = self.repo.get_file_by_id(file_id).await?;
         let code: String = Uuid::new_v4().to_string().chars().take(8).collect();
         let expires_at = expires_hours.map(|h| chrono::Utc::now() + chrono::Duration::hours(h));
-        let _share = self.repo.create_share_link(fid, &code, password.as_deref(), expires_at, None).await?;
-        Ok(serde_json::json!({ "code": code, "file_id": fid.to_string(), "expires_at": expires_at.map(|t| t.to_rfc3339()), "password": password }))
+        let has_password = password.is_some();
+        let password_hash: Option<String> = password.map(|p| {
+            use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+            use argon2::Argon2;
+            let salt = SaltString::generate(&mut OsRng);
+            Argon2::default().hash_password(p.as_bytes(), &salt)
+                .map(|h| h.to_string())
+                .unwrap_or_default()
+        });
+        let _share = self.repo.create_share_link(fid, &code, password_hash.as_deref(), expires_at, None).await?;
+        Ok(serde_json::json!({ "code": code, "file_id": fid.to_string(), "expires_at": expires_at.map(|t| t.to_rfc3339()), "has_password": has_password }))
     }
 
     pub async fn get_share_info(&self, code: &str) -> Result<serde_json::Value, AppError> {

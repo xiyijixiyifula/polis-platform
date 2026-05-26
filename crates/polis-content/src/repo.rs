@@ -96,61 +96,94 @@ impl ContentRepo {
         let offset = ((page - 1) * page_size) as i64;
         let limit = page_size as i64;
 
-        // Determine ORDER BY clause: default newest, supports 'views' and 'likes'
-        let order_clause = match sort {
-            Some("views") => "ORDER BY is_pinned DESC, view_count DESC, created_at DESC",
-            Some("likes") => "ORDER BY is_pinned DESC, like_count DESC, created_at DESC",
-            _ => "ORDER BY is_pinned DESC, created_at DESC",
-        };
-
-        let hidden_filter = if include_hidden { "" } else { " AND hidden_by_owner = FALSE" };
-
-        let (posts, total) = if let Some(mt) = module_type {
-            let count_sql = format!(
-                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE{} AND visibility = 'public'",
-                hidden_filter
-            );
-            let total: (i64,) = sqlx::query_as(&count_sql)
-            .bind(space_id)
-            .bind(mt)
-            .fetch_one(&self.pool)
-            .await?;
-
-            let query_str = format!(
-                "SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE{} AND visibility = 'public' {} LIMIT $3 OFFSET $4",
-                hidden_filter, order_clause
-            );
-            let posts = sqlx::query_as::<_, Post>(&query_str)
-            .bind(space_id)
-            .bind(mt)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
-
-            (posts, total.0 as u64)
-        } else {
-            let count_sql = format!(
-                "SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE{} AND visibility = 'public'",
-                hidden_filter
-            );
-            let total: (i64,) = sqlx::query_as(&count_sql)
-            .bind(space_id)
-            .fetch_one(&self.pool)
-            .await?;
-
-            let query_str = format!(
-                "SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE{} AND visibility = 'public' {} LIMIT $2 OFFSET $3",
-                hidden_filter, order_clause
-            );
-            let posts = sqlx::query_as::<_, Post>(&query_str)
-            .bind(space_id)
-            .bind(limit)
-            .bind(offset)
-            .fetch_all(&self.pool)
-            .await?;
-
-            (posts, total.0 as u64)
+        let (posts, total): (Vec<Post>, i64) = match (module_type, sort, include_hidden) {
+            // With module_type filter
+            (Some(mt), Some("views"), false) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
+                    .bind(space_id).bind(mt).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $3 OFFSET $4")
+                    .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (Some(mt), Some("likes"), false) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
+                    .bind(space_id).bind(mt).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $3 OFFSET $4")
+                    .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (Some(mt), _, false) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
+                    .bind(space_id).bind(mt).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4")
+                    .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            // Without module_type filter
+            (None, Some("views"), false) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
+                    .bind(space_id).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $2 OFFSET $3")
+                    .bind(space_id).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (None, Some("likes"), false) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
+                    .bind(space_id).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $2 OFFSET $3")
+                    .bind(space_id).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (None, _, false) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
+                    .bind(space_id).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3")
+                    .bind(space_id).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            // include_hidden = true variations
+            (Some(mt), Some("views"), true) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public'")
+                    .bind(space_id).bind(mt).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $3 OFFSET $4")
+                    .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (Some(mt), Some("likes"), true) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public'")
+                    .bind(space_id).bind(mt).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $3 OFFSET $4")
+                    .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (Some(mt), _, true) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public'")
+                    .bind(space_id).bind(mt).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4")
+                    .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (None, Some("views"), true) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public'")
+                    .bind(space_id).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $2 OFFSET $3")
+                    .bind(space_id).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (None, Some("likes"), true) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public'")
+                    .bind(space_id).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $2 OFFSET $3")
+                    .bind(space_id).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
+            (None, _, true) => {
+                let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public'")
+                    .bind(space_id).fetch_one(&self.pool).await?;
+                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3")
+                    .bind(space_id).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+                (posts, total.0)
+            },
         };
 
         let total_pages = (total as f64 / page_size as f64).ceil() as u32;
@@ -159,7 +192,7 @@ impl ContentRepo {
             Pagination {
                 page,
                 page_size,
-                total,
+                total: total as u64,
                 total_pages,
             },
         ))
@@ -198,15 +231,25 @@ impl ContentRepo {
         Ok(post)
     }
 
-    /// 验证帖子分享密码
+    /// 验证帖子分享密码（使用 Argon2 哈希验证）
     pub async fn verify_post_password(&self, post_id: Uuid, password: &str) -> Result<Option<Post>, AppError> {
+        use argon2::{password_hash::PasswordHash, PasswordVerifier, Argon2};
         let post = sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE id = $1 AND is_deleted = FALSE AND password_hash = $2"
+            "SELECT * FROM posts WHERE id = $1 AND is_deleted = FALSE"
         )
         .bind(post_id)
-        .bind(password)
         .fetch_optional(&self.pool)
         .await?;
+
+        if let Some(ref p) = post {
+            if let Some(ref hash) = p.password_hash {
+                let parsed = PasswordHash::new(hash)
+                    .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
+                if Argon2::default().verify_password(password.as_bytes(), &parsed).is_err() {
+                    return Ok(None);
+                }
+            }
+        }
         Ok(post)
     }
 

@@ -5,7 +5,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{decode, DecodingKey};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -41,7 +41,7 @@ pub async fn auth_middleware(
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
+        &polis_core::auth::secure_validation(),
     )
     .map_err(|_| AppError::Unauthorized)?;
 

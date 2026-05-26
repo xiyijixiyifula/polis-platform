@@ -50,8 +50,8 @@ async function getEngine() {
             indentedCodeBlock: false,
           },
           table: { enableChart: false },
-          link: { target: '_blank', rel: 'nofollow' },
-          autoLink: { target: '_blank', rel: 'nofollow' },
+          link: { target: '_blank', rel: 'nofollow noopener noreferrer' },
+          autoLink: { target: '_blank', rel: 'nofollow noopener noreferrer' },
         },
       },
     });

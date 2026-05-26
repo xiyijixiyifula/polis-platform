@@ -152,7 +152,7 @@ export function setToken(token: string | null) {
   if (token) {
     localStorage.setItem('polis_access_token', token);
     if (typeof document !== 'undefined') {
-      document.cookie = `polis_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax`;
+      document.cookie = `polis_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax; Secure`;
     }
   } else {
     localStorage.removeItem('polis_access_token');

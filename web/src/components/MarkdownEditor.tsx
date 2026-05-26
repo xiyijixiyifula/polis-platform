@@ -26,7 +26,10 @@ function renderMarkdown(md: string): string {
     // 行内代码
     .replace(/`([^`]+)`/g, '<code class="bg-gray-100 text-primary-600 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>')
     // 链接
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-600 hover:underline" target="_blank">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+      const safe = /^(https?:|\/|#)/i.test(url) ? url : '#';
+      return `<a href="${safe}" class="text-primary-600 hover:underline" target="_blank" rel="noopener noreferrer">${text}</a>`;
+    })
     // 图片
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-lg max-w-full my-2" />')
     // 无序列表

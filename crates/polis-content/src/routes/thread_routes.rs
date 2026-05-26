@@ -27,7 +27,7 @@ fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
         Some(t) => t, None => return Ok(None),
     };
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
-    match jsonwebtoken::decode::<Claims>(token, &jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()), &jsonwebtoken::Validation::default()) {
+    match jsonwebtoken::decode::<Claims>(token, &jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation()) {
         Ok(data) => Uuid::parse_str(&data.claims.sub).map(Some).map_err(|_| AppError::Forbidden("Invalid token".to_string())),
         Err(_) => Ok(None),
     }
