@@ -4,8 +4,30 @@ export const metadata: Metadata = { title: '更新日志' };
 export default function ChangelogPage() {
   const versions = [
     {
-      ver: '0.3.86', date: '2026-05-20', title: '🛡️ 社区增强 — 封禁+密码+等级+编辑+关注+通知',
+      ver: '1.0.9', date: '2026-05-26', title: '🔧 首页 Feed 算法修复 — 关注Tab + 热榜排序',
       isLatest: true,
+      items: [
+        '🐛 **关注Tab key 匹配修复**: 前端 tab key `\'follow\'` → `\'following\'`，与 `getSortParam` 检查逻辑统一，修复关注Tab所有帖子使用默认排序的问题',
+        '🔥 **热榜排序覆盖修复**: `get_feed` 仅在非 hot 模式才按 `created_at DESC` 排序，确保热门Tab按互动热度评分正确展示',
+        '🧪 **浏览器验证通过**: 首页三Tab（全部动态/关注的人/热门）+ 右侧栏（热门趋势 Top 5 + 推荐社区）全部正常',
+        '🚀 **部署版本**: v1.0.9 — 覆盖 v1.0.8 全部修复（密码安全/限流/JWT）',
+      ],
+    },
+    {
+      ver: '1.0.8', date: '2026-05-25', title: '🛡️ 系统安全加固 — 密码重置 + 限流 + JWT + 前端防御',
+      isLatest: false,
+      items: [
+        '🔐 **密码重置安全加固**: UUID v4 + SHA256 hash token 替代可预测的伪随机数，防止 Token 预测攻击',
+        '🚦 **Gateway 限流中间件**: 60 req/min per IP（滑动窗口），429 超限响应，保护后端服务免受 API 滥用',
+        '🔑 **JWT_SECRET 强制验证**: 未配置或使用默认值时拒绝启动，消除弱密钥安全隐患',
+        '🛡️ **前端安全加固**: `.map()` 数组空值防御（避免 `Cannot read properties of undefined`），生产环境 `console.error` 清理，API 响应错误处理优化',
+        '🎨 **创作中心重构**: 组件拆分 + API 统一 + Bug 修复，提升代码可维护性',
+        '🚀 **部署版本**: v1.0.8 — 3个后端服务 + 1个前端安全修复',
+      ],
+    },
+    {
+      ver: '0.3.86', date: '2026-05-20', title: '🛡️ 社区增强 — 封禁+密码+等级+编辑+关注+通知',
+      isLatest: false,
       items: [
         '🔒 **封禁系统**: 时长封禁（1h/24h/3d/7d/30d/永久），到期自动解封（PostgreSQL auto_unban_expired_members 函数），封禁期间禁止重新加入',
         '🔐 **密码保护社区**: 未公开（unlisted）社区支持 argon2 密码访问，通过 x-polis-space-password HTTP header 验证',
