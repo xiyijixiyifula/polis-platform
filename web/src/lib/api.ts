@@ -268,8 +268,15 @@ export const spaces = {
 
   get: (namespace: string) => request<Space>(`/spaces/${encodeNs(namespace)}`),
 
-  update: (namespace: string, data: { title?: string; description?: string; enabled_modules?: string[]; visibility?: string; password?: string }) =>
+  update: (namespace: string, data: { title?: string; description?: string; icon_url?: string; banner_url?: string; enabled_modules?: string[]; visibility?: string; password?: string }) =>
     request<Space>(`/spaces/${encodeNs(namespace)}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  /** 上传文件 (base64) — 返回 { id, filename, file_size, mime_type }，通过 /api/files/{id} 访问 */
+  uploadFile: (namespace: string, filename: string, dataBase64: string, mimeType?: string) =>
+    request<{ id: string; filename: string; file_size: number; mime_type: string }>(`/spaces/${encodeNs(namespace)}/files`, {
+      method: 'POST',
+      body: JSON.stringify({ filename, data_base64: dataBase64, mime_type: mimeType }),
+    }),
 
   join: (namespace: string, message?: string) =>
     request<{ status: string; message: string }>(`/spaces/${encodeNs(namespace)}/join`, {
@@ -315,6 +322,14 @@ export const spaces = {
       method: 'POST',
       body: JSON.stringify({ user_id: userId, approved }),
     }),
+
+  /** 关注社区 */
+  follow: (namespace: string) =>
+    request<{ following: boolean }>(`/spaces/${encodeNs(namespace)}/follow`, { method: 'POST' }),
+
+  /** 取消关注社区 */
+  unfollow: (namespace: string) =>
+    request<{ following: boolean }>(`/spaces/${encodeNs(namespace)}/unfollow`, { method: 'POST' }),
 };
 
 export interface SpaceMember {

@@ -97,8 +97,8 @@ impl SpaceRepo {
             UPDATE spaces
             SET title = COALESCE($2, title),
                 description = COALESCE($3, description),
-                icon_url = COALESCE($4, icon_url),
-                banner_url = COALESCE($5, banner_url),
+                icon_url = CASE WHEN $4 = '' THEN NULL ELSE COALESCE($4, icon_url) END,
+                banner_url = CASE WHEN $5 = '' THEN NULL ELSE COALESCE($5, banner_url) END,
                 visibility = COALESCE($6, visibility),
                 custom_rules = COALESCE($7, custom_rules),
                 enabled_modules = COALESCE($8, enabled_modules),
@@ -399,6 +399,17 @@ impl SpaceRepo {
         Ok(())
     }
 
+    /// 检查用户对某空间的加入申请状态
+    pub async fn get_join_request_status(&self, space_id: Uuid, user_id: Uuid) -> Result<Option<String>, AppError> {
+        let status: Option<String> = sqlx::query_scalar(
+            "SELECT status FROM space_join_requests WHERE space_id = $1 AND user_id = $2"
+        )
+        .bind(space_id).bind(user_id)
+        .fetch_optional(&self.pool).await?
+        .flatten();
+        Ok(status)
+    }
+
     /// 获取审批列表
     pub async fn list_join_requests(&self, space_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
         let rows = sqlx::query_as::<_, (Uuid, Uuid, String, Option<String>, chrono::DateTime<chrono::Utc>,)>(
@@ -503,6 +514,52 @@ impl SpaceRepo {
         .bind(space_id).fetch_optional(&self.pool).await?
         .flatten();
         Ok(count.unwrap_or(0))
+    }
+
+    /// 关注社区
+    pub async fn follow_space(&self, space_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let existing = sqlx::query_scalar::<_, Option<Uuid>>(
+            "SELECT id FROM follows WHERE follower_id = $1 AND followee_type = 'space' AND followee_id = $2"
+        )
+        .bind(user_id).bind(space_id)
+        .fetch_optional(&self.pool).await?
+        .flatten();
+
+        if existing.is_some() {
+            return Ok(true); // 已关注
+        }
+
+        sqlx::query("INSERT INTO follows (follower_id, followee_type, followee_id) VALUES ($1, 'space', $2)")
+            .bind(user_id).bind(space_id)
+            .execute(&self.pool).await?;
+
+        self.update_follower_count(space_id).await?;
+        Ok(true)
+    }
+
+    /// 取消关注社区
+    pub async fn unfollow_space(&self, space_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let result = sqlx::query(
+            "DELETE FROM follows WHERE follower_id = $1 AND followee_type = 'space' AND followee_id = $2"
+        )
+        .bind(user_id).bind(space_id)
+        .execute(&self.pool).await?;
+
+        if result.rows_affected() > 0 {
+            self.update_follower_count(space_id).await?;
+        }
+        Ok(false)
+    }
+
+    /// 检查是否已关注社区
+    pub async fn is_following_space(&self, space_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let exists = sqlx::query_scalar::<_, Option<i32>>(
+            "SELECT 1 FROM follows WHERE follower_id = $1 AND followee_type = 'space' AND followee_id = $2"
+        )
+        .bind(user_id).bind(space_id)
+        .fetch_optional(&self.pool).await?
+        .is_some();
+        Ok(exists)
     }
 
     /// 获取社区是否有密码

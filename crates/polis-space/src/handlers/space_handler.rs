@@ -495,4 +495,28 @@ impl SpaceHandler {
         .execute(&self.repo.pool)
         .await;
     }
+
+    /// 关注社区
+    pub async fn follow_space(&self, namespace: &str, user_id: Uuid) -> Result<bool, AppError> {
+        let space = self.repo.find_by_namespace(namespace).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+        let following = self.repo.follow_space(space.id, user_id).await?;
+
+        // 通知社区 owner
+        if let Some(owner_id) = space.owner_id {
+            if owner_id != user_id {
+                self.create_notification(owner_id, &space.namespace, user_id, "follow", None, None).await;
+            }
+        }
+
+        Ok(following)
+    }
+
+    /// 取消关注社区
+    pub async fn unfollow_space(&self, namespace: &str, user_id: Uuid) -> Result<bool, AppError> {
+        let space = self.repo.find_by_namespace(namespace).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+        let following = self.repo.unfollow_space(space.id, user_id).await?;
+        Ok(following)
+    }
 }

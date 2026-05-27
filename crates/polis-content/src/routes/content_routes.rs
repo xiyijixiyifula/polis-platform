@@ -456,6 +456,7 @@ async fn handle_auth_content(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let path = req.uri().path().to_string();
     let method = req.method().clone();
+    let headers = req.headers().clone();
 
     // 读取请求体
     let body_bytes = axum::body::to_bytes(req.into_body(), 10 * 1024 * 1024).await
@@ -474,6 +475,8 @@ async fn handle_auth_content(
                         .map_err(|e| AppError::Validation(format!("Invalid base64: {}", e)))?;
                     let mime_type = r.mime_type.unwrap_or_else(|| "application/octet-stream".to_string());
                     let space_id = resolve_space_id(&h.pool, &ns).await?;
+                    // 私有空间：仅成员可上传文件
+                    block_private_space_public_listing(&h.pool, space_id, &headers).await?;
                     let result = h.upload_file(space_id, uid, &r.filename, &data, &mime_type).await?;
                     Ok(json_ok(ApiResponse::success(result)))
                 }
@@ -482,6 +485,9 @@ async fn handle_auth_content(
                     let r: CreatePostRequest = serde_json::from_slice(&body_bytes)
                         .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
                     let space_id = resolve_space_id(&h.pool, &ns).await?;
+
+                    // 私有空间：仅成员可发帖（仿微信群权限模式）
+                    block_private_space_public_listing(&h.pool, space_id, &headers).await?;
 
                     // 分享模块权限校验：仅创建者可发布
                     if let Some(ref mt) = r.module_type {

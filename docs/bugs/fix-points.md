@@ -6,10 +6,10 @@
 
 | 指标 | 数值 |
 |------|------|
-| 涉及文件数 | 18 |
-| 总修复点位 | 35 |
-| 高危文件 (修复 3+ 次) | 4 |
-| 最近更新 | 2026-05-26 |
+| 涉及文件数 | 21 |
+| 总修复点位 | 45 |
+| 高危文件 (修复 3+ 次) | 6 |
+| 最近更新 | 2026-05-27 |
 
 ## 高危文件 ⚠️
 
@@ -21,6 +21,8 @@
 | `crates/polis-space/src/routes/space_routes.rs` | 4 | URL编码, DELETE路由, 中文slug | v1.0.14 |
 | `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 3 | URL编码, 模块导航, 成员列表 | v1.0.14 |
 | `web/src/components/SpaceSettings.tsx` | 2 | localStorage key, members keyMap | v1.0.14 |
+| `web/src/lib/api.ts` | 3 | URL编码, 类型修复, uploadFile | v1.0.15 |
+| `crates/polis-content/src/routes/content_routes.rs` | 3 | URL编码, 发帖权限, 上传权限 | v1.0.15 |
 
 ## 完整点位索引
 
@@ -35,6 +37,15 @@
 | `handlers/space_handler.rs` | `create_space` | title 非空验证 + 50 字符限制 | v1.0.14 | — |
 | `handlers/space_handler.rs` | `archive_space` | 软删除 (status='archived')，仅 owner | v1.0.14 | — |
 | `repo.rs` | `archive` | SQL: update status='archived' where owner match | v1.0.14 | — |
+| `repo.rs` | `update` | icon_url/banner_url: CASE WHEN 空值清除替代 COALESCE | v1.0.15 | — |
+| `repo.rs` | `follow_space` | INSERT INTO follows + update_follower_count | v1.0.15 | — |
+| `repo.rs` | `unfollow_space` | DELETE FROM follows + update_follower_count | v1.0.15 | — |
+| `repo.rs` | `is_following_space` | SELECT 1 FROM follows 存在性检查 | v1.0.15 | — |
+| `repo.rs` | `get_join_request_status` | SELECT status FROM space_join_requests | v1.0.15 | — |
+| `routes/space_routes.rs` | `handle_public_path` | 新增 /my-join-status 端点（JWT 提取，免感认证） | v1.0.15 | — |
+| `routes/space_routes.rs` | `handle_auth_path` | 新增 /follow, /unfollow 路由 | v1.0.15 | — |
+| `handlers/space_handler.rs` | `follow_space` | 关注社区 + owner 通知 | v1.0.15 | — |
+| `handlers/space_handler.rs` | `unfollow_space` | 取消关注 | v1.0.15 | — |
 
 ### 后端 — polis-content
 
@@ -46,6 +57,8 @@
 | `handlers/creation.rs` | `submit_to_community` | INSERT INTO posts 后 post_count +1 | v1.0.14 | post-count-sync |
 | `handlers/thread_handler.rs` | `publish` | INSERT INTO posts 后 post_count +1 | v1.0.14 | post-count-sync |
 | `repo.rs` | `find_posts_by_space` | SQL format!() → 12 臂 match 参数化 | v1.0.13 | — |
+| `routes/content_routes.rs` | `handle_auth_content` (POST posts) | block_private_space_public_listing 发帖门控 | v1.0.15 | — |
+| `routes/content_routes.rs` | `handle_auth_content` (POST files) | block_private_space_public_listing 上传门控 | v1.0.15 | — |
 
 ### 后端 — polis-core
 
@@ -66,6 +79,13 @@
 | `MilkdownEditor.tsx` | XSS 过滤 | javascript: href/src 属性移除 | v1.0.13 | — |
 | `Header.tsx` | 登出 | 清除 token + localStorage | v1.0.13 | — |
 | `next.config.js` | 安全头 | Permissions-Policy + CORP 头 | v1.0.13 | — |
+| `SpacePageClient.tsx` | useEffect | my-join-status 替代 /members 检查 | v1.0.15 | — |
+| `SpacePageClient.tsx` | Join button | 新增 pending 状态显示 + 禁用 | v1.0.15 | — |
+| `SpacePageClient.tsx` | Follow button | 关注/取消关注按钮 + follower_count 本地更新 | v1.0.15 | — |
+| `SpacePageClient.tsx` | Edit dialog | 图标/封面上传 (FileReader base64 → POST /files) | v1.0.15 | — |
+| `SpacePageClient.tsx` | Header | icon_url 头像显示 + banner_url 横幅背景 | v1.0.15 | — |
+| `api.ts` | `spaces.update` | 新增 icon_url/banner_url 参数 | v1.0.15 | — |
+| `api.ts` | `spaces.uploadFile` | 新增 base64 文件上传方法 | v1.0.15 | — |
 
 ### 部署 — infra
 

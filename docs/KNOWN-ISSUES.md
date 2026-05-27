@@ -71,6 +71,18 @@
 
 - **SpaceSettings members keyMap 缺失** — `persistModules` 映射表缺少 `members: 'members'`，虽通过 fallback 能工作但不一致。修复: 补充 keyMap（v1.0.14）
 
+- **私有空间发帖权限缺失（安全漏洞）** — POST /api/spaces/{ns}/posts 到私有空间时，仅认证检查，未校验成员身份。任何认证用户均可向私有空间发帖。修复: 发帖前调用 `block_private_space_public_listing`（v1.0.15）
+
+- **私有空间文件上传权限缺失（安全漏洞）** — POST /api/spaces/{ns}/files 到私有空间时未检查成员身份。修复: 上传前调用 `block_private_space_public_listing`（v1.0.15）
+
+- **加入社区无"审批中"状态显示** — 用户提交加入私有社区的申请后，按钮仍显示"加入社区"，无法区分"已申请待审批"状态。修复: 新增 `/my-join-status` 端点，前端显示"审批中..."（v1.0.15）
+
+- **无法关注社区** — 缺少关注/取消关注 API 和 UI。修复: 新增 `/follow` `/unfollow` 端点 + 前端关注按钮 + owner 通知（v1.0.15）
+
+- **社区缺少图标/封面上传功能** — `icon_url`/`banner_url` 字段已存在但无上传 UI。修复: 编辑对话框新增图标/封面上传（base64），header 展示图标和横幅（v1.0.15）
+
+- **icon_url/banner_url 无法清除** — 更新逻辑使用 COALESCE，NULL 时保留旧值，导致"移除"按钮不生效。修复: 改为 `CASE WHEN $4 = '' THEN NULL ELSE COALESCE(...)`（v1.0.15）
+
 ## 部署前预防清单
 
 > 每次部署前过一遍，防止已知 Bug 回归。详见 [docs/bugs/INDEX.md](bugs/INDEX.md)

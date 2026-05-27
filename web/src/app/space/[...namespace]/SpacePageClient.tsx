@@ -13,7 +13,7 @@ import SpaceStore from '@/components/SpaceStore';
 import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Star, Grid3X3, List, Filter } from 'lucide-react';
 import NovelCard, { adaptPostToNovel } from '@/components/NovelCard';
 import QACard from '@/components/QACard';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, ImageIcon } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
 import { getModuleLabel, getModuleEmoji, buildPostLink } from '@/lib/module-config';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
@@ -82,6 +82,9 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  const [joining, setJoining] = useState(false);
  const [joinMessage, setJoinMessage] = useState('');
  const [showJoinInput, setShowJoinInput] = useState(false);
+ const [joinStatus, setJoinStatus] = useState<string>('none');
+ const [isFollowing, setIsFollowing] = useState(false);
+ const [followLoading, setFollowLoading] = useState(false);
 
  // Active tab - default to overview (GitHub style)
  const availableTabs = [
@@ -171,8 +174,10 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
 
  // Edit community state
  const [showEditDialog, setShowEditDialog] = useState(false);
- const [editForm, setEditForm] = useState({ title: '', description: '' });
+ const [editForm, setEditForm] = useState({ title: '', description: '', icon_url: '', banner_url: '' });
  const [editSaving, setEditSaving] = useState(false);
+ const [uploadingIcon, setUploadingIcon] = useState(false);
+ const [uploadingBanner, setUploadingBanner] = useState(false);
 
  useEffect(() => {
  try {
@@ -180,23 +185,21 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  if (stored && space) {
  const me = JSON.parse(stored);
  setIsOwner(me.id === space.owner_id);
- // 检查当前用户是否已是成员
+ // 检查当前用户是否已是成员 + 加入申请状态
  const token = getToken();
  if (token && cleanNamespace) {
- fetch(`/api/spaces/${cleanNamespace}/members`, {
+ fetch(`/api/spaces/${cleanNamespace}/my-join-status`, {
  headers: { Authorization: `Bearer ${token}` },
  })
  .then(r => r.json())
  .then(data => {
- if (data.code === 0 && Array.isArray(data.data)) {
- const found = data.data.some((m: any) =>
- (m.user?.id || m.user_id) === me.id
- );
- setIsMember(found);
+ if (data.code === 0 && data.data) {
+ setIsMember(data.data.is_member ?? false);
+ setJoinStatus(data.data.join_status ?? 'none');
+ setIsFollowing(data.data.is_following ?? false);
  }
  })
  .catch(() => {});
-
  }
  }
  } catch (_) {}
@@ -474,11 +477,19 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  return (
  <div className="mx-auto max-w-7xl px-4 py-6">
  {/* Community Header - GitHub Style with Particles */}
- <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-50 to-white dark:from-slate-900 dark:to-slate-800 p-6 mb-6">
+ <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-50 to-white dark:from-slate-900 dark:to-slate-800 mb-6">
+ {space.banner_url && (
+ <div className="h-32 w-full bg-cover bg-center" style={{ backgroundImage: `url(${space.banner_url})` }} />
+ )}
+ <div className="p-6">
  <SpaceParticles color="16, 185, 129" />
  <div className="relative z-10 flex items-start gap-4">
- <div className="h-16 w-16 shrink-0 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl">
- {space.title.charAt(0)}
+ <div className="h-16 w-16 shrink-0 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden">
+ {space.icon_url ? (
+ <img src={space.icon_url} className="h-full w-full object-cover" alt="" />
+ ) : (
+ space.title.charAt(0)
+ )}
  </div>
  <div className="flex-1 min-w-0">
  <div className="flex items-center gap-3 flex-wrap">
@@ -499,7 +510,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  {isOwner && (
  <button
  onClick={() => {
- setEditForm({ title: space.title, description: space.description || '' });
+ setEditForm({ title: space.title, description: space.description || '', icon_url: space.icon_url || '', banner_url: space.banner_url || '' });
  setShowEditDialog(true);
  }}
  className="p-1 rounded-lg text-gray-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
@@ -528,6 +539,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  <div className="mt-3 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
  <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {formatCount(space.member_count)} 成员</span>
  <span>{formatCount(space.post_count)} 帖子</span>
+ <span>{formatCount(space.follower_count || 0)} 关注</span>
  {announcements.length > 0 && (
  <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
  <Megaphone className="h-4 w-4" /> {announcements.length} 条公告
@@ -541,11 +553,13 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  className={`text-sm px-5 py-2 rounded-lg transition-colors ${
  isOwner || isMember
  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 cursor-default'
+ : joinStatus === 'pending'
+ ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 cursor-default'
  : 'btn-primary'
  }`}
- disabled={isOwner || isMember || joining}
+ disabled={isOwner || isMember || joining || joinStatus === 'pending'}
  onClick={async () => {
- if (isOwner || isMember) return;
+ if (isOwner || isMember || joinStatus === 'pending') return;
  const token = getToken();
  if (!token) { alert('请先登录'); return; }
  setJoining(true);
@@ -569,8 +583,39 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  setJoining(false);
  }}
  >
- {isOwner ? '我的社区' : isMember ? '✓ 已加入' : joining ? '加入中...' : '加入社区'}
+ {isOwner ? '我的社区' : isMember ? '✓ 已加入' : joinStatus === 'pending' ? '审批中...' : joining ? '加入中...' : '加入社区'}
  </button>
+ {!isOwner && (
+ <button
+ className={`text-sm px-4 py-2 rounded-lg transition-colors ${
+ isFollowing
+ ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+ : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+ }`}
+ disabled={followLoading}
+ onClick={async () => {
+ const token = getToken();
+ if (!token) { alert('请先登录'); return; }
+ setFollowLoading(true);
+ try {
+ if (isFollowing) {
+ await apiSpaces.unfollow(cleanNamespace);
+ setIsFollowing(false);
+ setSpace(prev => prev ? { ...prev, follower_count: Math.max(0, (prev.follower_count || 0) - 1) } : prev);
+ } else {
+ await apiSpaces.follow(cleanNamespace);
+ setIsFollowing(true);
+ setSpace(prev => prev ? { ...prev, follower_count: (prev.follower_count || 0) + 1 } : prev);
+ }
+ } catch (e: any) {
+ alert(e?.message || '操作失败');
+ }
+ setFollowLoading(false);
+ }}
+ >
+ {isFollowing ? '已关注' : followLoading ? '...' : '关注'}
+ </button>
+ )}
  {!isOwner && !isMember && showJoinInput && (
  <div className="flex items-center gap-1">
  <input
@@ -596,6 +641,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  附言申请
  </button>
  )}
+ </div>
  </div>
  </div>
  </div>
@@ -690,6 +736,80 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  rows={3}
  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
  </div>
+ <div>
+ <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">图标</label>
+ <div className="flex items-center gap-3">
+ {editForm.icon_url ? (
+ <img src={editForm.icon_url} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+ ) : (
+ <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400">
+ <ImageIcon className="h-5 w-5" />
+ </div>
+ )}
+ <label className="flex-1">
+ <input type="file" accept="image/*" className="hidden" disabled={uploadingIcon}
+ onChange={async (e) => {
+ const file = e.target.files?.[0];
+ if (!file) return;
+ if (file.size > 2 * 1024 * 1024) { alert('图标不能超过 2MB'); return; }
+ setUploadingIcon(true);
+ try {
+ const dataBase64 = await new Promise<string>((resolve, reject) => {
+ const reader = new FileReader();
+ reader.onload = () => resolve((reader.result as string).split(',')[1]);
+ reader.onerror = reject;
+ reader.readAsDataURL(file);
+ });
+ const result = await apiSpaces.uploadFile(cleanNamespace, file.name, dataBase64, file.type);
+ if (result.data) { const url = `/api/files/${result.data.id}`; setEditForm(prev => ({ ...prev, icon_url: url })); }
+ } catch (e: any) { alert(e?.message || '上传失败'); }
+ setUploadingIcon(false);
+ }}
+ />
+ <span className="px-3 py-2 text-sm border border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary-400 text-gray-500 hover:text-primary-600 transition-colors block text-center">
+ {uploadingIcon ? '上传中...' : editForm.icon_url ? '更换图标' : '选择图标'}
+ </span>
+ </label>
+ {editForm.icon_url && (
+ <button type="button" className="text-xs text-red-400 hover:text-red-600" onClick={() => setEditForm(prev => ({ ...prev, icon_url: '' }))}>移除</button>
+ )}
+ </div>
+ </div>
+ <div>
+ <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">封面</label>
+ <div className="space-y-2">
+ {editForm.banner_url && (
+ <img src={editForm.banner_url} alt="" className="w-full h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+ )}
+ <label>
+ <input type="file" accept="image/*" className="hidden" disabled={uploadingBanner}
+ onChange={async (e) => {
+ const file = e.target.files?.[0];
+ if (!file) return;
+ if (file.size > 5 * 1024 * 1024) { alert('封面不能超过 5MB'); return; }
+ setUploadingBanner(true);
+ try {
+ const dataBase64 = await new Promise<string>((resolve, reject) => {
+ const reader = new FileReader();
+ reader.onload = () => resolve((reader.result as string).split(',')[1]);
+ reader.onerror = reject;
+ reader.readAsDataURL(file);
+ });
+ const result = await apiSpaces.uploadFile(cleanNamespace, file.name, dataBase64, file.type);
+ if (result.data) { const url = `/api/files/${result.data.id}`; setEditForm(prev => ({ ...prev, banner_url: url })); }
+ } catch (e: any) { alert(e?.message || '上传失败'); }
+ setUploadingBanner(false);
+ }}
+ />
+ <span className="px-3 py-2 text-sm border border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary-400 text-gray-500 hover:text-primary-600 transition-colors block text-center">
+ {uploadingBanner ? '上传中...' : editForm.banner_url ? '更换封面' : '选择封面 (推荐 1200×400)'}
+ </span>
+ </label>
+ {editForm.banner_url && (
+ <button type="button" className="text-xs text-red-400 hover:text-red-600" onClick={() => setEditForm(prev => ({ ...prev, banner_url: '' }))}>移除封面</button>
+ )}
+ </div>
+ </div>
  </div>
  <div className="flex items-center justify-end gap-2 mt-4">
  <button onClick={() => setShowEditDialog(false)}
@@ -700,8 +820,10 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  await apiSpaces.update(cleanNamespace, {
  title: editForm.title.trim() || undefined,
  description: editForm.description.trim() || undefined,
+ icon_url: editForm.icon_url,
+ banner_url: editForm.banner_url,
  });
- setSpace((prev: any) => prev ? { ...prev, title: editForm.title, description: editForm.description } : prev);
+ setSpace((prev: any) => prev ? { ...prev, title: editForm.title, description: editForm.description, icon_url: editForm.icon_url, banner_url: editForm.banner_url } : prev);
  setShowEditDialog(false);
  } catch (e: any) { alert(e?.message || '保存失败'); }
  setEditSaving(false);

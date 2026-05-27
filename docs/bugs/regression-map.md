@@ -95,6 +95,11 @@ v1.0.14 thread_handler::publish（遗漏 post_count +1）← 回归 #2
 | 所有含 `.map()` 的组件 | Chain #3 | 15+ | 必须 `?.map()` 或 `?? []` |
 | `crates/polis-content/src/handlers/creation.rs` | Chain #4 | 1 | 新增 INSERT INTO posts 必须同步 post_count |
 | `crates/polis-content/src/handlers/thread_handler.rs` | Chain #4 | 1 | 同上 |
+| `crates/polis-content/src/routes/content_routes.rs` | — | 3 | POST/PUT 操作前需检查 `block_private_space_public_listing` |
+| `crates/polis-space/src/routes/space_routes.rs` | — | 5 | 新增 actions_suffixes + actions 数组项时保持同步 |
+| `crates/polis-space/src/repo.rs` | — | 5 | COALESCE vs CASE WHEN 空值清除语义区分 |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | — | 8 | 社区页面核心组件，修改时审查所有状态依赖 |
+| `web/src/lib/api.ts` | — | 3 | 新增 API 方法注意 ApiResponse<T> 包装类型 |
 
 ## 如何使用本文件
 

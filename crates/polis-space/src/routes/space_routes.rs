@@ -90,7 +90,7 @@ async fn handle_public_path(
     }
 
     // 提取 namespace（去掉尾部动作）
-    let actions_suffixes = ["/members", "/join", "/leave", "/posts", "/featured", "/bookmarks", "/join-requests"];
+    let actions_suffixes = ["/members", "/join", "/leave", "/posts", "/featured", "/bookmarks", "/join-requests", "/my-join-status"];
     let mut ns = remaining;
     for suffix in &actions_suffixes {
         if let Some(stripped) = remaining.strip_suffix(suffix) {
@@ -104,6 +104,24 @@ async fn handle_public_path(
         let space = handler.get_space(&decoded_ns).await?;
         let members = handler.repo.get_members_with_users(space.id).await.unwrap_or_default();
         return Ok(Json(serde_json::json!({"code": 0, "data": members})));
+    }
+
+    // 查询当前用户在该空间的加入申请状态
+    if remaining.ends_with("/my-join-status") {
+        let user_id = extract_user_id_from_headers(req.headers()).await?;
+        let decoded_ns = decode_namespace(ns)?;
+        let space = handler.get_space(&decoded_ns).await?;
+        let status = handler.repo.get_join_request_status(space.id, user_id).await.unwrap_or(None);
+        let is_member = handler.repo.get_member_role(space.id, user_id).await.ok().flatten().is_some();
+        let is_following = handler.repo.is_following_space(space.id, user_id).await.unwrap_or(false);
+        return Ok(Json(serde_json::json!({
+            "code": 0,
+            "data": {
+                "join_status": status.unwrap_or_else(|| if is_member { "approved".to_string() } else { "none".to_string() }),
+                "is_member": is_member,
+                "is_following": is_following
+            }
+        })));
     }
 
     // 需要认证的 GET 端点：从 Authorization header 中提取 user_id
@@ -169,6 +187,7 @@ async fn handle_auth_path(
         "/members/ban", "/members/role", "/members/unban",
         "/join-requests", "/join-requests/review",
         "/verify-password",
+        "/follow", "/unfollow",
     ];
     let mut ns = remaining;
     for action in &actions {
@@ -262,6 +281,16 @@ async fn handle_auth_path(
             &body.password,
         ).await.unwrap_or(false);
         return Ok(Json(serde_json::json!({"code": 0, "data": {"valid": valid}, "message": "ok"})));
+    }
+
+    if remaining.ends_with("/follow") && method == axum::http::Method::POST {
+        let following = handler.follow_space(&decoded_ns, user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": {"following": following}, "message": "ok"})));
+    }
+
+    if remaining.ends_with("/unfollow") && method == axum::http::Method::POST {
+        let following = handler.unfollow_space(&decoded_ns, user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": {"following": following}, "message": "ok"})));
     }
 
     if method == axum::http::Method::PUT {
