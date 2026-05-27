@@ -18,6 +18,9 @@ pub struct User {
     pub verified: bool,
     pub verified_type: Option<String>,
     pub notification_prefs: serde_json::Value,
+    pub banned: bool,
+    pub banned_at: Option<DateTime<Utc>>,
+    pub ban_reason: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -215,6 +218,7 @@ pub struct Post {
     pub metadata: serde_json::Value,
     /// 分享密码（明文，NULL 表示无密码保护）
     pub password_hash: Option<String>,
+    pub hidden_until: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

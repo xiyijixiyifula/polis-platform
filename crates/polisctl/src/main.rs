@@ -857,6 +857,23 @@ enum AdminUsersAction {
     Unban {
         user_id: String,
     },
+    /// Hide all public works of a user (creations + posts)
+    HideWorks {
+        user_id: String,
+        /// Reason for hiding
+        #[arg(short, long, default_value = "violation")]
+        reason: String,
+        /// Auto-restore after N hours
+        #[arg(short, long)]
+        duration: Option<i32>,
+    },
+    /// Set all public spaces of a user to private
+    HideSpaces {
+        user_id: String,
+        /// Reason for hiding
+        #[arg(short, long, default_value = "violation")]
+        reason: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -908,9 +925,12 @@ enum AdminPostsAction {
         #[arg(short, long)]
         reason: Option<String>,
     },
-    /// Admin hide a post
+    /// Admin hide a post (with optional auto-restore duration)
     Hide {
         post_id: String,
+        /// Auto-restore after N hours (hidden_until = NOW + duration)
+        #[arg(short, long)]
+        duration: Option<i32>,
     },
     /// Admin unhide a post
     Unhide {
@@ -1294,6 +1314,8 @@ async fn main() -> Result<(), anyhow::Error> {
                 AdminUsersAction::Get { user_id } => commands::admin::users_get(&config, &client, &user_id).await,
                 AdminUsersAction::Ban { user_id, reason } => commands::admin::users_ban(&config, &client, &user_id, &reason).await,
                 AdminUsersAction::Unban { user_id } => commands::admin::users_unban(&config, &client, &user_id).await,
+                AdminUsersAction::HideWorks { user_id, reason, duration } => commands::admin::users_hide_works(&config, &client, &user_id, &reason, duration).await,
+                AdminUsersAction::HideSpaces { user_id, reason } => commands::admin::users_hide_spaces(&config, &client, &user_id, &reason).await,
             },
             AdminAction::Spaces(sub) => match sub {
                 AdminSpacesAction::List { page, size } => commands::admin::spaces_list(&config, &client, page, size).await,
@@ -1306,7 +1328,7 @@ async fn main() -> Result<(), anyhow::Error> {
                 AdminPostsAction::Delete { post_id } => commands::admin::posts_delete(&config, &client, &post_id).await,
                 AdminPostsAction::Approve { post_id } => commands::admin::posts_approve(&config, &client, &post_id).await,
                 AdminPostsAction::Reject { post_id, reason } => commands::admin::posts_reject(&config, &client, &post_id, reason.as_deref()).await,
-                AdminPostsAction::Hide { post_id } => commands::admin::posts_hide(&config, &client, &post_id).await,
+                AdminPostsAction::Hide { post_id, duration } => commands::admin::posts_hide(&config, &client, &post_id, duration).await,
                 AdminPostsAction::Unhide { post_id } => commands::admin::posts_unhide(&config, &client, &post_id).await,
                 AdminPostsAction::Feature { post_id } => commands::admin::posts_feature(&config, &client, &post_id).await,
                 AdminPostsAction::Unfeature { post_id } => commands::admin::posts_unfeature(&config, &client, &post_id).await,

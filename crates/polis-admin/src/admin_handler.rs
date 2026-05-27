@@ -71,15 +71,21 @@ impl AdminHandler {
     }
 
     pub async fn ban_user(&self, admin_id: Uuid, user_id: Uuid, reason: &str) -> Result<(), AppError> {
-        sqlx::query("UPDATE users SET verified = FALSE, bio = CONCAT('[已封禁] ', $2) WHERE id = $1")
+        sqlx::query("UPDATE users SET banned = TRUE, banned_at = NOW(), ban_reason = $2, verified = FALSE WHERE id = $1")
             .bind(user_id).bind(reason).execute(&self.pool).await?;
+        // 同时将该用户的所有作品设为 private
+        let _ = sqlx::query("UPDATE creations SET visibility = 'private' WHERE creator_id = $1 AND visibility = 'public'")
+            .bind(user_id).execute(&self.pool).await;
+        // 将该用户的公开帖子隐藏
+        let _ = sqlx::query("UPDATE posts SET visibility = 'hidden' WHERE author_id = $1 AND visibility = 'public' AND is_deleted = FALSE")
+            .bind(user_id).execute(&self.pool).await;
         self.audit_log(admin_id, "admin", "user", user_id, "ban", Some("active"), Some("banned"), Some(reason)).await;
         tracing::info!("Admin {} banned user {}: {}", admin_id, user_id, reason);
         Ok(())
     }
 
     pub async fn unban_user(&self, admin_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
-        sqlx::query("UPDATE users SET verified = TRUE WHERE id = $1")
+        sqlx::query("UPDATE users SET banned = FALSE, banned_at = NULL, ban_reason = NULL, verified = TRUE WHERE id = $1")
             .bind(user_id).execute(&self.pool).await?;
         self.audit_log(admin_id, "admin", "user", user_id, "unban", Some("banned"), Some("active"), None).await;
         Ok(())
@@ -141,18 +147,59 @@ impl AdminHandler {
         Ok(())
     }
 
-    pub async fn hide_post(&self, admin_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
-        sqlx::query("UPDATE posts SET visibility = 'hidden' WHERE id = $1")
-            .bind(post_id).execute(&self.pool).await?;
+    pub async fn hide_post(&self, admin_id: Uuid, post_id: Uuid, duration_hours: Option<i32>) -> Result<(), AppError> {
+        if let Some(hours) = duration_hours {
+            sqlx::query("UPDATE posts SET visibility = 'hidden', hidden_until = NOW() + ($1 || ' hours')::interval WHERE id = $2")
+                .bind(hours).bind(post_id).execute(&self.pool).await?;
+        } else {
+            sqlx::query("UPDATE posts SET visibility = 'hidden' WHERE id = $1")
+                .bind(post_id).execute(&self.pool).await?;
+        }
         self.audit_log(admin_id, "admin", "post", post_id, "hide", Some("public"), Some("hidden"), None).await;
         Ok(())
     }
 
     pub async fn unhide_post(&self, admin_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
-        sqlx::query("UPDATE posts SET visibility = 'public' WHERE id = $1")
+        sqlx::query("UPDATE posts SET visibility = 'public', hidden_until = NULL WHERE id = $1")
             .bind(post_id).execute(&self.pool).await?;
         self.audit_log(admin_id, "admin", "post", post_id, "unhide", Some("hidden"), Some("public"), None).await;
         Ok(())
+    }
+
+    /// 隐藏用户所有公开作品和帖子（不解封，仅隐藏内容）
+    pub async fn hide_user_works(&self, admin_id: Uuid, user_id: Uuid, reason: &str, duration_hours: Option<i32>) -> Result<serde_json::Value, AppError> {
+        let creations_count = sqlx::query(
+            "UPDATE creations SET visibility = 'private' WHERE creator_id = $1 AND visibility = 'public'"
+        ).bind(user_id).execute(&self.pool).await?.rows_affected();
+
+        let posts_count = if let Some(hours) = duration_hours {
+            sqlx::query(
+                "UPDATE posts SET visibility = 'hidden', hidden_until = NOW() + ($2 || ' hours')::interval WHERE author_id = $1 AND visibility = 'public' AND is_deleted = FALSE"
+            ).bind(user_id).bind(hours).execute(&self.pool).await?.rows_affected()
+        } else {
+            sqlx::query(
+                "UPDATE posts SET visibility = 'hidden' WHERE author_id = $1 AND visibility = 'public' AND is_deleted = FALSE"
+            ).bind(user_id).execute(&self.pool).await?.rows_affected()
+        };
+
+        self.audit_log(admin_id, "admin", "user", user_id, "hide_works", Some("public"), Some("hidden"), Some(reason)).await;
+        tracing::info!("Admin {} hid {} creations + {} posts of user {}: {}", admin_id, creations_count, posts_count, user_id, reason);
+
+        Ok(serde_json::json!({
+            "creations_hidden": creations_count,
+            "posts_hidden": posts_count,
+        }))
+    }
+
+    /// 将用户所有社区设为不公开
+    pub async fn hide_user_spaces(&self, admin_id: Uuid, user_id: Uuid, reason: &str) -> Result<i64, AppError> {
+        let count = sqlx::query(
+            "UPDATE spaces SET visibility = 'private' WHERE owner_id = $1 AND visibility = 'public'"
+        ).bind(user_id).execute(&self.pool).await?.rows_affected() as i64;
+
+        self.audit_log(admin_id, "admin", "user", user_id, "hide_spaces", Some("public"), Some("private"), Some(reason)).await;
+        tracing::info!("Admin {} hid {} spaces of user {}: {}", admin_id, count, user_id, reason);
+        Ok(count)
     }
 
     // ==================== 举报管理 (增强版：联动审核) ====================
@@ -207,7 +254,7 @@ impl AdminHandler {
                 let reason = target_action_reason.unwrap_or("举报联动处理");
                 match (target_type.as_str(), ta) {
                     ("post", "hide") => {
-                        self.hide_post(handled_by, target_id).await?;
+                        self.hide_post(handled_by, target_id, None).await?;
                         linked_actions.push("post.hide".to_string());
                     }
                     ("post", "delete") => {
@@ -271,7 +318,7 @@ impl AdminHandler {
                     self.reject_post(admin_id, item.target_id, req.reason.as_deref().unwrap_or("批量审核")).await.map(|_| "rejected").unwrap_or("error").to_string()
                 }
                 ("post", "hide") => {
-                    self.hide_post(admin_id, item.target_id).await.map(|_| "hidden").unwrap_or("error").to_string()
+                    self.hide_post(admin_id, item.target_id, None).await.map(|_| "hidden").unwrap_or("error").to_string()
                 }
                 ("post", "delete") => {
                     self.delete_post(admin_id, item.target_id).await.map(|_| "deleted").unwrap_or("error").to_string()

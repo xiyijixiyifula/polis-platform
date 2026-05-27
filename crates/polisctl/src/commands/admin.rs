@@ -76,6 +76,26 @@ pub async fn users_unban(
     Ok(())
 }
 
+pub async fn users_hide_works(
+    config: &Config, client: &HttpClient, user_id: &str, reason: &str, duration_hours: Option<i32>,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let body = json!({"reason": reason, "duration_hours": duration_hours});
+    let resp = client.post(&format!("/api/admin/users/{}/hide-works", user_id), Some(&token), &body).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
+pub async fn users_hide_spaces(
+    config: &Config, client: &HttpClient, user_id: &str, reason: &str,
+) -> Result<(), anyhow::Error> {
+    let token = config.require_admin()?;
+    let body = json!({"reason": reason});
+    let resp = client.post(&format!("/api/admin/users/{}/hide-spaces", user_id), Some(&token), &body).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
+
 pub async fn spaces_list(
     config: &Config, client: &HttpClient, page: u32, size: u32,
 ) -> Result<(), anyhow::Error> {
@@ -212,11 +232,16 @@ pub async fn posts_reject(
 }
 
 pub async fn posts_hide(
-    config: &Config, client: &HttpClient, post_id: &str,
+    config: &Config, client: &HttpClient, post_id: &str, duration_hours: Option<i32>,
 ) -> Result<(), anyhow::Error> {
     let token = config.require_admin()?;
-    let _resp = client.post(&format!("/api/admin/posts/{}/hide", post_id), Some(&token), &json!({})).await?;
-    print_success(&format!("Post {} hidden", post_id));
+    let body = json!({"duration_hours": duration_hours});
+    let _resp = client.post(&format!("/api/admin/posts/{}/hide", post_id), Some(&token), &body).await?;
+    if let Some(h) = duration_hours {
+        print_success(&format!("Post {} hidden (auto-restore in {}h)", post_id, h));
+    } else {
+        print_success(&format!("Post {} hidden", post_id));
+    }
     Ok(())
 }
 

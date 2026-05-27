@@ -6,11 +6,11 @@
 
 | 指标 | 数值 |
 |------|------|
-| 总修复数 | 38 |
+| 总修复数 | 44 |
 | 已归类 Pattern | 5 |
 | 回归链数 | 4 |
 | 总复发次数 | 5（URL编码 ×3 + xattr ×2 + Array.map ×1） |
-| 复发率 | 13.2%（5/38） |
+| 复发率 | 11.4%（5/44） |
 | 修复配方数 | 5 |
 | 修复点位地图 | [fix-points.md](fix-points.md) |
 | 最近更新 | 2026-05-27 |
@@ -76,6 +76,10 @@
 - [ ] 私有空间 API：`handle_auth_content` 中每个 POST/PUT 操作前是否调用 `block_private_space_public_listing`
 - [ ] 新增的枚举值/状态（如 joinStatus）是否在 `handle_auth_path` 的 actions_suffixes 数组中
 - [ ] icon_url/banner_url 更新使用 CASE WHEN（空值即清除），非 COALESCE
+- [ ] `grep -rn "title:\s*slug" web/src/app/create/` 检查创建社区 title 参数是否被错误 slug 化
+- [ ] 新增 DB visibility 值时同步更新 `Visibility` 枚举（types.rs）+ `Display` impl
+- [ ] `grep -rn "post\.visibility" crates/polis-content/` 检查是否使用 effective_visibility 而非原始 DB 值
+- [ ] 审核系统：封禁用户后 `grep -rn "banned" crates/polis-user/` 确认登录路径有 banned 检查
 
 ## 回归热度图
 
@@ -107,4 +111,4 @@
 | `space_routes.rs` | 5 | 统一路由注册宏（消除 actions_suffixes 手动维护） | 🟡 中 |
 | `content_routes.rs` | 3 | 中间件统一权限门控（替代每次手写 block_private 调用） | 🟡 中 |
 | `SpacePageClient.tsx` | 8 | 拆分为多个小组件（post/join/follow/edit 独立管理状态） | 🟢 低 |
-| `repo.rs` (space) | 8 | COALESCE vs CASE WHEN 语义统一化 | 🟢 低 |
+| `types.rs` (Visibility) | 1 | DB 新增 visibility 值 → 同步更新 enum + Display + serde | 🟡 中 |

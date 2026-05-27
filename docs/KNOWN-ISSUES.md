@@ -83,6 +83,16 @@
 
 - **icon_url/banner_url 无法清除** — 更新逻辑使用 COALESCE，NULL 时保留旧值，导致"移除"按钮不生效。修复: 改为 `CASE WHEN $4 = '' THEN NULL ELSE COALESCE(...)`（v1.0.15）
 
+- **创建社区标题被 slug 化（BUG-11）** — `create/page.tsx` 中 `handleCreate` 将 `slug`（已 slugify 处理的小写/无特殊字符版本）作为 `title` 传给 API，导致用户输入的原始标题（如 "TestCommunity_17686"）丢失，变成全小写无下划线版本。修复: `title: slug` → `title: title.trim()`，保留用户原始输入（v1.0.17）
+
+- **deriveSlug 不保留下划线（BUG-12）** — `create/page.tsx` 中 `deriveSlug` 正则会过滤 `_`，导致 slug 中下划线丢失，命名空间与用户预期不一致。修复: 正则字符类中添加 `_`（v1.0.17）
+
+- **前端缺少删除社区按钮（BUG-13）** — `SpacePageClient.tsx` 已有编辑按钮但无删除功能，用户无法清理误创建的社区。修复: 新增 Trash2 删除按钮 + Fragment 包裹多个子元素（v1.0.17）
+
+- **Visibility 枚举缺失 Hidden 变体** — 审核系统新增 `visibility='hidden'` 状态，但 `Visibility` 枚举只有 Public/Private/Unlisted。serde_json 反序列化 "hidden" 失败时 fallback 到 `Default::Public`，导致隐藏帖子 API 返回 `visibility: public`。修复: 新增 `Hidden` 变体 + serde rename="hidden" + Display impl（v1.0.18）
+
+- **PostPublic 使用原始 visibility 而非 effective_visibility** — `get_post_public` 计算了 auto-restore 后的 effective_visibility，但构造 PostPublic 时错误使用 `post.visibility`（DB 原始值），导致首次 GET 返回过期 visibility。修复: 将 `post.visibility` 替换为 `effective_visibility`（v1.0.18）
+
 ## 部署前预防清单
 
 > 每次部署前过一遍，防止已知 Bug 回归。详见 [docs/bugs/INDEX.md](bugs/INDEX.md)

@@ -6,10 +6,10 @@
 
 | 指标 | 数值 |
 |------|------|
-| 回归链总数 | 4 |
+| 回归链总数 | 5 |
 | 跨层回归（后端↔前端） | 1 |
-| 同层回归 | 3 |
-| 涉及脆弱文件 | 6 |
+| 同层回归 | 4 |
+| 涉及脆弱文件 | 8 |
 
 ## 回归链
 
@@ -83,6 +83,24 @@ v1.0.14 thread_handler::publish（遗漏 post_count +1）← 回归 #2
 | **扩散路径** | content_handler → creation → thread_handler |
 | **根除方案** | 数据库触发器或统一抽象层（尚未实施）；修复配方已编写 |
 
+### Chain #5: Visibility 枚举不同步 — 审核系统新增 DB 值引发序列化 Bug
+
+```
+v1.0.18 Feature (审核系统新增 visibility='hidden')
+    ↓ DB 写入 'hidden' 但 Visibility enum 无此变体
+v1.0.18 Bug (隐藏帖子 API 返回 visibility: public)
+    ↓ serde_json 反序列化 "hidden" 失败 → unwrap_or_default() → Visibility::Public
+    ↓ 同时 PostPublic 使用 post.visibility (原始值) 而非 effective_visibility
+```
+
+| 属性 | 值 |
+|------|-----|
+| **根因** | `types.rs::Visibility` enum 与 DB `visibility` 列的有效值不同步 |
+| **脆弱点** | 所有 `serde_json::from_str(format!("\"{}\"", post.visibility))` 的转换点 |
+| **触发条件** | 新增 DB visibility 值但未更新 Visibility enum + Display + serde rename |
+| **扩散路径** | admin_handler (SET visibility='hidden') → content_handler (读取) → PostPublic (序列化) |
+| **预防方案** | 新增 visibility 值时 search `enum Visibility` → 同步添加变体 + Display |
+
 ## 脆弱文件清单
 
 这些文件多次出现在修复记录中，修改时需额外注意：
@@ -98,8 +116,10 @@ v1.0.14 thread_handler::publish（遗漏 post_count +1）← 回归 #2
 | `crates/polis-content/src/routes/content_routes.rs` | — | 3 | POST/PUT 操作前需检查 `block_private_space_public_listing` |
 | `crates/polis-space/src/routes/space_routes.rs` | — | 5 | 新增 actions_suffixes + actions 数组项时保持同步 |
 | `crates/polis-space/src/repo.rs` | — | 5 | COALESCE vs CASE WHEN 空值清除语义区分 |
-| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | — | 8 | 社区页面核心组件，修改时审查所有状态依赖 |
-| `web/src/lib/api.ts` | — | 3 | 新增 API 方法注意 ApiResponse<T> 包装类型 |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | — | 9 | 社区页面核心组件，修改时审查所有状态依赖 |
+| `web/src/lib/api.ts` | — | 4 | 新增 API 方法注意 ApiResponse<T> 包装类型 |
+| `web/src/app/create/page.tsx` | — | 2 | title 参数检查 + deriveSlug 正则字符集维护 |
+| `crates/polis-core/src/types.rs` | Chain #5 | 1 | Visibility 枚举必须与 DB visibility 有效值同步 |
 
 ## 如何使用本文件
 

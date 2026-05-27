@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use chrono::Utc;
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
 use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscription, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, Pagination, Post, PostPublic, PostReference, SeriesPublic, UpdatePostRequest, UnlockPostRequest, UserPublic, PaginationParams,
@@ -448,8 +449,22 @@ impl ContentHandler {
             .await?
             .ok_or(AppError::NotFound("Post not found".to_string()))?;
 
+        // 检查隐藏时限是否到期，到期自动恢复
+        let effective_visibility = if post.visibility == "hidden" && post.hidden_until.is_some() {
+            let expired = post.hidden_until.unwrap() <= Utc::now();
+            if expired {
+                let _ = sqlx::query("UPDATE posts SET visibility = 'public', hidden_until = NULL WHERE id = $1")
+                    .bind(post_id).execute(&self.repo.pool).await;
+                "public".to_string()
+            } else {
+                "hidden".to_string()
+            }
+        } else {
+            post.visibility.clone()
+        };
+
         // SEC-002: Private posts are only accessible by the author
-        if post.visibility == "private" {
+        if effective_visibility == "private" {
             match current_user_id {
                 Some(uid) if uid == post.author_id => {} // OK — author can view own private post
                 _ => return Err(AppError::Forbidden("This post is private".to_string())),
@@ -510,7 +525,7 @@ impl ContentHandler {
             content_type: serde_json::from_str(&format!("\"{}\"", post.content_type)).unwrap_or_default(),
             media_urls: serde_json::from_value(post.media_urls).unwrap_or_default(),
             tags: serde_json::from_value(post.tags).unwrap_or_default(),
-            visibility: serde_json::from_str(&format!("\"{}\"", post.visibility)).unwrap_or_default(),
+            visibility: serde_json::from_str(&format!("\"{}\"", effective_visibility)).unwrap_or_default(),
             is_pinned: post.is_pinned,
             is_featured: post.is_featured,
             view_count: post.view_count,

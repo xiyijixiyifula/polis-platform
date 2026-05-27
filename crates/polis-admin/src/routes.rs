@@ -49,6 +49,8 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
         .route("/api/admin/users/{id}/ban", post(ban_user))
         .route("/api/admin/users/{id}/unban", post(unban_user))
         .route("/api/admin/users/{id}/verify", post(verify_user))
+        .route("/api/admin/users/{id}/hide-works", post(hide_user_works))
+        .route("/api/admin/users/{id}/hide-spaces", post(hide_user_spaces))
         // 社区管理
         .route("/api/admin/spaces", get(get_spaces))
         .route("/api/admin/spaces/{id}", get(get_space_detail))
@@ -223,6 +225,37 @@ async fn verify_user(
     Ok(Json(ApiResponse::success(())))
 }
 
+#[derive(Deserialize)]
+pub struct HideWorksRequest {
+    pub reason: String,
+    pub duration_hours: Option<i32>,
+}
+
+async fn hide_user_works(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+    Extension(admin_id): Extension<Uuid>,
+    Json(req): Json<HideWorksRequest>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let result = handler.hide_user_works(admin_id, id, &req.reason, req.duration_hours).await?;
+    Ok(Json(ApiResponse::success(result)))
+}
+
+#[derive(Deserialize)]
+pub struct HideSpacesRequest {
+    pub reason: String,
+}
+
+async fn hide_user_spaces(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+    Extension(admin_id): Extension<Uuid>,
+    Json(req): Json<HideSpacesRequest>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let count = handler.hide_user_spaces(admin_id, id, &req.reason).await?;
+    Ok(Json(ApiResponse::success(serde_json::json!({"spaces_hidden": count}))))
+}
+
 // ============================================================
 // 社区管理
 // ============================================================
@@ -346,12 +379,18 @@ async fn reject_post(
     Ok(Json(ApiResponse::success(())))
 }
 
+#[derive(Deserialize)]
+pub struct HideRequest {
+    pub duration_hours: Option<i32>,
+}
+
 async fn hide_post(
     State(handler): State<Arc<AdminHandler>>,
     Path(id): Path<Uuid>,
     Extension(admin_id): Extension<Uuid>,
+    Json(req): Json<HideRequest>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
-    handler.hide_post(admin_id, id).await?;
+    handler.hide_post(admin_id, id, req.duration_hours).await?;
     Ok(Json(ApiResponse::success(())))
 }
 

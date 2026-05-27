@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 pub struct ContentRepo {
-    pool: PgPool,
+    pub pool: PgPool,
 }
 
 impl ContentRepo {

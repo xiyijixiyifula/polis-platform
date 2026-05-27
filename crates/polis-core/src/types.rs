@@ -10,6 +10,8 @@ pub enum Visibility {
     Private,
     #[serde(rename = "unlisted")]
     Unlisted,
+    #[serde(rename = "hidden")]
+    Hidden,
 }
 
 impl Default for Visibility {
@@ -24,6 +26,7 @@ impl std::fmt::Display for Visibility {
             Self::Public => write!(f, "public"),
             Self::Private => write!(f, "private"),
             Self::Unlisted => write!(f, "unlisted"),
+            Self::Hidden => write!(f, "hidden"),
         }
     }
 }

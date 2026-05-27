@@ -115,6 +115,13 @@ impl UserHandler {
             .await?
             .ok_or(AppError::Unauthorized)?;
 
+        if user.banned {
+            return Err(AppError::Forbidden(
+                user.ban_reason
+                    .unwrap_or_else(|| "账号已被冻结，如有疑问请联系管理员".to_string()),
+            ));
+        }
+
         let valid = auth::verify_password(&req.password, &user.password_hash)
             .map_err(|e| AppError::Internal(format!("Password verify error: {}", e)))?;
 
