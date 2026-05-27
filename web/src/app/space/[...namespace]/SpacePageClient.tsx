@@ -507,7 +507,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  </span>
  )}
  {/* Edit button for owner */}
- {isOwner && (
+ {isOwner && (<>
  <button
  onClick={() => {
  setEditForm({ title: space.title, description: space.description || '', icon_url: space.icon_url || '', banner_url: space.banner_url || '' });
@@ -531,7 +531,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  >
  <Trash2 className="h-4 w-4" />
  </button>
- )}
+ </>)}
  </div>
  {/* GitHub-style namespace breadcrumb */}
  <div className="mt-1 flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
