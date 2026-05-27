@@ -330,6 +330,10 @@ export const spaces = {
   /** 取消关注社区 */
   unfollow: (namespace: string) =>
     request<{ following: boolean }>(`/spaces/${encodeNs(namespace)}/unfollow`, { method: 'POST' }),
+
+  /** 删除/归档社区 (仅 owner) */
+  archive: (namespace: string) =>
+    request<{ message: string }>(`/spaces/${encodeNs(namespace)}`, { method: 'DELETE' }),
 };
 
 export interface SpaceMember {

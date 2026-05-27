@@ -518,6 +518,19 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  >
  <Pencil className="h-4 w-4" />
  </button>
+ <button
+ onClick={async () => {
+ if (!confirm('确定要删除这个社区吗？此操作不可撤销，社区内容将被归档。')) return;
+ try {
+ await apiSpaces.archive(cleanNamespace);
+ window.location.href = '/';
+ } catch (e: any) { alert(e?.message || '删除失败'); }
+ }}
+ className="p-1 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+ title="删除社区"
+ >
+ <Trash2 className="h-4 w-4" />
+ </button>
  )}
  </div>
  {/* GitHub-style namespace breadcrumb */}

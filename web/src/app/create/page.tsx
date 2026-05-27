@@ -9,7 +9,7 @@ function deriveSlug(title: string): string {
   // Keep a-z, 0-9, Chinese CJK (一-鿿), spaces, and hyphens
   const cleaned = title
     .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf\s-]/g, "")
+    .replace(/[^a-z0-9\u4e00-\u9fff\u3400-\u4dbf_\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
@@ -59,7 +59,7 @@ export default function CreateSpacePage() {
     try {
       const res = await spaces.create({
         slug,
-        title: slug,  // 社区名与空间标识统一
+        title: title.trim(),
         description: description || undefined,
         visibility,
       });
