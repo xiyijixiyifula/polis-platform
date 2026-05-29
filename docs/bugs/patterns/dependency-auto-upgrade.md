@@ -1,3 +1,12 @@
+---
+symptoms: [npm包升级后报错, 编辑器不可用, 组件渲染异常]
+keywords: [npm, 升级, 编辑器, 报错, cherry, 版本, package, 依赖, 不兼容, toString]
+severity: high
+recipe: docs/bugs/fix-recipes/dependency-auto-upgrade.md
+fix_time: 15min
+diagnosis_cmd: npm list | grep -E 'cherry|markdown'
+---
+
 # 依赖自动升级 Bug
 
 ## 元信息

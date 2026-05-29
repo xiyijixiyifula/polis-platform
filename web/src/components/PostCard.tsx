@@ -5,7 +5,7 @@ import { Pin, EyeOff, Star } from 'lucide-react';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
-import { buildPostLink } from '@/lib/module-config';
+import { buildPostLink, getModuleLabel } from '@/lib/module-config';
 
 interface PostCardProps {
   post: {
@@ -26,6 +26,8 @@ interface PostCardProps {
     visibility?: string;
     is_liked?: boolean;
     is_bookmarked?: boolean;
+    module_type?: string;
+    module_label?: string;
   };
   canPin?: boolean;
   onTogglePin?: () => void;
@@ -45,7 +47,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
     type: 'post',
     space: { namespace: post.space_ns, title: post.space_name },
     author: post.author || {},
-    module_type: 'forum',
+    module_type: post.module_type || 'forum',
   });
 
   const postLink = buildPostLink(post.id, post.space_ns);
@@ -91,7 +93,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
               </>
             )}
             <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0">
-              交流
+              {post.module_label || getModuleLabel(post.module_type) || '交流'}
             </span>
             <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
             <span className="text-gray-900 dark:text-white font-semibold truncate">

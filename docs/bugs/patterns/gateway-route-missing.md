@@ -1,3 +1,12 @@
+---
+symptoms: [新增API端点404, 直连后端正常, 通过网关404]
+keywords: [新增API, 404, 直连, 后端, 正常, 网关, gateway, 端点, 路由]
+severity: high
+recipe: docs/bugs/fix-recipes/gateway-route-missing.md
+fix_time: 10min
+diagnosis_cmd: grep -n "api/" crates/polis-gateway/src/main.rs | grep route
+---
+
 # Gateway 路由遗漏
 
 > Pattern ID: PAT-007 | 严重程度: 🔴 高 | 最近发现: v1.0.22

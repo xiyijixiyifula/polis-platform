@@ -1,3 +1,12 @@
+---
+symptoms: [点击按钮无反应, 页面重定向, atob InvalidCharacterError, JWT解码失败]
+keywords: [atob, InvalidCharacterError, base64, 按钮, 无反应, 重定向, JWT, 解码, 失败, payload]
+severity: medium
+recipe: docs/bugs/fix-recipes/atob-base64url.md
+fix_time: 5min
+diagnosis_cmd: grep -rn "atob(" web/src/ --include="*.tsx" | grep -v "replace.*-.*g" | grep -v node_modules
+---
+
 # Pattern: atob URL-safe base64 解码失败
 
 > **严重程度**: 🟡 中  

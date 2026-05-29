@@ -6,14 +6,69 @@
 
 | 指标 | 数值 |
 |------|------|
-| 总修复数 | 73 |
+| 总修复数 | 75 |
 | 已归类 Pattern | 12 |
 | 回归链数 | 8 |
 | 总复发次数 | 7（URL编码 ×3 + xattr ×2 + Array.map ×1 + Gateway路由 ×1 + 部署流程 ×1） |
 | 复发率 | 9.7%（7/72） |
 | 修复配方数 | 12 |
 | 修复点位地图 | [fix-points.md](fix-points.md) |
-| 最近更新 | 2026-05-29 (v1.0.35) |
+| 最近更新 | 2026-05-29 (v1.0.36) |
+
+## 趋势面板
+
+> 运行 `./scripts/gen-stats.sh` 获取最新动态统计。
+
+### 月度 Bug 产生率
+
+| 月份 | 新增 Bug | 修复 | 复发 | 复发率 |
+|------|---------|------|------|--------|
+| 2026-05 | 35 | 73 | 7 | 9.7% |
+
+### 脆弱文件 Top-10（修复次数降序）
+
+> 修改这些文件时务必查询 [修复影响矩阵](regression-map.md#修复影响矩阵-fix-impact-matrix)。
+
+| 排名 | 文件 | 修复次数 | 主要风险 | 风险等级 |
+|------|------|----------|----------|----------|
+| 1 | `SpacePageClient.tsx` | 9 | RTE-MAP, RTE-NULL | 🔴 |
+| 2 | `space_routes.rs` | 7 | RTE-REG, RTE-ENC | 🔴 |
+| 3 | `content_handler.rs` | 5 | SQL注入, post_count, XSS | 🔴 |
+| 4 | `SpaceSettings.tsx` | 4 | RTE-NULL, RTE-ENC | 🟡 |
+| 5 | `content_routes.rs` | 4 | RTE-ENC, SEC-AUTH | 🟡 |
+| 6 | `main.rs` (gateway) | 4 | RTE-REG, DEP-FLOW | 🔴 |
+| 7 | `api.ts` | 4 | DEP-VER | 🟡 |
+| 8 | `repo.rs` (space) | 3 | post_count, star | 🟡 |
+| 9 | `ManagePageClient.tsx` | 2 | RTE-ENC, UI-FORM | 🟡 |
+| 10 | `create/page.tsx` | 2 | RTE-ENC | 🟡 |
+
+### Pattern 频率分布
+
+```
+array-map-null         ████████████████████████████ 15+
+deploy-flow            ██████████████ 7
+url-double-encoding    ████████████ 6
+post-count-sync        ██████ 3
+xattr-contamination    ████ 2
+atob-base64url         ████ 2
+gateway-route-missing  ████ 2
+actions-array-missing  ████ 2
+missing-form-field     ██ 1
+wrong-build-target     ██ 1
+dependency-auto-upgrade ██ 1
+module-tab-key-mismatch ██ 1
+```
+
+### 修复有效性追踪
+
+| 修复版本 | Pattern | 是否复发 | 失效天数 | 根除方案 |
+|----------|---------|----------|----------|----------|
+| v1.0.8 | array-map-null | 是 (v1.0.35) | 27天 | ESLint 规则 |
+| v0.3.91 | xattr-contamination | 是 (v0.3.95) | 4天 | CLAUDE.md 部署铁律 |
+| v0.2.54 | url-double-encoding | 是 (v1.0.11) | 多天 | 统一编解码工具函数 |
+| v1.0.14 | post-count-sync | 否 | — | 修复配方 + 预防清单 |
+| v1.0.26 | atob-base64url | 否 | — | 统一 JWT 解码工具 |
+| v1.0.30 | module-tab-key-mismatch | 否 | — | 统一键空间映射 |
 
 ## 快速定位表
 

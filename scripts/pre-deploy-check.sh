@@ -18,7 +18,13 @@ PASS=0
 FAIL=0
 WARN=0
 STRICT=false
-[[ "${1:-}" == "--strict" ]] && STRICT=true
+QUICK=false
+for arg in "$@"; do
+    case "$arg" in
+        --strict) STRICT=true ;;
+        --quick) QUICK=true ;;
+    esac
+done
 
 check_pass() { echo -e "  ${GREEN}✅ PASS${NC}: $1"; PASS=$((PASS + 1)); }
 check_fail() { echo -e "  ${RED}❌ FAIL${NC}: $1"; FAIL=$((FAIL + 1)); }
@@ -30,8 +36,20 @@ check_warn() {
     fi
 }
 
+# Quick mode: skip non-critical checks (returns 0 = skip, 1 = run)
+skip_in_quick() {
+    if $QUICK; then
+        echo -e "${CYAN}[$1] $2${NC}"
+        echo "  ⏭  快速模式跳过"
+        echo ""
+        return 0
+    fi
+    return 1
+}
+
 echo -e "${CYAN}════════════════════════════════════════════${NC}"
 echo -e "${CYAN}  Polis 部署前预防检查${NC}"
+$QUICK && echo -e "${CYAN}  [快速模式 — 仅高风险检查]${NC}"
 echo -e "${CYAN}════════════════════════════════════════════${NC}"
 echo ""
 
@@ -62,7 +80,7 @@ else
 fi
 echo ""
 
-# ─── 3. JWT atob URL-safe base64 ─────────────────────────────
+if ! skip_in_quick "3" "JWT atob() URL-safe base64 转换"; then
 echo -e "${CYAN}[3] JWT atob() URL-safe base64 转换检查${NC}"
 
 ATOB_CALLS=$(grep -rn "atob(" web/src/ --include="*.tsx" --include="*.ts" | grep -v "node_modules" | grep -v "replace.*-.*g.*replace.*_" | true)
@@ -79,8 +97,10 @@ else
     fi
 fi
 echo ""
+fi  # check #3
 
 # ─── 4. space_routes.rs — actions 数组同步 ─────────────────────
+if ! skip_in_quick "4" "space_routes.rs actions 数组同步"; then
 echo -e "${CYAN}[4] space_routes.rs actions 数组同步检查${NC}"
 
 if [[ -f "crates/polis-space/src/routes/space_routes.rs" ]]; then
@@ -98,6 +118,10 @@ else
     check_warn "space_routes.rs 文件未找到"
 fi
 echo ""
+fi  # check #4
+
+# ─── 5, 6, 7, 8, 11: Non-critical checks (skipped in quick mode) ──
+if ! skip_in_quick "5-8,11" "非关键检查 (Gateway路由/post_count/JWT安全/SQL注入/Visibility)"; then
 
 # ─── 11. Visibility 枚举同步 ──────────────────────────────────
 echo -e "${CYAN}[11] Visibility 枚举同步检查${NC}"
@@ -113,7 +137,6 @@ echo ""
 echo -e "${CYAN}[5] Gateway 路由覆盖检查${NC}"
 
 if [[ -f "crates/polis-gateway/src/main.rs" ]]; then
-    # 检查是否最近有新增 API 端点
     NEW_ROUTES=$(git diff --name-only HEAD~3 2>/dev/null | grep -E "routes\.rs$" || true)
     if [[ -n "$NEW_ROUTES" ]]; then
         echo "  最近修改的路由文件:"
@@ -170,6 +193,8 @@ else
 fi
 echo ""
 
+fi  # non-critical checks block
+
 # ─── 9. 二进制格式 ───────────────────────────────────────────
 echo -e "${CYAN}[9] 交叉编译目标检查${NC}"
 
@@ -216,6 +241,9 @@ if [[ "$UNSTAGED" -eq 0 && "$UNTRACKED" -eq 0 ]]; then
 fi
 echo ""
 
+# ─── 12, 13, 14: Doc integrity checks (skipped in quick mode) ───
+if ! skip_in_quick "12-14" "文档完整性检查 (表单/Pattern/统计一致性)"; then
+
 # ─── 12. Form 字段完整性 ──────────────────────────────────────
 echo -e "${CYAN}[12] 表单字段完整性检查${NC}"
 
@@ -229,6 +257,49 @@ else
     check_pass "近期无表单文件修改"
 fi
 echo ""
+
+# ─── 13. Pattern frontmatter 完整性 ────────────────────────────
+echo -e "${CYAN}[13] Pattern frontmatter 完整性检查${NC}"
+
+MISSING_FM=0
+for pf in docs/bugs/patterns/*.md; do
+    if head -1 "$pf" | grep -q "^---$"; then
+        continue
+    else
+        echo "  缺少 frontmatter: $pf"
+        MISSING_FM=$((MISSING_FM + 1))
+    fi
+done
+
+if [[ "$MISSING_FM" -eq 0 ]]; then
+    check_pass "所有 Pattern 文件包含 frontmatter"
+else
+    check_warn "$MISSING_FM 个 Pattern 文件缺少 frontmatter (diagnose.sh 依赖)"
+fi
+echo ""
+
+# ─── 14. fix-points 统计一致性 ──────────────────────────────────
+echo -e "${CYAN}[14] fix-points 统计一致性检查${NC}"
+
+if [[ -f "docs/bugs/fix-points.md" ]] && [[ -f "docs/bugs/INDEX.md" ]]; then
+    FP_COUNT=$(awk -F'|' '/总修复点位/ { gsub(/[^0-9]/, "", $3); print $3 }' docs/bugs/fix-points.md 2>/dev/null || echo "0")
+    # 计算 fix-points.md 中实际条目数
+    FP_ACTUAL=$(grep -c "| \`" docs/bugs/fix-points.md 2>/dev/null || echo "0")
+
+    echo "  fix-points 声明修复点数: $FP_COUNT"
+    echo "  fix-points 实际条目数: $FP_ACTUAL"
+
+    if [[ "$FP_COUNT" -lt "$FP_ACTUAL" ]]; then
+        check_warn "fix-points 声明点数 ($FP_COUNT) < 实际条目 ($FP_ACTUAL)，统计不准确"
+    else
+        check_pass "fix-points 统计与 INDEX 一致"
+    fi
+else
+    check_warn "fix-points.md 或 INDEX.md 未找到"
+fi
+echo ""
+
+fi  # checks 12-14 block
 
 # ─── 汇总 ─────────────────────────────────────────────────────
 TOTAL=$((PASS + FAIL + WARN))

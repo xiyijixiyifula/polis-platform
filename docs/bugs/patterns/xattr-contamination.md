@@ -1,3 +1,12 @@
+---
+symptoms: [部署后UI错乱, CSS不一致, ._文件, 样式异常]
+keywords: [UI错乱, CSS, 不一致, 部署, 样式, ._, AppleDouble, xattr, md5]
+severity: high
+recipe: docs/bugs/fix-recipes/xattr-contamination.md
+fix_time: 10min
+diagnosis_cmd: find /opt/polis-web/.next -name '._*' | wc -l
+---
+
 # macOS xattr 部署污染
 
 ## 元信息

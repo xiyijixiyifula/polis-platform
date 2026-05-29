@@ -20,6 +20,8 @@
 ## 关键 Bug 修复记录
 
 > 防止回退 — 以下 bug 曾经导致线上事故，修复后记录在此
+- **社区概览页和Feed页帖子面包屑显示模块名为'交流'而非实际模块名(如'天气预报') (v1.0.40)** — 见 [module-breadcrumb-hardcoded](bugs/patterns/module-breadcrumb-hardcoded.md)
+- **自定义模块帖子DB中module_type正确但API返回forum/text，前端tab不显示 (v1.0.39)** — 见 [enum-serialization-data-loss](bugs/patterns/enum-serialization-data-loss.md)
 
 - **部署后 UI 错乱 (macOS xattr 污染)** — v0.3.91 和 v0.3.95 两次复现。macOS tar 含 AppleDouble (`._*`) 和 xattr 扩展头。必须：
   1. 本地打包: `COPYFILE_DISABLE=1 tar -czf release.tar.gz ...`

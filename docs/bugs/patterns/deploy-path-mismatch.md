@@ -1,3 +1,12 @@
+---
+symptoms: [部署后功能不生效, 服务行为像旧版, systemd路径不对]
+keywords: [部署, 功能, 不生效, 服务, 旧版, systemd, ExecStart, 路径, 不一致]
+severity: medium
+recipe: docs/bugs/fix-recipes/deploy-path-mismatch.md
+fix_time: 3min
+diagnosis_cmd: for s in polis-gateway polis-space polis-user polis-content polis-video polis-admin; do systemctl cat $s 2>/dev/null | grep ExecStart; done
+---
+
 # 部署路径不匹配
 
 ## 症状

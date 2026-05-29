@@ -1,3 +1,12 @@
+---
+symptoms: [新增API端点返回Space not found, 直连后端正常, namespace提取失败]
+keywords: [Space not found, 新增端点, 直连, 后端, 正常, actions, 数组, 遗漏, namespace]
+severity: high
+recipe: docs/bugs/fix-recipes/actions-array-missing.md
+fix_time: 5min
+diagnosis_cmd: grep -A 30 "let actions" crates/polis-space/src/routes/space_routes.rs | grep '"'
+---
+
 # Pattern: Actions 数组遗漏
 
 ## 分类

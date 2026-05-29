@@ -1,3 +1,12 @@
+---
+symptoms: [部署后功能无变化, 二进制格式不对, Mach-O而非ELF]
+keywords: [部署, 功能, 无变化, 二进制, Mach-O, ELF, 交叉编译, target, 不对]
+severity: high
+recipe: docs/bugs/fix-recipes/wrong-build-target.md
+fix_time: 3min
+diagnosis_cmd: file target/x86_64-unknown-linux-gnu/release/polis-*
+---
+
 # Pattern: 交叉编译目标错误
 
 ## 分类

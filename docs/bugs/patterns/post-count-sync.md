@@ -1,3 +1,12 @@
+---
+symptoms: [帖子计数不对, 统计为0, 分析数据不准, post_count]
+keywords: [帖子计数, 不对, 为0, 不更新, post_count, INSERT INTO posts, 不同步, 计数]
+severity: high
+recipe: docs/bugs/fix-recipes/post-count-sync.md
+fix_time: 10min
+diagnosis_cmd: grep -rn "INSERT INTO posts" crates/ | grep -v migration
+---
+
 # Pattern: post_count 不同步
 
 > **类型**: 数据一致性问题  

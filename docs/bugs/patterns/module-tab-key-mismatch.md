@@ -1,3 +1,12 @@
+---
+symptoms: [模块Tab点击空白, Tab选中无内容, 自定义模块无渲染]
+keywords: [模块, Tab, 点击, 空白, 无内容, 选中, module_key, route, 渲染, 不匹配]
+severity: high
+recipe: docs/bugs/fix-recipes/module-tab-key-mismatch.md
+fix_time: 5min
+diagnosis_cmd: grep -n "activeTab" web/src/app/space/\[...namespace\]/SpacePageClient.tsx
+---
+
 # 模块Tab键值不匹配
 
 > Pattern ID: PAT-012 | 严重程度: 🔴 高 | 最近发现: v1.0.34

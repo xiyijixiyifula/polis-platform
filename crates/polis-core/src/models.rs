@@ -297,11 +297,11 @@ pub struct PostPublic {
     /// 社区 namespace（用于前端 API 调用，避免额外的一次空间查询）
     #[serde(default)]
     pub space_ns: String,
-    pub module_type: ModuleType,
+    pub module_type: String,
     pub author: UserPublic,
     pub title: String,
     pub body: String,
-    pub content_type: ContentType,
+    pub content_type: String,
     pub media_urls: Vec<String>,
     pub tags: Vec<String>,
     pub visibility: Visibility,

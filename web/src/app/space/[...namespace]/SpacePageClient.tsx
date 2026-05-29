@@ -377,6 +377,8 @@ setIsStarred(data.data.is_starred ?? false);
 	 }
 	 // Include all module types for client-side tab filtering
 	 const mtFilter = new Set(['forum', 'article', '', 'share', 'wiki', 'qa', 'novel', 'game', 'mini_app']);
+		 // 纳入动态自定义模块键（非 built-in MODULE_CONFIG 中的模块键）
+		 spaceModules.forEach(m => { if (!MODULE_CONFIG[m.module_key]) mtFilter.add(m.module_key); });
 	 setPosts(allPosts.filter((p: any) => mtFilter.has(p.module_type || '')));
 	 }
  if (featuredData.code === 0) setFeatured(featuredData.data || []);
@@ -926,7 +928,7 @@ setIsStarred(data.data.is_starred ?? false);
  <div className="space-y-1">
  {posts.slice(0, 20).map((post) => {
  const moduleIcon = getModuleEmoji(post.module_type);
- const moduleLabel = getModuleLabel(post.module_type);
+ const moduleLabel = MODULE_CONFIG[post.module_type]?.label || spaceModules.find(m => m.module_key === post.module_type)?.name || '交流';
  const author = (post.author || {}) as any;
  const authorUsername = author.username || '';
  const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
@@ -1094,6 +1096,7 @@ setIsStarred(data.data.is_starred ?? false);
  tags: post.tags,
  is_pinned: post.is_pinned,
  is_hidden: post.is_hidden,
+ module_type: post.module_type,
  }} canPin={isOwner && !post.is_hidden} onTogglePin={() => togglePin(post.id, post.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} isFeatured={post.is_featured} canFeature={isOwner && !post.is_hidden} onToggleFeature={() => toggleFeature(post.id, post.is_featured)} canUnhide={isOwner && post.is_hidden} onToggleUnhide={() => toggleUnhide(post.id)} />
  ))}
  </div>
@@ -1101,7 +1104,6 @@ setIsStarred(data.data.is_starred ?? false);
  <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
  <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
  <p>暂无帖子</p>
- <p className="text-sm mt-1">成为第一个发帖的人吧！</p>
  </div>
  )}
 
@@ -1436,6 +1438,7 @@ setIsStarred(data.data.is_starred ?? false);
  created_at: post.created_at,
  tags: post.tags,
  is_pinned: post.is_pinned,
+ module_type: post.module_type,
  }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} isFeatured={post.is_featured} canFeature={isOwner && !post.is_hidden} onToggleFeature={() => toggleFeature(post.id, post.is_featured)} />
  ))}
  </div>
@@ -1492,6 +1495,7 @@ setIsStarred(data.data.is_starred ?? false);
  created_at: post.created_at,
  tags: post.tags,
  is_pinned: post.is_pinned,
+ module_type: post.module_type,
  }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} isFeatured={post.is_featured} canFeature={isOwner && !post.is_hidden} onToggleFeature={() => toggleFeature(post.id, post.is_featured)} />
  ))}
  </div>
@@ -1903,6 +1907,7 @@ setIsStarred(data.data.is_starred ?? false);
  created_at: post.created_at,
  tags: post.tags,
  is_pinned: post.is_pinned,
+ module_type: post.module_type,
  }} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} isFeatured={post.is_featured} canFeature={isOwner && !post.is_hidden} onToggleFeature={() => toggleFeature(post.id, post.is_featured)} />
  ))}
  </div>
@@ -1972,6 +1977,8 @@ setIsStarred(data.data.is_starred ?? false);
                tags: p.tags,
                is_pinned: p.is_pinned,
                is_hidden: p.is_hidden,
+               module_type: p.module_type,
+               module_label: currentMod.name,
                }} canPin={isOwner && !p.is_hidden} onTogglePin={() => togglePin(p.id, p.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(p.id)} isFeatured={p.is_featured} canFeature={isOwner && !p.is_hidden} onToggleFeature={() => toggleFeature(p.id, p.is_featured)} canUnhide={isOwner && p.is_hidden} onToggleUnhide={() => toggleUnhide(p.id)} />
            ))}
          </div>

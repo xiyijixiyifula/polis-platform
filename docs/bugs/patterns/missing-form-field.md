@@ -1,3 +1,12 @@
+---
+symptoms: [表单提交失败, 认证失败, 字段缺失, 输入框消失]
+keywords: [表单, 提交, 失败, 认证, 密码, 缺少, input, useState, JSX, 不匹配, 字段]
+severity: medium
+recipe: docs/bugs/fix-recipes/missing-form-field.md
+fix_time: 2min
+diagnosis_cmd: grep -c "useState" web/src/app/admin/login/page.tsx
+---
+
 # 表单字段缺失 (Missing Form Field)
 
 ## 症状

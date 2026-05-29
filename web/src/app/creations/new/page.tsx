@@ -11,7 +11,7 @@ import {
   File as FileIcon, CircleCheck, CloudUpload, Eye,
 } from 'lucide-react';
 import { series as seriesApi, getToken, spaces as spacesApi, type Series } from '@/lib/api';
-import { normalizeModuleType } from '@/lib/module-config';
+import { normalizeModuleType, MODULE_CONFIG } from '@/lib/module-config';
 
 const AUTOSAVE_KEY = 'polis_creation_draft';
 
@@ -36,7 +36,7 @@ const VISIBILITY_OPTIONS = [
 ];
 
 interface SubmissionEntry {
-  spaceId: string; spaceNs: string; spaceTitle: string; moduleType: string;
+  spaceId: string; spaceNs: string; spaceTitle: string; moduleType: string; moduleLabel?: string;
 }
 
 function NewCreationPageInner() {
@@ -48,9 +48,16 @@ function NewCreationPageInner() {
   const editId = searchParams.get('edit') || ''; // 编辑模式：创作 ID
   const isEditMode = !!editId;
 
-  // 根据 URL 参数确定初始模块（视频需特殊处理旧链接）
+  // 根据 URL 参数确定初始模块类型
   const getInitialModule = (): string => {
-    if (prefillModule) return normalizeModuleType(prefillModule);
+    if (prefillModule) {
+      const normalized = normalizeModuleType(prefillModule);
+      // 自定义模块键（不在 MODULE_CONFIG 中）降级到 'forum' 时，改用 'article' 确保后端校验通过
+      if (normalized === 'forum' && prefillModule !== 'forum' && !MODULE_CONFIG[prefillModule]) {
+        return 'article';
+      }
+      return normalized;
+    }
     if (prefillType === 'video') return 'video';
     return 'article';
   };
@@ -174,10 +181,9 @@ function NewCreationPageInner() {
           const data = await res.json();
           if (data.code === 0 && data.data) {
             const s = data.data;
-            const resolvedModule = normalizeModuleType(prefillModule);
-            setSubmissions([{ spaceId: s.id, spaceNs: s.namespace, spaceTitle: s.title, moduleType: resolvedModule }]);
 
-            // 同时获取该模块允许的内容类型
+            // 获取该模块配置（允许的内容类型 + 模块名称显示）
+            let moduleLabel: string | undefined;
             try {
               const modRes = await spacesApi.listModules(s.namespace);
               if (modRes.code === 0 && modRes.data) {
@@ -185,8 +191,14 @@ function NewCreationPageInner() {
                 if (mod?.allowed_content_types) {
                   setModuleAllowedTypes(mod.allowed_content_types);
                 }
+                if (mod?.name) {
+                  moduleLabel = mod.name;
+                }
               }
             } catch {}
+
+            // 使用原始 module_key 投稿，保留实际模块键名
+            setSubmissions([{ spaceId: s.id, spaceNs: s.namespace, spaceTitle: s.title, moduleType: prefillModule, moduleLabel }]);
           }
         } catch {}
       })();
@@ -375,11 +387,27 @@ function NewCreationPageInner() {
     }, 300);
   };
 
-  const addSubmission = (space: any) => {
-    if (submissions.some(s => s.spaceId === space.id && s.moduleType === moduleType)) return;
+  const addSubmission = async (space: any) => {
+    // 查找该空间中接受当前内容类型的模块
+    let mk = moduleType; // fallback: 编辑器类型
+    let ml: string | undefined;
+    try {
+      const modRes = await spacesApi.listModules(space.namespace);
+      if (modRes.code === 0 && modRes.data) {
+        const matchingMod = modRes.data.find((m: any) =>
+          (m.allowed_content_types || []).includes(currentModule.contentType)
+        );
+        if (matchingMod) {
+          mk = matchingMod.module_key;
+          ml = matchingMod.name;
+        }
+      }
+    } catch {}
+
+    if (submissions.some(s => s.spaceId === space.id && s.moduleType === mk)) return;
     setSubmissions(prev => [...prev, {
       spaceId: space.id, spaceNs: space.namespace,
-      spaceTitle: space.title, moduleType,
+      spaceTitle: space.title, moduleType: mk, moduleLabel: ml,
     }]);
     setSpaceQuery(''); setSpaceResults([]); setShowSpaceDropdown(false);
   };
@@ -685,7 +713,7 @@ function NewCreationPageInner() {
               <div className="flex flex-wrap gap-2 mb-3">
                 {submissions.map((s, i) => (
                   <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 text-xs rounded-full">
-                    @{s.spaceTitle || s.spaceNs} / {currentModule.label}
+                    @{s.spaceTitle || s.spaceNs} / {s.moduleLabel || currentModule.label}
                     <button onClick={() => removeSubmission(s.spaceId, s.moduleType)} className="hover:text-red-500"><X size={12} /></button>
                   </span>
                 ))}

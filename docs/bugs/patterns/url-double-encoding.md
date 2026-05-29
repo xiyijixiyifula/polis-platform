@@ -1,3 +1,12 @@
+---
+symptoms: [中文404, URL含%25, 用户不存在, params乱码]
+keywords: [中文, 404, %25, 双重编码, encodeURIComponent, decodeURIComponent, URL, 参数, 编码]
+severity: high
+recipe: docs/bugs/fix-recipes/url-double-encoding.md
+fix_time: 5min
+diagnosis_cmd: grep -rn "encodeURIComponent" web/src/ --include="*.tsx" | grep -v node_modules
+---
+
 # URL 双重编码 Bug
 
 ## 元信息

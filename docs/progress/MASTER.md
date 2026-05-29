@@ -8,7 +8,19 @@ LOCAL_ONLY
 
 ## 当前状态
 
-**活跃任务**: 模块权限修改调查 + 防御性修复 (v1.0.35)
+**活跃任务**: Bug 追踪系统深度增强 (v1.0.36)
+
+### 已完成 (v1.0.36) — Bug 追踪系统深度增强
+
+- [x] **`scripts/bug-record.sh`** — 一键修复记录 CLI（交互+非交互模式），自动更新 6 个追踪文件（timeline/INDEX/fix-points/KNOWN-ISSUES/Pattern/regression-map）
+- [x] **`scripts/gen-stats.sh`** — 自动统计生成器（脆弱文件排名、Pattern 频率分布、月度趋势、DNA 分布）
+- [x] **`scripts/diagnose.sh`** — 症状自动诊断工具，输入关键词匹配已知 Pattern + 给出修复配方 + 诊断命令
+- [x] **`scripts/install-hooks.sh`** — Git pre-push hook 安装（push 前自动运行 pre-deploy-check.sh --strict）
+- [x] **`scripts/pre-deploy-check.sh` 增强** — 新增 Pattern frontmatter 完整性检查 + fix-points 统计一致性检查 + `--quick` 快速模式（只跑高风险检查）
+- [x] **INDEX.md 趋势面板** — 新增月度趋势 + 脆弱文件 Top-10 + Pattern 频率分布 + 修复有效性追踪
+- [x] **12 个 Pattern 文件 YAML frontmatter** — 机器可解析的症状/关键词/严重程度/配方/诊断命令元数据
+- [x] **CLAUDE.md 流程简化** — 8 步手动流程 → 一键命令 + Bug 追踪工具速查表
+- [x] **MASTER.md 更新** — 记录 v1.0.36
 
 ### 已完成 (v1.0.35) — 模块权限修改调查 + null 安全加固
 
@@ -73,6 +85,7 @@ LOCAL_ONLY
 
 ### 部署版本
 
+v1.0.36 — Bug 追踪系统深度增强 (2026-05-29)
 v1.0.35 — 模块权限调查 + null 安全加固 (2026-05-29)
 v1.0.34 — 模块Tab渲染修复 + 创作体验简化 (2026-05-29)
 
@@ -90,6 +103,21 @@ v1.0.24 — 平台设置系统 + 上传大小可配置 + 网站初始化 + 安�
 - [x] 修复系统设置页验证码修改错误类型 (Unauthorized→Validation) (v1.0.21)
 - [x] 浏览器全部功能深入测试 — 12 个管理页面 + 所有功能验证
 - [x] 管理后台联动修复 + 用户申诉系统 (v1.0.22 + v1.0.23) — 未认证封禁+自定义原因+申诉API+申诉页面+Gateway路由修复+登录页申诉链接触发修复
+
+### 已完成 (v1.0.39 - v1.0.40) — 自定义模块完整修复
+
+- [x] **枚举序列化数据丢失修复 (v1.0.39)** — PostPublic.module_type 和 content_type 从枚举改为 String，消除 serde_json round-trip 的数据丢失
+- [x] **content_handler.rs 5 处修复** — 所有 `serde_json::from_str().unwrap_or_default()` 替换为 `.clone()`
+- [x] **前端 mtFilter 修复 (v1.0.39)** — 纳入动态自定义模块键（从 spaceModules 读取）
+- [x] **概览页面包屑修复 (v1.0.40)** — 从 spaceModules 查找自定义模块的实际名称而非 fallback 到 '交流'
+- [x] **PostCard 组件修复 (v1.0.40)** — module_type 不再硬编码为 'forum'，内联面包屑使用动态 module_label
+- [x] **所有 PostCard 调用点更新** — 传入真实 module_type，自定义模块 Tab 传入 module_label=currentMod.name
+- [x] **Bug 追踪记录** — 2 个新 Pattern (enum-serialization-data-loss, module-breadcrumb-hardcoded) + 修复点数更新 (73→75)
+- [x] **浏览器全量验证** — 天气预报 Tab 正常显示帖子、面包屑显示正确模块名、首页动态正常更新、交流模块发帖正常
+
+### 已知残留
+
+- [ ] **ContentCard.tsx feed 面包屑** — `getModuleLabel()` 在 feed/explore/search 页面仍 fallback 到 '交流'。需后端 API 返回模块显示名称后修复。
 
 ### 历史完成
 

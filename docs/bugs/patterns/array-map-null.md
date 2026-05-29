@@ -1,3 +1,12 @@
+---
+symptoms: [页面白屏, .map is not a function, undefined is not iterable, TypeError]
+keywords: [白屏, map, TypeError, 崩溃, null, undefined, React, 渲染, 组件]
+severity: medium
+recipe: docs/bugs/fix-recipes/array-map-null.md
+fix_time: 2min
+diagnosis_cmd: grep -rn '\.map(' web/src/ --include="*.tsx" --include="*.ts" | grep -v '?\.' | grep -v node_modules
+---
+
 # .map() 防空防御 Bug
 
 ## 元信息

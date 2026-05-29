@@ -7,7 +7,7 @@
 | 指标 | 数值 |
 |------|------|
 | 涉及文件数 | 50 |
-| 总修复点位 | 121 |
+| 总修复点位 | 123 |
 | 高危文件 (修复 3+ 次) | 13 |
 | 最近更新 | 2026-05-29 (v1.0.35) |
 
@@ -122,6 +122,7 @@
 
 | 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
 |------|----------|----------|------|---------|
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | moduleLabel从spaceModules查找自定义模块名,web/src/components/PostCard.tsx:48:module_type不再硬编码为forum,web/src/components/PostCard.tsx:94:内联面包屑使用动态module_label,SpacePageClient多处PostCard调用:传入module_type和module_label | v1.0.40 | module-breadcrumb-hardcoded |
 | `SpaceSettings.tsx` | `persistModules` | 补充 members keyMap 映射 | v1.0.14 | — |
 | `SpaceSettings.tsx` | `loadModules` | localStorage key 双格式回退 (编码/解码) | v0.2.58 | url-double-encoding |
 | `SpacePageClient.tsx` | params 处理 | decodeURIComponent → encodeURIComponent 防双重编码 | v1.0.11 | url-double-encoding |
