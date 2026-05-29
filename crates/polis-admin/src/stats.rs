@@ -41,7 +41,7 @@ pub async fn list_users(
     let offset = ((page - 1) * page_size) as i64;
     let limit = page_size as i64;
     let rows = sqlx::query_as::<_, (serde_json::Value,)>(
-        "SELECT json_build_object('id', id, 'username', username, 'display_name', display_name, 'email', CONCAT(LEFT(email, 3), '***', SUBSTRING(email FROM POSITION('@' IN email))), 'verified', verified, 'bio', bio, 'created_at', created_at, 'updated_at', updated_at) FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+        "SELECT json_build_object('id', id, 'username', username, 'display_name', display_name, 'email', CONCAT(LEFT(email, 3), '***', SUBSTRING(email FROM POSITION('@' IN email))), 'verified', verified, 'bio', bio, 'banned', COALESCE(banned, FALSE), 'banned_at', banned_at, 'ban_reason', ban_reason, 'created_at', created_at, 'updated_at', updated_at) FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2"
     )
     .bind(limit)
     .bind(offset)
@@ -77,7 +77,7 @@ pub async fn list_all_posts(
     let offset = ((page - 1) * page_size) as i64;
     let limit = page_size as i64;
     let rows = sqlx::query_as::<_, (serde_json::Value,)>(
-        "SELECT json_build_object('id', id, 'space_id', space_id, 'module_type', module_type, 'author_id', author_id, 'title', title, 'is_featured', is_featured, 'is_deleted', is_deleted, 'view_count', view_count, 'like_count', like_count, 'created_at', created_at) FROM posts ORDER BY created_at DESC LIMIT $1 OFFSET $2"
+        "SELECT json_build_object('id', id, 'space_id', space_id, 'module_type', module_type, 'author_id', author_id, 'title', title, 'is_featured', is_featured, 'is_deleted', is_deleted, 'visibility', visibility, 'hidden_until', hidden_until, 'view_count', view_count, 'like_count', like_count, 'created_at', created_at) FROM posts ORDER BY created_at DESC LIMIT $1 OFFSET $2"
     )
     .bind(limit)
     .bind(offset)

@@ -6,10 +6,10 @@
 
 | 指标 | 数值 |
 |------|------|
-| 涉及文件数 | 26 |
-| 总修复点位 | 58 |
-| 高危文件 (修复 3+ 次) | 8 |
-| 最近更新 | 2026-05-27 |
+| 涉及文件数 | 50 |
+| 总修复点位 | 121 |
+| 高危文件 (修复 3+ 次) | 13 |
+| 最近更新 | 2026-05-29 (v1.0.35) |
 
 ## 高危文件 ⚠️
 
@@ -17,14 +17,17 @@
 
 | 文件 | 修复次数 | 涉及 Pattern | 最近修复 |
 |------|----------|-------------|----------|
-| `crates/polis-content/src/handlers/content_handler.rs` | 4 | SQL注入, post_count, XSS, Argon2 | v1.0.13 |
-| `crates/polis-space/src/routes/space_routes.rs` | 4 | URL编码, DELETE路由, 中文slug | v1.0.14 |
-| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 4 | URL编码, 模块导航, 成员列表, 删除按钮 | v1.0.17 |
-| `web/src/components/SpaceSettings.tsx` | 2 | localStorage key, members keyMap | v1.0.14 |
+| `crates/polis-content/src/handlers/content_handler.rs` | 5 | SQL注入, post_count, XSS, Argon2, 上传大小 | v1.0.24 |
+| `crates/polis-content/src/routes/content_routes.rs` | 4 | URL编码, 发帖权限, 上传权限, DefaultBodyLimit | v1.0.24 |
+| `crates/polis-gateway/src/main.rs` | 4 | 查询参数丢失, 路由缺失, Body Limit, modules路由误判 | v1.0.31 |
+| `crates/polis-space/src/routes/space_routes.rs` | 7 | URL编码, DELETE路由, 中文slug, star端点, is_starred, modules CRUD, actions数组遗漏 | v1.0.32 |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 6 | URL编码, 模块导航, 成员列表, 删除按钮, mtFilter, module-tab-key-mismatch | v1.0.34 |
 | `web/src/lib/api.ts` | 4 | URL编码, 类型修复, uploadFile, archive | v1.0.17 |
-| `crates/polis-content/src/routes/content_routes.rs` | 3 | URL编码, 发帖权限, 上传权限 | v1.0.15 |
+| `web/src/components/SpaceSettings.tsx` | 4 | localStorage key, members keyMap, SpaceModulesManager rewrite, allowed_content_types null safety | v1.0.35 |
 | `web/src/app/create/page.tsx` | 2 | title slug, deriveSlug | v1.0.17 |
 | `crates/polis-core/src/types.rs` | 1 | Visibility::Hidden 枚举缺失 | v1.0.18 |
+| `crates/polis-video/src/routes.rs` | 2 | 硬编码 body limit, 动态配置 | v1.0.24 |
+| `crates/polis-space/src/repo.rs` | 3 | follow 系统, star 系统 (7个方法), module CRUD (5个方法) | v1.0.30 |
 
 ## 完整点位索引
 
@@ -48,6 +51,14 @@
 | `routes/space_routes.rs` | `handle_auth_path` | 新增 /follow, /unfollow 路由 | v1.0.15 | — |
 | `handlers/space_handler.rs` | `follow_space` | 关注社区 + owner 通知 | v1.0.15 | — |
 | `handlers/space_handler.rs` | `unfollow_space` | 取消关注 | v1.0.15 | — |
+| `repo.rs` | `star_space` / `unstar_space` / `is_starred_space` / `get_star_count` / `update_star_count` / `get_starred_spaces` / `find_most_starred` | Star 收藏系统 7 个 DB 方法 | v1.0.26 | — |
+| `routes/space_routes.rs` | `handle_auth_path` | 新增 /star, /unstar 端点 + is_starred 字段 | v1.0.26 | — |
+| `routes/space_routes.rs` | `handle_public_path` | 新增 /starred, /most-starred 公开端点 | v1.0.26 | — |
+| `handlers/space_handler.rs` | `star_space` / `unstar_space` / `get_starred_spaces` / `get_most_starred` | Star 收藏 4 个 handler | v1.0.26 | — |
+| `handlers/space_handler.rs` | `create_module` / `update_module` / `delete_module` / `list_modules` / `get_module` | Module CRUD 5 个 handler | v1.0.30 | — |
+| `repo.rs` | `create_module` / `update_module` / `delete_module` / `list_modules` / `get_module` | Module CRUD 5 个 DB 方法 | v1.0.30 | — |
+| `routes/space_routes.rs` | `handle_auth_path` (actions array) | 追加 "/modules" 到 actions 数组 | v1.0.32 | actions-array-missing |
+| `routes/space_routes.rs` | Route config (line 65-67) | .delete(delete_space) → .delete(handle_auth_path) | v1.0.32 | — |
 
 ### 后端 — polis-content
 
@@ -75,12 +86,26 @@
 | `admin_handler.rs` | `hide_user_works` | 批量隐藏用户所有作品 (creations + posts)，支持 duration | v1.0.18 | — |
 | `admin_handler.rs` | `hide_user_spaces` | 批量设置用户所有社区 visibility='private' | v1.0.18 | — |
 | `routes.rs` | hide_post/hide-works/hide-spaces | 新增 HideRequest(duration_hours)，三条路由 | v1.0.18 | — |
+| `admin_handler.rs` | `update_review_rule` | UPDATE review_rules SET 规则编辑 | v1.0.19 | — |
+| `admin_handler.rs` | `delete_review_rule` | DELETE FROM review_rules 规则删除 | v1.0.19 | — |
+| `admin_handler.rs` | `get_agent_policy` | 返回启用的规则 + 违规分类 + 处置分级 + 置信度阈值 | v1.0.19 | — |
+| `admin_handler.rs` | `get_agent_new_content` | 按时间窗口查询新内容，audit_logs 反连接去重 | v1.0.19 | — |
+| `admin_handler.rs` | `agent_review` | 置信度路由: ≥0.9 自动执行 / 0.6-0.9 创建举报 / <0.6 跳过 | v1.0.19 | — |
+| `admin_handler.rs` | `get_agent_stats` | 返回今日/本周审查统计 | v1.0.19 | — |
+| `routes.rs` | review-rules + agent | 新增 PUT/DELETE /review-rules/{id} + 4 条 Agent 路由 | v1.0.19 | — |
+| `stats.rs` | `list_users` | SQL 新增 banned/banned_at/ban_reason 字段 | v1.0.19 | — |
+| `stats.rs` | `list_all_posts` | SQL 新增 visibility/hidden_until 字段 | v1.0.19 | — |
+| `routes.rs` | `update_admin_code_handler` | 验证码不匹配 Unauthorized → Validation，错误码 401→400 | v1.0.21 | — |
+| `admin_handler.rs` | `resolve_report_with_action` | 新增 ("user","unban") + ("appeal","unban") match arm → 解封用户 | v1.0.22 | — |
 
 ### 后端 — polis-user
 
 | 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
 |------|----------|----------|------|---------|
 | `handlers/user_handler.rs` | `login` | banned 状态检查 (密码验证前)，返回 403 + 封禁原因 | v1.0.18 | — |
+| `handlers/user_handler.rs` | `get_ban_status` | 公开查询封禁状态 (无需JWT): banned/banned_at/ban_reason | v1.0.22 | — |
+| `handlers/user_handler.rs` | `submit_appeal` | 被封用户申诉: 校验 banned + reason≥10字 → INSERT INTO reports | v1.0.22 | — |
+| `routes/user_routes.rs` | ban_status + submit_appeal | 新增 2 条公开路由 GET /api/user/ban-status + POST /api/user/appeal | v1.0.22 | — |
 
 ### 后端 — polis-core
 
@@ -90,6 +115,8 @@
 | `types.rs` | `Visibility` enum | 新增 Hidden 变体 (serde rename="hidden") + Display impl | v1.0.18 | — |
 | `models.rs` | `User` struct | 新增 banned/banned_at/ban_reason 字段 | v1.0.18 | — |
 | `models.rs` | `Post` struct | 新增 hidden_until 字段 (TIMESTAMPTZ → DateTime<Utc>) | v1.0.18 | — |
+| `models.rs` | `AgentReviewDecision` | 新增 struct: target_type/id/action/duration/confidence/violation | v1.0.19 | — |
+| `models.rs` | `AgentReviewRequest` | 新增 struct: decisions: Vec<AgentReviewDecision> | v1.0.19 | — |
 
 ### 前端 — web
 
@@ -115,6 +142,43 @@
 | `create/page.tsx` | `deriveSlug` | 正则新增 `_` 保留下划线字符 | v1.0.17 | — |
 | `SpacePageClient.tsx` | Header area | 新增删除社区按钮 (Trash2 图标 + Fragment 包裹) | v1.0.17 | — |
 | `api.ts` | `spaces.archive` | 新增 DELETE 请求方法 → archive 社区 | v1.0.17 | — |
+| `admin/login/page.tsx` | `handleSubmit` JSX | 补充密码 `<input type="password">` 字段，useState 初始化了 password 但 JSX 缺失对应 input | v1.0.20 | missing-form-field |
+| `admin/review-queue/page.tsx` | 整个文件 | 新建审查队列页 — 批量操作 + 时长选择 + 审批/拒绝/隐藏 | v1.0.19 | — |
+| `admin/review-rules/page.tsx` | 整个文件 | 新建审查规则页 — CRUD + 启用/禁用 + JSON 配置编辑器 | v1.0.19 | — |
+| `admin/audit-logs/page.tsx` | 整个文件 | 新建操作日志页 — 操作者/操作/对象三维筛选 + 状态迁移展示 | v1.0.19 | — |
+| `admin/layout.tsx` | navItems | 新增审查队列/审查规则/操作日志 3 个导航项 | v1.0.19 | — |
+| `admin/users/page.tsx` | 表格+状态列 | 新增封禁状态徽章 + 解封/隐藏作品/隐藏社区按钮 | v1.0.19 | — |
+| `admin/posts/page.tsx` | 表格+可见性列 | 新增可见性徽章 + 隐藏/取消隐藏/精选 + 批量选择+隐藏 | v1.0.19 | — |
+| `admin/reports/page.tsx` | doResolve | 新增"处理+隐藏""处理+封禁"联动按钮 | v1.0.19 | — |
+| `SpacePageClient.tsx` | Header stats + Star button | 新增 Star 按钮（收藏/已收藏 切换 + star_count 本地更新）+ stats 行新增 收藏 计数显示 | v1.0.26 | — |
+| `api.ts` | `spaces` object | 新增 star/unstar/getStarred/getMostStarred 4 个 API 方法 + star_count 类型 | v1.0.26 | — |
+| `saved/page.tsx` | Bookmark list | 新增收藏的社区 section — SpaceCard 网格 + fetchStarredSpaces() | v1.0.26 | — |
+| `manage/[...namespace]/ManagePageClient.tsx` | 整个文件 | 新建社区管理页 — 5 个 Tab (基本信息/模块/成员/审批/数据) | v1.0.26 | — |
+| `manage/[...namespace]/ManagePageClient.tsx` | `atob(token.split('.')[1])` | URL-safe base64 → standard 转换 (v1.0.28 React批处理修复无效) | v1.0.29 | atob-base64url |
+| `post/[id]/PostPageClient.tsx` | `getCurrentUserId()` | URL-safe base64 → standard 转换 | v1.0.29 | atob-base64url |
+| `manage/[...namespace]/page.tsx` | 整个文件 | 管理页路由入口 — 服务器组件参数透传 | v1.0.26 | — |
+| `admin/settings/page.tsx` | 上传限制设置 | 附件/视频上传大小限制调整（10MB / 200MB） | v1.0.27 | — |
+| `admin/users/page.tsx` | 封禁按钮条件 | 未认证用户也显示封禁按钮（取消 verified 前置条件） | v1.0.22 | — |
+| `admin/users/page.tsx` | banReason state | 封禁确认对话框添加自定义原因 textarea 输入 | v1.0.22 | — |
+| `admin/reports/page.tsx` | TARGET_LABELS + doResolve | 新增 appeal→"申诉" 标签 + "解封"联动按钮 (target_action: unban) | v1.0.22 | — |
+| `app/login/page.tsx` | error 显示 | 封禁错误下方显示"申请申诉 →"链接 (Forbidden/封禁/冻结 关键词) | v1.0.22 | — |
+| `app/login/page.tsx` | appeal 链接触发 | 增加 `Forbidden:` 前缀检测，不依赖语义关键词 | v1.0.23 | — |
+| `app/appeal/page.tsx` | 整个文件 | 新建申诉页: 邮箱+理由+封禁状态查询+提交 | v1.0.22 | — |
+| `SpaceSettings.tsx` | `SpaceModulesManager` 整个组件 | 从硬编码 17 个模块改写为动态 API CRUD + 自定义模块名/模式/内容类型 | v1.0.30 | — |
+| `app/creations/new/page.tsx` | module/content_type 联动 | 动态模块过滤 + allowed_content_types 驱动内容类型选择 | v1.0.30 | — |
+| `app/polls/new/page.tsx` | `listModules` API | 从硬编码模块检查改为动态 API 验证 polls 模块是否启用 | v1.0.30 | — |
+| `app/space/[...namespace]/SpacePageClient.tsx` | moduleKeySet + availableTabs | 动态 Tab 生成替代硬编码 17 个 Tab | v1.0.30 | — |
+| `app/space/[...namespace]/SpacePageClient.tsx` | mtFilter + loadMorePosts | 移除硬编码模块类型过滤，所有动态模块帖子正常显示 | v1.0.33 | — |
+| `app/space/[...namespace]/SpacePageClient.tsx` | availableTabs (tab id) + 通用fallback | 模块Tab id 从 module_key 改为 MODULE_CONFIG route 映射 + 自定义模块渲染fallback | v1.0.34 | module-tab-key-mismatch |
+| `app/creations/new/page.tsx` | 整个文件简化 | 模块类型 17→2 (文章/视频)，移除 unlisted/密码/Thread/QA | v1.0.33 | — |
+| `app/profile/[username]/ProfilePageClient.tsx` | Works tab subtabs | 从动态模块子选项卡改为固定 概览/视频/文章 三个子tab | v1.0.33 | — |
+
+### 后端 — polis-gateway
+
+| 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
+|------|----------|----------|------|---------|
+| `main.rs` | Router 构建 | 新增 `.route("/api/user/{*path}", any(proxy_to_user))` — ban-status/appeal API | v1.0.22 | gateway-route-missing |
+| `main.rs` | `proxy_space_router` (is_content) | 移除 `remaining.contains("/modules")` 避免 modules 路由误判为 content | v1.0.31 | gateway-route-missing |
 
 ### 部署 — infra
 
@@ -132,6 +196,23 @@
 | `commands/admin.rs` | `posts_hide` | duration_hours: Option<i32> 参数传递 | v1.0.18 | — |
 | `commands/admin.rs` | `users_hide_works` | POST /api/admin/users/{id}/hide-works | v1.0.18 | — |
 | `commands/admin.rs` | `users_hide_spaces` | POST /api/admin/users/{id}/hide-spaces | v1.0.18 | — |
+| `main.rs` | AdminAction::Login | 新增 --password 参数，移除硬编码密码 | v1.0.25 | — |
+| `commands/admin.rs` | `login` | 密码从硬编码 `admin123` → 参数传入 | v1.0.25 | — |
+
+### 脚本 — Shell
+
+| 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
+|------|----------|----------|------|---------|
+| `polisctl.sh` | `cmd_admin` login | 硬编码 `admin123` → 命令行参数 `password` | v1.0.25 | — |
+| `polisctl.sh` | `cmd_admin` login | admin_code 默认值 `mzGW2026!PolisHub` → `polis2026` | v1.0.25 | — |
+| `adminctl.sh` | `cmd_login` | 空密码 `""` → 环境变量 `$POLIS_ADMIN_PASSWORD` (必须) | v1.0.25 | — |
+| `adminctl.sh` | 全局变量 | ADMIN_CODE 默认值 `mzGW2026!PolisHub` → `polis2026` | v1.0.25 | — |
+
+### 配置 — 服务器
+
+| 文件 | 位置 | 修复内容 | 版本 | Pattern |
+|------|------|----------|------|---------|
+| `/root/polis/admin_code.txt` | 管理码文件 | 内容 `polis2026` 与 env var `mzGW2026!PolisHub` 不一致，记录但不自动同步 | v1.0.25 | — |
 
 ## 如何使用本文件
 

@@ -1,18 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CherryEditor } from '@/components/CherryEditor';
 import {
-  ArrowLeft, Globe, Lock, Link2, PenLine, FileText, MessageSquareText,
+  ArrowLeft, Globe, Lock, PenLine, FileText,
   Home, Plus, X, Tag, Send, Paperclip, Upload, RotateCcw, Clock,
-  Maximize2, Minimize2, Save, Loader2, LogIn, BookOpen, Video, Film, HelpCircle,
-  Share2, Library, Bot, MessageSquare,
+  Maximize2, Minimize2, Save, LogIn, BookOpen, Video, Film,
   File as FileIcon, CircleCheck, CloudUpload, Eye,
 } from 'lucide-react';
-import { series as seriesApi, getToken, threads as threadsApi, type Series } from '@/lib/api';
-import { normalizeModuleType, getModuleLabel } from '@/lib/module-config';
+import { series as seriesApi, getToken, spaces as spacesApi, type Series } from '@/lib/api';
+import { normalizeModuleType } from '@/lib/module-config';
 
 const AUTOSAVE_KEY = 'polis_creation_draft';
 
@@ -21,23 +20,18 @@ interface ModuleDef {
   value: string;
   label: string;
   icon: React.ElementType;
-  editor: 'markdown' | 'video' | 'qa' | 'thread';  // 创作方案类型
+  editor: 'markdown' | 'video';  // 创作方案类型
   desc: string;
+  contentType: 'article' | 'video';  // 映射到的实际内容类型
 }
 
 const MODULE_TYPES: ModuleDef[] = [
-  { value: 'forum', label: '交流', icon: MessageSquareText, editor: 'markdown', desc: '发布讨论帖，支持 Markdown 格式' },
-  { value: 'article', label: '文章', icon: PenLine, editor: 'markdown', desc: '发布长文章，支持 Markdown 排版' },
-  { value: 'video', label: '视频', icon: Film, editor: 'video', desc: '上传视频，支持 MP4/MOV/AVI/MKV/WebM' },
-  { value: 'share', label: '分享', icon: Share2, editor: 'markdown', desc: '分享链接、资源或心得体会' },
-  { value: 'wiki', label: '知识库', icon: Library, editor: 'markdown', desc: '编写知识库文档，成员可协作编辑' },
-  { value: 'qa', label: '问答', icon: HelpCircle, editor: 'qa', desc: '提出问题，等待社区成员回答' },
-  { value: 'thread', label: 'AI 对话', icon: Bot, editor: 'thread', desc: '与 AI 多轮对话后发布为作品' },
+  { value: 'article', label: '文章', icon: PenLine, editor: 'markdown', desc: '发布文章，支持 Markdown 排版', contentType: 'article' },
+  { value: 'video', label: '视频', icon: Film, editor: 'video', desc: '上传视频，支持 MP4/MOV/AVI/MKV/WebM', contentType: 'video' },
 ];
 
 const VISIBILITY_OPTIONS = [
   { value: 'public', label: '公开', icon: Globe, desc: '所有人可见' },
-  { value: 'unlisted', label: '私密分享', icon: Link2, desc: '有链接的人可查看' },
   { value: 'private', label: '仅自己', icon: Lock, desc: '仅自己可见' },
 ];
 
@@ -58,7 +52,7 @@ function NewCreationPageInner() {
   const getInitialModule = (): string => {
     if (prefillModule) return normalizeModuleType(prefillModule);
     if (prefillType === 'video') return 'video';
-    return 'forum';
+    return 'article';
   };
 
   // ── 模块选择（一级） ──
@@ -70,7 +64,6 @@ function NewCreationPageInner() {
   const [body, setBody] = useState('');
   const [tags, setTags] = useState('');
   const [visibility, setVisibility] = useState('public');
-  const [password, setPassword] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(true);
@@ -100,7 +93,6 @@ function NewCreationPageInner() {
           setTags(Array.isArray(c.tags) ? c.tags.join(', ') : (c.tags || ''));
           setVisibility(c.visibility || 'public');
           setModuleType(normalizeModuleType(c.content_type));
-          if (c.password_hash) setPassword('');
           if (c.space_ns && c.module_type) {
             setSubmissions([{ spaceId: c.space_id || '', spaceNs: c.space_ns, spaceTitle: c.space_title || c.space_ns, moduleType: normalizeModuleType(c.module_type) }]);
           }
@@ -146,11 +138,9 @@ function NewCreationPageInner() {
   const [uploadedVideo, setUploadedVideo] = useState<{ id: string; title: string } | null>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Thread 模式 ──
-  const [threadFirstMessage, setThreadFirstMessage] = useState('');
 
   // ── 离开确认（非编辑模式且有内容时） ──
-  const hasUnsavedContent = !isEditMode && (title.trim() || body.trim() || threadFirstMessage.trim());
+  const hasUnsavedContent = !isEditMode && (title.trim() || body.trim());
   useEffect(() => {
     if (!hasUnsavedContent) return;
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
@@ -158,7 +148,23 @@ function NewCreationPageInner() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [hasUnsavedContent]);
 
-  // 从社区链接来的预填充
+  // ── 目标模块允许的内容类型（从社区模块链接来时获取） ──
+ const [moduleAllowedTypes, setModuleAllowedTypes] = useState<string[]>([]);
+
+ // Filter available module types based on target module's allowed content types
+ const availableModuleTypes = useMemo(() => {
+ if (moduleAllowedTypes.length === 0) return MODULE_TYPES;
+ return MODULE_TYPES.filter(m => moduleAllowedTypes.includes(m.contentType));
+ }, [moduleAllowedTypes]);
+
+ // Auto-select if only one type available for the target module
+ useEffect(() => {
+ if (moduleAllowedTypes.length > 0 && availableModuleTypes.length === 1) {
+ setModuleType(availableModuleTypes[0].value);
+ }
+ }, [availableModuleTypes, moduleAllowedTypes]);
+
+ // 从社区链接来的预填充
   useEffect(() => {
     if (prefillSpaceNs && prefillModule) {
       (async () => {
@@ -170,6 +176,17 @@ function NewCreationPageInner() {
             const s = data.data;
             const resolvedModule = normalizeModuleType(prefillModule);
             setSubmissions([{ spaceId: s.id, spaceNs: s.namespace, spaceTitle: s.title, moduleType: resolvedModule }]);
+
+            // 同时获取该模块允许的内容类型
+            try {
+              const modRes = await spacesApi.listModules(s.namespace);
+              if (modRes.code === 0 && modRes.data) {
+                const mod = modRes.data.find((m: any) => m.module_key === prefillModule);
+                if (mod?.allowed_content_types) {
+                  setModuleAllowedTypes(mod.allowed_content_types);
+                }
+              }
+            } catch {}
           }
         } catch {}
       })();
@@ -178,16 +195,16 @@ function NewCreationPageInner() {
 
   // 加载系列
   useEffect(() => {
-    if (!prefillSpaceNs || currentModule.editor === 'video' || currentModule.editor === 'thread') return;
+    if (!prefillSpaceNs || currentModule.editor === 'video') return;
     setSeriesLoading(true);
     seriesApi.list(prefillSpaceNs).then(res => {
       if (res.code === 0 && res.data) setSeriesList(res.data.filter((s: Series) => s.is_published));
     }).catch(() => {}).finally(() => setSeriesLoading(false));
   }, [prefillSpaceNs, moduleType]);
 
-  // 草稿恢复（仅 markdown 和 qa 编辑器，非编辑模式）
+  // 草稿恢复（仅 markdown 编辑器，非编辑模式）
   useEffect(() => {
-    if (draftRestored || currentModule.editor === 'video' || currentModule.editor === 'thread' || isEditMode) return;
+    if (draftRestored || currentModule.editor === 'video' || isEditMode) return;
     const draftStr = localStorage.getItem(AUTOSAVE_KEY);
     const draftTime = localStorage.getItem(`${AUTOSAVE_KEY}_time`);
     if (draftStr && draftTime && !body && !title) {
@@ -220,7 +237,7 @@ function NewCreationPageInner() {
     setHasDraft(false);
   };
 
-  // 自动保存（仅 markdown/qa 编辑器，非编辑模式）
+  // 自动保存（仅 markdown 编辑器，非编辑模式）
   const handleAutoSave = useCallback((markdown: string) => {
     if (isEditMode) return;
     const now = new Date();
@@ -350,12 +367,7 @@ function NewCreationPageInner() {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&page_size=8`);
         const data = await res.json();
         if (data.code === 0 && Array.isArray(data.data)) {
-          const filtered = data.data.filter((s: any) => {
-            const mods = s.enabled_modules;
-            if (!mods || !Array.isArray(mods)) return true;
-            return mods.includes(moduleType);
-          });
-          setSpaceResults(filtered);
+          setSpaceResults(data.data);
           setShowSpaceDropdown(true);
         }
       } catch {}
@@ -376,7 +388,7 @@ function NewCreationPageInner() {
     setSubmissions(prev => prev.filter(s => !(s.spaceId === spaceId && s.moduleType === mt)));
   };
 
-  // ── 提交文本（markdown / qa） ──
+  // ── 提交文本（文章） ──
   const handleSubmitText = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!title.trim()) { setError('请输入标题'); return; }
@@ -388,7 +400,7 @@ function NewCreationPageInner() {
       const payload = {
         content_type: moduleType, title: title.trim(), body,
         tags: tagList.length > 0 ? tagList : undefined,
-        visibility, password: visibility === 'unlisted' && password ? password : undefined,
+        visibility,
       };
       const url = isEditMode ? `/api/creations/${editId}` : '/api/creations';
       const method = isEditMode ? 'PUT' : 'POST';
@@ -421,24 +433,6 @@ function NewCreationPageInner() {
     finally { setPublishing(false); }
   };
 
-  // ── 创建 Thread ──
-  const handleCreateThread = async () => {
-    if (!title.trim()) { setError('请输入对话标题'); return; }
-    if (!threadFirstMessage.trim()) { setError('请输入首条消息'); return; }
-    setPublishing(true); setError('');
-    try {
-      const result = await threadsApi.create({ title: title.trim() });
-      if (result.code === 0 && result.data) {
-        const threadId = result.data.id;
-        await threadsApi.addMessage(threadId, { role: 'user', content: threadFirstMessage.trim() });
-        router.push(`/creations/new/thread?threadId=${threadId}`);
-      } else {
-        setError(result.message || '创建对话失败');
-      }
-    } catch { setError('网络错误，请重试'); }
-    finally { setPublishing(false); }
-  };
-
   // ── 切换模块（编辑模式下不允许切换） ──
   const handleModuleChange = (val: string) => {
     if (isEditMode) return;
@@ -456,8 +450,7 @@ function NewCreationPageInner() {
     return () => window.removeEventListener('keydown', handler);
   }, [isFullscreen]);
 
-  const isMarkdownEditor = currentModule.editor === 'markdown' || currentModule.editor === 'qa';
-  const isThreadEditor = currentModule.editor === 'thread';
+  const isMarkdownEditor = currentModule.editor === 'markdown';
 
   // ── 全屏编辑器 ──
   if (isFullscreen && isMarkdownEditor) {
@@ -531,12 +524,6 @@ function NewCreationPageInner() {
               <button type="button" onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
                 className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
                 {isEditMode ? <><Save size={15} /> {publishing ? '保存中...' : '保存修改'}</> : <><Send size={15} /> {publishing ? '发布中...' : '发布'}</>}
-              </button>
-            )}
-            {isThreadEditor && (
-              <button type="button" onClick={handleCreateThread} disabled={publishing || !title.trim() || !threadFirstMessage.trim()}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
-                <Send size={15} /> {publishing ? '创建中...' : '开始对话'}
               </button>
             )}
             {currentModule.editor === 'video' && (
@@ -627,7 +614,7 @@ function NewCreationPageInner() {
             </span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {MODULE_TYPES.map((mod) => {
+            {availableModuleTypes.map((mod) => {
               const Icon = mod.icon;
               const isActive = moduleType === mod.value;
               return (
@@ -664,15 +651,10 @@ function NewCreationPageInner() {
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm text-gray-500 dark:text-gray-400">可见性:</span>
             <select value={visibility}
-              onChange={(e) => { setVisibility(e.target.value); if (e.target.value !== 'unlisted') setPassword(''); }}
+              onChange={(e) => setVisibility(e.target.value)}
               className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
               {VISIBILITY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label} — {opt.desc}</option>)}
             </select>
-            {visibility === 'unlisted' && (
-              <input type="text" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent w-40"
-                placeholder="分享密码（可选）" />
-            )}
             <div className="flex items-center gap-1.5 ml-2">
               <Tag size={13} className="text-gray-400" />
               <input type="text" value={tags} onChange={(e) => setTags(e.target.value)}
@@ -681,7 +663,7 @@ function NewCreationPageInner() {
           </div>
 
           {/* Series */}
-          {prefillSpaceNs && seriesList.length > 0 && currentModule.editor !== 'video' && currentModule.editor !== 'thread' && (
+          {prefillSpaceNs && seriesList.length > 0 && currentModule.editor !== 'video' && (
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-gray-400" />
               <span className="text-xs text-gray-500 dark:text-gray-400">收录到系列:</span>
@@ -697,7 +679,7 @@ function NewCreationPageInner() {
           {/* ========== 投稿到社区（所有模块共用） ========== */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              投稿到社区 <span className="text-xs text-gray-400 font-normal">(可选，可多选 — 仅搜索启用了「{currentModule.label}」模块的社区)</span>
+              投稿到社区 <span className="text-xs text-gray-400 font-normal">(可选，可多选)</span>
             </label>
             {submissions.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
@@ -737,23 +719,13 @@ function NewCreationPageInner() {
             </div>
           </div>
 
-          {/* ========== Markdown 编辑器（交流/分享/知识库/小说/游戏/小程序/问答） ========== */}
+          {/* ========== Markdown 编辑器 ========== */}
           {isMarkdownEditor && (
           <>
-            {/* 问答提示 */}
-            {currentModule.editor === 'qa' && (
-              <div className="rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 p-3 flex items-center gap-2 mb-1">
-                <HelpCircle className="h-4 w-4 text-cyan-500 shrink-0" />
-                <span className="text-sm text-cyan-700 dark:text-cyan-400">
-                  请在标题中清晰描述你的问题，正文中补充详细信息和背景。发布后社区成员可以回答你的问题。
-                </span>
-              </div>
-            )}
-
             {/* Title */}
             <div>
               <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-                placeholder={currentModule.editor === 'qa' ? '简明扼要地描述你的问题...' : '给你的作品起个标题...'}
+                placeholder="给你的作品起个标题..."
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 transition-all" />
             </div>
 
@@ -792,43 +764,6 @@ function NewCreationPageInner() {
               <button type="button" onClick={handleSubmitText} disabled={publishing || !title.trim() || !body.trim()}
                 className="flex items-center gap-2 px-8 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 disabled:opacity-50 transition shadow-lg shadow-primary-600/20">
                 {isEditMode ? <><Save size={16} />{publishing ? '保存中...' : '保存修改'}</> : <><Send size={16} />{publishing ? '发布中...' : '发布作品'}</>}
-              </button>
-            </div>
-          </>
-          )}
-
-          {/* ========== Thread 编辑器（AI 对话） ========== */}
-          {isThreadEditor && (
-          <>
-            <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-4 flex items-start gap-3 mb-1">
-              <Bot className="h-5 w-5 text-purple-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-medium text-purple-700 dark:text-purple-300">AI 对话模式</p>
-                <p className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                  创建一个标题，输入首条消息。之后可继续与 AI 多轮对话，最终将完整对话发布为作品。
-                </p>
-              </div>
-            </div>
-
-            {/* Title */}
-            <div>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
-                placeholder="对话标题，例如：帮我设计一个社区规则..."
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all" />
-            </div>
-
-            {/* First Message */}
-            <div>
-              <textarea value={threadFirstMessage} onChange={(e) => setThreadFirstMessage(e.target.value)}
-                rows={5} placeholder="输入你的第一条消息，开启与 AI 的对话..."
-                className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 transition-all resize-none" />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-400 dark:text-gray-500">创建后可在对话页面继续与 AI 交流，满意后发布</p>
-              <button type="button" onClick={handleCreateThread} disabled={publishing || !title.trim() || !threadFirstMessage.trim()}
-                className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 transition shadow-lg shadow-purple-600/20">
-                {publishing ? <><Loader2 size={16} className="animate-spin" />创建中...</> : <><MessageSquare size={16} />开始对话</>}
               </button>
             </div>
           </>

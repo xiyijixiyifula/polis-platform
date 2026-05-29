@@ -6,6 +6,7 @@ pub struct ContentServiceConfig {
     pub port: u16,
     pub database_url: String,
     pub nats_url: String,
+    pub max_upload_size_mb: u64,
 }
 
 impl ContentServiceConfig {
@@ -19,6 +20,10 @@ impl ContentServiceConfig {
             database_url: env::var("DATABASE_URL")
                 .expect("DATABASE_URL must be set"),
             nats_url: env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string()),
+            max_upload_size_mb: env::var("UPLOAD_MAX_SIZE_MB")
+                .unwrap_or_else(|_| "60".to_string())
+                .parse()
+                .unwrap_or(60),
         }
     }
 }

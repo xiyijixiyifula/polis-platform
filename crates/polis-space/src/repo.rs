@@ -1,5 +1,5 @@
 use polis_core::error::AppError;
-use polis_core::models::{Space, Membership, UpdateSpaceRequest};
+use polis_core::models::{Space, Membership, UpdateSpaceRequest, SpaceModule, CreateModuleRequest, UpdateModuleRequest};
 use sqlx::PgPool;
 use uuid::Uuid;
 use argon2::{
@@ -171,7 +171,7 @@ impl SpaceRepo {
     /// 算法: member_count(权重0.3) + post_count(权重0.5) + 近期活跃加分(7天内权重+1)
     pub async fn find_trending(&self, limit: u32) -> Result<Vec<Space>, AppError> {
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY (member_count * 0.3 + post_count * 0.5 + CASE WHEN updated_at > NOW() - INTERVAL '7 days' THEN 1.5 ELSE 0 END) DESC, created_at DESC LIMIT $1",
+            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY (member_count * 0.3 + post_count * 0.5 + star_count * 0.4 + CASE WHEN updated_at > NOW() - INTERVAL '7 days' THEN 1.5 ELSE 0 END) DESC, created_at DESC LIMIT $1",
         )
         .bind(limit as i64)
         .fetch_all(&self.pool)
@@ -562,6 +562,93 @@ impl SpaceRepo {
         Ok(exists)
     }
 
+    // ===== 收藏统计 =====
+
+    /// 更新社区收藏数
+    pub async fn update_star_count(&self, space_id: Uuid) -> Result<(), AppError> {
+        sqlx::query(
+            "UPDATE spaces SET star_count = (SELECT COUNT(*) FROM space_stars WHERE space_id=$1) WHERE id=$1"
+        )
+        .bind(space_id).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    /// 获取社区收藏数
+    pub async fn get_star_count(&self, space_id: Uuid) -> Result<i64, AppError> {
+        let count: Option<i64> = sqlx::query_scalar(
+            "SELECT star_count FROM spaces WHERE id = $1"
+        )
+        .bind(space_id).fetch_optional(&self.pool).await?
+        .flatten();
+        Ok(count.unwrap_or(0))
+    }
+
+    /// 收藏社区
+    pub async fn star_space(&self, space_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let existing = sqlx::query_scalar::<_, Option<Uuid>>(
+            "SELECT id FROM space_stars WHERE user_id = $1 AND space_id = $2"
+        )
+        .bind(user_id).bind(space_id)
+        .fetch_optional(&self.pool).await?
+        .flatten();
+
+        if existing.is_some() {
+            return Ok(true);
+        }
+
+        sqlx::query("INSERT INTO space_stars (user_id, space_id) VALUES ($1, $2)")
+            .bind(user_id).bind(space_id)
+            .execute(&self.pool).await?;
+
+        self.update_star_count(space_id).await?;
+        Ok(true)
+    }
+
+    /// 取消收藏社区
+    pub async fn unstar_space(&self, space_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let result = sqlx::query(
+            "DELETE FROM space_stars WHERE user_id = $1 AND space_id = $2"
+        )
+        .bind(user_id).bind(space_id)
+        .execute(&self.pool).await?;
+
+        if result.rows_affected() > 0 {
+            self.update_star_count(space_id).await?;
+        }
+        Ok(false)
+    }
+
+    /// 检查是否已收藏社区
+    pub async fn is_starred_space(&self, space_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let exists = sqlx::query_scalar::<_, Option<i32>>(
+            "SELECT 1 FROM space_stars WHERE user_id = $1 AND space_id = $2"
+        )
+        .bind(user_id).bind(space_id)
+        .fetch_optional(&self.pool).await?
+        .is_some();
+        Ok(exists)
+    }
+
+    /// 获取用户收藏的社区 ID 列表
+    pub async fn get_starred_spaces(&self, user_id: Uuid) -> Result<Vec<Uuid>, AppError> {
+        let ids = sqlx::query_scalar(
+            "SELECT space_id FROM space_stars WHERE user_id = $1 ORDER BY created_at DESC"
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool).await?;
+        Ok(ids)
+    }
+
+    /// 获取最多收藏的社区 (Top N)
+    pub async fn find_most_starred(&self, limit: i64) -> Result<Vec<Space>, AppError> {
+        let spaces = sqlx::query_as::<_, Space>(
+            "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY star_count DESC LIMIT $1"
+        )
+        .bind(limit)
+        .fetch_all(&self.pool).await?;
+        Ok(spaces)
+    }
+
     /// 获取社区是否有密码
     pub async fn has_password(&self, space_id: Uuid) -> Result<bool, AppError> {
         let hash: Option<String> = sqlx::query_scalar(
@@ -587,5 +674,95 @@ impl SpaceRepo {
             }
             None => Ok(false),
         }
+    }
+
+    // ==================== 自定义模块 CRUD ====================
+
+    /// 列表社区的所有模块
+    pub async fn list_modules(&self, space_id: Uuid) -> Result<Vec<SpaceModule>, AppError> {
+        let modules = sqlx::query_as::<_, SpaceModule>(
+            "SELECT * FROM space_modules WHERE space_id = $1 AND is_active = true ORDER BY sort_order"
+        )
+        .bind(space_id)
+        .fetch_all(&self.pool).await?;
+        Ok(modules)
+    }
+
+    /// 获取单个模块
+    pub async fn get_module(&self, space_id: Uuid, module_key: &str) -> Result<Option<SpaceModule>, AppError> {
+        let m = sqlx::query_as::<_, SpaceModule>(
+            "SELECT * FROM space_modules WHERE space_id = $1 AND module_key = $2"
+        )
+        .bind(space_id).bind(module_key)
+        .fetch_optional(&self.pool).await?;
+        Ok(m)
+    }
+
+    /// 创建模块
+    pub async fn create_module(&self, space_id: Uuid, req: &CreateModuleRequest) -> Result<SpaceModule, AppError> {
+        let module_key = req.module_key.clone().unwrap_or_else(|| {
+            format!("mod_{:x}", uuid::Uuid::new_v4().as_fields().0)
+        });
+        let mode = req.mode.clone().unwrap_or_else(|| "free".to_string());
+        let types = serde_json::to_value(req.allowed_content_types.clone().unwrap_or_else(|| vec!["article".to_string()]))
+            .unwrap_or_default();
+
+        // 获取下一个 sort_order
+        let max_order: Option<i32> = sqlx::query_scalar(
+            "SELECT COALESCE(MAX(sort_order), -1) FROM space_modules WHERE space_id = $1"
+        )
+        .bind(space_id)
+        .fetch_optional(&self.pool).await?
+        .flatten();
+
+        let sort_order = max_order.unwrap_or(-1) + 1;
+
+        let m = sqlx::query_as::<_, SpaceModule>(
+            r#"INSERT INTO space_modules (space_id, name, module_key, mode, allowed_content_types, sort_order)
+               VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"#
+        )
+        .bind(space_id)
+        .bind(&req.name)
+        .bind(&module_key)
+        .bind(&mode)
+        .bind(&types)
+        .bind(sort_order)
+        .fetch_one(&self.pool).await?;
+
+        Ok(m)
+    }
+
+    /// 更新模块
+    pub async fn update_module(&self, space_id: Uuid, module_key: &str, req: &UpdateModuleRequest) -> Result<Option<SpaceModule>, AppError> {
+        let existing = self.get_module(space_id, module_key).await?;
+        let existing = match existing {
+            Some(m) => m,
+            None => return Ok(None),
+        };
+
+        let name = req.name.clone().unwrap_or(existing.name);
+        let mode = req.mode.clone().unwrap_or(existing.mode);
+        let types = req.allowed_content_types.as_ref()
+            .map(|t| serde_json::to_value(t).unwrap_or(existing.allowed_content_types.clone()))
+            .unwrap_or(existing.allowed_content_types);
+        let is_active = req.is_active.unwrap_or(existing.is_active);
+
+        let m = sqlx::query_as::<_, SpaceModule>(
+            r#"UPDATE space_modules SET name=$1, mode=$2, allowed_content_types=$3, is_active=$4
+               WHERE space_id=$5 AND module_key=$6 RETURNING *"#
+        )
+        .bind(&name).bind(&mode).bind(&types).bind(is_active)
+        .bind(space_id).bind(module_key)
+        .fetch_optional(&self.pool).await?;
+
+        Ok(m)
+    }
+
+    /// 删除模块
+    pub async fn delete_module(&self, space_id: Uuid, module_key: &str) -> Result<bool, AppError> {
+        let result = sqlx::query("DELETE FROM space_modules WHERE space_id=$1 AND module_key=$2")
+            .bind(space_id).bind(module_key)
+            .execute(&self.pool).await?;
+        Ok(result.rows_affected() > 0)
     }
 }

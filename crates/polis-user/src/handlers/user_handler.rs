@@ -393,6 +393,34 @@ impl UserHandler {
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
 
+    /// 查询用户封禁状态
+    pub async fn get_ban_status(&self, email: &str) -> Result<serde_json::Value, AppError> {
+        let user = self.repo.find_by_email(email).await?
+            .ok_or(AppError::NotFound("User not found".to_string()))?;
+        Ok(serde_json::json!({
+            "banned": user.banned,
+            "ban_reason": user.ban_reason,
+            "banned_at": user.banned_at.map(|t| t.to_rfc3339()),
+        }))
+    }
+
+    /// 提交账号申诉 — 创建一条 target_type='appeal' 的举报记录
+    pub async fn submit_appeal(&self, email: &str, reason: &str) -> Result<(), AppError> {
+        let user = self.repo.find_by_email(email).await?
+            .ok_or(AppError::NotFound("该邮箱未注册".to_string()))?;
+        if !user.banned {
+            return Err(AppError::Validation("该账号未被封禁，无需申诉".to_string()));
+        }
+        if reason.trim().len() < 10 {
+            return Err(AppError::Validation("申诉理由至少需要10个字符".to_string()));
+        }
+        sqlx::query(
+            "INSERT INTO reports (reporter_id, target_type, target_id, reason, status) VALUES ($1, 'appeal', $2, $3, 'pending')"
+        ).bind(user.id).bind(user.id).bind(reason.trim())
+        .execute(&self.repo.pool).await?;
+        Ok(())
+    }
+
     /// 获取互相关注的联系人（WeChat-style contacts: 我关注了TA 且 TA关注了我）
     pub async fn get_mutual_contacts(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
         let rows = sqlx::query_as::<_, (serde_json::Value,)>(

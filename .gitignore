@@ -31,3 +31,5 @@ uploads
 web/out/
 # Release artifacts (local build output)
 polis-release-*
+*.network-response
+release-*.tar.gz

@@ -14,6 +14,8 @@
 - `polis-aggregate` 有完整代码但未部署，跨社区精选/热榜功能缺失
 - 无蓝绿/滚动部署（重启时有短暂中断）
 - 日志无自动轮转（可能撑满磁盘）
+- systemd 服务 ExecStart 使用 `/root/polis/target/release/` 路径，与部署目标 `/usr/local/bin/` 不一致 → v1.0.27 记录为 [deploy-path-mismatch](bugs/patterns/deploy-path-mismatch.md) Pattern
+- 服务器 admin_code 存储在 `/root/polis/admin_code.txt`，文件优先级高于 `ADMIN_CODE` 环境变量（管理后台修改后不同步） → v1.0.25 记录
 
 ## 关键 Bug 修复记录
 
@@ -46,6 +48,12 @@
 - **Standalone 部署文件同步** — npm build 后需同步 server/ + BUILD_ID + *.json 到 standalone/.next/（v0.2.41）
 
 - **网关查询参数丢失** — `proxy_to_*` 函数改用 `path_and_query()`（v0.2.7）
+
+- **模块Tab点击空白页 (v1.0.34)** — 动态Tab系统使用 `module_key` 作为标识符，但渲染块条件使用 `MODULE_CONFIG` route 名。两个键空间不一致导致Tab激活但无匹配渲染块。修复: tab id 改为 `MODULE_CONFIG[m.module_key]?.route || m.module_key` + 新增通用 fallback 渲染块处理自定义模块。见 [module-tab-key-mismatch](bugs/patterns/module-tab-key-mismatch.md)。
+
+- **SpaceSettings allowed_content_types null 安全 (v1.0.35)** — `m.allowed_content_types.map()` 缺少空值防御，若 API 返回 null/undefined 则 React 崩溃白屏。用户曾报告"改模块权限后页面空白"但多次浏览器测试未能稳定复现。作为防御性修复: `(m.allowed_content_types ?? []).map()`。见 [array-map-null](bugs/patterns/array-map-null.md)。
+
+- **mtFilter 硬编码模块类型过滤 (v1.0.33)** — SpacePageClient 使用硬编码 Set 过滤帖子模块类型（仅允许 17 种旧模块），自定义模块帖子被过滤掉。修复: 移除 mtFilter，直接追加所有帖子。
 
 - **管理后台 reported_content SQL Bug** — `get_platform_stats()` 子查询错误使用了 `posts` 表。修复: 改为 `SELECT COUNT(*) FROM reports WHERE status = 'pending'`（v0.3.64）
 
@@ -93,6 +101,14 @@
 
 - **PostPublic 使用原始 visibility 而非 effective_visibility** — `get_post_public` 计算了 auto-restore 后的 effective_visibility，但构造 PostPublic 时错误使用 `post.visibility`（DB 原始值），导致首次 GET 返回过期 visibility。修复: 将 `post.visibility` 替换为 `effective_visibility`（v1.0.18）
 
+- **管理后台登录页缺少密码输入框** — admin/login 页面 `useState` 初始化了 `password` 字段但 JSX 中没有对应的 `<input type="password">`，导致后端 Argon2 验证失败，无法登录。修复: 在邮箱和验证码之间补充密码输入框（v1.0.20）
+
+- **系统设置页验证码修改失败返回 "Authentication required"** — `update_admin_code_handler` 在校验当前验证码不匹配时错误返回 `AppError::Unauthorized` (HTTP 401)，前端收到 401 无法读取业务错误消息，显示 "Authentication required" 而非 "当前验证码不正确"。修复: 将错误类型改为 `AppError::Validation("当前验证码不正确".to_string())` (HTTP 400)。⚠️ 教训: API 错误类型映射要保持语义一致 — 业务校验失败用 Validation(400)，认证失败用 Unauthorized(401)（v1.0.21）
+
+- **上传大小硬编码不一致** — 视频上传 3 处硬编码（500/600/650MB），附件上传完全无大小限制（内容服务 + Gateway）。修复: 新建 `platform_settings` 表 + Admin API 可配置 + 视频/内容服务动态 DB 读取 + Gateway 环境变量可配 + 内容服务 DefaultBodyLimit + 大小检查。⚠️ 修改平台设置后需重启 polis-video 和 polis-gateway 服务（v1.0.24）
+
+- **测试数据污染** — 95 个用户中有 66 个 E2E 测试账号（`tester_*`），139 个空间中有 89 个测试空间（`E2E Test Space*`），登录页显示测试账号提示。修复: 按 FK 依赖顺序清理所有测试数据 + 移除登录页测试提示。⚠️ 67 个 FK 引用约束，删除需按正确顺序进行（v1.0.24）
+
 ## 部署前预防清单
 
 > 每次部署前过一遍，防止已知 Bug 回归。详见 [docs/bugs/INDEX.md](bugs/INDEX.md)
@@ -106,3 +122,31 @@
 - [ ] **SQL 安全**: `grep -rn 'format!("' crates/*/src/repo.rs | grep -i "select\|update\|delete\|insert"' 无结果
 - [ ] **Nginx 版本泄露**: `curl -sI https://www.mzgw.com | grep server:` 不显示版本号
 - [ ] **Nginx 废弃头**: 服务器 nginx 配置不含 `X-XSS-Protection`
+- [ ] **Gateway 路由同步**: 新增 API 路径前缀时，检查 `crates/polis-gateway/src/main.rs` 是否已有对应路由
+- [ ] **JWT atob 解码**: `grep -rn "atob(" web/src/ --include="*.tsx" --include="*.ts" | grep -v "replace.*-.*g.*replace.*_"` 检查 atob() 前有 URL-safe base64 转换
+
+- **Gateway 路由遗漏导致新 API 404** — v1.0.22 新增 `/api/user/ban-status` 和 `/api/user/appeal` 端点后，Gateway 未配置 `/api/user/` 路由导致通过域名访问返回 404。修复: 在 Gateway 路由表添加 `.route("/api/user/{*path}", any(proxy_to_user))`。教训: 新增 API 端点时同步检查 Gateway 路由表（v1.0.22）
+
+- **登录页申诉链接触发条件不完整** — v1.0.22 申诉链接仅在错误信息包含"封禁"/"冻结"时显示，但自定义封禁原因可能不含这些关键词。修复: 增加 `Forbidden:` 前缀检测（AppError::Forbidden 的 display 格式为 "Forbidden: {reason}"）。教训: 错误匹配用结构性前缀而非语义关键词（v1.0.23）
+
+- **未认证用户无法被封禁** — v1.0.22 管理后台用户页仅对已认证用户显示封禁按钮。修复: 封禁按钮对所有未封禁用户显示，认证按钮仅对未认证用户显示（两个按钮独立判断）（v1.0.22）
+
+- **封禁原因硬编码** — v1.0.22 封禁操作始终使用 "违规操作" 作为原因。修复: 确认对话框中添加封禁原因输入框（v1.0.22）
+
+- **视频无法播放 — HLS 文件全部丢失 (2026-05-27 发现)** — 服务器 `data/hls/` 和 `data/videos/` 目录为空，所有历史视频的原始文件和 HLS 分段文件均已丢失。API 返回正常（数据库记录完整），但磁盘文件不存在。视频上传功能正常（新上传可用），但历史视频无法恢复。根因: 服务器 `data/` 目录在部署/重启过程中被清空重建。**待修复**: 暂无恢复方案，需建立数据备份机制。教训: `data/` 目录需独立于部署流程持久化，部署脚本不得触碰该目录。**建议**: 新增部署预防清单项 — 部署前备份 `data/` 目录。（2026-05-27）
+
+- **管理页"管理"按钮无反应 — atob URL-safe base64 解码失败** — JWT token 使用 base64url 编码（含 `-` 和 `_`），`ManagePageClient.tsx` 中 isOwner 校验调用了 `JSON.parse(atob(token.split('.')[1]))`，但 JavaScript 的 `atob()` 不支持 base64url，解码失败抛异常被 catch 捕获后重定向回社区页，表现为按钮无反应。修复: atob() 前添加 `.replace(/-/g, '+').replace(/_/g, '/')` 将 base64url 转为标准 base64。同时修复 `PostPageClient.tsx` 中 `getCurrentUserId()` 的同名问题。教训: 所有调用 atob() 解码 JWT payload 的位置必须先行转换 base64url→standard base64（v1.0.29）
+
+- **polisctl/adminctl 硬编码密码 (v1.0.25 已修复)** — polisctl admin login 硬编码 `admin123` 密码，adminctl.sh 硬编码空密码，导致管理员无法通过 CLI 工具登录。修复: polisctl 新增 `--password` 参数，adminctl.sh 改为读取 `POLIS_ADMIN_PASSWORD` 环境变量（必须）。教训: 不得在工具代码中硬编码凭据。（2026-05-27）
+
+- **管理员密码丢失 (2026-05-27 发现及修复)** — 管理后台 seed 时创建的管理员 `admin@polis.app` 密码不明确（非 `admin123`，非空），导致无法登录。通过直接更新 PostgreSQL 中 password_hash 重置。教训: seed 数据中的密码应记录在安全位置，或提供初始密码重置机制。（2026-05-27）
+
+- **模块管理 POST 端点 "Space not found" (2026-05-28)** — 新增 `/api/spaces/{ns}/modules` POST/PUT 端点后，`handle_auth_path` 的 `actions` 数组遗漏 `/modules` 后缀，导致 namespace 提取失败。修复: actions 数组追加 "/modules"。教训: 所有通过 handle_auth_path 处理的新端点必须同步更新 actions 数组。已建立 [Pattern](bugs/patterns/actions-array-missing.md) + [修复配方](bugs/fix-recipes/actions-array-missing.md)（v1.0.32）
+
+- **模块管理 DELETE 返回 404 (2026-05-28)** — 路由配置 `.delete(delete_space)` 将 `/api/spaces/{*path}` 的所有 DELETE 请求路由到 `delete_space` 函数，而非 `handle_auth_path`。修复: 改为 `.delete(handle_auth_path)`，space 归档逻辑移入 handle_auth_path 内部（v1.0.32）
+
+- **Gateway 模块接口路由误判 (2026-05-28)** — `proxy_space_router` 的 `is_content` 条件包含 `remaining.contains("/modules")`，导致 `/api/spaces/{ns}/modules` 被转发到内容服务而非空间服务。修复: 移除 modules 条件（v1.0.31）
+
+- **编译目标错误导致修复无效 (2026-05-28)** — `cargo build --release` 默认编译 macOS (aarch64-apple-darwin) 二进制，Linux 服务器二进制从未更新，导致 `actions` 数组修复看似完成但实际未部署。修复: 改用 `--target x86_64-unknown-linux-gnu`。教训: 每次编译时显式指定 Linux target，打包前验证 ELF 格式。已建立 [Pattern](bugs/patterns/wrong-build-target.md) + [修复配方](bugs/fix-recipes/wrong-build-target.md)（v1.0.32）
+
+- **前端旧代码残留 (2026-05-28)** — v1.0.30 打包时 SpaceSettings.tsx 新版代码未被打入（可能与 tar 排序或缓存有关），服务器仍运行旧版硬编码模块列表。修复: 重新 `next build` + 打包部署。教训: 部署后验证前端功能实际生效（v1.0.32）

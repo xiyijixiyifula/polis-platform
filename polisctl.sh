@@ -590,11 +590,15 @@ cmd_admin() {
     local action="${1:-}"; shift || true
     case "$action" in
         login)
-            local email="${1:-admin@polis.app}"; local code="${2:-mzGW2026!PolisHub}"
+            local email="${1:-admin@polis.app}"; local password="${2}"; local code="${3:-polis2026}"
+            if [ -z "$password" ]; then
+                echo -e "${RED}Usage: polisctl admin login <email> <password> [admin_code]${NC}" >&2
+                exit 1
+            fi
             local resp
             resp=$(curl -sf -X POST "${BASE_URL}/api/admin/login" \
                 -H "Content-Type: application/json" \
-                -d "{\"email\":\"$email\",\"password\":\"admin123\",\"admin_code\":\"$code\"}")
+                -d "{\"email\":\"$email\",\"password\":\"$password\",\"admin_code\":\"$code\"}")
             echo "$resp" | jq -r '.data.access_token' > "$ADMIN_TOKEN_FILE"
             chmod 600 "$ADMIN_TOKEN_FILE"
             echo -e "${GREEN}✓ Admin logged in${NC}" >&2

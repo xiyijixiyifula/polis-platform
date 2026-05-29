@@ -137,6 +137,7 @@ pub struct SpacePublic {
     pub member_count: i64,
     pub post_count: i64,
     pub follower_count: i64,
+    pub star_count: i64,
     pub has_password: bool,
     pub created_at: DateTime<Utc>,
     pub level: Option<i32>,
@@ -162,6 +163,7 @@ impl From<Space> for SpacePublic {
             member_count: s.member_count,
             post_count: s.post_count,
             follower_count: 0,
+            star_count: 0,
             has_password: false,
             created_at: s.created_at,
             level: None,
@@ -191,6 +193,70 @@ pub struct UpdateSpaceRequest {
     pub password: Option<String>,
     pub custom_rules: Option<serde_json::Value>,
     pub enabled_modules: Option<Vec<String>>,
+}
+
+// ==================== 自定义模块 ====================
+
+/// 自定义模块 (DB 行)
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct SpaceModule {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub name: String,
+    pub module_key: String,
+    pub mode: String,
+    pub allowed_content_types: serde_json::Value,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+/// 自定义模块公开信息
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpaceModulePublic {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub name: String,
+    pub module_key: String,
+    pub mode: String,
+    pub allowed_content_types: Vec<String>,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+impl From<SpaceModule> for SpaceModulePublic {
+    fn from(m: SpaceModule) -> Self {
+        Self {
+            id: m.id,
+            space_id: m.space_id,
+            name: m.name,
+            module_key: m.module_key,
+            mode: m.mode,
+            allowed_content_types: serde_json::from_value(m.allowed_content_types).unwrap_or_default(),
+            sort_order: m.sort_order,
+            is_active: m.is_active,
+            created_at: m.created_at,
+        }
+    }
+}
+
+/// 创建自定义模块请求
+#[derive(Debug, Deserialize)]
+pub struct CreateModuleRequest {
+    pub name: String,
+    pub module_key: Option<String>,
+    pub mode: Option<String>,
+    pub allowed_content_types: Option<Vec<String>>,
+}
+
+/// 更新自定义模块请求
+#[derive(Debug, Deserialize)]
+pub struct UpdateModuleRequest {
+    pub name: Option<String>,
+    pub mode: Option<String>,
+    pub allowed_content_types: Option<Vec<String>>,
+    pub is_active: Option<bool>,
 }
 
 // ==================== 内容 ====================
@@ -1257,6 +1323,24 @@ pub struct CreateReviewRuleRequest {
     pub config: serde_json::Value,
     pub target_types: Vec<String>,
     pub priority: Option<i32>,
+}
+
+/// Agent 审查决策
+#[derive(Debug, Deserialize)]
+pub struct AgentReviewDecision {
+    pub target_type: String,       // "post" | "creation" | "user"
+    pub target_id: Uuid,
+    pub action: String,            // "approve" | "hide" | "ban_user"
+    pub duration_hours: Option<i32>,
+    pub reason: String,
+    pub confidence: f64,           // 0.0 - 1.0
+    pub violation_type: Option<String>, // "nsfw" | "violence" | "hate_speech" | "spam" | "illegal" | "harassment"
+}
+
+/// Agent 审查请求
+#[derive(Debug, Deserialize)]
+pub struct AgentReviewRequest {
+    pub decisions: Vec<AgentReviewDecision>,
 }
 
 /// 审计日志查询

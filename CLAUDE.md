@@ -104,15 +104,19 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 3. **检查 Pattern** — 打开 [docs/bugs/INDEX.md](docs/bugs/INDEX.md) 快速定位表，逐条比对症状，判断是否已有同类：
    - **已有 Pattern** → 在 Pattern 文件的 `已修复点位` 表格追加一行，更新 `复发次数`；如为复发，在 [回归地图](docs/bugs/regression-map.md) 追加因果链
    - **新类型** → 在 `docs/bugs/patterns/` 下新建 Pattern 文件 + 在 `docs/bugs/fix-recipes/` 下新建配方文件
-4. **更新** [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) — 在 `关键 Bug 修复记录` 中追加条目
-5. **更新** [docs/bugs/INDEX.md](docs/bugs/INDEX.md) 的统计数字、快速定位表、最近更新时间
-6. **如为复发** → commit message 标注 `复发: [Pattern名称]`，检查 [回归地图](docs/bugs/regression-map.md) 是否需追加因果链，考虑架构层面根除
+4. **分类 Bug DNA** — 在 [回归地图 - Bug DNA](docs/bugs/regression-map.md) 中找到对应的根因类别（如 RTE-REG、DEP-FLOW），累计计数
+5. **更新修复点位** — 在 [docs/bugs/fix-points.md](docs/bugs/fix-points.md) 追加记录
+6. **更新** [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) — 在 `关键 Bug 修复记录` 中追加条目
+7. **更新** [docs/bugs/INDEX.md](docs/bugs/INDEX.md) 的统计数字、快速定位表、最近更新时间
+8. **如为复发** → commit message 标注 `复发: [Pattern名称]`，检查 [回归地图](docs/bugs/regression-map.md) 是否需追加因果链，考虑架构层面根除
+9. **部署前** → 运行 `./scripts/pre-deploy-check.sh` 自动化检查
 
 ### 诊断优先原则
 
 修 bug 前，先查 [docs/bugs/INDEX.md](docs/bugs/INDEX.md) 的快速定位表，按症状关键词匹配：
 - 匹配到 Pattern → 直接参考该 [修复配方](docs/bugs/fix-recipes/INDEX.md)，复制粘贴即可
 - 未匹配 → 诊断后修复，修复完成后执行分类（步骤 3）
+- 修改脆弱文件前 → 查 [修复影响矩阵](docs/bugs/regression-map.md#修复影响矩阵-fix-impact-matrix)，确认不会触发已知回归
 
 ## 快速参考
 
@@ -124,6 +128,8 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 | [docs/DEV-SETUP.md](docs/DEV-SETUP.md) | 本地开发环境 |
 | [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md) | 已知Bug+技术债务+预防清单 |
 | [docs/bugs/INDEX.md](docs/bugs/INDEX.md) | Bug 追踪索引+统计面板 |
-| [docs/bugs/regression-map.md](docs/bugs/regression-map.md) | 回归因果链+脆弱文件 |
+| [docs/bugs/regression-map.md](docs/bugs/regression-map.md) | 回归因果链+修复影响矩阵+Bug DNA分类+脆弱文件 |
+| [docs/bugs/fix-points.md](docs/bugs/fix-points.md) | 修复点位反向索引 (代码→修复历史) |
 | [docs/bugs/fix-recipes/INDEX.md](docs/bugs/fix-recipes/INDEX.md) | 修复配方库（复发直接套用） |
 | [docs/progress/MASTER.md](docs/progress/MASTER.md) | 当前任务进度 |
+| [scripts/pre-deploy-check.sh](scripts/pre-deploy-check.sh) | 部署前自动化预防检查 (12类风险) |

@@ -93,8 +93,8 @@ pub fn video_routes(handler: Arc<VideoHandler>) -> Router {
         // === 社区上下文（审核、社区列表）===
         .route("/api/spaces/{*path}", get(space_get).post(space_post))
         .nest_service("/hls", ServeDir::new(&handler.config.hls_output_path))
-        // 视频上传需要支持大文件（650MB）
-        .layer(axum::extract::DefaultBodyLimit::max(650 * 1024 * 1024))
+        // 视频上传需要支持大文件（使用配置值 + 50MB buffer）
+        .layer(axum::extract::DefaultBodyLimit::max((handler.config.max_file_size_mb + 50) as usize * 1024 * 1024))
         .with_state(handler)
 }
 
@@ -117,8 +117,8 @@ async fn upload_video(State(h): State<Arc<VideoHandler>>, headers: HeaderMap, mu
             "file" => {
                 filename = field.file_name().unwrap_or("video.mp4").to_string();
                 let data = field.bytes().await.map_err(|e| AppError::Validation(format!("读取文件数据失败: {}", e)))?;
-                if data.len() > 600 * 1024 * 1024 {
-                    return Err(AppError::Validation("文件大小超过600MB限制".to_string()));
+                if data.len() > (h.config.max_file_size_mb as usize) * 1024 * 1024 {
+                    return Err(AppError::Validation(format!("文件大小超过{}MB限制", h.config.max_file_size_mb)));
                 }
                 file_data = Some(data.to_vec());
             }

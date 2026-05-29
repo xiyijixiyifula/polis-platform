@@ -1,285 +1,267 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
-import {
-  Settings, X, MessageCircle, BarChart3, Megaphone,
-  UserCheck, Video, Code, HelpCircle, MessageSquare,
-  ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow,
-  Globe, Lock, Key, Eye, EyeOff,
-} from 'lucide-react';
-import { spaces } from '@/lib/api';
+import { useState, useEffect } from 'react';
+import { Plus, X, Edit3, Trash2, FileText, Video, Globe, Users } from 'lucide-react';
+import { spaces, type SpaceModule } from '@/lib/api';
 
-export interface SpaceModules {
-  posts: boolean;          // 交流 - 默认开启不可关闭
-  share: boolean;          // 分享 - 仅创建者可发布
-  series: boolean;         // 系列/专栏
-  video: boolean;          // 视频
-  code_repo: boolean;      // 代码仓库
-  qa: boolean;             // 问答
-  polls: boolean;          // 投票
-  announcements: boolean;  // 公告
-  chat: boolean;           // 聊天
-  store: boolean;          // 商城
-  course: boolean;         // 课程
-  members: boolean;        // 成员
-  membership: boolean;     // 付费会员
-  wiki: boolean;            // 知识库 - 协作文档
-  novel: boolean;          // 小说/阅读
-  game: boolean;           // 游戏
-  mini_app: boolean;       // 小程序
-}
-
-const defaultModules: SpaceModules = {
-  posts: true,
-  share: false,
-  series: false,
-  video: false,
-  code_repo: false,
-  qa: false,
-  polls: true,
-  announcements: false,
-  chat: true,
-  store: false,
-  course: false,
-  members: false,
-  membership: false,
-  wiki: false,
-  novel: false,
-  game: false,
-  mini_app: false,
-};
-
-function getModulesKey(namespace: string) {
-  return `polis_space_modules_${namespace}`;
-}
-
-export function loadModules(namespace: string): SpaceModules {
-  try {
-    // Try decoded namespace key first (new format)
-    let saved = localStorage.getItem(getModulesKey(namespace));
-    // Fallback: try URL-encoded key (old format, for backward compatibility)
-    if (!saved) {
-      saved = localStorage.getItem(getModulesKey(encodeURIComponent(namespace)));
-    }
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Ensure share has a default value if missing in old data
-      if (parsed.share === undefined) parsed.share = false;
-      if (parsed.wiki === undefined) parsed.wiki = false;
-      return { ...defaultModules, ...parsed, posts: true };
-    }
-  } catch {}
-  return { ...defaultModules };
-}
-
-export function saveModules(namespace: string, modules: SpaceModules) {
-  localStorage.setItem(getModulesKey(namespace), JSON.stringify(modules));
-}
-
-interface SpaceSettingsProps {
+interface Props {
   namespace: string;
-  modules: SpaceModules;
-  onChange: (modules: SpaceModules) => void;
-  onClose: () => void;
+  onClose?: () => void;
 }
 
-interface ModuleDef {
-  key: keyof SpaceModules;
-  label: string;
-  icon: React.ElementType;
-  desc: string;
-  locked: boolean;
-  comingSoon: boolean;
-}
+export default function SpaceModulesManager({ namespace, onClose }: Props) {
+  const [modules, setModules] = useState<SpaceModule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-export function SpaceSettings({ namespace, modules, onChange, onClose }: SpaceSettingsProps) {
-  const [saving, startSave] = useTransition();
-  const [saveError, setSaveError] = useState<string | null>(null);
+  // Add form
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newMode, setNewMode] = useState('free');
+  const [newTypes, setNewTypes] = useState<string[]>(['article']);
 
-  // 社区权限状态
-  const [visibility, setVisibility] = useState<string>('public');
-  const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [visLoading, setVisLoading] = useState(true);
+  // Edit form
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editMode, setEditMode] = useState('free');
+  const [editTypes, setEditTypes] = useState<string[]>(['article']);
 
-  useEffect(() => {
-    // 加载当前社区可见性
-    (async () => {
-      try {
-        const res = await fetch(`/api/spaces/${encodeURIComponent(namespace)}`);
-        const data = await res.json();
-        if (data.code === 0 && data.data) {
-          setVisibility(data.data.visibility || 'public');
-          if (data.data.has_password) setPassword('••••••••');
-        }
-      } catch {} finally { setVisLoading(false); }
-    })();
-  }, [namespace]);
-
-  const saveVisibility = async (newVis: string, newPwd?: string) => {
-    setVisibility(newVis);
+  const fetchModules = async () => {
     try {
-      const body: any = { visibility: newVis };
-      if (newPwd !== undefined) body.password = newPwd;
-      await spaces.update(namespace, body);
-    } catch {
-      setSaveError('保存失败');
-    }
+      const res = await spaces.listModules(namespace);
+      if (res.code === 0 && res.data) setModules(res.data);
+    } catch (_) {}
+    setLoading(false);
   };
 
-  const persistModules = async (mods: SpaceModules) => {
-    const moduleNames = Object.entries(mods)
-      .filter(([, enabled]) => enabled)
-      .map(([key]) => {
-        // Map frontend module keys to backend module_type values
-        const mapping: Record<string, string> = {
-          posts: 'forum', share: 'share', wiki: 'wiki', series: 'series',
-          membership: 'membership', video: 'video', code_repo: 'code_repo',
-          qa: 'qa', polls: 'polls', announcements: 'announcements',
-          chat: 'chat', store: 'store', course: 'course', members: 'members',
-          novel: 'novel', game: 'game', mini_app: 'mini_app',
-        };
-        return mapping[key] || key;
+  useEffect(() => { fetchModules(); }, [namespace]);
+
+  const handleAdd = async () => {
+    if (!newName.trim() || newTypes.length === 0) return;
+    setSaving(true);
+    try {
+      const res = await spaces.createModule(namespace, {
+        name: newName.trim(),
+        mode: newMode,
+        allowed_content_types: newTypes,
       });
+      if (res.code === 0 && res.data) {
+        setModules(prev => [...prev, res.data!]);
+        setShowAdd(false);
+        setNewName('');
+        setNewMode('free');
+        setNewTypes(['article']);
+      }
+    } catch (_) {}
+    setSaving(false);
+  };
+
+  const handleUpdate = async (moduleKey: string) => {
+    if (!editName.trim() || editTypes.length === 0) return;
+    setSaving(true);
     try {
-      await spaces.update(namespace, { enabled_modules: moduleNames });
-      setSaveError(null);
-    } catch {
-      setSaveError('保存失败');
-    }
+      const res = await spaces.updateModule(namespace, moduleKey, {
+        name: editName.trim(),
+        mode: editMode,
+        allowed_content_types: editTypes,
+      });
+      if (res.code === 0 && res.data) {
+        setModules(prev => prev.map(m => m.module_key === moduleKey ? res.data! : m));
+        setEditingKey(null);
+      }
+    } catch (_) {}
+    setSaving(false);
   };
 
-  const availableModules: ModuleDef[] = [
-    { key: 'posts', label: '交流', icon: MessageCircle, locked: true, comingSoon: false, desc: '社区交流与讨论板块，所有成员可发帖互动' },
-    { key: 'share', label: '分享', icon: MessageSquare, locked: false, comingSoon: false, desc: '个人内容分享空间，仅社区创建者可发布' },
-    { key: 'wiki', label: '知识库', icon: Library, locked: false, comingSoon: false, desc: '协作文档，所有成员可编辑知识库页面' },
-    { key: 'series', label: '系列', icon: BookOpen, locked: false, comingSoon: false, desc: '内容系列/专栏，组织帖子合集' },
-    { key: 'membership', label: '会员', icon: Crown, locked: false, comingSoon: false, desc: '付费会员等级与订阅管理' },
-    { key: 'video', label: '视频', icon: Video, locked: false, comingSoon: false, desc: '视频内容发布与播放' },
-    { key: 'code_repo', label: '代码仓库', icon: Code, locked: false, comingSoon: true, desc: 'Git 代码仓库托管' },
-    { key: 'qa', label: '问答', icon: HelpCircle, locked: false, comingSoon: false, desc: '提问与回答' },
-    { key: 'polls', label: '投票', icon: BarChart3, locked: false, comingSoon: false, desc: '社区投票和问卷调查' },
-    { key: 'announcements', label: '公告', icon: Megaphone, locked: false, comingSoon: false, desc: '社区公告和通知' },
-    { key: 'chat', label: '聊天', icon: MessageSquare, locked: false, comingSoon: false, desc: '即时通讯聊天室' },
-    { key: 'store', label: '商城', icon: ShoppingBag, locked: false, comingSoon: true, desc: '商品发布与交易' },
-    { key: 'course', label: '课程', icon: GraduationCap, locked: false, comingSoon: true, desc: '在线课程与学习' },
-    { key: 'novel', label: '小说', icon: BookText, locked: false, comingSoon: false, desc: '小说发布与阅读，支持章节连载' },
-    { key: 'game', label: '游戏', icon: Gamepad2, locked: false, comingSoon: false, desc: '游戏内容讨论与分享' },
-    { key: 'mini_app', label: '小程序', icon: AppWindow, locked: false, comingSoon: false, desc: '嵌入式小应用，社区内互动工具' },
-    { key: 'members', label: '成员', icon: UserCheck, locked: false, comingSoon: false, desc: '社区成员列表' },
-  ];
-
-  const toggle = (key: keyof SpaceModules) => {
-    const mod = availableModules.find(m => m.key === key);
-    if (!mod || mod.locked || mod.comingSoon) return;
-    const next = { ...modules, [key]: !modules[key] };
-    onChange(next);
-    saveModules(namespace, next);
-    // 持久化到服务器：模块开关 = 文件夹开关，关闭后端不再返回该模块内容
-    startSave(() => persistModules(next));
+  const handleDelete = async (moduleKey: string) => {
+    if (!confirm('确定删除此模块？该模块下的内容将被隐藏。')) return;
+    setSaving(true);
+    try {
+      const res = await spaces.deleteModule(namespace, moduleKey);
+      if (res.code === 0 && res.data?.deleted) {
+        setModules(prev => prev.filter(m => m.module_key !== moduleKey));
+      }
+    } catch (_) {}
+    setSaving(false);
   };
+
+  const startEdit = (m: SpaceModule) => {
+    setEditingKey(m.module_key);
+    setEditName(m.name);
+    setEditMode(m.mode);
+    setEditTypes(m.allowed_content_types);
+  };
+
+  const ContentTypeTag = ({ t }: { t: string }) => (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+      t === 'video' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+    }`}>
+      {t === 'video' ? <Video className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+      {t === 'video' ? '视频' : '文章'}
+    </span>
+  );
+
+  const ModeTag = ({ mode }: { mode: string }) => (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
+      mode === 'creator_only'
+        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+    }`}>
+      {mode === 'creator_only' ? <Users className="w-3 h-3" /> : <Globe className="w-3 h-3" />}
+      {mode === 'creator_only' ? '仅创建者' : '自由模式'}
+    </span>
+  );
+
+  if (loading) return <div className="py-8 text-center text-gray-400">加载中...</div>;
 
   return (
-    <div className="absolute right-0 top-12 w-72 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-2 z-40 max-h-[70vh] overflow-y-auto">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-        <span className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-1.5">
-          <Settings className="h-3.5 w-3.5" /> 模块设置
-        </span>
-        <div className="flex items-center gap-2">
-          {saving && <span className="text-xs text-gray-400">保存中...</span>}
-          {saveError && <span className="text-xs text-red-500">{saveError}</span>}
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-            <X className="h-3.5 w-3.5" />
-          </button>
+    <div className="space-y-4">
+      {/* Current modules */}
+      {modules.length === 0 ? (
+        <div className="py-8 text-center text-gray-400">
+          <p className="mb-2">还没有自定义模块</p>
+          <button onClick={() => setShowAdd(true)}
+            className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+          >添加第一个模块</button>
         </div>
-      </div>
-
-      {/* 社区权限 */}
-      {!visLoading && (
-        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-          <p className="text-xs text-gray-400 mb-2">社区权限</p>
-          <div className="flex gap-1">
-            {([
-              { key: 'public', label: '公开', icon: Globe, desc: '任何人可访问和发布' },
-              { key: 'private', label: '私有', icon: Lock, desc: '需申请加入' },
-              { key: 'unlisted', label: '不公开', icon: Key, desc: '仅链接/密码访问' },
-            ] as const).map((opt) => (
-              <button
-                key={opt.key}
-                onClick={() => saveVisibility(opt.key)}
-                className={`flex-1 flex flex-col items-center gap-0.5 px-1.5 py-1.5 rounded-lg text-xs transition-colors ${
-                  visibility === opt.key
-                    ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-700'
-                    : 'bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-500'
-                }`}
-                title={opt.desc}
-              >
-                <opt.icon size={14} />
-                <span className="text-[10px] font-medium">{opt.label}</span>
-              </button>
-            ))}
-          </div>
-          {visibility === 'unlisted' && (
-            <div className="mt-2 relative">
-              <input
-                type={showPwd ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onBlur={() => { if (password && password !== '••••••••') saveVisibility('unlisted', password); }}
-                placeholder="设置访问密码（可选）"
-                className="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg
-                           bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white
-                           focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
-              <button
-                onClick={() => setShowPwd(!showPwd)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                {showPwd ? <EyeOff size={12} /> : <Eye size={12} />}
-              </button>
+      ) : (
+        <div className="space-y-2">
+          {modules.map(m => (
+            <div key={m.module_key} className="glass-card p-4">
+              {editingKey === m.module_key ? (
+                /* Edit form */
+                <div className="space-y-3">
+                  <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
+                    maxLength={10} placeholder="模块名称 (最多10字)"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm" />
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input type="radio" name={`mode-${m.module_key}`} value="free"
+                        checked={editMode === 'free'} onChange={e => setEditMode(e.target.value)} />
+                      <Globe className="w-3.5 h-3.5 text-green-600" /> 自由模式
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input type="radio" name={`mode-${m.module_key}`} value="creator_only"
+                        checked={editMode === 'creator_only'} onChange={e => setEditMode(e.target.value)} />
+                      <Users className="w-3.5 h-3.5 text-purple-600" /> 仅创建者
+                    </label>
+                  </div>
+                  <div className="flex gap-3">
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input type="checkbox" checked={editTypes.includes('article')}
+                        onChange={e => {
+                          if (e.target.checked) setEditTypes([...editTypes, 'article']);
+                          else setEditTypes(editTypes.filter(t => t !== 'article'));
+                        }} />
+                      <FileText className="w-3.5 h-3.5 text-blue-600" /> 文章
+                    </label>
+                    <label className="flex items-center gap-1.5 text-sm">
+                      <input type="checkbox" checked={editTypes.includes('video')}
+                        onChange={e => {
+                          if (e.target.checked) setEditTypes([...editTypes, 'video']);
+                          else setEditTypes(editTypes.filter(t => t !== 'video'));
+                        }} />
+                      <Video className="w-3.5 h-3.5 text-red-600" /> 视频
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleUpdate(m.module_key)} disabled={saving}
+                      className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+                    >保存</button>
+                    <button onClick={() => setEditingKey(null)}
+                      className="px-4 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                    >取消</button>
+                  </div>
+                </div>
+              ) : (
+                /* Module display */
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <FileText className="w-5 h-5 text-gray-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">{m.name}</span>
+                        <ModeTag mode={m.mode} />
+                        {(m.allowed_content_types ?? []).map(t => <ContentTypeTag key={t} t={t} />)}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5">key: {m.module_key}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => startEdit(m)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 rounded transition-colors">
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDelete(m.module_key)}
+                      className="p-1.5 text-gray-400 hover:text-red-600 rounded transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
       )}
 
-      <div className="py-1">
-        {availableModules.map((mod) => {
-          const Icon = mod.icon;
-          const isOn = modules[mod.key];
-          const disabled = mod.locked || mod.comingSoon;
-
-          return (
-            <button
-              key={mod.key}
-              onClick={() => toggle(mod.key)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer'
-              }`}
-              disabled={disabled}
-            >
-              <Icon className="h-4 w-4 text-gray-400 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                  {mod.label}
-                  {mod.comingSoon && (
-                    <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-1 rounded">
-                      即将推出
-                    </span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-400">{mod.desc}</p>
-              </div>
-              <div className={`w-9 h-5 rounded-full relative transition-colors shrink-0 ${
-                isOn ? 'bg-primary-500' : 'bg-gray-300 dark:bg-gray-600'
-              } ${disabled ? 'opacity-60' : ''}`}>
-                <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                  isOn ? 'translate-x-4' : 'translate-x-0.5'
-                }`} />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {/* Add module form */}
+      {showAdd ? (
+        <div className="glass-card p-4 border-2 border-dashed border-blue-300 dark:border-blue-700">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white">新建模块</h4>
+              <button onClick={() => setShowAdd(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <input type="text" value={newName} onChange={e => setNewName(e.target.value)}
+              maxLength={10} placeholder="模块名称 (最多10字)"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm" />
+            <div className="flex gap-3">
+              <label className="flex items-center gap-1.5 text-sm">
+                <input type="radio" name="new-mode" value="free"
+                  checked={newMode === 'free'} onChange={e => setNewMode(e.target.value)} />
+                <Globe className="w-3.5 h-3.5 text-green-600" /> 自由模式 — 任何人都可发布
+              </label>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input type="radio" name="new-mode" value="creator_only"
+                  checked={newMode === 'creator_only'} onChange={e => setNewMode(e.target.value)} />
+                <Users className="w-3.5 h-3.5 text-purple-600" /> 仅创建者 — 类似公众号
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-1.5 text-sm">
+                <input type="checkbox" checked={newTypes.includes('article')}
+                  onChange={e => {
+                    if (e.target.checked) setNewTypes([...newTypes, 'article']);
+                    else setNewTypes(newTypes.filter(t => t !== 'article'));
+                  }} />
+                <FileText className="w-3.5 h-3.5 text-blue-600" /> 文章
+              </label>
+              <label className="flex items-center gap-1.5 text-sm">
+                <input type="checkbox" checked={newTypes.includes('video')}
+                  onChange={e => {
+                    if (e.target.checked) setNewTypes([...newTypes, 'video']);
+                    else setNewTypes(newTypes.filter(t => t !== 'video'));
+                  }} />
+                <Video className="w-3.5 h-3.5 text-red-600" /> 视频
+              </label>
+            </div>
+            <button onClick={handleAdd} disabled={saving || !newName.trim() || newTypes.length === 0}
+              className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm disabled:opacity-50"
+            >创建模块</button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setShowAdd(true)}
+          className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium">
+          <Plus className="w-4 h-4" /> 添加自定义模块
+        </button>
+      )}
     </div>
   );
 }
+
+// 保留旧接口兼容性
+export type { SpaceModule };

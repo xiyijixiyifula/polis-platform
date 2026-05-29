@@ -34,7 +34,8 @@ set -euo pipefail
 BASE_URL="${POLIS_BASE_URL:-http://localhost:8080}"
 TOKEN_FILE="${HOME}/.polis_admin_token"
 ADMIN_EMAIL="${POLIS_ADMIN_EMAIL:-admin@polis.app}"
-ADMIN_CODE="${POLIS_ADMIN_CODE:-mzGW2026!PolisHub}"
+ADMIN_PASSWORD="${POLIS_ADMIN_PASSWORD:?Error: POLIS_ADMIN_PASSWORD is required. Set it before running adminctl.}"
+ADMIN_CODE="${POLIS_ADMIN_CODE:-polis2026}"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; NC='\033[0m'; BOLD='\033[1m'
@@ -77,7 +78,7 @@ cmd_login() {
     local resp
     resp=$(curl -sf -X POST "${BASE_URL}/api/admin/login" \
         -H "Content-Type: application/json" \
-        -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"\",\"admin_code\":\"${ADMIN_CODE}\"}")
+        -d "{\"email\":\"${ADMIN_EMAIL}\",\"password\":\"${ADMIN_PASSWORD}\",\"admin_code\":\"${ADMIN_CODE}\"}")
     
     local token user
     token=$(echo "$resp" | jq -r '.data.access_token')

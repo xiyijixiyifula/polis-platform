@@ -54,7 +54,14 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="card space-y-4">
           {error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+              {error}
+              {(error.includes('Forbidden:') || error.includes('封禁') || error.includes('冻结')) && (
+                <div className="mt-2 pt-2 border-t border-red-200">
+                  <a href="/appeal" className="text-primary-600 hover:text-primary-500 font-medium">申请申诉 &rarr;</a>
+                </div>
+              )}
+            </div>
           )}
 
           <div>
@@ -101,9 +108,6 @@ export default function LoginPage() {
 
         <p className="mt-4 text-center text-sm text-gray-600">
           没有账号？<a href="/register" className="text-primary-600 hover:text-primary-500">注册</a>
-        </p>
-        <p className="mt-2 text-center text-xs text-gray-400">
-          测试账号: test@example.com / Test1234! (用户名: testuser)
         </p>
       </div>
     </div>

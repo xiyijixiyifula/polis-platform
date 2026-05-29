@@ -16,8 +16,8 @@ function getCurrentUserId(): string | null {
   try {
     const token = getToken();
     if (!token) return null;
-    const payload = token.split('.')[1];
-    const decoded = JSON.parse(atob(payload));
+    const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = JSON.parse(atob(b64));
     return decoded.sub || null;
   } catch { return null; }
 }

@@ -13,10 +13,20 @@ pub struct GatewayConfig {
     pub video_service_url: String,
     #[allow(dead_code)]
     pub rate_limit_per_minute: u32,
+    pub max_upload_bytes: usize,
+    pub max_video_bytes: usize,
 }
 
 impl GatewayConfig {
     pub fn from_env() -> Self {
+        let max_upload_mb: u64 = env::var("GATEWAY_UPLOAD_LIMIT_MB")
+            .unwrap_or_else(|_| "60".to_string())
+            .parse()
+            .unwrap_or(60);
+        let max_video_mb: u64 = env::var("GATEWAY_VIDEO_LIMIT_MB")
+            .unwrap_or_else(|_| "600".to_string())
+            .parse()
+            .unwrap_or(600);
         Self {
             host: env::var("GATEWAY_HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             port: env::var("GATEWAY_PORT")
@@ -39,6 +49,8 @@ impl GatewayConfig {
                 .unwrap_or_else(|_| "60".to_string())
                 .parse()
                 .expect("RATE_LIMIT_PER_MINUTE must be a number"),
+            max_upload_bytes: (max_upload_mb * 1024 * 1024) as usize,
+            max_video_bytes: (max_video_mb * 1024 * 1024) as usize,
         }
     }
 }

@@ -1358,7 +1358,27 @@ impl ContentHandler {
         }
     }
 
+    async fn get_max_upload_size_mb(&self) -> i64 {
+        let result: Option<(serde_json::Value,)> = sqlx::query_as(
+            "SELECT value FROM platform_settings WHERE key = 'max_upload_size_mb'"
+        ).fetch_optional(&self.pool).await.ok().flatten();
+        if let Some((val,)) = result {
+            if let Some(n) = val.as_i64() {
+                if n > 0 { return n; }
+            }
+            if let Some(s) = val.as_str() {
+                if let Ok(n) = s.parse::<i64>() { return n; }
+            }
+        }
+        50
+    }
+
     pub async fn upload_file_generic(&self, user_id: Uuid, filename: &str, data: &[u8], mime_type: &str) -> Result<serde_json::Value, AppError> {
+        let max_mb = self.get_max_upload_size_mb().await;
+        let max_bytes = (max_mb * 1024 * 1024) as usize;
+        if data.len() > max_bytes {
+            return Err(AppError::Validation(format!("文件大小超过 {}MB 限制", max_mb)));
+        }
         let file_id = Uuid::new_v4();
         let storage_dir = "/root/polis/uploads/general";
         tokio::fs::create_dir_all(storage_dir).await.map_err(|e| AppError::External(format!("Failed to create upload dir: {}", e)))?;
@@ -1374,6 +1394,11 @@ impl ContentHandler {
     }
 
     pub async fn upload_file(&self, space_id: Uuid, user_id: Uuid, filename: &str, data: &[u8], mime_type: &str) -> Result<serde_json::Value, AppError> {
+        let max_mb = self.get_max_upload_size_mb().await;
+        let max_bytes = (max_mb * 1024 * 1024) as usize;
+        if data.len() > max_bytes {
+            return Err(AppError::Validation(format!("文件大小超过 {}MB 限制", max_mb)));
+        }
         let file_id = Uuid::new_v4();
         let storage_dir = format!("/root/polis/uploads/{}", space_id);
         tokio::fs::create_dir_all(&storage_dir).await.map_err(|e| AppError::External(format!("Failed to create upload dir: {}", e)))?;

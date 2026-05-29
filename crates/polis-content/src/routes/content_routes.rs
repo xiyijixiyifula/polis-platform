@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use axum::{
-    response::{IntoResponse, Response},extract::{Path, Query, Request, State, Extension}, http::HeaderMap, middleware, routing::{delete, get, post, put}, Json, Router};
+    response::{IntoResponse, Response},extract::{DefaultBodyLimit, Path, Query, Request, State, Extension}, http::HeaderMap, middleware, routing::{delete, get, post, put}, Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
 use percent_encoding::percent_decode_str;
@@ -261,7 +261,9 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
     let webhooks = super::webhook_routes::webhook_routes();
     let agents = super::agent_routes::agent_routes();
     let threads = super::thread_routes::thread_routes();
-    public.merge(auth).merge(share_routes).merge(creation).merge(webhooks).merge(agents).merge(threads).with_state(handler)
+    public.merge(auth).merge(share_routes).merge(creation).merge(webhooks).merge(agents).merge(threads)
+        .layer(DefaultBodyLimit::max((handler.config.max_upload_size_mb + 50) as usize * 1024 * 1024))
+        .with_state(handler)
 }
 
 /// 非公开空间访问检查：block private + unlisted spaces
@@ -489,9 +491,17 @@ async fn handle_auth_content(
                     // 私有空间：仅成员可发帖（仿微信群权限模式）
                     block_private_space_public_listing(&h.pool, space_id, &headers).await?;
 
-                    // 分享模块权限校验：仅创建者可发布
+                    // 自定义模块权限校验：creator_only 模式仅创建者可发布
                     if let Some(ref mt) = r.module_type {
-                        if mt.to_string() == "share" {
+                        let module_mode: Option<String> = sqlx::query_scalar(
+                            "SELECT mode FROM space_modules WHERE space_id = $1 AND module_key = $2 AND is_active = true"
+                        )
+                        .bind(space_id)
+                        .bind(mt.to_string())
+                        .fetch_optional(&h.pool)
+                        .await?
+                        .flatten();
+                        if module_mode.as_deref() == Some("creator_only") {
                             let owner_id: Option<Uuid> = sqlx::query_scalar(
                                 "SELECT owner_id FROM spaces WHERE id = $1"
                             )
@@ -500,7 +510,7 @@ async fn handle_auth_content(
                             .await?
                             .flatten();
                             if owner_id != Some(uid) {
-                                return Err(AppError::Forbidden("仅社区创建者可发布分享内容".to_string()));
+                                return Err(AppError::Forbidden("仅社区创建者可在此模块发布内容".to_string()));
                             }
                         }
                     }

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle, Video, Globe, Lock, Key, ThumbsUp } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
-import { getModuleLabel, normalizeModuleType } from '@/lib/module-config';
 import { users, follow, videos, getToken, type User, type FollowUser, type VideoItem } from '@/lib/api';
 import { SpaceCard } from '@/components/SpaceCard';
 import { FeedItem } from '@/components/FeedItem';
@@ -661,29 +660,25 @@ export default function UserProfilePage({ username }: { username: string }) {
       {/* 作品 Tab — 公开可见 */}
       {activeTab === 'works' && (
         <>
-          {/* 模块子选项卡 — 按作品实际模块类型分类 */}
+          {/* 子选项卡: 概览 / 视频 / 文章 */}
           {(() => {
-            // 规范化模块类型并收集实际出现的模块
-            const ntype = (c: any) => normalizeModuleType(c.submissions?.[0]?.module_type || c.content_type);
-            const modules = new Set<string>();
-            myCreations.forEach((c: any) => modules.add(ntype(c)));
-            const moduleList = Array.from(modules);
-            if (moduleList.length === 0) return null;
-            const allTabs = ['overview', ...moduleList];
+            const videoCount = myCreations.filter((c: any) => c.content_type === 'video').length;
+            const articleCount = myCreations.length - videoCount;
+            const allTabs = [
+              { key: 'overview', label: '概览', count: myCreations.length },
+              { key: 'video', label: '视频', count: videoCount },
+              { key: 'article', label: '文章', count: articleCount },
+            ];
             return (
               <div className="flex gap-0 mb-4 border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
                 {allTabs.map((tab) => (
-                  <button key={tab} onClick={() => setWorksSubTab(tab)}
+                  <button key={tab.key} onClick={() => setWorksSubTab(tab.key)}
                     className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
-                      worksSubTab === tab
+                      worksSubTab === tab.key
                         ? 'border-primary-600 text-primary-600 dark:text-primary-400 dark:border-primary-400'
                         : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}>
-                    {tab === 'overview' ? '概览' : getModuleLabel(tab)}
-                    {' '}
-                    ({tab === 'overview'
-                      ? myCreations.length
-                      : myCreations.filter((c: any) => ntype(c) === tab).length})
+                    {tab.label} ({tab.count})
                   </button>
                 ))}
               </div>
@@ -693,15 +688,15 @@ export default function UserProfilePage({ username }: { username: string }) {
           {creationsLoading ? (
             <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
           ) : (() => {
-            const ntype = (c: any) => normalizeModuleType(c.submissions?.[0]?.module_type || c.content_type);
             const filtered = myCreations.filter((c: any) => {
               if (worksSubTab === 'overview') return true;
-              return ntype(c) === worksSubTab;
+              if (worksSubTab === 'video') return c.content_type === 'video';
+              return c.content_type !== 'video';
             });
             if (filtered.length === 0) return (
               <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
                 <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">该模块还没有作品</p>
+                <p className="text-sm">{worksSubTab === 'video' ? '还没有视频作品' : worksSubTab === 'article' ? '还没有文章作品' : '该分类还没有作品'}</p>
               </div>
             );
             return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertTriangle, CheckCircle, XCircle, Clock, Filter } from 'lucide-react';
+import { AlertTriangle, CheckCircle, XCircle, Clock, Filter, EyeOff, Ban } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 interface Report {
@@ -21,6 +21,7 @@ const TARGET_LABELS: Record<string, string> = {
   comment: '评论',
   space: '社区',
   user: '用户',
+  appeal: '申诉',
 };
 
 const STATUS_LABELS: Record<string, { label: string; icon: typeof CheckCircle; color: string }> = {
@@ -56,13 +57,18 @@ export default function AdminReportsPage() {
     finally { setLoading(false); }
   };
 
-  const doResolve = async (reportId: string, action: 'resolve' | 'dismiss') => {
+  const doResolve = async (reportId: string, action: 'resolve' | 'dismiss', targetAction?: string) => {
     const token = localStorage.getItem('polis_admin_token');
     try {
+      const body: Record<string, string> = { action };
+      if (targetAction) {
+        body.target_action = targetAction;
+        body.target_action_reason = '举报处理联动操作';
+      }
       const res = await fetch(`/api/admin/reports/${reportId}/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.code === 0) fetchReports();
@@ -168,16 +174,42 @@ export default function AdminReportsPage() {
                             <button
                               onClick={() => doResolve(report.id, 'resolve')}
                               className="text-xs px-2.5 py-1 rounded bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-800/40"
+                              title="仅处理举报"
                             >
-                              <CheckCircle className="h-3 w-3 inline mr-1" />
-                              处理
+                              <CheckCircle className="h-3 w-3 inline mr-1" />处理
                             </button>
+                            {report.target_type === 'post' && (
+                              <button
+                                onClick={() => doResolve(report.id, 'resolve', 'hide')}
+                                className="text-xs px-2.5 py-1 rounded bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-800/40"
+                                title="处理举报并隐藏内容"
+                              >
+                                <EyeOff className="h-3 w-3 inline mr-1" />处理+隐藏
+                              </button>
+                            )}
+                            {report.target_type === 'user' && (
+                              <button
+                                onClick={() => doResolve(report.id, 'resolve', 'ban')}
+                                className="text-xs px-2.5 py-1 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-800/40"
+                                title="处理举报并封禁用户"
+                              >
+                                <Ban className="h-3 w-3 inline mr-1" />处理+封禁
+                              </button>
+                            )}
+                            {report.target_type === 'appeal' && (
+                              <button
+                                onClick={() => doResolve(report.id, 'resolve', 'unban')}
+                                className="text-xs px-2.5 py-1 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-800/40"
+                                title="处理申诉并解封用户"
+                              >
+                                解封
+                              </button>
+                            )}
                             <button
                               onClick={() => doResolve(report.id, 'dismiss')}
                               className="text-xs px-2.5 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
                             >
-                              <XCircle className="h-3 w-3 inline mr-1" />
-                              驳回
+                              <XCircle className="h-3 w-3 inline mr-1" />驳回
                             </button>
                           </>
                         ) : (

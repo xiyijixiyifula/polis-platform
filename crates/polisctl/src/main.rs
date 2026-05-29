@@ -764,8 +764,11 @@ enum AdminAction {
         /// Admin email
         #[arg(default_value = "admin@polis.app")]
         email: String,
+        /// Admin password
+        #[arg(short = 'P', long)]
+        password: String,
         /// Admin code
-        #[arg(default_value = "mzGW2026!PolisHub")]
+        #[arg(short = 'C', long, default_value = "mzGW2026!PolisHub")]
         code: String,
     },
     /// Dashboard overview
@@ -1306,7 +1309,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
         // === Admin ===
         Commands::Admin { action } => match action {
-            AdminAction::Login { email, code } => commands::admin::login(&config, &client, &email, &code).await,
+            AdminAction::Login { email, password, code } => commands::admin::login(&config, &client, &email, &password, &code).await,
             AdminAction::Dashboard => commands::admin::dashboard(&config, &client).await,
             AdminAction::Stats => commands::admin::stats(&config, &client).await,
             AdminAction::Users(sub) => match sub {

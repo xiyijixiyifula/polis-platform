@@ -12,6 +12,13 @@
 | 页面白屏，console 报 `x.map is not a function` | [array-map-null.md](array-map-null.md) | 2 分钟/处 |
 | npm 包升级后编辑器/组件报错 | [dependency-auto-upgrade.md](dependency-auto-upgrade.md) | 15 分钟 |
 | 社区帖子计数与实际不符，分析数据为 0 | [post-count-sync.md](post-count-sync.md) | 10 分钟 |
+| 表单提交失败，后端报认证/验证错误 | [missing-form-field.md](missing-form-field.md) | 2 分钟/处 |
+| 新增 API 端点返回 404，直连后端正常 | [gateway-route-missing.md](gateway-route-missing.md) | 10 分钟 |
+| 部署新版本后功能没变化，服务行为像旧版 | [deploy-path-mismatch.md](deploy-path-mismatch.md) | 3 分钟 |
+| 点击按钮无反应，页面重定向，atob 报 InvalidCharacterError | [atob-base64url.md](atob-base64url.md) | 5 分钟 |
+| 新增 API 端点返回 "Space not found"，直连后端正常 | [actions-array-missing.md](actions-array-missing.md) | 5 分钟 |
+| 部署后功能无变化，`file` 显示二进制为 Mach-O | [wrong-build-target.md](wrong-build-target.md) | 3 分钟 |
+| 社区模块Tab点击后内容区域空白，Tab高亮但无渲染 | [module-tab-key-mismatch.md](module-tab-key-mismatch.md) | 5 分钟 |
 
 ## 配方结构
 

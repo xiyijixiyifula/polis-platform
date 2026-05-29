@@ -58,17 +58,18 @@ async fn main() -> anyhow::Result<()> {
     // CORS 由 Nginx 统一管理
 
     // 路由
-    // 代理路由 - 视频服务 (需要 650MB body limit 支持大文件上传)
+    // 代理路由 - 视频服务 (可配置 body limit，默认 600MB)
     let video_routes = Router::new()
         .route("/api/videos/{*path}", any(proxy_to_video))
         .route("/api/videos", any(proxy_to_video))
         .route("/hls/{*path}", any(proxy_to_video))
-        .layer(axum::extract::DefaultBodyLimit::max(650 * 1024 * 1024));
+        .layer(axum::extract::DefaultBodyLimit::max(config.max_video_bytes));
 
     let app = Router::new()
         // 代理路由 - 用户服务
         .route("/api/auth/{*path}", any(proxy_to_user))
         .route("/api/users/{*path}", any(proxy_user_router))
+        .route("/api/user/{*path}", any(proxy_to_user))
         .route("/api/my/{*path}", any(proxy_to_content))
         .route("/api/follow", any(proxy_to_user))
         .route("/api/contacts/{*path}", any(proxy_to_user))
@@ -120,7 +121,7 @@ async fn main() -> anyhow::Result<()> {
         // 代理路由 - 私信
         .route("/api/messages", any(proxy_to_content))
         .route("/api/messages/{*path}", any(proxy_to_content))
-        // 代理路由 - 视频服务 (650MB body limit)
+        // 代理路由 - 视频服务
         .merge(video_routes)
         // 代理路由 - 管理后台服务
         .route("/api/admin/{*path}", any(proxy_to_admin))
@@ -305,7 +306,7 @@ async fn proxy_space_router(
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or(path);
     // 判断是否是内容服务路径（包含 /posts, /featured, /bookmarks, /announcements）
     let remaining = path.strip_prefix("/api/spaces").unwrap_or(path);
-    let is_content = remaining.contains("/posts") || remaining.contains("/featured") || remaining.contains("/bookmarks") || remaining.contains("/announcements") || remaining.contains("/polls") || remaining.contains("/files") || remaining.contains("/share") || remaining.contains("/analytics") || remaining.contains("/modules") || remaining.contains("/references");
+    let is_content = remaining.contains("/posts") || remaining.contains("/featured") || remaining.contains("/bookmarks") || remaining.contains("/announcements") || remaining.contains("/polls") || remaining.contains("/files") || remaining.contains("/share") || remaining.contains("/analytics") || remaining.contains("/references");
     let is_video = remaining.contains("/videos");
 
     let base_url = if is_video {
@@ -317,7 +318,7 @@ async fn proxy_space_router(
     };
 
     let target_url = format!("{}{}", base_url, path_and_query);
-    proxy_request(&state.client, &target_url, req).await
+    proxy_request(&state.client, &target_url, req, state.config.max_upload_bytes).await
 }
 
 /// 代理请求到用户服务
@@ -327,7 +328,7 @@ async fn proxy_to_user(
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.user_service_url, path_and_query);
-    proxy_request(&state.client, &target_url, req).await
+    proxy_request(&state.client, &target_url, req, state.config.max_upload_bytes).await
 }
 
 /// 用户路由分发：/contents → 内容服务, 其他 → 用户服务
@@ -343,7 +344,7 @@ async fn proxy_user_router(
     };
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", base_url, path_and_query);
-    proxy_request(&state.client, &target_url, req).await
+    proxy_request(&state.client, &target_url, req, state.config.max_upload_bytes).await
 }
 
 /// 代理请求到社区服务
@@ -353,7 +354,7 @@ async fn proxy_to_space(
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.space_service_url, path_and_query);
-    proxy_request(&state.client, &target_url, req).await
+    proxy_request(&state.client, &target_url, req, state.config.max_upload_bytes).await
 }
 
 /// 代理请求到内容服务
@@ -363,18 +364,17 @@ async fn proxy_to_content(
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.content_service_url, path_and_query);
-    proxy_request(&state.client, &target_url, req).await
+    proxy_request(&state.client, &target_url, req, state.config.max_upload_bytes).await
 }
 
-/// 代理请求到视频服务（650MB 大文件上传支持）
+/// 代理请求到视频服务（大文件上传支持）
 async fn proxy_to_video(
     State(state): State<Arc<GatewayState>>,
     req: Request,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.video_service_url, path_and_query);
-    // 视频上传需要支持大文件，使用 650MB 限制
-    proxy_request_with_limit(&state.client, &target_url, req, 650 * 1024 * 1024).await
+    proxy_request_with_limit(&state.client, &target_url, req, state.config.max_video_bytes).await
 }
 
 /// 代理请求到管理后台服务
@@ -384,16 +384,17 @@ async fn proxy_to_admin(
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.admin_service_url, path_and_query);
-    proxy_request(&state.client, &target_url, req).await
+    proxy_request(&state.client, &target_url, req, state.config.max_upload_bytes).await
 }
 
-/// 通用代理转发 (10MB 默认限制)
+/// 通用代理转发（使用配置的 body limit）
 async fn proxy_request(
     client: &reqwest::Client,
     target_url: &str,
     req: Request,
+    limit_bytes: usize,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
-    proxy_request_with_limit(client, target_url, req, 10 * 1024 * 1024).await
+    proxy_request_with_limit(client, target_url, req, limit_bytes).await
 }
 
 /// 通用代理转发，支持自定义请求体大小限制

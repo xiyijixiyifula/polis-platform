@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, X, BarChart3, Globe, ChevronDown } from 'lucide-react';
 import { Suspense } from 'react';
-import { loadModules } from '@/components/SpaceSettings';
+import { spaces as spacesApi } from '@/lib/api';
 
 interface SpaceOption {
   id: string;
@@ -64,17 +64,21 @@ function NewPollForm() {
       .finally(() => setLoading(false));
   }, [spaceParam]);
 
-  // Validate polls module when a space is selected (via SpaceSettings localStorage)
+  // Validate polls module when a space is selected
   useEffect(() => {
     if (!selectedSpace) { setModuleWarning(''); return; }
     const space = spaces.find(s => s.id === selectedSpace);
     if (!space) return;
-    const modules = loadModules(space.namespace);
-    if (!modules.polls) {
-      setModuleWarning('⚠️ 该社区未启用投票模块，请先在社区设置中开启「投票」功能后再创建');
-    } else {
-      setModuleWarning('');
-    }
+    spacesApi.listModules(space.namespace).then(res => {
+      if (res.code === 0 && res.data) {
+        const hasPolls = res.data.some((m: any) => m.module_key === 'polls');
+        if (!hasPolls) {
+          setModuleWarning('该社区未启用投票模块，请先在社区管理页中开启「投票」功能后再创建');
+        } else {
+          setModuleWarning('');
+        }
+      }
+    }).catch(() => {});
   }, [selectedSpace, spaces]);
 
   const addOption = () => setOptions([...options, '']);

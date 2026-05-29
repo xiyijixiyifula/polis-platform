@@ -60,6 +60,7 @@ export interface Space {
   member_count: number;
   post_count: number;
   follower_count: number;
+  star_count: number;
   has_password: boolean;
   enabled_modules?: string[];
   created_at: string;
@@ -331,10 +332,62 @@ export const spaces = {
   unfollow: (namespace: string) =>
     request<{ following: boolean }>(`/spaces/${encodeNs(namespace)}/unfollow`, { method: 'POST' }),
 
+  /** 收藏社区 */
+  star: (namespace: string) =>
+    request<{ starred: boolean }>(`/spaces/${encodeNs(namespace)}/star`, { method: 'POST' }),
+
+  /** 取消收藏社区 */
+  unstar: (namespace: string) =>
+    request<{ starred: boolean }>(`/spaces/${encodeNs(namespace)}/unstar`, { method: 'POST' }),
+
+  /** 获取用户收藏的社区列表 */
+  getStarred: () => request<Space[]>('/spaces/starred'),
+
+  /** 获取最多收藏的社区 */
+  getMostStarred: (limit?: number) =>
+    request<Space[]>(`/spaces/most-starred?page_size=${limit || 20}`),
+
   /** 删除/归档社区 (仅 owner) */
   archive: (namespace: string) =>
     request<{ message: string }>(`/spaces/${encodeNs(namespace)}`, { method: 'DELETE' }),
+
+  // ==================== 自定义模块 ====================
+
+  /** 列出社区所有模块 */
+  listModules: (namespace: string) =>
+    request<SpaceModule[]>(`/spaces/${encodeNs(namespace)}/modules`),
+
+  /** 创建自定义模块 */
+  createModule: (namespace: string, data: { name: string; module_key?: string; mode?: string; allowed_content_types?: string[] }) =>
+    request<SpaceModule>(`/spaces/${encodeNs(namespace)}/modules`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  /** 更新自定义模块 */
+  updateModule: (namespace: string, moduleKey: string, data: { name?: string; mode?: string; allowed_content_types?: string[]; is_active?: boolean }) =>
+    request<SpaceModule>(`/spaces/${encodeNs(namespace)}/modules/${encodeURIComponent(moduleKey)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  /** 删除自定义模块 */
+  deleteModule: (namespace: string, moduleKey: string) =>
+    request<{ deleted: boolean }>(`/spaces/${encodeNs(namespace)}/modules/${encodeURIComponent(moduleKey)}`, { method: 'DELETE' }),
 };
+
+/** 自定义模块公开信息 */
+export interface SpaceModule {
+  id: string;
+  space_id: string;
+  name: string;
+  module_key: string;
+  mode: 'free' | 'creator_only';
+  allowed_content_types: string[];
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
 
 export interface SpaceMember {
   user: User;

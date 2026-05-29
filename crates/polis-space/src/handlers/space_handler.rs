@@ -2,6 +2,7 @@ use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
 use polis_core::models::{
     CreateSpaceRequest, SpacePublic, UpdateSpaceRequest,
+    SpaceModulePublic, CreateModuleRequest, UpdateModuleRequest,
 };
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
@@ -67,11 +68,8 @@ impl SpaceHandler {
             .visibility
             .unwrap_or_default()
             .to_string();
-        let enabled_modules = req
-            .enabled_modules
-            .as_ref()
-            .map(|m| serde_json::to_value(m).unwrap_or_else(|_| serde_json::json!(["forum"])))
-            .unwrap_or_else(|| serde_json::json!(["forum"]));
+        // 新系统不再使用旧 enabled_modules，创建默认"交流"模块
+        let enabled_modules = serde_json::json!(["forum"]);
 
         let description = req.description.unwrap_or_default();
 
@@ -90,6 +88,14 @@ impl SpaceHandler {
                 &enabled_modules,
             )
             .await?;
+
+        // 创建默认"交流"模块
+        let _ = self.repo.create_module(space.id, &CreateModuleRequest {
+            name: "交流".to_string(),
+            module_key: Some("forum".to_string()),
+            mode: Some("free".to_string()),
+            allowed_content_types: Some(vec!["article".to_string()]),
+        }).await;
 
         // 将创建者添加为 Owner
         self.repo
@@ -126,6 +132,9 @@ impl SpaceHandler {
         }
         if let Ok(has) = self.repo.has_password(pub_space.id).await {
             pub_space.has_password = has;
+        }
+        if let Ok(count) = self.repo.get_star_count(pub_space.id).await {
+            pub_space.star_count = count;
         }
         pub_space
     }
@@ -518,5 +527,120 @@ impl SpaceHandler {
             .ok_or(AppError::NotFound("Space not found".to_string()))?;
         let following = self.repo.unfollow_space(space.id, user_id).await?;
         Ok(following)
+    }
+
+    /// 收藏社区
+    pub async fn star_space(&self, namespace: &str, user_id: Uuid) -> Result<bool, AppError> {
+        let space = self.repo.find_by_namespace(namespace).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+        let starred = self.repo.star_space(space.id, user_id).await?;
+        Ok(starred)
+    }
+
+    /// 取消收藏社区
+    pub async fn unstar_space(&self, namespace: &str, user_id: Uuid) -> Result<bool, AppError> {
+        let space = self.repo.find_by_namespace(namespace).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+        let starred = self.repo.unstar_space(space.id, user_id).await?;
+        Ok(starred)
+    }
+
+    /// 获取用户收藏的社区列表
+    pub async fn get_starred_spaces(&self, user_id: Uuid) -> Result<Vec<SpacePublic>, AppError> {
+        let ids = self.repo.get_starred_spaces(user_id).await?;
+        let mut spaces = Vec::new();
+        for id in ids {
+            if let Ok(space) = self.repo.find_by_id(id).await {
+                if let Some(space) = space {
+                    spaces.push(self.space_to_public(space).await);
+                }
+            }
+        }
+        Ok(spaces)
+    }
+
+    /// 获取最多收藏的社区
+    pub async fn get_most_starred(&self, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
+        let spaces = self.repo.find_most_starred(limit as i64).await?;
+        let mut result = Vec::new();
+        for space in spaces {
+            result.push(self.space_to_public(space).await);
+        }
+        Ok(result)
+    }
+
+    // ==================== 自定义模块 CRUD ====================
+
+    /// 列表社区所有模块
+    pub async fn list_modules(&self, namespace: &str) -> Result<Vec<SpaceModulePublic>, AppError> {
+        let space = self.repo.find_by_namespace(namespace).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+        let modules = self.repo.list_modules(space.id).await?;
+        Ok(modules.into_iter().map(|m| m.into()).collect())
+    }
+
+    /// 创建模块（仅 owner）
+    pub async fn create_module(&self, namespace: &str, user_id: Uuid, req: CreateModuleRequest) -> Result<SpaceModulePublic, AppError> {
+        let space = self.repo.find_by_namespace(namespace).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        // 仅 owner 可创建模块
+        let role = self.repo.get_member_role(space.id, user_id).await?;
+        if role != Some("owner".to_string()) {
+            return Err(AppError::Forbidden("仅社区创建者可管理模块".to_string()));
+        }
+
+        // 验证 name
+        let name = req.name.trim();
+        if name.is_empty() {
+            return Err(AppError::Validation("模块名称不能为空".to_string()));
+        }
+        if name.chars().count() > 10 {
+            return Err(AppError::Validation("模块名称不能超过10个字符".to_string()));
+        }
+
+        let m = self.repo.create_module(space.id, &CreateModuleRequest {
+            name: name.to_string(),
+            module_key: req.module_key.clone(),
+            mode: req.mode.clone(),
+            allowed_content_types: req.allowed_content_types.clone(),
+        }).await?;
+
+        Ok(m.into())
+    }
+
+    /// 更新模块（仅 owner）
+    pub async fn update_module(&self, namespace: &str, module_key: &str, user_id: Uuid, req: UpdateModuleRequest) -> Result<SpaceModulePublic, AppError> {
+        let space = self.repo.find_by_namespace(namespace).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        let role = self.repo.get_member_role(space.id, user_id).await?;
+        if role != Some("owner".to_string()) {
+            return Err(AppError::Forbidden("仅社区创建者可管理模块".to_string()));
+        }
+
+        if let Some(ref name) = req.name {
+            if name.chars().count() > 10 {
+                return Err(AppError::Validation("模块名称不能超过10个字符".to_string()));
+            }
+        }
+
+        let m = self.repo.update_module(space.id, module_key, &req).await?
+            .ok_or(AppError::NotFound("模块不存在".to_string()))?;
+
+        Ok(m.into())
+    }
+
+    /// 删除模块（仅 owner）
+    pub async fn delete_module(&self, namespace: &str, module_key: &str, user_id: Uuid) -> Result<bool, AppError> {
+        let space = self.repo.find_by_namespace(namespace).await?
+            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+
+        let role = self.repo.get_member_role(space.id, user_id).await?;
+        if role != Some("owner".to_string()) {
+            return Err(AppError::Forbidden("仅社区创建者可管理模块".to_string()));
+        }
+
+        self.repo.delete_module(space.id, module_key).await
     }
 }

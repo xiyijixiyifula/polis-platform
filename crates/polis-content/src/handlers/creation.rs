@@ -310,16 +310,48 @@ impl CreationHandler {
         .map_err(|e| AppError::Internal(e.to_string()))?
         .ok_or(AppError::Forbidden("无权操作此创作".to_string()))?;
 
-        // 获取社区 ID
-        let space_id: Option<Uuid> = sqlx::query_scalar(
-            "SELECT id FROM spaces WHERE namespace = $1",
+        // 获取社区 ID 和 owner_id
+        let space_row: Option<(Uuid, Option<Uuid>)> = sqlx::query_as(
+            "SELECT id, owner_id FROM spaces WHERE namespace = $1",
         )
         .bind(&req.space_ns)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
-        let space_id = space_id.ok_or(AppError::NotFound("社区不存在".to_string()))?;
+        let (space_id, space_owner) = space_row.ok_or(AppError::NotFound("社区不存在".to_string()))?;
+
+        // 检查自定义模块模式和作品类型
+        let module_info: Option<(String, serde_json::Value, String)> = sqlx::query_as(
+            "SELECT mode, allowed_content_types, name FROM space_modules WHERE space_id = $1 AND module_key = $2 AND is_active = true"
+        )
+        .bind(space_id)
+        .bind(&req.module_type)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?;
+
+        if let Some((mode, allowed_types, module_name)) = module_info {
+            // 创建者模式：仅 owner 可投稿
+            if mode == "creator_only" && space_owner != Some(user_id) {
+                return Err(AppError::Forbidden(format!("仅社区创建者可在「{}」模块发布作品", module_name)));
+            }
+            // 作品类型校验
+            let allowed: Vec<String> = serde_json::from_value(allowed_types).unwrap_or_default();
+            let content_type = creation.content_type.clone();
+            if !allowed.contains(&content_type) {
+                return Err(AppError::Forbidden(format!(
+                    "「{}」模块不接受 {} 类型的作品（允许: {}）",
+                    module_name,
+                    content_type,
+                    allowed.join(", ")
+                )));
+            }
+        } else {
+            // 模块不存在或未激活，检查是否为旧模块类型（兼容迁移过渡期）
+            // 如果没有匹配的 space_modules 记录，拒绝投稿
+            return Err(AppError::Forbidden("目标社区未开启该模块".to_string()));
+        }
 
         // 检查是否已存在
         let existing: Option<(Uuid,)> = sqlx::query_as(

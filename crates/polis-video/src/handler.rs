@@ -15,12 +15,28 @@ pub struct VideoHandler {
 impl VideoHandler {
     pub fn new(repo: VideoRepo, config: VideoServiceConfig) -> Self { Self { repo, config } }
 
+    async fn get_max_video_size_mb(&self) -> u64 {
+        let result: Option<(serde_json::Value,)> = sqlx::query_as(
+            "SELECT value FROM platform_settings WHERE key = 'max_video_size_mb'"
+        ).fetch_optional(&self.repo.pool).await.ok().flatten();
+        if let Some((val,)) = result {
+            if let Some(n) = val.as_i64() {
+                if n > 0 { return n as u64; }
+            }
+            if let Some(s) = val.as_str() {
+                if let Ok(n) = s.parse::<u64>() { return n; }
+            }
+        }
+        self.config.max_file_size_mb
+    }
+
     // ===== 上传（不绑定社区）=====
 
     pub async fn upload_video(&self, uploader_id: Uuid, title: &str, description: &str, data: &[u8], extension: &str, visibility: &str) -> Result<serde_json::Value, AppError> {
-        let max_bytes = self.config.max_file_size_mb * 1024 * 1024;
+        let max_mb = self.get_max_video_size_mb().await;
+        let max_bytes = max_mb * 1024 * 1024;
         if data.len() as u64 > max_bytes {
-            return Err(AppError::Validation(format!("文件大小超过 {}MB 限制", self.config.max_file_size_mb)));
+            return Err(AppError::Validation(format!("文件大小超过 {}MB 限制", max_mb)));
         }
         let ext = extension.trim_start_matches('.').to_lowercase();
         if !self.config.allowed_extensions.contains(&ext) {

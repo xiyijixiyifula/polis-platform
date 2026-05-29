@@ -15,6 +15,10 @@ pub struct ForgotPasswordRequest { pub email: String }
 pub struct ResetPasswordRequest { pub token: String, pub new_password: String }
 #[derive(Deserialize)]
 pub struct FollowRequest { pub followee_type: String, pub followee_id: Uuid }
+#[derive(Deserialize)]
+pub struct AppealRequest { pub email: String, pub reason: String }
+#[derive(Deserialize)]
+pub struct BanStatusQuery { pub email: String }
 
 pub fn user_routes(handler: Arc<UserHandler>) -> Router {
     let public = Router::new()
@@ -27,7 +31,9 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/users/{username}", get(get_user_profile))
         .route("/api/users/{username}/spaces", get(get_user_spaces))
         .route("/api/users/{username}/followers", get(get_followers))
-        .route("/api/users/{username}/following", get(get_following));
+        .route("/api/users/{username}/following", get(get_following))
+        .route("/api/user/ban-status", get(ban_status))
+        .route("/api/user/appeal", post(submit_appeal));
     let auth = Router::new()
         .route("/api/users/me", get(get_my_profile).put(update_profile))
         .route("/api/users/me/password", put(change_password))
@@ -147,4 +153,30 @@ async fn get_mutual_contacts(
     axum::Extension(uid): axum::Extension<Uuid>,
 ) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
     Ok(Json(ApiResponse::success(h.get_mutual_contacts(uid).await?)))
+}
+
+/// GET /api/user/ban-status?email=xxx — 查询封禁状态（公开端点）
+async fn ban_status(
+    State(h): State<Arc<UserHandler>>,
+    axum::extract::Query(q): axum::extract::Query<BanStatusQuery>,
+) -> Json<ApiResponse<serde_json::Value>> {
+    match h.get_ban_status(&q.email).await {
+        Ok(status) => Json(ApiResponse::success(status)),
+        Err(_) => Json(ApiResponse::success(serde_json::json!({
+            "banned": false,
+            "ban_reason": null,
+            "banned_at": null,
+        }))),
+    }
+}
+
+/// POST /api/user/appeal — 提交账号申诉（公开端点）
+async fn submit_appeal(
+    State(h): State<Arc<UserHandler>>,
+    Json(r): Json<AppealRequest>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    h.submit_appeal(&r.email, &r.reason).await?;
+    Ok(Json(ApiResponse::success(serde_json::json!({
+        "message": "申诉已提交，管理员将在1-3个工作日内审核",
+    }))))
 }

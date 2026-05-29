@@ -2,7 +2,7 @@
 //! 支持人类管理员 + AI Agent 管理员双通道
 use polis_core::admin::*;
 use polis_core::error::AppError;
-use polis_core::models::{AuditLogQuery, ReviewQueueQuery, BatchReviewRequest, AgentAdminLoginRequest, CreateReviewRuleRequest};
+use polis_core::models::{AuditLogQuery, ReviewQueueQuery, BatchReviewRequest, AgentAdminLoginRequest, CreateReviewRuleRequest, AgentReviewDecision};
 use sqlx::PgPool;
 use std::fs;
 use std::sync::RwLock;
@@ -273,6 +273,14 @@ impl AdminHandler {
                         self.ban_user(handled_by, target_id, reason).await?;
                         linked_actions.push("user.ban".to_string());
                     }
+                    ("user", "unban") => {
+                        self.unban_user(handled_by, target_id).await?;
+                        linked_actions.push("user.unban".to_string());
+                    }
+                    ("appeal", "unban") => {
+                        self.unban_user(handled_by, target_id).await?;
+                        linked_actions.push("user.unban".to_string());
+                    }
                     ("comment", "delete") => {
                         sqlx::query("UPDATE comments SET is_deleted = TRUE WHERE id = $1")
                             .bind(target_id).execute(&self.pool).await?;
@@ -420,6 +428,24 @@ impl AdminHandler {
         Ok(())
     }
 
+    pub async fn update_review_rule(&self, admin_id: Uuid, rule_id: Uuid, req: CreateReviewRuleRequest) -> Result<(), AppError> {
+        let target_types = serde_json::to_value(req.target_types).unwrap_or_default();
+        sqlx::query(
+            "UPDATE review_rules SET name=$1, description=$2, rule_type=$3, config=$4, target_types=$5, priority=$6, updated_at=NOW() WHERE id=$7"
+        ).bind(&req.name).bind(req.description.as_deref()).bind(&req.rule_type)
+         .bind(&req.config).bind(&target_types).bind(req.priority.unwrap_or(0)).bind(rule_id)
+         .execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "system", rule_id, "update_review_rule", None, None, Some(&req.name)).await;
+        Ok(())
+    }
+
+    pub async fn delete_review_rule(&self, admin_id: Uuid, rule_id: Uuid) -> Result<(), AppError> {
+        sqlx::query("DELETE FROM review_rules WHERE id = $1")
+            .bind(rule_id).execute(&self.pool).await?;
+        self.audit_log(admin_id, "admin", "system", rule_id, "delete_review_rule", None, None, None).await;
+        Ok(())
+    }
+
     // ==================== 审计日志查询 ====================
 
     pub async fn get_audit_logs(&self, query: AuditLogQuery) -> Result<(Vec<serde_json::Value>, i64), AppError> {
@@ -510,7 +536,7 @@ impl AdminHandler {
     pub async fn get_user_detail(&self, user_id: Uuid) -> Result<serde_json::Value, AppError> {
         use sqlx::Row;
         let row = sqlx::query(
-            "SELECT id, username, display_name, CONCAT(LEFT(email, 3), '***', SUBSTRING(email FROM POSITION('@' IN email))) as email, bio, verified, verified_type, created_at, updated_at FROM users WHERE id = $1"
+            "SELECT id, username, display_name, CONCAT(LEFT(email, 3), '***', SUBSTRING(email FROM POSITION('@' IN email))) as email, bio, verified, verified_type, COALESCE(banned, FALSE) as banned, banned_at, ban_reason, created_at, updated_at FROM users WHERE id = $1"
         ).bind(user_id).fetch_optional(&self.pool).await?
         .ok_or(AppError::NotFound("User not found".to_string()))?;
 
@@ -522,6 +548,9 @@ impl AdminHandler {
             "bio": row.get::<String, _>("bio"),
             "verified": row.get::<bool, _>("verified"),
             "verified_type": row.get::<Option<String>, _>("verified_type"),
+            "banned": row.get::<Option<bool>, _>("banned").unwrap_or(false),
+            "banned_at": row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("banned_at"),
+            "ban_reason": row.get::<Option<String>, _>("ban_reason"),
             "created_at": row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at"),
             "updated_at": row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("updated_at"),
         }))
@@ -683,6 +712,178 @@ impl AdminHandler {
             ORDER BY d"#
         ).bind(days).fetch_all(&self.pool).await?;
         Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    // ==================== Agent 审查 API ====================
+
+    /// 获取审查策略（供 Agent 读取）
+    pub async fn get_agent_policy(&self) -> Result<serde_json::Value, AppError> {
+        let rules = self.list_review_rules().await?;
+        let active_rules: Vec<_> = rules.into_iter().filter(|r| {
+            r.get("is_active").and_then(|v| v.as_bool()).unwrap_or(false)
+        }).collect();
+
+        Ok(serde_json::json!({
+            "rules": active_rules,
+            "violation_categories": {
+                "nsfw": { "label": "色情/低俗内容", "first_level": "L1", "severe_level": "L4", "keywords": ["色情", "裸露", "性暗示"] },
+                "violence": { "label": "暴力/恐怖内容", "first_level": "L2", "severe_level": "L4", "keywords": ["暴力", "恐怖", "威胁"] },
+                "hate_speech": { "label": "仇恨言论", "first_level": "L2", "severe_level": "L3", "keywords": ["歧视", "种族", "仇恨"] },
+                "spam": { "label": "垃圾信息", "first_level": "L1", "severe_level": "L3", "keywords": ["广告", "灌水", "刷屏"] },
+                "illegal": { "label": "违法违规", "first_level": "L3", "severe_level": "L4", "keywords": ["诈骗", "赌博", "毒品", "侵权"] },
+                "harassment": { "label": "骚扰/网络暴力", "first_level": "L1", "severe_level": "L3", "keywords": ["人肉", "网暴", "攻击"] }
+            },
+            "action_levels": {
+                "L1": { "action": "hide", "duration_hours": 24, "ban": false, "description": "隐藏24小时" },
+                "L2": { "action": "hide", "duration_hours": 168, "ban": false, "description": "隐藏7天" },
+                "L3": { "action": "hide", "duration_hours": 720, "ban": true, "ban_days": 7, "description": "隐藏30天+封禁7天" },
+                "L4": { "action": "hide", "duration_hours": null, "ban": true, "ban_days": null, "description": "永久隐藏+永久封禁" }
+            },
+            "confidence_thresholds": {
+                "auto_execute": 0.9,
+                "flag_for_review": 0.6
+            }
+        }))
+    }
+
+    /// 获取最近 N 小时的新内容（供 Agent 扫描）
+    pub async fn get_agent_new_content(&self, hours: i32, space_id: Option<Uuid>, limit: i32, offset: i32) -> Result<(Vec<serde_json::Value>, i64), AppError> {
+        use sqlx::Row;
+        let rows = sqlx::query(
+            r#"SELECT json_build_object(
+                'id', p.id, 'title', p.title,
+                'content', CASE WHEN length(p.body) > 5000 THEN left(p.body, 5000) || '...' ELSE p.body END,
+                'content_truncated', length(p.body) > 5000,
+                'author_id', p.author_id,
+                'author_username', u.username,
+                'author_display_name', u.display_name,
+                'space_id', p.space_id,
+                'space_title', s.title,
+                'module_type', p.module_type,
+                'visibility', p.visibility,
+                'created_at', p.created_at
+            ) FROM posts p
+            LEFT JOIN users u ON p.author_id = u.id
+            LEFT JOIN spaces s ON p.space_id = s.id
+            WHERE p.created_at > NOW() - ($1 || ' hours')::interval
+            AND p.is_deleted = FALSE
+            AND (p.space_id = $2 OR $2 IS NULL)
+            AND NOT EXISTS (
+                SELECT 1 FROM audit_logs a WHERE a.target_id = p.id AND a.target_type = 'post'
+                AND a.actor_type = 'agent' AND a.created_at > NOW() - ($1 || ' hours')::interval
+            )
+            ORDER BY p.created_at DESC LIMIT $3 OFFSET $4"#
+        ).bind(hours.to_string()).bind(space_id).bind(limit as i64).bind(offset as i64)
+         .fetch_all(&self.pool).await?;
+
+        let total: (i64,) = sqlx::query_as(
+            r#"SELECT COUNT(*) FROM posts p
+            WHERE p.created_at > NOW() - ($1 || ' hours')::interval
+            AND p.is_deleted = FALSE
+            AND (p.space_id = $2 OR $2 IS NULL)
+            AND NOT EXISTS (
+                SELECT 1 FROM audit_logs a WHERE a.target_id = p.id AND a.target_type = 'post'
+                AND a.actor_type = 'agent' AND a.created_at > NOW() - ($1 || ' hours')::interval
+            )"#
+        ).bind(hours.to_string()).bind(space_id).fetch_one(&self.pool).await?;
+
+        Ok((rows.into_iter().map(|r| r.get(0)).collect(), total.0))
+    }
+
+    /// Agent 提交审查决策
+    pub async fn agent_review(&self, agent_user_id: Uuid, decisions: Vec<AgentReviewDecision>) -> Result<serde_json::Value, AppError> {
+        let mut total = 0i32;
+        let mut auto_executed = 0i32;
+        let mut flagged_for_review = 0i32;
+        let mut skipped = 0i32;
+
+        for d in &decisions {
+            total += 1;
+            if d.confidence >= 0.9 {
+                match d.action.as_str() {
+                    "hide" => {
+                        let _ = self.hide_post(agent_user_id, d.target_id, d.duration_hours).await;
+                        self.audit_log(agent_user_id, "agent", "post", d.target_id, "hide", None, Some("hidden"), Some(&d.reason)).await;
+                    }
+                    "ban_user" => {
+                        let _ = self.ban_user(agent_user_id, d.target_id, &d.reason).await;
+                        self.audit_log(agent_user_id, "agent", "user", d.target_id, "ban", None, Some("banned"), Some(&d.reason)).await;
+                    }
+                    "approve" => {
+                        self.audit_log(agent_user_id, "agent", &d.target_type, d.target_id, "approve", None, Some("approved"), None).await;
+                    }
+                    _ => {}
+                }
+                auto_executed += 1;
+            } else if d.confidence >= 0.6 {
+                let _ = sqlx::query(
+                    "INSERT INTO reports (reporter_id, target_type, target_id, reason, status, created_at) VALUES ($1, $2, $3, $4, 'pending', NOW())"
+                ).bind(agent_user_id).bind(&d.target_type).bind(d.target_id).bind(format!("[Agent:{}] {}", d.violation_type.as_deref().unwrap_or("unknown"), d.reason))
+                 .execute(&self.pool).await;
+                self.audit_log(agent_user_id, "agent", &d.target_type, d.target_id, "flag_for_review", None, Some("pending"), Some(&d.reason)).await;
+                flagged_for_review += 1;
+            } else {
+                self.audit_log(agent_user_id, "agent", &d.target_type, d.target_id, "skipped", None, None, Some("low confidence")).await;
+                skipped += 1;
+            }
+        }
+
+        Ok(serde_json::json!({
+            "total": total,
+            "auto_executed": auto_executed,
+            "flagged_for_review": flagged_for_review,
+            "skipped": skipped,
+        }))
+    }
+
+    /// Agent 审查统计
+    pub async fn get_agent_stats(&self, agent_user_id: Uuid) -> Result<serde_json::Value, AppError> {
+        use sqlx::Row;
+        let today = sqlx::query(
+            r#"SELECT COUNT(*) as cnt, action FROM audit_logs
+               WHERE actor_type = 'agent' AND actor_id = $1
+               AND created_at > CURRENT_DATE
+               GROUP BY action"#
+        ).bind(agent_user_id).fetch_all(&self.pool).await?;
+
+        let week = sqlx::query(
+            r#"SELECT COUNT(*) as cnt FROM audit_logs
+               WHERE actor_type = 'agent' AND actor_id = $1
+               AND created_at > CURRENT_DATE - INTERVAL '7 days'"#
+        ).bind(agent_user_id).fetch_one(&self.pool).await?;
+
+        let today_actions: Vec<serde_json::Value> = today.iter().map(|r| {
+            serde_json::json!({
+                "action": r.get::<String, _>("action"),
+                "count": r.get::<i64, _>("cnt"),
+            })
+        }).collect();
+
+        Ok(serde_json::json!({
+            "today_total": today.iter().map(|r| r.get::<i64, _>("cnt")).sum::<i64>(),
+            "today_actions": today_actions,
+            "week_total": week.get::<i64, _>("cnt"),
+        }))
+    }
+
+    pub async fn get_platform_settings(&self) -> Result<serde_json::Value, AppError> {
+        let rows: Vec<(String, serde_json::Value)> = sqlx::query_as(
+            "SELECT key, value FROM platform_settings ORDER BY key"
+        ).fetch_all(&self.pool).await.map_err(|e| AppError::Internal(format!("读取平台设置失败: {}", e)))?;
+        let mut map = serde_json::Map::new();
+        for (k, v) in rows {
+            map.insert(k, v);
+        }
+        Ok(serde_json::Value::Object(map))
+    }
+
+    pub async fn update_platform_settings(&self, settings: serde_json::Map<String, serde_json::Value>) -> Result<(), AppError> {
+        for (key, value) in &settings {
+            sqlx::query(
+                "INSERT INTO platform_settings (key, value, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()"
+            ).bind(key).bind(value).execute(&self.pool).await.map_err(|e| AppError::Internal(format!("保存平台设置失败: {}", e)))?;
+        }
+        Ok(())
     }
 
 }

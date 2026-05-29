@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Settings, Shield, Key, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Settings, Shield, Key, Save, AlertCircle, CheckCircle, Upload } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [currentCode, setCurrentCode] = useState('');
@@ -9,6 +9,81 @@ export default function AdminSettingsPage() {
   const [confirmCode, setConfirmCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // 上传大小限制
+  const [uploadSizeMb, setUploadSizeMb] = useState('50');
+  const [videoSizeMb, setVideoSizeMb] = useState('500');
+  const [platformLoading, setPlatformLoading] = useState(true);
+  const [platformSaving, setPlatformSaving] = useState(false);
+  const [platformMsg, setPlatformMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('polis_admin_token');
+    fetch('/api/admin/settings/platform', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.code === 0 && data.data) {
+          if (data.data.max_upload_size_mb) {
+            const val = typeof data.data.max_upload_size_mb === 'number'
+              ? String(data.data.max_upload_size_mb)
+              : String(data.data.max_upload_size_mb);
+            setUploadSizeMb(val);
+          }
+          if (data.data.max_video_size_mb) {
+            const val = typeof data.data.max_video_size_mb === 'number'
+              ? String(data.data.max_video_size_mb)
+              : String(data.data.max_video_size_mb);
+            setVideoSizeMb(val);
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setPlatformLoading(false));
+  }, []);
+
+  const savePlatformSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPlatformMsg(null);
+
+    const uploadVal = parseInt(uploadSizeMb, 10);
+    const videoVal = parseInt(videoSizeMb, 10);
+    if (isNaN(uploadVal) || uploadVal < 1) {
+      setPlatformMsg({ type: 'error', text: '附件上传大小必须是有效的正整数' });
+      return;
+    }
+    if (isNaN(videoVal) || videoVal < 1) {
+      setPlatformMsg({ type: 'error', text: '视频上传大小必须是有效的正整数' });
+      return;
+    }
+
+    setPlatformSaving(true);
+    try {
+      const token = localStorage.getItem('polis_admin_token');
+      const res = await fetch('/api/admin/settings/platform', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          max_upload_size_mb: uploadVal,
+          max_video_size_mb: videoVal,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.code === 0) {
+        setPlatformMsg({ type: 'success', text: '上传限制已更新。需重启 polis-video 和 polis-gateway 服务使新限制生效。' });
+      } else {
+        setPlatformMsg({ type: 'error', text: data.message || '保存失败' });
+      }
+    } catch {
+      setPlatformMsg({ type: 'error', text: '网络错误' });
+    } finally {
+      setPlatformSaving(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +160,82 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* 上传大小限制 */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Upload className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">上传大小限制</h2>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          设置附件和视频的最大上传大小（MB）。修改后即时写入数据库，但需重启对应服务使新限制在网关层生效。
+        </p>
+
+        {platformLoading ? (
+          <div className="text-sm text-gray-400">加载中...</div>
+        ) : (
+          <>
+            {platformMsg && (
+              <div className={`flex items-center gap-2 p-3 rounded-lg mb-4 text-sm ${
+                platformMsg.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+              }`}>
+                {platformMsg.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                {platformMsg.text}
+              </div>
+            )}
+
+            <form onSubmit={savePlatformSettings} className="space-y-4 max-w-md">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  附件上传大小 (MB)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    min={1}
+                    value={uploadSizeMb}
+                    onChange={(e) => setUploadSizeMb(e.target.value)}
+                  />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">MB</span>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  应用于帖子附件、文件上传等。服务器重启后网关层限制生效。
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  视频上传大小 (MB)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    className="w-32 px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    min={1}
+                    value={videoSizeMb}
+                    onChange={(e) => setVideoSizeMb(e.target.value)}
+                  />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">MB</span>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  应用于视频上传。需重启 polis-video 和 polis-gateway 服务。
+                </p>
+              </div>
+              <button
+                type="submit"
+                disabled={platformSaving}
+                className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >
+                {platformSaving ? (
+                  <>保存中...</>
+                ) : (
+                  <><Save className="h-4 w-4" /> 保存上传限制</>
+                )}
+              </button>
+            </form>
+          </>
+        )}
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">

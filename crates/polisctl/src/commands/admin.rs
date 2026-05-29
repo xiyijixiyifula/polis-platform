@@ -7,11 +7,12 @@ pub async fn login(
     config: &Config,
     client: &HttpClient,
     email: &str,
+    password: &str,
     admin_code: &str,
 ) -> Result<(), anyhow::Error> {
     let body = json!({
         "email": email,
-        "password": "admin123",
+        "password": password,
         "admin_code": admin_code
     });
     let resp = client.post("/api/admin/login", None, &body).await?;

@@ -14,7 +14,7 @@ use polis_core::error::AppError;
 use polis_core::models::{
     ApiResponse, Pagination, PaginationParams,
     ReviewQueueQuery, BatchReviewRequest, AgentAdminLoginRequest,
-    CreateReviewRuleRequest, AuditLogQuery,
+    CreateReviewRuleRequest, AuditLogQuery, AgentReviewDecision, AgentReviewRequest,
 };
 
 use crate::admin_handler::AdminHandler;
@@ -40,6 +40,7 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
         // 设置
         .route("/api/admin/settings", get(get_settings))
         .route("/api/admin/settings/code", put(update_admin_code_handler))
+        .route("/api/admin/settings/platform", get(get_platform_settings).put(update_platform_settings))
         // 统计 & 仪表盘
         .route("/api/admin/stats", get(get_stats))
         .route("/api/admin/dashboard", get(get_dashboard))
@@ -75,7 +76,13 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
         .route("/api/admin/review-queue/batch", post(batch_review))
         // 审核规则
         .route("/api/admin/review-rules", get(list_review_rules).post(create_review_rule))
+        .route("/api/admin/review-rules/{id}", put(update_review_rule).delete(delete_review_rule))
         .route("/api/admin/review-rules/{id}/toggle", post(toggle_review_rule))
+        // Agent 审查 API
+        .route("/api/admin/agent/policy", get(get_agent_policy))
+        .route("/api/admin/agent/new-content", get(get_agent_new_content))
+        .route("/api/admin/agent/review", post(agent_review))
+        .route("/api/admin/agent/stats", get(get_agent_stats))
         // 审计日志
         .route("/api/admin/audit-logs", get(get_audit_logs))
         // 跨社区引用管理
@@ -531,6 +538,25 @@ async fn toggle_review_rule(
     Ok(Json(ApiResponse::success(())))
 }
 
+async fn update_review_rule(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+    Extension(admin_id): Extension<Uuid>,
+    Json(req): Json<CreateReviewRuleRequest>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.update_review_rule(admin_id, id, req).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn delete_review_rule(
+    State(handler): State<Arc<AdminHandler>>,
+    Path(id): Path<Uuid>,
+    Extension(admin_id): Extension<Uuid>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    handler.delete_review_rule(admin_id, id).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
 // ============================================================
 // 审计日志
 // ============================================================
@@ -710,11 +736,86 @@ async fn update_admin_code_handler(
     Json(req): Json<UpdateAdminCodeRequest>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
     if req.current_code != handler.get_admin_code() {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Validation("当前验证码不正确".to_string()));
     }
     handler.update_admin_code(&req.new_code)?;
     tracing::info!("Admin code updated via API");
     Ok(Json(ApiResponse::success(())))
+}
+
+async fn get_platform_settings(
+    State(handler): State<Arc<AdminHandler>>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let settings = handler.get_platform_settings().await?;
+    Ok(Json(ApiResponse::success(settings)))
+}
+
+async fn update_platform_settings(
+    State(handler): State<Arc<AdminHandler>>,
+    Json(body): Json<serde_json::Value>,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    let map = body.as_object()
+        .ok_or_else(|| AppError::Validation("请求体必须是 JSON 对象".to_string()))?
+        .clone();
+    handler.update_platform_settings(map).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+// ============================================================
+// Agent 审查 API
+// ============================================================
+
+async fn get_agent_policy(
+    State(handler): State<Arc<AdminHandler>>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let policy = handler.get_agent_policy().await?;
+    Ok(Json(ApiResponse::success(policy)))
+}
+
+#[derive(Deserialize)]
+pub struct AgentNewContentQuery {
+    pub hours: Option<i32>,
+    pub space_id: Option<Uuid>,
+    pub limit: Option<i32>,
+    pub offset: Option<i32>,
+}
+
+async fn get_agent_new_content(
+    State(handler): State<Arc<AdminHandler>>,
+    Query(params): Query<AgentNewContentQuery>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let (items, total) = handler.get_agent_new_content(
+        params.hours.unwrap_or(24),
+        params.space_id,
+        params.limit.unwrap_or(100),
+        params.offset.unwrap_or(0),
+    ).await?;
+    Ok(Json(ApiResponse::success_with_pagination(
+        serde_json::json!({ "items": items, "total": total }),
+        Pagination {
+            page: 1,
+            page_size: params.limit.unwrap_or(100) as u32,
+            total: total as u64,
+            total_pages: 1,
+        },
+    )))
+}
+
+async fn agent_review(
+    State(handler): State<Arc<AdminHandler>>,
+    Extension(admin_id): Extension<Uuid>,
+    Json(req): Json<AgentReviewRequest>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let result = handler.agent_review(admin_id, req.decisions).await?;
+    Ok(Json(ApiResponse::success(result)))
+}
+
+async fn get_agent_stats(
+    State(handler): State<Arc<AdminHandler>>,
+    Extension(admin_id): Extension<Uuid>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let stats = handler.get_agent_stats(admin_id).await?;
+    Ok(Json(ApiResponse::success(stats)))
 }
 
 async fn health_check(State(h): State<Arc<AdminHandler>>) -> Json<ApiResponse<serde_json::Value>> {

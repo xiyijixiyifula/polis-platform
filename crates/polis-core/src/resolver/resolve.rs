@@ -38,33 +38,30 @@ pub async fn resolve_space_id_optional(pool: &PgPool, namespace: &str) -> Result
     Ok(row.map(|r| r.0))
 }
 
-/// 查询空间已启用的模块列表 (JSONB → Vec<String>)
+/// 查询空间已启用的模块列表（从 space_modules 表读取）
 pub async fn resolve_space_enabled_modules(pool: &PgPool, space_id: Uuid) -> Result<Vec<String>, AppError> {
-    let row: Option<(serde_json::Value,)> = sqlx::query_as(
-        "SELECT enabled_modules FROM spaces WHERE id = $1 AND status = 'active'"
+    let rows: Vec<(String,)> = sqlx::query_as(
+        "SELECT module_key FROM space_modules WHERE space_id = $1 AND is_active = true ORDER BY sort_order"
     )
     .bind(space_id)
-    .fetch_optional(pool)
+    .fetch_all(pool)
     .await
     .map_err(|e| AppError::Database(e))?;
 
-    match row {
-        Some((value,)) => {
-            let mut modules: Vec<String> = serde_json::from_value(value).unwrap_or_default();
-            if modules.is_empty() {
-                modules = vec!["forum".to_string()];
-            }
-            // forum 和 article 互为别名，确保启用了 forum 时也能显示 article 类型的帖子
-            if modules.contains(&"forum".to_string()) && !modules.contains(&"article".to_string()) {
-                modules.push("article".to_string());
-            }
-            if modules.contains(&"article".to_string()) && !modules.contains(&"forum".to_string()) {
-                modules.push("forum".to_string());
-            }
-            Ok(modules)
-        }
-        None => Ok(vec!["forum".to_string(), "article".to_string()]),
+    if rows.is_empty() {
+        return Ok(vec!["forum".to_string()]);
     }
+
+    let mut modules: Vec<String> = rows.into_iter().map(|(k,)| k).collect();
+
+    // forum/article 别名兼容
+    if modules.contains(&"forum".to_string()) && !modules.contains(&"article".to_string()) {
+        modules.push("article".to_string());
+    }
+    if modules.contains(&"article".to_string()) && !modules.contains(&"forum".to_string()) {
+        modules.push("forum".to_string());
+    }
+    Ok(modules)
 }
 
 /// 根据 slug 查询根社区 space_id

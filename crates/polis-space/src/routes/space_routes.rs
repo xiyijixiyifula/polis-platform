@@ -21,6 +21,7 @@ pub struct SearchParams {
 
 use polis_core::models::{
     ApiResponse, CreateSpaceRequest, Pagination, SpacePublic, UpdateSpaceRequest, PaginationParams,
+    CreateModuleRequest, UpdateModuleRequest,
 };
 
 use crate::handlers::space_handler::SpaceHandler;
@@ -52,6 +53,7 @@ pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
         .route("/health", get(health_check))
         .route("/api/search", get(search_spaces))
         .route("/api/spaces/trending", get(get_trending_spaces))
+        .route("/api/spaces/most-starred", get(get_most_starred))
         .route("/api/spaces", get(list_spaces))
         .route("/api/spaces/{*path}", get(handle_public_path))
         .route("/api/root/{slug}", get(get_root_space))
@@ -59,9 +61,10 @@ pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
 
     let auth = Router::new()
         .route("/api/spaces", post(create_space))
+        .route("/api/spaces/starred", get(handle_starred_spaces))
         .route("/api/spaces/{*path}", post(handle_auth_path)
             .put(handle_auth_path)
-            .delete(delete_space))
+            .delete(handle_auth_path))
         .route_layer(middleware::from_fn_with_state(
             handler.clone(),
             auth_middleware,
@@ -90,7 +93,7 @@ async fn handle_public_path(
     }
 
     // 提取 namespace（去掉尾部动作）
-    let actions_suffixes = ["/members", "/join", "/leave", "/posts", "/featured", "/bookmarks", "/join-requests", "/my-join-status"];
+    let actions_suffixes = ["/members", "/join", "/leave", "/posts", "/featured", "/bookmarks", "/join-requests", "/my-join-status", "/modules"];
     let mut ns = remaining;
     for suffix in &actions_suffixes {
         if let Some(stripped) = remaining.strip_suffix(suffix) {
@@ -114,12 +117,14 @@ async fn handle_public_path(
         let status = handler.repo.get_join_request_status(space.id, user_id).await.unwrap_or(None);
         let is_member = handler.repo.get_member_role(space.id, user_id).await.ok().flatten().is_some();
         let is_following = handler.repo.is_following_space(space.id, user_id).await.unwrap_or(false);
+        let is_starred = handler.repo.is_starred_space(space.id, user_id).await.unwrap_or(false);
         return Ok(Json(serde_json::json!({
             "code": 0,
             "data": {
                 "join_status": status.unwrap_or_else(|| if is_member { "approved".to_string() } else { "none".to_string() }),
                 "is_member": is_member,
-                "is_following": is_following
+                "is_following": is_following,
+                "is_starred": is_starred
             }
         })));
     }
@@ -130,6 +135,13 @@ async fn handle_public_path(
         let decoded_ns = decode_namespace(ns)?;
         let requests = handler.list_join_requests(&decoded_ns, user_id).await?;
         return Ok(Json(serde_json::json!({"code": 0, "data": requests})));
+    }
+
+    // 模块列表
+    if remaining.ends_with("/modules") {
+        let decoded_ns = decode_namespace(ns)?;
+        let modules = handler.list_modules(&decoded_ns).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": modules})));
     }
 
     // URL 解码命名空间（支持中文等非 ASCII 字符）
@@ -188,6 +200,8 @@ async fn handle_auth_path(
         "/join-requests", "/join-requests/review",
         "/verify-password",
         "/follow", "/unfollow",
+        "/star", "/unstar",
+        "/modules",
     ];
     let mut ns = remaining;
     for action in &actions {
@@ -293,6 +307,50 @@ async fn handle_auth_path(
         return Ok(Json(serde_json::json!({"code": 0, "data": {"following": following}, "message": "ok"})));
     }
 
+    if remaining.ends_with("/star") && method == axum::http::Method::POST {
+        let starred = handler.star_space(&decoded_ns, user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": {"starred": starred}, "message": "ok"})));
+    }
+
+    if remaining.ends_with("/unstar") && method == axum::http::Method::POST {
+        let starred = handler.unstar_space(&decoded_ns, user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": {"starred": starred}, "message": "ok"})));
+    }
+
+    // 自定义模块 CRUD
+    // POST /api/spaces/{ns}/modules — 创建模块
+    if remaining.ends_with("/modules") && method == axum::http::Method::POST {
+        let create_req: CreateModuleRequest = read_json_body(req).await?;
+        let module = handler.create_module(&decoded_ns, user_id, create_req).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "data": module})));
+    }
+
+    // PUT/DELETE /api/spaces/{ns}/modules/{module_key}
+    if let Some(module_part) = remaining.find("/modules/") {
+        let module_ns = &remaining[..module_part];
+        let module_key = remaining[module_part + "/modules/".len()..].trim_end_matches('/');
+        if !module_key.is_empty() && !module_ns.is_empty() {
+            let decoded_ns2 = decode_namespace(module_ns)?;
+
+            if method == axum::http::Method::PUT {
+                let update_req: UpdateModuleRequest = read_json_body(req).await?;
+                let module = handler.update_module(&decoded_ns2, module_key, user_id, update_req).await?;
+                return Ok(Json(serde_json::json!({"code": 0, "data": module})));
+            }
+
+            if method == axum::http::Method::DELETE {
+                let deleted = handler.delete_module(&decoded_ns2, module_key, user_id).await?;
+                return Ok(Json(serde_json::json!({"code": 0, "data": {"deleted": deleted}})));
+            }
+        }
+    }
+
+    // DELETE /api/spaces/{ns} — 归档社区
+    if method == axum::http::Method::DELETE {
+        handler.archive_space(&decoded_ns, user_id).await?;
+        return Ok(Json(serde_json::json!({"code": 0, "message": "社区已归档"})));
+    }
+
     if method == axum::http::Method::PUT {
         let update_req: UpdateSpaceRequest = read_json_body(req).await?;
         let space = handler.update_space(&decoded_ns, user_id, update_req).await?;
@@ -300,30 +358,6 @@ async fn handle_auth_path(
     }
 
     Err(AppError::NotFound("Route not found".to_string()))
-}
-
-/// DELETE /api/spaces/{namespace} — 归档社区（仅 owner）
-async fn delete_space(
-    State(handler): State<Arc<SpaceHandler>>,
-    axum::Extension(user_id): axum::Extension<Uuid>,
-    req: Request,
-) -> Result<Json<serde_json::Value>, AppError> {
-    let path = req.uri().path().to_string();
-    let remaining = path.strip_prefix("/api/spaces/").unwrap_or("");
-
-    // 去掉尾部动作（如 /members）
-    let actions = ["/members", "/join", "/leave", "/posts", "/featured", "/bookmarks", "/join-requests"];
-    let mut ns = remaining;
-    for suffix in &actions {
-        if let Some(stripped) = remaining.strip_suffix(suffix) {
-            ns = stripped;
-            break;
-        }
-    }
-    let decoded_ns = decode_namespace(ns)?;
-
-    handler.archive_space(&decoded_ns, user_id).await?;
-    Ok(Json(serde_json::json!({"code": 0, "message": "社区已归档"})))
 }
 
 /// POST /api/spaces - 创建社区
@@ -353,6 +387,26 @@ async fn get_trending_spaces(
 ) -> Result<Json<ApiResponse<Vec<SpacePublic>>>, AppError> {
     let limit = params.page_size.unwrap_or(20);
     let spaces = handler.get_trending_spaces(limit).await?;
+    Ok(Json(ApiResponse::success(spaces)))
+}
+
+/// GET /api/spaces/most-starred - 最多收藏社区
+async fn get_most_starred(
+    State(handler): State<Arc<SpaceHandler>>,
+    Query(params): Query<PaginationParams>,
+) -> Result<Json<ApiResponse<Vec<SpacePublic>>>, AppError> {
+    let limit = params.page_size.unwrap_or(20);
+    let spaces = handler.get_most_starred(limit).await?;
+    Ok(Json(ApiResponse::success(spaces)))
+}
+
+/// GET /api/spaces/starred - 用户收藏的社区列表 (需认证)
+async fn handle_starred_spaces(
+    State(handler): State<Arc<SpaceHandler>>,
+    req: Request,
+) -> Result<Json<ApiResponse<Vec<SpacePublic>>>, AppError> {
+    let user_id = extract_user_id_from_headers(req.headers()).await?;
+    let spaces = handler.get_starred_spaces(user_id).await?;
     Ok(Json(ApiResponse::success(spaces)))
 }
 

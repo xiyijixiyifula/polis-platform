@@ -1,18 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bookmark, BookOpen, Trash2 } from 'lucide-react';
+import { Bookmark, BookOpen, Star, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { FeedItem } from '@/components/FeedItem';
-import { getToken } from '@/lib/api';
+import { SpaceCard } from '@/components/SpaceCard';
+import { getToken, spaces as apiSpaces, Space } from '@/lib/api';
 
 export default function SavedPage() {
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [starredSpaces, setStarredSpaces] = useState<Space[]>([]);
 
   useEffect(() => {
     fetchBookmarks();
+    fetchStarredSpaces();
   }, []);
+
+  const fetchStarredSpaces = async () => {
+    try {
+      const res = await apiSpaces.getStarred();
+      if (res.code === 0 && res.data) setStarredSpaces(res.data);
+    } catch {}
+  };
 
   const fetchBookmarks = () => {
     const token = getToken();
@@ -73,6 +83,23 @@ export default function SavedPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
+      {/* 收藏的社区 */}
+      {starredSpaces.length > 0 && (
+        <section className="mb-10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500" /> 收藏的社区
+            </h2>
+            <span className="text-sm text-gray-400 dark:text-gray-500">{starredSpaces.length} 个</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {starredSpaces.map((space) => (
+              <SpaceCard key={space.id} space={space} />
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
           <Bookmark className="h-6 w-6 text-primary-600" /> 我的收藏
@@ -82,11 +109,11 @@ export default function SavedPage() {
         )}
       </div>
 
-      {bookmarks.length === 0 ? (
+      {bookmarks.length === 0 && starredSpaces.length === 0 ? (
         <div className="glass-card p-6 py-16 text-center">
           <BookOpen className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
           <p className="text-gray-500 dark:text-gray-400">还没有收藏任何内容</p>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">浏览帖子时点击收藏按钮即可保存</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">收藏社区或帖子即可在此查看</p>
           <Link href="/" className="text-sm text-primary-600 dark:text-primary-400 hover:underline mt-3 inline-block">去发现内容 →</Link>
         </div>
       ) : (

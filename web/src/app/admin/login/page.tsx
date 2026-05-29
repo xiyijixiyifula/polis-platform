@@ -49,6 +49,11 @@ export default function AdminLoginPage() {
               value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">密码</label>
+            <input type="password" className="input-field" placeholder="请输入密码"
+              value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">管理员验证码</label>
             <input type="text" className="input-field" placeholder="请输入管理员验证码"
               value={form.admin_code} onChange={(e) => setForm({ ...form, admin_code: e.target.value })} required />

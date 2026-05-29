@@ -7,16 +7,16 @@ import { PostCard } from '@/components/PostCard';
 import { PollCard } from '@/components/PollCard';
 import { SeriesCard } from '@/components/SeriesCard';
 import GameCard from '@/components/GameCard';
-import { SpaceSettings, loadModules, saveModules, type SpaceModules } from '@/components/SpaceSettings';
+import SpaceModulesManager from '@/components/SpaceSettings';
 import SpaceCodeRepo from '@/components/SpaceCodeRepo';
 import SpaceStore from '@/components/SpaceStore';
-import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Star, Grid3X3, List, Filter } from 'lucide-react';
+import { Users, Share2, MessageCircle, Plus, PenLine, UserCheck, BarChart3, Megaphone, Vote, Settings, Layout, Pin, ExternalLink, Video, Code, HelpCircle, MessageSquare, ShoppingBag, GraduationCap, BookOpen, Crown, Library, BookText, Gamepad2, AppWindow, TrendingUp, Star, Grid3X3, List, Filter, FileText } from 'lucide-react';
 import NovelCard, { adaptPostToNovel } from '@/components/NovelCard';
 import QACard from '@/components/QACard';
 import { Pencil, Trash2, ImageIcon } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
-import { getModuleLabel, getModuleEmoji, buildPostLink } from '@/lib/module-config';
-import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
+import { getModuleLabel, getModuleEmoji, buildPostLink, MODULE_CONFIG } from '@/lib/module-config';
+import type { Space, Post, Series, SpaceTier, Subscription, SpaceModule } from '@/lib/api';
 import { spaces as apiSpaces, tiers, subscribe, getToken } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
 import { SpaceChat } from '@/components/SpaceChat';
@@ -44,10 +44,20 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  }, [rawNamespace]);
 
 
- // Handle sub-routes like /space/tech/posts -> namespace=tech, tab=posts
- const knownSubRoutes = new Set(['posts', 'polls', 'announcements', 'overview',
- 'members', 'video', 'code_repo', 'qa', 'files', 'series', 'membership', 'novel', 'game', 'mini_app',
- 'share', 'wiki', 'chat', 'store', 'course']);
+ const [spaceModules, setSpaceModules] = useState<SpaceModule[]>([]);
+
+ // Handle sub-routes — base set covers all legacy + common module keys
+ const BASE_SUB_ROUTES = new Set([
+ 'overview', 'members', 'analytics',
+ 'posts', 'polls', 'announcements', 'video', 'code_repo', 'qa',
+ 'series', 'membership', 'novel', 'game', 'mini_app',
+ 'share', 'wiki', 'chat', 'store', 'course',
+ ]);
+ const knownSubRoutes = useMemo(() => {
+ const routes = new Set(BASE_SUB_ROUTES);
+ spaceModules.forEach(m => routes.add(m.module_key));
+ return routes;
+ }, [spaceModules]);
 
  // 从原始命名空间中剥离子路由后缀，得到纯社区命名空间
  const cleanNamespace = useMemo(() => {
@@ -66,15 +76,15 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  return null;
  }, [namespace]);
 
- // Module settings (persisted in localStorage)
- const [modules, setModules] = useState<SpaceModules>(() => loadModules(cleanNamespace));
- const [showSettings, setShowSettings] = useState(false);
-
- // Sync modules when namespace changes
+ // Fetch space modules from API
  useEffect(() => {
- setModules(loadModules(cleanNamespace));
- setShowSettings(false);
+ if (!cleanNamespace) return;
+ apiSpaces.listModules(cleanNamespace).then(res => {
+ if (res.code === 0 && res.data) setSpaceModules(res.data);
+ }).catch(() => {});
  }, [cleanNamespace]);
+
+ const moduleKeySet = useMemo(() => new Set(spaceModules.map(m => m.module_key)), [spaceModules]);
 
  // Space ownership (must be declared before availableTabs — analytics tab depends on it)
  const [isOwner, setIsOwner] = useState(false);
@@ -85,36 +95,41 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  const [joinStatus, setJoinStatus] = useState<string>('none');
  const [isFollowing, setIsFollowing] = useState(false);
  const [followLoading, setFollowLoading] = useState(false);
+ const [isStarred, setIsStarred] = useState(false);
+ const [starLoading, setStarLoading] = useState(false);
 
- // Active tab - default to overview (GitHub style)
- const availableTabs = [
- { id: 'overview', label: '概览', icon: Layout, enabled: true },
- { id: 'posts', label: '交流', icon: MessageCircle, enabled: modules.posts },
- { id: 'share', label: '分享', icon: Share2, enabled: modules.share },
- { id: 'wiki', label: '知识库', icon: Library, enabled: modules.wiki },
- { id: 'series', label: '系列', icon: BookOpen, enabled: modules.series },
- { id: 'membership', label: '会员', icon: Crown, enabled: modules.membership },
- { id: 'video', label: '视频', icon: Video, enabled: modules.video },
- { id: 'code_repo', label: '代码', icon: Code, enabled: modules.code_repo },
- { id: 'qa', label: '问答', icon: HelpCircle, enabled: modules.qa },
- { id: 'polls', label: '投票', icon: BarChart3, enabled: modules.polls },
- { id: 'announcements', label: '公告', icon: Megaphone, enabled: modules.announcements },
- { id: 'chat', label: '聊天', icon: MessageSquare, enabled: modules.chat },
- { id: 'store', label: '商城', icon: ShoppingBag, enabled: modules.store },
- { id: 'course', label: '课程', icon: GraduationCap, enabled: modules.course },
- { id: 'novel', label: '小说', icon: BookText, enabled: modules.novel },
- { id: 'game', label: '游戏', icon: Gamepad2, enabled: modules.game },
- { id: 'mini_app', label: '小程序', icon: AppWindow, enabled: modules.mini_app },
- { id: 'members', label: '成员', icon: UserCheck, enabled: modules.members },
- { id: 'analytics', label: '分析', icon: TrendingUp, enabled: isOwner },
- ].filter(t => t.enabled);
+ // Icon map for module tabs
+ const MODULE_ICONS: Record<string, React.ElementType> = {
+ forum: MessageCircle, share: Share2, wiki: Library, series: BookOpen,
+ membership: Crown, video: Video, code_repo: Code, qa: HelpCircle,
+ polls: BarChart3, announcements: Megaphone, chat: MessageSquare,
+ store: ShoppingBag, course: GraduationCap, novel: BookText,
+ game: Gamepad2, mini_app: AppWindow,
+ };
+
+ // Active tab - dynamic from space modules
+ const availableTabs = useMemo(() => {
+ const tabs: { id: string; label: string; icon: React.ElementType }[] = [
+ { id: 'overview', label: '概览', icon: Layout },
+ ];
+ spaceModules.forEach(m => {
+ tabs.push({
+ id: MODULE_CONFIG[m.module_key]?.route || m.module_key,
+ label: m.name,
+ icon: MODULE_ICONS[m.module_key] || FileText,
+ });
+ });
+ tabs.push({ id: 'members', label: '成员', icon: UserCheck });
+ if (isOwner) tabs.push({ id: 'analytics', label: '分析', icon: TrendingUp });
+ return tabs;
+ }, [spaceModules, isOwner]);
 
  const [activeTab, setActiveTab] = useState(urlTab || 'overview');
  useEffect(() => {
- if (!availableTabs.find(t => t.id === activeTab)) {
+ if (spaceModules.length > 0 && !availableTabs.find(t => t.id === activeTab)) {
  setActiveTab(availableTabs[0]?.id || 'overview');
  }
- }, [modules]);
+ }, [spaceModules]);
 
  const [space, setSpace] = useState<Space | null>(null);
  const [posts, setPosts] = useState<Post[]>([]);
@@ -197,6 +212,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  setIsMember(data.data.is_member ?? false);
  setJoinStatus(data.data.join_status ?? 'none');
  setIsFollowing(data.data.is_following ?? false);
+setIsStarred(data.data.is_starred ?? false);
  }
  })
  .catch(() => {});
@@ -276,9 +292,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  const data = await res.json();
  if (data.code === 0 && Array.isArray(data.data)) {
  const morePosts = data.data;
- const mtFilter = new Set(['forum', 'article', '', 'share', 'wiki', 'qa', 'novel', 'game', 'mini_app']);
- const filtered = morePosts.filter((p: any) => mtFilter.has(p.module_type || ''));
- setPosts(prev => [...prev, ...filtered]);
+ setPosts(prev => [...prev, ...morePosts]);
  setPostPage(nextPage);
  if (data.pagination) {
  setPostTotalPages(data.pagination.total_pages);
@@ -287,7 +301,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  } catch {} finally {
  setLoadingMore(false);
  }
- }, [cleanNamespace, postPage, postSort, loadingMore, modules, showHiddenPosts]);
+ }, [cleanNamespace, postPage, postSort, loadingMore, spaceModules, showHiddenPosts]);
 
  const goToPostPage = (p: number) => {
  if (p < 1 || p > postTotalPages) return;
@@ -311,28 +325,6 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  if (data.code === 0) {
  setSpace(data.data);
  // Try to resolve owner info
- // 从服务器同步 enabled_modules：覆盖 localStorage
- if (data.data.enabled_modules && Array.isArray(data.data.enabled_modules)) {
- const serverMods = { ...loadModules(cleanNamespace) };
- // 默认为 false，仅服务器启用的模块设为 true
- for (const key of Object.keys(serverMods) as (keyof SpaceModules)[]) {
- serverMods[key] = false;
- }
- for (const mod of data.data.enabled_modules) {
- const keyMap: Record<string, keyof SpaceModules> = {
- forum: 'posts', share: 'share', wiki: 'wiki', series: 'series',
- membership: 'membership', video: 'video', code_repo: 'code_repo',
- qa: 'qa', polls: 'polls', announcements: 'announcements',
- chat: 'chat', store: 'store', course: 'course',
- novel: 'novel', game: 'game', mini_app: 'mini_app',
- };
- const key = keyMap[mod as string];
- if (key) serverMods[key] = true;
- }
- serverMods.posts = true; // 交流模块始终可用
- setModules(serverMods);
- saveModules(cleanNamespace, serverMods);
- }
  if (data.data.owner_id) {
  fetch(`/api/users/${data.data.owner_id}`)
  .then(r => r.json())
@@ -359,7 +351,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  ];
 
  // Only fetch polls if the module is enabled
- if (modules.polls) {
+ if (moduleKeySet.has('polls')) {
  fetchers.push(fetch(`/api/spaces/${cleanNamespace}/polls`).then(r => r.json()));
  }
 
@@ -367,16 +359,16 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  fetchers.push(fetch(`/api/spaces/${cleanNamespace}/announcements`).then(r => r.json()));
 
  // Fetch videos for overview if module enabled
- if (modules.video) {
+ if (moduleKeySet.has('video')) {
  fetchers.push(fetch(`/api/spaces/${cleanNamespace}/videos?page=1&page_size=10`).then(r => r.json()));
  }
 
  Promise.all(fetchers)
  .then((results) => {
  const [postsData, featuredData] = results;
- const vidIdx = modules.video ? (results.length - 1) : -1;
- const pollsIdx = modules.polls ? 2 : -1;
- const annIdx = modules.polls ? 3 : 2;
+ const vidIdx = moduleKeySet.has('video') ? (results.length - 1) : -1;
+ const pollsIdx = moduleKeySet.has('polls') ? 2 : -1;
+ const annIdx = moduleKeySet.has('polls') ? 3 : 2;
 
  if (postsData.code === 0) {
 	 const allPosts = postsData.data || [];
@@ -396,11 +388,11 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  })
  .catch(() => {})
  .finally(() => setPostLoading(false));
- }, [cleanNamespace, modules.polls, postSort, postPage, showHiddenPosts]);
+ }, [cleanNamespace, spaceModules, postSort, postPage, showHiddenPosts]);
 
  // Fetch series list when series tab is active or module is enabled
  useEffect(() => {
- if (!cleanNamespace || !modules.series) return;
+ if (!cleanNamespace || !moduleKeySet.has('series')) return;
  if (activeTab === 'series') {
  setSeriesLoading(true);
  fetch(`/api/series/space/${cleanNamespace}`)
@@ -413,10 +405,10 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  .catch(() => {})
  .finally(() => setSeriesLoading(false));
  }
- }, [cleanNamespace, activeTab, modules.series]);
+ }, [cleanNamespace, activeTab, spaceModules]);
 
  useEffect(() => {
- if (!cleanNamespace || !modules.membership) return;
+ if (!cleanNamespace || !moduleKeySet.has('membership')) return;
  if (activeTab === 'membership') {
  setTiersLoading(true);
  Promise.all([
@@ -427,7 +419,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  if (sRes.code === 0 && sRes.data) setMySubscription(sRes.data);
  }).catch(() => {}).finally(() => setTiersLoading(false));
  }
- }, [cleanNamespace, activeTab, modules.membership]);
+ }, [cleanNamespace, activeTab, spaceModules]);
 
  const handleCreateSeries = async () => {
  const token = getToken();
@@ -531,6 +523,12 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  >
  <Trash2 className="h-4 w-4" />
  </button>
+ <Link
+ href={`/space/manage/${cleanNamespace}`}
+ className="px-3 py-1 text-sm rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+ >
+ 管理
+ </Link>
  </>)}
  </div>
  {/* GitHub-style namespace breadcrumb */}
@@ -553,6 +551,7 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {formatCount(space.member_count)} 成员</span>
  <span>{formatCount(space.post_count)} 帖子</span>
  <span>{formatCount(space.follower_count || 0)} 关注</span>
+<span className="flex items-center gap-1"><Star className="h-4 w-4" /> {formatCount(space.star_count || 0)} 收藏</span>
  {announcements.length > 0 && (
  <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
  <Megaphone className="h-4 w-4" /> {announcements.length} 条公告
@@ -627,6 +626,38 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  }}
  >
  {isFollowing ? '已关注' : followLoading ? '...' : '关注'}
+ </button>
+ )}
+ {!isOwner && (
+ <button
+ className={`text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-1 ${
+ isStarred
+ ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 border border-yellow-300 dark:border-yellow-700'
+ : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 hover:text-yellow-600 dark:hover:text-yellow-400'
+ }`}
+ disabled={starLoading}
+ onClick={async () => {
+ const token = getToken();
+ if (!token) { alert('请先登录'); return; }
+ setStarLoading(true);
+ try {
+ if (isStarred) {
+ await apiSpaces.unstar(cleanNamespace);
+ setIsStarred(false);
+ setSpace(prev => prev ? { ...prev, star_count: Math.max(0, (prev.star_count || 0) - 1) } : prev);
+ } else {
+ await apiSpaces.star(cleanNamespace);
+ setIsStarred(true);
+ setSpace(prev => prev ? { ...prev, star_count: (prev.star_count || 0) + 1 } : prev);
+ }
+ } catch (e: any) {
+ alert(e?.message || '操作失败');
+ }
+ setStarLoading(false);
+ }}
+ >
+ <Star className={`w-4 h-4 ${isStarred ? 'fill-yellow-500' : ''}`} />
+ {isStarred ? '已收藏' : starLoading ? '...' : '收藏'}
  </button>
  )}
  {!isOwner && !isMember && showJoinInput && (
@@ -706,31 +737,6 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  );
  })}
  </div>
- {/* Settings button - outside overflow scroll area */}
- {isOwner && (
- <div className="relative shrink-0">
- <button
- onClick={() => setShowSettings(!showSettings)}
- className={`flex items-center gap-1.5 px-3 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
- showSettings
- ? 'border-primary-600 text-primary-600 dark:border-primary-400 dark:text-primary-400'
- : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
- }`}
- title="模块设置"
- >
- <Settings className="h-4 w-4" />
- 设置
- </button>
- {showSettings && (
- <SpaceSettings
- namespace={cleanNamespace}
- modules={modules}
- onChange={setModules}
- onClose={() => setShowSettings(false)}
- />
- )}
- </div>
- )}
 
  {/* Edit Community Dialog */}
  {showEditDialog && (
@@ -1928,6 +1934,60 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  </div>
  </div>
  )}
+
+ {/* === 动态模块通用渲染 (自定义 module_key 的 fallback) === */}
+ {(() => {
+   const KNOWN_TABS = new Set(['overview','posts','wiki','share','polls','announcements','members','chat','video','code_repo','qa','novel','game','mini_app','store','course','analytics','series','membership']);
+   const currentMod = spaceModules.find(m => (MODULE_CONFIG[m.module_key]?.route || m.module_key) === activeTab);
+   if (!currentMod || KNOWN_TABS.has(activeTab)) return null;
+   const hasArticle = !currentMod.allowed_content_types || currentMod.allowed_content_types.includes('article');
+   const hasVideo = !currentMod.allowed_content_types || currentMod.allowed_content_types.includes('video');
+   const filteredPosts = posts.filter((p: any) => p.module_type === currentMod.module_key);
+   return (
+     <div>
+       <div className="flex items-center justify-between mb-4">
+         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{currentMod.name}</h3>
+         <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=${encodeURIComponent(currentMod.module_key)}`}
+           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors">
+           <Plus size={14} />发布
+         </Link>
+       </div>
+       {postLoading ? (
+         <div className="glass-card py-8 text-center text-gray-400">加载中...</div>
+       ) : filteredPosts.length > 0 ? (
+         <div className="space-y-2">
+           {filteredPosts.map((p: any) => (
+             <PostCard key={p.id} post={{
+               id: p.id,
+               title: p.title,
+               body: p.body,
+               author: p.author,
+               space_id: p.space_id,
+               space_ns: cleanNamespace,
+               space_name: space?.title,
+               like_count: p.like_count,
+               comment_count: p.comment_count,
+               view_count: p.view_count,
+               created_at: p.created_at,
+               tags: p.tags,
+               is_pinned: p.is_pinned,
+               is_hidden: p.is_hidden,
+               }} canPin={isOwner && !p.is_hidden} onTogglePin={() => togglePin(p.id, p.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(p.id)} isFeatured={p.is_featured} canFeature={isOwner && !p.is_hidden} onToggleFeature={() => toggleFeature(p.id, p.is_featured)} canUnhide={isOwner && p.is_hidden} onToggleUnhide={() => toggleUnhide(p.id)} />
+           ))}
+         </div>
+       ) : (
+         <div className="glass-card py-8 text-center text-gray-400 dark:text-gray-500">
+           <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
+           <p className="text-sm">还没有内容</p>
+           <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=${encodeURIComponent(currentMod.module_key)}`}
+             className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
+             发布第一篇帖子
+           </Link>
+         </div>
+       )}
+     </div>
+   );
+ })()}
 
  {/* === Analytics Tab (空间创建者专属) === */}
  {activeTab === 'analytics' && isOwner && (
