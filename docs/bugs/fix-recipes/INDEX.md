@@ -19,6 +19,7 @@
 | 新增 API 端点返回 "Space not found"，直连后端正常 | [actions-array-missing.md](actions-array-missing.md) | 5 分钟 |
 | 部署后功能无变化，`file` 显示二进制为 Mach-O | [wrong-build-target.md](wrong-build-target.md) | 3 分钟 |
 | 社区模块Tab点击后内容区域空白，Tab高亮但无渲染 | [module-tab-key-mismatch.md](module-tab-key-mismatch.md) | 5 分钟 |
+| 模块名显示为"交流"（首页/社区/个人主页/帖子详情等全局） | [module-breadcrumb-hardcoded.md](module-breadcrumb-hardcoded.md) | 30 分钟（根因修复涉及 8 文件 20+ 点位） |
 
 ## 配方结构
 

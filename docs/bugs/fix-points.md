@@ -6,10 +6,10 @@
 
 | 指标 | 数值 |
 |------|------|
-| 涉及文件数 | 50 |
-| 总修复点位 | 123 |
-| 高危文件 (修复 3+ 次) | 13 |
-| 最近更新 | 2026-05-29 (v1.0.35) |
+| 涉及文件数 | 52 |
+| 总修复点位 | 140 |
+| 高危文件 (修复 3+ 次) | 14 |
+| 最近更新 | 2026-05-29 (v1.0.43) |
 
 ## 高危文件 ⚠️
 
@@ -21,7 +21,7 @@
 | `crates/polis-content/src/routes/content_routes.rs` | 4 | URL编码, 发帖权限, 上传权限, DefaultBodyLimit | v1.0.24 |
 | `crates/polis-gateway/src/main.rs` | 4 | 查询参数丢失, 路由缺失, Body Limit, modules路由误判 | v1.0.31 |
 | `crates/polis-space/src/routes/space_routes.rs` | 7 | URL编码, DELETE路由, 中文slug, star端点, is_starred, modules CRUD, actions数组遗漏 | v1.0.32 |
-| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 6 | URL编码, 模块导航, 成员列表, 删除按钮, mtFilter, module-tab-key-mismatch | v1.0.34 |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 7 | URL编码, 模块导航, 成员列表, 删除按钮, mtFilter, module-tab-key-mismatch, 去交流中心主义 | v1.0.41 |
 | `web/src/lib/api.ts` | 4 | URL编码, 类型修复, uploadFile, archive | v1.0.17 |
 | `web/src/components/SpaceSettings.tsx` | 4 | localStorage key, members keyMap, SpaceModulesManager rewrite, allowed_content_types null safety | v1.0.35 |
 | `web/src/app/create/page.tsx` | 2 | title slug, deriveSlug | v1.0.17 |
@@ -75,6 +75,9 @@
 | `handlers/content_handler.rs` | `get_post_public` | auto-restore: hidden_until 到期自动恢复 visibility='public' | v1.0.18 | — |
 | `handlers/content_handler.rs` | `get_post_public` | visibility 字段使用 effective_visibility (非 post.visibility) | v1.0.18 | — |
 | `repo.rs` | `ContentRepo` | pool 字段 pub 化 (auto-restore SQL 直接访问) | v1.0.18 | — |
+| `repo.rs` | feed SQL (3处) + PostRow tuple + JSON | feed查询 LEFT JOIN space_modules + SELECT sm.name as module_name → PostRow新增Option<String> → JSON响应新增module_name字段 | v1.0.41 | module-breadcrumb-hardcoded |
+| `handlers/creation.rs` | `creation_to_public()` SQL + tuple | LEFT JOIN space_modules ON space_id AND module_key → SELECT sm.name as module_name → tuple 11→12元素 → SubmissionInfo 含 module_name | v1.0.42 | module-breadcrumb-hardcoded |
+| `handlers/creation.rs` | `get_submissions()` SQL + tuple | 同上: LEFT JOIN space_modules + tuple 11→12元素 + SubmissionInfo 含 module_name | v1.0.42 | module-breadcrumb-hardcoded |
 
 ### 后端 — polis-admin
 
@@ -117,12 +120,22 @@
 | `models.rs` | `Post` struct | 新增 hidden_until 字段 (TIMESTAMPTZ → DateTime<Utc>) | v1.0.18 | — |
 | `models.rs` | `AgentReviewDecision` | 新增 struct: target_type/id/action/duration/confidence/violation | v1.0.19 | — |
 | `models.rs` | `AgentReviewRequest` | 新增 struct: decisions: Vec<AgentReviewDecision> | v1.0.19 | — |
+| `models.rs` | `SubmissionInfo` struct | 新增 module_name: Option<String> 字段 (来自 space_modules.name) | v1.0.42 | module-breadcrumb-hardcoded |
 
 ### 前端 — web
 
 | 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
 |------|----------|----------|------|---------|
 | `web/src/app/space/[...namespace]/SpacePageClient.tsx` | moduleLabel从spaceModules查找自定义模块名,web/src/components/PostCard.tsx:48:module_type不再硬编码为forum,web/src/components/PostCard.tsx:94:内联面包屑使用动态module_label,SpacePageClient多处PostCard调用:传入module_type和module_label | v1.0.40 | module-breadcrumb-hardcoded |
+| `web/src/lib/module-config.ts` | **ROOT CAUSE**: MODULE_ALIASES 删除 article→forum 映射 / getModuleLabel() 未知key返回自身而非'交流' / normalizeModuleType() 去折叠 / getModuleLabelByContentType() moduleType优先 | v1.0.41 | module-breadcrumb-hardcoded |
+| `web/src/components/ContentCard.tsx` | moduleLabel prop新增 / 面包屑优先moduleLabel / adaptCreationItem()去normalizeModuleType / adaptFeedItem()读API module_name | v1.0.41 | module-breadcrumb-hardcoded |
+| `web/src/components/PostCard.tsx` | 移除三重fallback `|| '交流'` / getModuleLabel不再返回空值 | v1.0.41 | module-breadcrumb-hardcoded |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | mtFilter统一键空间(Object.keys(MODULE_CONFIG)+spaceModules) / 标签回退链(+post.module_type) / 概览区route==='posts'替代module_type==='forum' | v1.0.41 | module-breadcrumb-hardcoded |
+| `web/src/app/profile/[username]/ProfilePageClient.tsx` | 3处硬编码三元表达式(856/910/935) → getModuleLabel(refPostModuleType) + import | v1.0.41 | module-breadcrumb-hardcoded |
+| `web/src/app/post/[id]/PostPageClient.tsx` | adaptCreationToPost优先submission module_type / 引用标签7臂硬编码 → getModuleLabel() + import | v1.0.41 | module-breadcrumb-hardcoded |
+| `web/src/app/creations/new/page.tsx` | 简化模块检查逻辑: normalized===forum复杂判断 → !MODULE_CONFIG[prefillModule] | v1.0.41 | module-breadcrumb-hardcoded |
+| `web/src/components/ContentCard.tsx` | `SubmissionInfo` interface + `adaptCreationItem()` | SubmissionInfo 新增 module_name 字段 + adaptCreationItem 传递 moduleLabel = firstSub?.module_name | v1.0.42 | module-breadcrumb-hardcoded |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 概览区 route fallback (lines 1081, 1087) | `|| 'posts'` → `|| p.module_type` — 修复 v1.0.41 引入的回归: 自定义模块帖子泄漏到交流Tab | v1.0.43 | module-breadcrumb-hardcoded |
 | `SpaceSettings.tsx` | `persistModules` | 补充 members keyMap 映射 | v1.0.14 | — |
 | `SpaceSettings.tsx` | `loadModules` | localStorage key 双格式回退 (编码/解码) | v0.2.58 | url-double-encoding |
 | `SpacePageClient.tsx` | params 处理 | decodeURIComponent → encodeURIComponent 防双重编码 | v1.0.11 | url-double-encoding |

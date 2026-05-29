@@ -8,7 +8,7 @@ LOCAL_ONLY
 
 ## 当前状态
 
-**活跃任务**: Bug 追踪系统深度增强 (v1.0.36)
+**活跃任务**: 模块架构去交流中心主义改造 (v1.0.41)
 
 ### 已完成 (v1.0.36) — Bug 追踪系统深度增强
 
@@ -83,8 +83,39 @@ LOCAL_ONLY
 - [x] **网站初始化** — 登录页移除测试账号提示 + 清理 66 个测试用户 + 89 个测试空间
 - [x] 浏览器验证 — 首页正常 + 管理后台设置页上传限制配置正常 + 平台设置 API 正常
 
+### 已完成 (v1.0.41) — 模块架构去交流中心主义彻底改造
+
+- [x] **核心库 (module-config.ts) ROOT CAUSE 修复** — MODULE_ALIASES 删除 article→forum / getModuleLabel() 未知key返回自身 / normalizeModuleType() 去折叠 / getModuleLabelByContentType() moduleType优先
+- [x] **ContentCard.tsx** — moduleLabel prop + 面包屑优先 + adaptCreationItem 去 normalizeModuleType + adaptFeedItem 读 module_name
+- [x] **PostCard.tsx** — 移除 `|| '交流'` 三重fallback
+- [x] **SpacePageClient.tsx** — mtFilter 统一键空间 + 标签回退链 + 概览区 route==='posts'
+- [x] **ProfilePageClient.tsx** — 3 处硬编码三元 → getModuleLabel()
+- [x] **PostPageClient.tsx** — adaptCreationToPost 优先 submission + 引用标签 getModuleLabel()
+- [x] **creations/new/page.tsx** — 简化模块检查逻辑
+- [x] **后端 repo.rs** — feed SQL LEFT JOIN space_modules + JSON 返回 module_name
+- [x] **Bug 追踪完整记录** — Pattern 更新 + 时间线 + INDEX 统计 + fix-points + regression-map Chain #9 + 修复配方
+- [x] **编译 + GitHub Release (v1.0.41) + 服务器部署 + 浏览器全量验证** — 首页动态/社区概览/自定义模块Tab/个人主页/帖子详情/创作中心全部正常
+
+### 已完成 (v1.0.42) — Profile 页作品模块名修复
+
+- [x] **后端 models.rs** — SubmissionInfo struct 新增 `module_name: Option<String>` 字段
+- [x] **后端 creation.rs** — `creation_to_public()` SQL LEFT JOIN space_modules + tuple 11→12元素 + SubmissionInfo 含 module_name
+- [x] **后端 creation.rs** — `get_submissions()` 同样 LEFT JOIN space_modules + tuple 更新
+- [x] **前端 ContentCard.tsx** — SubmissionInfo interface 新增 module_name 字段 + adaptCreationItem 传递 moduleLabel
+- [x] **编译 + GitHub Release (v1.0.42) + 服务器部署** — 个人主页作品Tab自定义模块显示真实名称（"天气预报"而非 mod_4167432e）
+
+### 已完成 (v1.0.43) — Route fallback 回归修复
+
+- [x] **SpacePageClient.tsx** — 概览区 route fallback `|| 'posts'` → `|| p.module_type` (lines 1081, 1087)
+- [x] **根因**: v1.0.41 引入的回归 — 当 p.module_type 不在 MODULE_CONFIG 中时，fallback 'posts' 导致自定义模块帖子泄漏到交流Tab
+- [x] **编译 + GitHub Release (v1.0.43) + 服务器部署 + 浏览器验证** — 交流Tab不再显示天气预报模块帖子
+
 ### 部署版本
 
+v1.0.43 — Route fallback 回归修复 (2026-05-29)
+v1.0.42 — Profile 页作品模块名修复 (2026-05-29)
+v1.0.41 — 模块架构去交流中心主义彻底改造 (2026-05-29)
+v1.0.40 — 模块面包屑部分修复 (2026-05-29)
 v1.0.36 — Bug 追踪系统深度增强 (2026-05-29)
 v1.0.35 — 模块权限调查 + null 安全加固 (2026-05-29)
 v1.0.34 — 模块Tab渲染修复 + 创作体验简化 (2026-05-29)
@@ -115,9 +146,10 @@ v1.0.24 — 平台设置系统 + 上传大小可配置 + 网站初始化 + 安�
 - [x] **Bug 追踪记录** — 2 个新 Pattern (enum-serialization-data-loss, module-breadcrumb-hardcoded) + 修复点数更新 (73→75)
 - [x] **浏览器全量验证** — 天气预报 Tab 正常显示帖子、面包屑显示正确模块名、首页动态正常更新、交流模块发帖正常
 
-### 已知残留
+### 已知残留 (v1.0.41 后)
 
-- [ ] **ContentCard.tsx feed 面包屑** — `getModuleLabel()` 在 feed/explore/search 页面仍 fallback 到 '交流'。需后端 API 返回模块显示名称后修复。
+- [x] ~~**ContentCard.tsx feed 面包屑**~~ — v1.0.41 已通过 moduleLabel prop + adaptFeedItem(module_name) + getModuleLabel 返修彻底解决
+- [x] ~~**Profile 页作品 Tab 模块名显示 module_key**~~ — v1.0.42 已通过 creation_to_public() JOIN space_modules + SubmissionInfo.module_name 解决
 
 ### 历史完成
 
@@ -161,6 +193,9 @@ v1.0.24 — 平台设置系统 + 上传大小可配置 + 网站初始化 + 安�
 
 ## 部署版本
 
+v1.0.41 — 模块架构去交流中心主义彻底改造 (8文件20+点位根因修复) (2026-05-29)
+v1.0.40 — 模块面包屑部分修复 (PostCard+SpacePageClient) (2026-05-29)
+v1.0.39 — 枚举序列化数据丢失修复 (2026-05-29)
 v1.0.34 — 模块Tab渲染修复 (module_key→route 映射 + 自定义模块fallback) (2026-05-29)
 v1.0.33 — 创作体验简化 (2类型+移除unlisted+个人主页改造) (2026-05-29)
 v1.0.32 — 自定义模块系统 (部署修复 + 3 Bug 修复) (2026-05-28)

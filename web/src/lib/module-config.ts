@@ -50,7 +50,7 @@ export const KNOWN_SUB_ROUTES = new Set(ALL_SUB_ROUTES);
 
 export function getModuleLabel(moduleType?: string): string {
   if (!moduleType) return '交流';
-  return MODULE_CONFIG[moduleType]?.label || '交流';
+  return MODULE_CONFIG[moduleType]?.label || moduleType;
 }
 
 export function getModuleEmoji(moduleType?: string): string {
@@ -62,24 +62,23 @@ export function getModuleEmoji(moduleType?: string): string {
 const MODULE_ALIASES: Record<string, string> = {
   text: 'forum',
   image: 'forum',
-  article: 'forum',
   post: 'forum',
   discussion: 'forum',
 };
 
 export function normalizeModuleType(rawType?: string): string {
   if (!rawType) return 'forum';
-  // 先查别名表，再查模块配置，最后降级到 forum
   if (MODULE_ALIASES[rawType]) return MODULE_ALIASES[rawType];
-  return MODULE_CONFIG[rawType] ? rawType : 'forum';
+  if (MODULE_CONFIG[rawType]) return rawType;
+  return rawType;
 }
 
 export function getModuleLabelByContentType(contentType?: string, moduleType?: string): string {
+  if (moduleType) return getModuleLabel(moduleType);
   if (contentType === 'poll') return '投票';
   if (contentType === 'announcement') return '公告';
   if (contentType === 'video') return '视频';
-  if (contentType === 'text' || contentType === 'image') return '交流';
-  return getModuleLabel(moduleType);
+  return '交流';
 }
 
 export function buildPostLink(postId: string, spaceNs?: string): string {

@@ -93,7 +93,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
               </>
             )}
             <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0">
-              {post.module_label || getModuleLabel(post.module_type) || '交流'}
+              {post.module_label || getModuleLabel(post.module_type)}
             </span>
             <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
             <span className="text-gray-900 dark:text-white font-semibold truncate">

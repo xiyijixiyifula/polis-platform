@@ -51,12 +51,8 @@ function NewCreationPageInner() {
   // 根据 URL 参数确定初始模块类型
   const getInitialModule = (): string => {
     if (prefillModule) {
-      const normalized = normalizeModuleType(prefillModule);
-      // 自定义模块键（不在 MODULE_CONFIG 中）降级到 'forum' 时，改用 'article' 确保后端校验通过
-      if (normalized === 'forum' && prefillModule !== 'forum' && !MODULE_CONFIG[prefillModule]) {
-        return 'article';
-      }
-      return normalized;
+      if (!MODULE_CONFIG[prefillModule]) return 'article';
+      return normalizeModuleType(prefillModule);
     }
     if (prefillType === 'video') return 'video';
     return 'article';
@@ -464,10 +460,16 @@ function NewCreationPageInner() {
   // ── 切换模块（编辑模式下不允许切换） ──
   const handleModuleChange = (val: string) => {
     if (isEditMode) return;
-    if (submissions.length > 0 && !confirm('切换模块类型将清空已选择的投稿社区，是否继续？')) return;
+    // 检查预填模块是否仍支持新内容类型（如 forum 允许 article+video 则不需清空）
+    const newMod = MODULE_TYPES.find(m => m.value === val);
+    const newContentType = newMod?.contentType;
+    const prefillStillValid = newContentType && moduleAllowedTypes.length > 0 && moduleAllowedTypes.includes(newContentType);
+    if (submissions.length > 0 && !prefillStillValid) {
+      if (!confirm('切换模块类型将清空已选择的投稿社区，是否继续？')) return;
+      setSubmissions([]);
+    }
     setModuleType(val);
     setError('');
-    setSubmissions([]);
   };
 
   // ── ESC ──

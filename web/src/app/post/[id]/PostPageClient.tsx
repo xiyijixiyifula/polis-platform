@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen, UserPlus, UserCheck, MessageSquare } from 'lucide-react';
 import { formatDate, formatCount, estimateReadTime, stripMarkdown } from '@/lib/utils';
-import { buildPostLink } from '@/lib/module-config';
+import { buildPostLink, getModuleLabel } from '@/lib/module-config';
 import { posts, series, creations, getToken, Comment, Post, type Series } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
@@ -27,7 +27,7 @@ function adaptCreationToPost(c: any): Post {
   return {
     id: c.id,
     space_id: '',
-    module_type: c.content_type || 'forum',
+    module_type: c.submissions?.[0]?.module_type || c.content_type || 'forum',
     author: c.creator || null,
     author_id: c.creator?.id,
     title: c.title || '',
@@ -920,11 +920,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400 dark:text-gray-500">
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700/50">
-                      {ref.module_type === 'forum' ? '💬 论坛' :
-                       ref.module_type === 'wiki' ? '📖 百科' :
-                       ref.module_type === 'blog' ? '📝 博客' :
-                       ref.module_type === 'docs' ? '📄 文档' :
-                       ref.module_type === 'news' ? '📰 资讯' : ref.module_type}
+                      {getModuleLabel(ref.module_type)}
                     </span>
                     <span>👥 {ref.member_count || 0} 成员</span>
                     <span>📄 {ref.post_count || 0} 帖子</span>

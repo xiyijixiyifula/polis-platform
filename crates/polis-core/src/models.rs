@@ -770,6 +770,8 @@ pub struct SubmissionInfo {
     pub ref_id: Uuid,
     pub space: SpaceMini,
     pub module_type: String,
+    /// 自定义模块显示名称（来自 space_modules.name），内置模块为 null
+    pub module_name: Option<String>,
     pub display_status: String,
     pub is_pinned: bool,
     pub module_views: i32,

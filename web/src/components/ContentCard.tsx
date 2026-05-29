@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatCount, stripMarkdown } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
-import { getModuleLabel, getModuleLabelByContentType, normalizeModuleType, buildPostLink } from '@/lib/module-config';
+import { getModuleLabel, getModuleLabelByContentType, buildPostLink } from '@/lib/module-config';
 
 // ========== Types ==========
 
@@ -24,6 +24,7 @@ export interface SubmissionInfo {
   ref_id: string;
   space: SpaceMini;
   module_type: string;
+  module_name?: string | null;
   display_status: string;
   is_pinned: boolean;
   module_views: number;
@@ -81,6 +82,8 @@ export interface ContentCardProps {
   moduleType?: string;
   /** 内容类型: post/video/poll/announcement 等 */
   contentType?: string;
+  /** 显式模块标签，覆盖 getModuleLabel()。有 SpaceModule 数据时传入自定义模块名 */
+  moduleLabel?: string;
 
   /** Author info */
   authorUsername?: string;
@@ -144,7 +147,7 @@ export interface ContentCardProps {
 
 // ========== Module Labels ==========
 // Re-export from unified module-config
-export { getModuleLabel, getModuleLabelByContentType, getModuleEmoji, normalizeModuleType, MODULE_CONFIG, VALID_MODULE_KEYS } from '@/lib/module-config';
+export { getModuleLabel, getModuleLabelByContentType, getModuleEmoji, MODULE_CONFIG, VALID_MODULE_KEYS } from '@/lib/module-config';
 
 function getTypeEmoji(type?: string): string {
   if (type === 'poll') return '📊';
@@ -164,6 +167,7 @@ export default function ContentCard({
   spaceName,
   spaceNs,
   moduleType,
+  moduleLabel: moduleLabelOverride,
   contentType,
   authorUsername,
   authorDisplayName,
@@ -229,7 +233,7 @@ export default function ContentCard({
   };
 
   // Auto-build links
-  const moduleLabel = getModuleLabelByContentType(contentType, moduleType);
+  const moduleLabel = moduleLabelOverride || getModuleLabel(moduleType);
   const typeEmoji = getTypeEmoji(contentType);
 
   const builtItemLink = itemLink || (() => {
@@ -511,7 +515,7 @@ export default function ContentCard({
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/space/${encodeURIComponent(sub.space.namespace)}`; }}
                           className="text-primary-600 dark:text-primary-400 hover:underline cursor-pointer truncate font-medium"
                         >
-                          @{sub.space.namespace.split('/')[0]}/{sub.space.title || sub.space.namespace}/{getModuleLabel(sub.module_type)}
+                          @{sub.space.namespace.split('/')[0]}/{sub.space.title || sub.space.namespace}/{sub.module_name || getModuleLabel(sub.module_type)}
                         </span>
                         {sub.is_pinned && <span className="text-amber-500 shrink-0">📌{t('space.pinned')}</span>}
                         {sub.display_status === 'hidden' && <span className="text-red-500 shrink-0">{t('post.hidden')}</span>}
@@ -614,6 +618,7 @@ export function adaptFeedItem(item: any): ContentCardProps {
   const spaceOwner = spaceNs.split('/')[0] || author.username || '';
   const spaceName = space.title || item.space_name || spaceNs || '';
   const moduleType = item.module_type || '';
+  const moduleNameFromApi = item.module_name || undefined;
 
   return {
     id: item.id || item.post_id || '',
@@ -624,6 +629,7 @@ export function adaptFeedItem(item: any): ContentCardProps {
     spaceName,
     spaceNs,
     moduleType,
+    moduleLabel: moduleNameFromApi,
     contentType: item.type || 'post',
     authorUsername: author.username || '',
     authorDisplayName: author.display_name || author.username || '',
@@ -652,7 +658,6 @@ export function adaptCreationItem(creation: any): ContentCardProps {
   const creator = creation.creator || {};
   const firstSub = creation.submissions?.[0];
   const rawType = firstSub?.module_type || creation.content_type || 'forum';
-  const normModuleType = normalizeModuleType(rawType);
 
   return {
     id: creation.id,
@@ -661,7 +666,8 @@ export function adaptCreationItem(creation: any): ContentCardProps {
     spaceOwner: firstSub?.space?.namespace?.split('/')[0] || creator.username || '',
     spaceName: firstSub?.space?.title || '',
     spaceNs: firstSub?.space?.namespace || '',
-    moduleType: normModuleType,
+    moduleType: rawType,
+    moduleLabel: firstSub?.module_name || undefined,
     contentType: creation.content_type || 'post',
     authorUsername: creator.username || '',
     authorDisplayName: creator.display_name || creator.username || '',

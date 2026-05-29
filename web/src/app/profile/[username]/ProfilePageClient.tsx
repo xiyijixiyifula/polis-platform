@@ -8,6 +8,7 @@ import { users, follow, videos, getToken, type User, type FollowUser, type Video
 import { SpaceCard } from '@/components/SpaceCard';
 import { FeedItem } from '@/components/FeedItem';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
+import { getModuleLabel } from '@/lib/module-config';
 import CreationCard from '@/components/CreationCard';
 
 function FollowList({ users: list, loading, emptyText }: {
@@ -853,7 +854,7 @@ export default function UserProfilePage({ username }: { username: string }) {
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
               将内容引用投放到目标社区。模块限制：
               <span className="px-1.5 py-0.5 rounded bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium text-xs ml-1">
-                {refPostModuleType === 'qa' ? '问答' : refPostModuleType === 'share' ? '分享' : refPostModuleType === 'wiki' ? '知识库' : refPostModuleType === 'novel' ? '小说' : refPostModuleType === 'game' ? '游戏' : refPostModuleType === 'mini_app' ? '小程序' : '交流'}
+                {getModuleLabel(refPostModuleType)}
               </span>
               &nbsp;仅可投稿到同模块社区
             </p>
@@ -907,7 +908,7 @@ export default function UserProfilePage({ username }: { username: string }) {
                   <div className="px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
                     <p className="text-xs text-amber-600 dark:text-amber-400">
                       {refSelectedUser.username} 暂无「
-                      {refPostModuleType === 'qa' ? '问答' : refPostModuleType === 'share' ? '分享' : refPostModuleType === 'wiki' ? '知识库' : refPostModuleType === 'novel' ? '小说' : refPostModuleType === 'game' ? '游戏' : refPostModuleType === 'mini_app' ? '小程序' : '交流'}
+                      {getModuleLabel(refPostModuleType)}
                       」模块的社区
                     </p>
                   </div>
@@ -932,7 +933,7 @@ export default function UserProfilePage({ username }: { username: string }) {
                   目标模块 <span className="text-amber-500">（锁定为源帖模块）</span>
                 </label>
                 <input type="text" readOnly
-                  value={refPostModuleType === 'qa' ? '问答 (qa)' : refPostModuleType === 'share' ? '分享 (share)' : refPostModuleType === 'wiki' ? '知识库 (wiki)' : refPostModuleType === 'novel' ? '小说 (novel)' : refPostModuleType === 'game' ? '游戏 (game)' : refPostModuleType === 'mini_app' ? '小程序 (mini_app)' : '交流 (forum)'}
+                  value={`${getModuleLabel(refPostModuleType)} (${refPostModuleType})`}
                   className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed outline-none" />
               </div>
 

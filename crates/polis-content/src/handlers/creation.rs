@@ -481,14 +481,15 @@ impl CreationHandler {
             return Err(AppError::Forbidden("无权查看".to_string()));
         }
 
-        let rows = sqlx::query_as::<_, (Uuid, String, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String, i64, i64)>(
+        let rows = sqlx::query_as::<_, (Uuid, String, Option<String>, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String, i64, i64)>(
             r#"
             SELECT
-                r.id, r.module_type, r.display_status, r.is_pinned,
+                r.id, r.module_type, sm.name as module_name, r.display_status, r.is_pinned,
                 r.module_views, r.created_at, s.id, s.namespace, s.title,
                 COALESCE(s.member_count, 0), COALESCE(s.post_count, 0)
             FROM community_module_refs r
             JOIN spaces s ON s.id = r.space_id
+            LEFT JOIN space_modules sm ON sm.space_id = r.space_id AND sm.module_key = r.module_type
             WHERE r.creation_id = $1
             ORDER BY r.created_at DESC
             "#,
@@ -500,11 +501,12 @@ impl CreationHandler {
 
         let list: Vec<SubmissionInfo> = rows
             .into_iter()
-            .map(|(ref_id, module_type, display_status, is_pinned, module_views, submitted_at, space_id, ns, title, member_count, post_count)| {
+            .map(|(ref_id, module_type, module_name, display_status, is_pinned, module_views, submitted_at, space_id, ns, title, member_count, post_count)| {
                 SubmissionInfo {
                     ref_id,
                     space: SpaceMini { id: space_id, namespace: ns, title },
                     module_type,
+                    module_name,
                     display_status,
                     is_pinned,
                     module_views,
@@ -781,15 +783,16 @@ async fn creation_to_public(
     .unwrap_or(false);
 
     let submissions = if current_user_id == creation.creator_id {
-        let subs: Vec<(Uuid, String, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String, i64, i64)> =
+        let subs: Vec<(Uuid, String, Option<String>, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String, i64, i64)> =
             sqlx::query_as(
                 r#"
                 SELECT
-                    r.id, r.module_type, r.display_status, r.is_pinned,
+                    r.id, r.module_type, sm.name as module_name, r.display_status, r.is_pinned,
                     r.module_views, r.created_at, s.id, s.namespace, s.title,
                     COALESCE(s.member_count, 0), COALESCE(s.post_count, 0)
                 FROM community_module_refs r
                 JOIN spaces s ON s.id = r.space_id
+                LEFT JOIN space_modules sm ON sm.space_id = r.space_id AND sm.module_key = r.module_type
                 WHERE r.creation_id = $1
                 ORDER BY r.created_at DESC
                 "#,
@@ -800,11 +803,12 @@ async fn creation_to_public(
             .unwrap_or_default();
 
         subs.into_iter()
-            .map(|(ref_id, module_type, display_status, is_pinned, module_views, submitted_at, space_id, ns, title, member_count, post_count)| {
+            .map(|(ref_id, module_type, module_name, display_status, is_pinned, module_views, submitted_at, space_id, ns, title, member_count, post_count)| {
                 SubmissionInfo {
                     ref_id,
                     space: SpaceMini { id: space_id, namespace: ns, title },
                     module_type,
+                    module_name,
                     display_status,
                     is_pinned,
                     module_views,

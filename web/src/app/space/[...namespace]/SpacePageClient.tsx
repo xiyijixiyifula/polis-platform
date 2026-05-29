@@ -376,9 +376,7 @@ setIsStarred(data.data.is_starred ?? false);
 	 setPostTotalPages(postsData.pagination.total_pages);
 	 }
 	 // Include all module types for client-side tab filtering
-	 const mtFilter = new Set(['forum', 'article', '', 'share', 'wiki', 'qa', 'novel', 'game', 'mini_app']);
-		 // 纳入动态自定义模块键（非 built-in MODULE_CONFIG 中的模块键）
-		 spaceModules.forEach(m => { if (!MODULE_CONFIG[m.module_key]) mtFilter.add(m.module_key); });
+	 const mtFilter = new Set<string>([...Object.keys(MODULE_CONFIG), ...spaceModules.map(m => m.module_key)]);
 	 setPosts(allPosts.filter((p: any) => mtFilter.has(p.module_type || '')));
 	 }
  if (featuredData.code === 0) setFeatured(featuredData.data || []);
@@ -928,7 +926,7 @@ setIsStarred(data.data.is_starred ?? false);
  <div className="space-y-1">
  {posts.slice(0, 20).map((post) => {
  const moduleIcon = getModuleEmoji(post.module_type);
- const moduleLabel = MODULE_CONFIG[post.module_type]?.label || spaceModules.find(m => m.module_key === post.module_type)?.name || '交流';
+ const moduleLabel = MODULE_CONFIG[post.module_type]?.label || spaceModules.find(m => m.module_key === post.module_type)?.name || post.module_type || '交流';
  const author = (post.author || {}) as any;
  const authorUsername = author.username || '';
  const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
@@ -1022,19 +1020,13 @@ setIsStarred(data.data.is_starred ?? false);
  {/* === Posts Tab (交流) === */}
  {activeTab === 'posts' && (
  <>
+ <div className="flex items-center justify-between mb-4">
+ <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">交流</h3>
  <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`}
- className="glass-card flex items-center gap-3 hover:border-primary-400 dark:hover:border-primary-600 transition-colors group mb-4">
- <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-medium text-sm group-hover:scale-105 transition-transform">
- <PenLine className="h-5 w-5" />
- </div>
- <div className="flex-1">
- <p className="text-sm font-medium text-gray-900 dark:text-white">发布帖子</p>
- <p className="text-xs text-gray-400 dark:text-gray-500">支持 Markdown 语法，所有成员可发帖</p>
- </div>
- <div className="btn-primary text-xs px-4 py-1.5 gap-1">
- <Plus className="h-3.5 w-3.5" /> 发布
- </div>
+ className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors">
+ <Plus size={14} />发布
  </Link>
+ </div>
 
  {/* Sort selector + Show hidden toggle */}
  <div className="flex items-center gap-2 mb-4 flex-wrap">
@@ -1078,9 +1070,17 @@ setIsStarred(data.data.is_starred ?? false);
 
  {postLoading ? (
  <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
- ) : posts.filter(p => p.module_type === 'forum' || !p.module_type).length > 0 ? (
+ ) : posts.filter(p => {
+   if (!p.module_type) return true;
+   const route = MODULE_CONFIG[p.module_type]?.route || p.module_type;
+   return route === 'posts';
+ }).length > 0 ? (
  <div className="space-y-3">
- {posts.filter(p => p.module_type === 'forum' || !p.module_type).map((post) => (
+ {posts.filter(p => {
+   if (!p.module_type) return true;
+   const route = MODULE_CONFIG[p.module_type]?.route || p.module_type;
+   return route === 'posts';
+ }).map((post) => (
  <PostCard key={post.id} post={{
  id: post.id,
  title: post.title,

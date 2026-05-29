@@ -6,14 +6,14 @@
 
 | 指标 | 数值 |
 |------|------|
-| 总修复数 | 75 |
+| 总修复数 | 78 |
 | 已归类 Pattern | 12 |
-| 回归链数 | 8 |
-| 总复发次数 | 7（URL编码 ×3 + xattr ×2 + Array.map ×1 + Gateway路由 ×1 + 部署流程 ×1） |
-| 复发率 | 9.7%（7/72） |
-| 修复配方数 | 12 |
+| 回归链数 | 9 |
+| 总复发次数 | 9（URL编码 ×3 + xattr ×2 + Array.map ×1 + Gateway路由 ×1 + 部署流程 ×1 + 模块标签硬编码 ×2） |
+| 复发率 | 10.3%（9/87） |
+| 修复配方数 | 13 |
 | 修复点位地图 | [fix-points.md](fix-points.md) |
-| 最近更新 | 2026-05-29 (v1.0.36) |
+| 最近更新 | 2026-05-29 (v1.0.43) |
 
 ## 趋势面板
 
@@ -23,7 +23,7 @@
 
 | 月份 | 新增 Bug | 修复 | 复发 | 复发率 |
 |------|---------|------|------|--------|
-| 2026-05 | 35 | 73 | 7 | 9.7% |
+| 2026-05 | 36 | 76 | 8 | 9.6% |
 
 ### 脆弱文件 Top-10（修复次数降序）
 
@@ -86,6 +86,7 @@ module-tab-key-mismatch ██ 1
 | 新增 API 端点返回 "Space not found" / 直连后端正常 | [actions-array-missing](patterns/actions-array-missing.md) | [配方](fix-recipes/actions-array-missing.md) | grep actions 数组是否包含新端点后缀 |
 | 部署后功能无变化 / `file` 命令显示 Mach-O 非 ELF | [wrong-build-target](patterns/wrong-build-target.md) | [配方](fix-recipes/wrong-build-target.md) | `file` 检查二进制格式 |
 | 社区模块Tab点击空白 / Tab选中无内容 | [module-tab-key-mismatch](patterns/module-tab-key-mismatch.md) | [配方](fix-recipes/module-tab-key-mismatch.md) | 对比 tab id 与渲染块条件 |
+| 模块名显示为'交流' / 自定义模块标签不对 / 作品面包屑模块名错误 | [module-breadcrumb-hardcoded](patterns/module-breadcrumb-hardcoded.md) | [配方](fix-recipes/module-breadcrumb-hardcoded.md) | grep -rn "交流\|'forum'" web/src/ --include="*.tsx" |
 
 ## Pattern 列表
 
@@ -103,6 +104,7 @@ module-tab-key-mismatch ██ 1
 | Actions 数组遗漏 | 0 | v1.0.32 (2026-05-28) | 🔴 高 | [actions-array-missing.md](patterns/actions-array-missing.md) |
 | 交叉编译目标错误 | 0 | v1.0.32 (2026-05-28) | 🔴 高 | [wrong-build-target.md](patterns/wrong-build-target.md) |
 | 模块Tab键值不匹配 | 0 | v1.0.34 (2026-05-29) | 🔴 高 | [module-tab-key-mismatch.md](patterns/module-tab-key-mismatch.md) |
+| 模块标签硬编码回退 | 2 | v1.0.43 (2026-05-29) | 🔴 高 | [module-breadcrumb-hardcoded.md](patterns/module-breadcrumb-hardcoded.md) |
 
 ## 修复配方库
 
@@ -121,6 +123,7 @@ module-tab-key-mismatch ██ 1
 | 新增 API 端点返回 "Space not found" | [actions-array-missing](fix-recipes/actions-array-missing.md) | 5 分钟 |
 | 部署后功能无变化，二进制格式不对 | [wrong-build-target](fix-recipes/wrong-build-target.md) | 3 分钟 |
 | 社区模块Tab点击空白无内容 | [module-tab-key-mismatch](fix-recipes/module-tab-key-mismatch.md) | 5 分钟 |
+| 模块标签显示为'交流'（首页/社区/个人主页/帖子详情） | [module-breadcrumb-hardcoded](fix-recipes/module-breadcrumb-hardcoded.md) | 30 分钟（根因修复涉及8文件20+点位） |
 
 → [完整配方索引](fix-recipes/INDEX.md)
 
@@ -195,14 +198,15 @@ module-tab-key-mismatch ██ 1
 | #7 | v1.0.28 | 管理页 isOwner 校验使用 atob() | JWT base64url 编码 → atob 解码失败 → 管理和编辑页无法访问 | atob-base64url | 代码层（JWT 编码标准认知缺失） |
 | #8 | v1.0.32 | 新增模块管理端点 (POST/PUT/DELETE /modules) | actions 数组遗漏 → "Space not found" + DELETE 映射错误 → 404 + 编译目标错误 → 修复未生效 | actions-array-missing / wrong-build-target | 流程层（部署 + 路由注册自动化缺失） |
 | #9 | v1.0.34 | 动态模块Tab id 映射 | Tab id 用 module_key，渲染块匹配 route 名 → 内容区域空白 | module-tab-key-mismatch | 代码层（键空间不一致） |
+| #10 | v1.0.40→v1.0.41 | 模块breadcrumb修复（表面） | v1.0.40 仅修PostCard/SpacePageClient面包屑，未改核心库 → ContentCard/ProfilePage/PostPage等仍显示'交流' | module-breadcrumb-hardcoded | 架构层（静态字典无法处理动态模块键） |
 
 ## 根因层级分布
 
 | 层级 | 次数 | 占比 | 说明 |
 |------|------|------|------|
-| 架构层（缺乏统一抽象） | 2 | 25% | URL编解码 / post_count同步 |
-| 流程层（工具/部署） | 2 | 25% | macOS tar xattr / Gateway路由未同步 |
-| 代码层（映射表/路由数组遗漏） | 5 | 50% | keyMap / actions_suffixes / 表单字段 / atob / module-tab-key |
+| 架构层（缺乏统一抽象） | 3 | 33% | URL编解码 / post_count同步 / 模块标签体系 |
+| 流程层（工具/部署） | 2 | 22% | macOS tar xattr / Gateway路由未同步 |
+| 代码层（映射表/路由数组遗漏） | 4 | 44% | keyMap / actions_suffixes / 表单字段 / atob / module-tab-key |
 
 > 架构层回归最难根除，需要专门的重构项目来处理。代码层回归可通过预防清单（grep 检查）减少。
 

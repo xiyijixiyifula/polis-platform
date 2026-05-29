@@ -1205,23 +1205,23 @@ impl ContentRepo {
         };
 
         // 帖子查询 (按模式分 SQL)
-        type PostRow = (Uuid, Uuid, String, Uuid, String, String, String, i64, i64, i64, chrono::DateTime<chrono::Utc>, Option<Uuid>, i64);
+        type PostRow = (Uuid, Uuid, String, Option<String>, Uuid, String, String, String, i64, i64, i64, chrono::DateTime<chrono::Utc>, Option<Uuid>, i64);
 
         let posts: Vec<PostRow> = match &following_ids {
             Some(ids) => {
                 sqlx::query_as::<_, PostRow>(
-                    "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at, p.creation_id, COALESCE(cref.cnt, 1) FROM posts p LEFT JOIN LATERAL (SELECT COUNT(*) as cnt FROM community_module_refs WHERE creation_id = p.creation_id) cref ON p.creation_id IS NOT NULL WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' AND p.author_id = ANY($1::uuid[]) ORDER BY p.created_at DESC LIMIT $2 OFFSET $3"
+                    "SELECT p.id, p.space_id, p.module_type, sm.name as module_name, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at, p.creation_id, COALESCE(cref.cnt, 1) FROM posts p LEFT JOIN LATERAL (SELECT COUNT(*) as cnt FROM community_module_refs WHERE creation_id = p.creation_id) cref ON p.creation_id IS NOT NULL LEFT JOIN space_modules sm ON sm.space_id = p.space_id AND sm.module_key = p.module_type WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' AND p.author_id = ANY($1::uuid[]) ORDER BY p.created_at DESC LIMIT $2 OFFSET $3"
                 ).bind(ids).bind(limit).bind(offset).fetch_all(&self.pool).await?
             }
             None => match sort {
                 Some("hot") => {
                     sqlx::query_as::<_, PostRow>(
-                        "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at, p.creation_id, COALESCE(cref.cnt, 1) FROM posts p LEFT JOIN LATERAL (SELECT COUNT(*) as cnt FROM community_module_refs WHERE creation_id = p.creation_id) cref ON p.creation_id IS NOT NULL WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' ORDER BY (p.view_count * 0.5 + p.like_count * 2.0 + p.comment_count * 3.0) / GREATEST(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600.0, 1.0) DESC, p.created_at DESC LIMIT $1 OFFSET $2"
+                        "SELECT p.id, p.space_id, p.module_type, sm.name as module_name, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at, p.creation_id, COALESCE(cref.cnt, 1) FROM posts p LEFT JOIN LATERAL (SELECT COUNT(*) as cnt FROM community_module_refs WHERE creation_id = p.creation_id) cref ON p.creation_id IS NOT NULL LEFT JOIN space_modules sm ON sm.space_id = p.space_id AND sm.module_key = p.module_type WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' ORDER BY (p.view_count * 0.5 + p.like_count * 2.0 + p.comment_count * 3.0) / GREATEST(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600.0, 1.0) DESC, p.created_at DESC LIMIT $1 OFFSET $2"
                     ).bind(limit).bind(offset).fetch_all(&self.pool).await?
                 }
                 _ => {
                     sqlx::query_as::<_, PostRow>(
-                        "SELECT p.id, p.space_id, p.module_type, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at, p.creation_id, COALESCE(cref.cnt, 1) FROM posts p LEFT JOIN LATERAL (SELECT COUNT(*) as cnt FROM community_module_refs WHERE creation_id = p.creation_id) cref ON p.creation_id IS NOT NULL WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
+                        "SELECT p.id, p.space_id, p.module_type, sm.name as module_name, p.author_id, p.title, LEFT(p.body, 200), p.content_type, p.comment_count, p.like_count, p.view_count, p.created_at, p.creation_id, COALESCE(cref.cnt, 1) FROM posts p LEFT JOIN LATERAL (SELECT COUNT(*) as cnt FROM community_module_refs WHERE creation_id = p.creation_id) cref ON p.creation_id IS NOT NULL LEFT JOIN space_modules sm ON sm.space_id = p.space_id AND sm.module_key = p.module_type WHERE p.is_deleted = FALSE AND p.hidden_by_owner = FALSE AND p.visibility = 'public' ORDER BY p.created_at DESC LIMIT $1 OFFSET $2"
                     ).bind(limit).bind(offset).fetch_all(&self.pool).await?
                 }
             },
@@ -1258,7 +1258,7 @@ impl ContentRepo {
         // 批量查找作者和空间
         let mut user_ids: Vec<Uuid> = Vec::new();
         let mut space_ids: Vec<Uuid> = Vec::new();
-        for (_, sid, _, aid, _, _, _, _, _, _, _, _, _) in &posts { user_ids.push(*aid); space_ids.push(*sid); }
+        for (_, sid, _, _, aid, _, _, _, _, _, _, _, _, _) in &posts { user_ids.push(*aid); space_ids.push(*sid); }
         for (_, sid, aid, _, _, _) in &polls { user_ids.push(*aid); space_ids.push(*sid); }
         for (_, sid, aid, _, _, _, _) in &announcements { user_ids.push(*aid); space_ids.push(*sid); }
         for (_, sid, aid, _, _, _, _, _, _, _, _) in &videos { user_ids.push(*aid); space_ids.push(*sid); }
@@ -1267,10 +1267,10 @@ impl ContentRepo {
 
         // 组装结果
         let mut items: Vec<serde_json::Value> = Vec::new();
-        for (id, space_id, module_type, author_id, title, body_preview, _content_type, comment_count, like_count, view_count, created_at, _creation_id, submission_count) in &posts {
+        for (id, space_id, module_type, module_name, author_id, title, body_preview, _content_type, comment_count, like_count, view_count, created_at, _creation_id, submission_count) in &posts {
             let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));
             let space_info = spaces.get(space_id);
-            items.push(serde_json::json!({"id": id, "type": "post", "module_type": module_type, "title": title, "preview": body_preview, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "author": author, "space": space_info, "submission_count": submission_count}));
+            items.push(serde_json::json!({"id": id, "type": "post", "module_type": module_type, "module_name": module_name, "title": title, "preview": body_preview, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "author": author, "space": space_info, "submission_count": submission_count}));
         }
         for (id, space_id, author_id, title, desc, created_at) in &polls {
             let author = users.get(author_id).map(|u| serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url}));

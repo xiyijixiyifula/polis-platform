@@ -6,7 +6,7 @@
 
 | 指标 | 数值 |
 |------|------|
-| 回归链总数 | 8 |
+| 回归链总数 | 9 |
 | 跨层回归（后端↔前端） | 1 |
 | 同层回归 | 6 |
 | 涉及脆弱文件 | 11 |
@@ -160,11 +160,34 @@ v1.0.32 Bug (wrong-build-target) ← 回归 #5
 | `web/src/app/space/[...namespace]/SpacePageClient.tsx` | — | 9 | 社区页面核心组件，修改时审查所有状态依赖 |
 | `web/src/lib/api.ts` | — | 4 | 新增 API 方法注意 ApiResponse<T> 包装类型 |
 | `web/src/app/create/page.tsx` | — | 2 | title 参数检查 + deriveSlug 正则字符集维护 |
-| `web/src/app/post/[id]/PostPageClient.tsx` | — | 1 | atob URL-safe base64 转换 |
+| `web/src/app/post/[id]/PostPageClient.tsx` | Chain #9 | 2 | atob URL-safe base64 转换 + 模块标签硬编码 |
 | `crates/polis-core/src/types.rs` | Chain #5 | 1 | Visibility 枚举必须与 DB visibility 有效值同步 |
 | `web/src/app/space/manage/[...namespace]/ManagePageClient.tsx` | — | 2 | 管理页核心 (v1.0.28 React批处理修复失败 + v1.0.29 atob修复) |
 | `crates/polis-space/src/routes/space_routes.rs` | Chain #7 | 7 | actions 数组 + DELETE 路由映射 — 任何新端点都需双处同步 |
 | `crates/polis-gateway/src/main.rs` | Chain #7 | 4 | is_content/is_video 条件 — 新增 space 端点要排除 |
+
+### Chain #9: 模块标签硬编码回退 — 架构缺陷暴露路径
+
+```
+v1.0.30 Feature (自定义模块系统)
+    ↓ 自定义模块键（如 mod_4167432e）不在 MODULE_CONFIG 中
+    ↓ getModuleLabel() → '交流', normalizeModuleType() → 'forum'
+v1.0.40 Bug (面包屑显示'交流') ← 首次发现（部分修复）
+    ↓ 仅修复 PostCard + SpacePageClient 面包屑，未改核心库函数
+v1.0.41 Bug (全面修复) ← 复发 #1
+    ↓ ROOT CAUSE: module-config.ts 4个函数/常量全部有'交流'/'forum'硬编码回退
+	    ↓ 连带修复: ContentCard/PostCard/SpacePageClient/ProfilePageClient/PostPageClient/creations+后端API
+	    ↓ v1.0.41 概览区 route fallback `|| 'posts'` 导致自定义模块帖子泄漏到交流Tab
+v1.0.43 Bug (route fallback 回归修复) ← 复发 #2
+```
+
+| 属性 | 值 |
+|------|-----|
+| **根因** | MODULE_CONFIG 是静态封闭字典，但自定义模块可无限创建。核心库函数对未知 key 返回硬编码 fallback 而非透传原始值 |
+| **脆弱点** | module-config.ts (getModuleLabel, normalizeModuleType, getModuleLabelByContentType, MODULE_ALIASES) + SpacePageClient.tsx (route fallback `|| 'posts'`) |
+| **触发条件** | 任何不在 MODULE_CONFIG 中的模块键被传入核心库函数；route 查找 fallback 为硬编码值 |
+| **扩散路径** | module-config.ts → ContentCard → PostCard → SpacePageClient → ProfilePageClient → PostPageClient → creations/new |
+| **根除方案** | 核心库函数对未知 key 透传自身（而非折叠为 'forum'/'交流'），后端 API 返回 module_name；route fallback 应使用 module_type 自身而非硬编码 'posts' |
 
 ### Chain #8: 模块Tab键值不匹配 — 功能实现遗留
 
@@ -198,15 +221,17 @@ v1.0.34 Bug (模块Tab点击空白) ← 首次发现
 | `crates/polis-content/src/routes/content_routes.rs` | — | 3 | POST/PUT 操作前需检查 `block_private_space_public_listing` |
 | `crates/polis-space/src/routes/space_routes.rs` | — | 5 | 新增 actions_suffixes + actions 数组项时保持同步 |
 | `crates/polis-space/src/repo.rs` | — | 5 | COALESCE vs CASE WHEN 空值清除语义区分 |
-| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | Chain #8 | 9 | 社区页面核心组件，修改时审查所有状态依赖 |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | Chain #8, Chain #9 | 11 | 社区页面核心组件，修改时审查所有状态依赖 |
 | `web/src/lib/api.ts` | — | 4 | 新增 API 方法注意 ApiResponse<T> 包装类型 |
 | `web/src/app/create/page.tsx` | — | 2 | title 参数检查 + deriveSlug 正则字符集维护 |
-| `web/src/app/post/[id]/PostPageClient.tsx` | — | 1 | atob URL-safe base64 转换 |
+| `web/src/app/post/[id]/PostPageClient.tsx` | Chain #9 | 2 | atob URL-safe base64 转换 + 模块标签硬编码 |
 | `crates/polis-core/src/types.rs` | Chain #5 | 1 | Visibility 枚举必须与 DB visibility 有效值同步 |
 | `web/src/app/space/manage/[...namespace]/ManagePageClient.tsx` | — | 2 | 管理页核心 (v1.0.28 React批处理修复失败 + v1.0.29 atob修复) |
 | `crates/polis-space/src/routes/space_routes.rs` | Chain #7 | 7 | actions 数组 + DELETE 路由映射 — 任何新端点都需双处同步 |
 | `crates/polis-gateway/src/main.rs` | Chain #7 | 4 | is_content/is_video 条件 — 新增 space 端点要排除 |
-| `web/src/app/creations/new/page.tsx` | Chain #8 | 2 | 模块类型简化 + 动态模块联动 — 修改时确保 MODULE_CONFIG 映射完整 |
+| `web/src/app/creations/new/page.tsx` | Chain #8, Chain #9 | 3 | 模块类型简化 + 动态模块联动 — 修改时确保 MODULE_CONFIG 映射完整 |
+| `web/src/lib/module-config.ts` | Chain #9 | 1 | **模块标签体系基石** — getModuleLabel/normalizeModuleType/getModuleLabelByContentType/MODULE_ALIASES 任一修改影响全局 |
+| `web/src/components/ContentCard.tsx` | Chain #9 | 2 | 首页Feed/探索/搜索核心组件 — adaptCreationItem/adaptFeedItem 影响所有列表页模块标签 |
 
 ## 修复影响矩阵 (Fix Impact Matrix)
 
@@ -225,6 +250,7 @@ v1.0.34 Bug (模块Tab点击空白) ← 首次发现
 | 修改部署脚本/流程 | deploy-path-mismatch, wrong-build-target, xattr-contamination | 🔴 | MD5 对比 + `file` 检查二进制格式 |
 | 新增 `handle_auth_path` 端点 | actions-array-missing (命名空间提取失败) | 🔴 | curl 直连后端测试 |
 | 修改 `.map()` 调用 | array-map-null (白屏) | 🟡 | console 无 TypeError |
+| 修改 `module-config.ts` 核心函数 | module-breadcrumb-hardcoded (全局模块标签错误) | 🔴 | 首页/社区/个人主页/帖子详情/创作中心面包屑全部正确 |
 
 ---
 
