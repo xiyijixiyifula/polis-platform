@@ -11,7 +11,7 @@ use http::HttpClient;
 /// Complete command-line interface for the Polis community platform.
 /// Set POLIS_FORMAT=json for AI-friendly output.
 #[derive(Parser)]
-#[command(name = "polisctl", version = "1.0.0", about, long_about = None)]
+#[command(name = "polisctl", version = "1.1.0", about, long_about = None)]
 struct Cli {
     /// Override API base URL (default: $POLIS_BASE_URL or https://www.mzgw.com)
     #[arg(long, global = true)]
@@ -387,6 +387,15 @@ enum PostAction {
         /// Visibility (public, private, unlisted)
         #[arg(short = 'v', long, default_value = "public")]
         visibility: String,
+        /// Content type: text, video, image, code, file
+        #[arg(short = 'c', long)]
+        content_type: Option<String>,
+        /// Media URLs (comma-separated, e.g. https://cdn.example.com/video.mp4)
+        #[arg(long)]
+        media_urls: Option<String>,
+        /// Cover image URL
+        #[arg(long)]
+        cover_url: Option<String>,
     },
     /// Update a post
     Update {
@@ -1150,8 +1159,8 @@ async fn main() -> Result<(), anyhow::Error> {
                 commands::post::list(&config, &client, &namespace, page, size, module.as_deref(), sort.as_deref()).await
             }
             PostAction::Get { post_id } => commands::post::get(&config, &client, &post_id).await,
-            PostAction::Create { namespace, title, body, tags, module, visibility } => {
-                commands::post::create(&config, &client, &namespace, &title, &body, tags.as_deref(), Some(&module), Some(&visibility)).await
+            PostAction::Create { namespace, title, body, tags, module, visibility, content_type, media_urls, cover_url } => {
+                commands::post::create(&config, &client, &namespace, &title, &body, tags.as_deref(), Some(&module), Some(&visibility), content_type.as_deref(), media_urls.as_deref(), cover_url.as_deref()).await
             }
             PostAction::Update { post_id, title, body, tags, visibility } => {
                 commands::post::update(&config, &client, &post_id, title.as_deref(), body.as_deref(), tags.as_deref(), visibility.as_deref()).await

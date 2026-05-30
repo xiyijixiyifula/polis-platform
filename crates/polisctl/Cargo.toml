@@ -1,6 +1,6 @@
 [package]
 name = "polisctl"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 description = "Polis Platform CLI — Complete command-line interface for the Polis community platform"
 authors = ["Polis Team"]

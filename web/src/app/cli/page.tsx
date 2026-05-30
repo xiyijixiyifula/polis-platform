@@ -84,6 +84,13 @@ polisctl --base-url https://www.mzgw.com --format table space search "Rust" 1 -s
               <tr><td className="px-4 py-2">--version</td><td className="px-4 py-2">✅ polisctl 1.0.0</td><td className="px-4 py-2">⚠️ 无</td></tr>
               <tr><td className="px-4 py-2">comment -p parent_id</td><td className="px-4 py-2">✅ 支持</td><td className="px-4 py-2">❌ 不支持</td></tr>
               <tr><td className="px-4 py-2">profile update 参数</td><td className="px-4 py-2">✅ -d/-b/--avatar-url</td><td className="px-4 py-2">⚠️ 位置参数</td></tr>
+              <tr><td className="px-4 py-2">chat（聊天室）</td><td className="px-4 py-2">✅ 支持</td><td className="px-4 py-2">❌ 不支持</td></tr>
+              <tr><td className="px-4 py-2">message（私信）</td><td className="px-4 py-2">✅ 支持</td><td className="px-4 py-2">❌ 不支持</td></tr>
+              <tr><td className="px-4 py-2">qa（AI 问答同步）</td><td className="px-4 py-2">✅ 支持</td><td className="px-4 py-2">❌ 不支持</td></tr>
+              <tr><td className="px-4 py-2">health（健康检查）</td><td className="px-4 py-2">✅ 支持</td><td className="px-4 py-2">❌ 不支持</td></tr>
+              <tr><td className="px-4 py-2">series update/delete</td><td className="px-4 py-2">✅ 支持</td><td className="px-4 py-2">✅ 支持</td></tr>
+              <tr><td className="px-4 py-2">tier update/delete</td><td className="px-4 py-2">✅ 支持</td><td className="px-4 py-2">✅ 支持</td></tr>
+              <tr><td className="px-4 py-2">admin review/rules/audit</td><td className="px-4 py-2">✅ 支持</td><td className="px-4 py-2">❌ 不支持</td></tr>
               <tr><td className="px-4 py-2">安装</td><td className="px-4 py-2">cargo build</td><td className="px-4 py-2">复制脚本</td></tr>
             </tbody>
           </table>
@@ -125,7 +132,7 @@ polisctl vote up post "<post_id>"`}
         <div className="bg-gray-900 dark:bg-gray-800 rounded-lg p-4 overflow-x-auto">
           <pre className="text-sm text-green-400">
 {`# 管理员登录
-polisctl admin login admin@polis.app mzGW2026!PolisHub
+polisctl admin login [admin_email] [admin_code]
 
 # 平台概览
 polisctl admin dashboard
@@ -483,29 +490,57 @@ rm -f ~/.polis/token`}
             <CmdItem cmd="polisctl profile following" desc="关注列表" />
           </CommandGroup>
 
-          <CommandGroup title="🏠 社区" desc="搜索、创建、加入">
+          <CommandGroup title="🏠 社区" desc="搜索、创建、加入、管理">
+            <CmdItem cmd="polisctl space list [page] [-s size]" desc="全部社区列表" />
             <CmdItem cmd="polisctl space search <keyword> [page] [-s size]" desc="搜索社区" />
             <CmdItem cmd="polisctl space trending [page] [-s size]" desc="热门社区" />
             <CmdItem cmd="polisctl space get <namespace>" desc="社区详情" />
+            <CmdItem cmd="polisctl space members <namespace>" desc="成员列表" />
             <CmdItem cmd="polisctl space join <namespace>" desc="加入社区" />
             <CmdItem cmd="polisctl space leave <namespace>" desc="退出社区" />
             <CmdItem cmd="polisctl space create <slug> <title> [-d desc] [-v visibility] [--modules forum,qa]" desc="创建社区（--modules 启用模块）" />
             <CmdItem cmd="polisctl space update <namespace> [-t title] [-d desc]" desc="更新社区" />
+            <CmdItem cmd="polisctl space root" desc="根社区列表" />
+            <CmdItem cmd="polisctl space subspaces <namespace>" desc="子社区列表" />
+            <CmdItem cmd="polisctl space analytics <namespace> [days]" desc="社区数据分析" />
           </CommandGroup>
 
-          <CommandGroup title="📝 帖子" desc="CRUD、搜索、精选">
-            <CmdItem cmd="polisctl post list <namespace> [page] [-s size] [-m module]" desc="列表" />
+          <CommandGroup title="👥 关注" desc="关注用户和社区">
+            <CmdItem cmd="polisctl follow user <username>" desc="关注用户" />
+            <CmdItem cmd="polisctl follow space <namespace>" desc="关注社区" />
+          </CommandGroup>
+
+          <CommandGroup title="📝 帖子" desc="CRUD、搜索、精选、管理">
+            <CmdItem cmd="polisctl post list <namespace> [page] [-s size] [-m module]" desc="列表（-o sort: newest/views/likes）" />
             <CmdItem cmd="polisctl post get <post_id>" desc="详情" />
-            <CmdItem cmd="polisctl post create <namespace> <title> <body> [-g tags] [-m module]" desc="创建（Markdown）" />
+            <CmdItem cmd="polisctl post create <namespace> <title> <body> [-g tags] [-m module] [-c type] [--media-urls urls] [--cover-url url]" desc="创建帖子（支持 text/video/image/code/file，自动路由创作API）" />
             <CmdItem cmd="polisctl post update <post_id> [-t title] [-b body] [-g tags]" desc="更新" />
             <CmdItem cmd="polisctl post delete <post_id>" desc="删除" />
-            <CmdItem cmd="polisctl post search <keyword> [limit]" desc="搜索" />
-            <CmdItem cmd="polisctl post featured <namespace>" desc="精选" />
+            <CmdItem cmd="polisctl post search <keyword> [limit]" desc="搜索（--tag 按标签）" />
+            <CmdItem cmd="polisctl post featured <namespace>" desc="精选列表" />
+            <CmdItem cmd="polisctl post pin <post_id>" desc="置顶" />
+            <CmdItem cmd="polisctl post featuring <post_id>" desc="设为精选" />
+            <CmdItem cmd="polisctl post hide <post_id>" desc="隐藏" />
+            <CmdItem cmd="polisctl post view <post_id>" desc="增加浏览量" />
+            <CmdItem cmd="polisctl post download <post_id>" desc="下载 Markdown" />
           </CommandGroup>
 
           <CommandGroup title="💬 评论" desc="查看和发表">
             <CmdItem cmd="polisctl comment list <post_id>" desc="评论列表" />
             <CmdItem cmd="polisctl comment create <post_id> <body> [-p parent_id]" desc="发表（-p 回复评论）" />
+          </CommandGroup>
+
+          <CommandGroup title="💭 聊天室" desc="社区聊天">
+            <CmdItem cmd="polisctl chat list <namespace> [-l limit]" desc="消息列表" />
+            <CmdItem cmd="polisctl chat send <namespace> <message>" desc="发送消息" />
+          </CommandGroup>
+
+          <CommandGroup title="✉️ 私信" desc="用户私信">
+            <CmdItem cmd="polisctl message send <username> <content>" desc="发送私信" />
+            <CmdItem cmd="polisctl message conversations" desc="会话列表" />
+            <CmdItem cmd="polisctl message list <username> [page] [-s size]" desc="私信记录" />
+            <CmdItem cmd="polisctl message read <username>" desc="标记已读" />
+            <CmdItem cmd="polisctl message unread-count" desc="未读数" />
           </CommandGroup>
 
           <CommandGroup title="👍 互动" desc="点赞、投票、收藏、举报">
@@ -517,10 +552,11 @@ rm -f ~/.polis/token`}
           </CommandGroup>
 
           <CommandGroup title="📊 投票调查" desc="创建和参与">
-            <CmdItem cmd="polisctl poll list <namespace>" desc="投票列表" />
+            <CmdItem cmd="polisctl poll list <namespace>" desc="社区投票列表" />
+            <CmdItem cmd="polisctl poll all [page] [-s size]" desc="全局投票列表" />
             <CmdItem cmd="polisctl poll get <poll_id>" desc="投票详情" />
             <CmdItem cmd="polisctl poll vote <poll_id> <option_id>" desc="参与投票" />
-            <CmdItem cmd="polisctl poll create <space_id> <title> <options...>" desc="创建投票" />
+            <CmdItem cmd="polisctl poll create <space_id> <title> <options...>" desc="创建投票（选项逗号分隔）" />
           </CommandGroup>
 
           <CommandGroup title="📚 专栏" desc="系列/专栏">
@@ -557,7 +593,11 @@ rm -f ~/.polis/token`}
             <CmdItem cmd="polisctl qa list [page] [-s size]" desc="列出 PolisAi 社区中的问答帖子" />
           </CommandGroup>
 
-          <CommandGroup title="🛡️ 管理后台" desc="管理员操作">
+          <CommandGroup title="💚 健康检查" desc="服务状态">
+            <CmdItem cmd="polisctl health" desc="API 健康检查（网关+微服务）" />
+          </CommandGroup>
+
+          <CommandGroup title="🛡️ 管理后台" desc="管理员操作（Rust 版专用 / adminctl.sh 备选）">
             <CmdItem cmd="polisctl admin login [email] [code]" desc="管理员登录" />
             <CmdItem cmd="polisctl admin dashboard" desc="仪表盘" />
             <CmdItem cmd="polisctl admin stats" desc="平台统计" />
@@ -565,19 +605,49 @@ rm -f ~/.polis/token`}
             <CmdItem cmd="polisctl admin users get <user_id>" desc="用户详情" />
             <CmdItem cmd="polisctl admin users ban <user_id> [reason]" desc="封禁" />
             <CmdItem cmd="polisctl admin users unban <user_id>" desc="解封" />
+            <CmdItem cmd="polisctl admin users hide-works <user_id>" desc="隐藏用户作品" />
+            <CmdItem cmd="polisctl admin users hide-spaces <user_id>" desc="隐藏用户社区" />
             <CmdItem cmd="polisctl admin spaces list [page] [-s size]" desc="社区列表" />
             <CmdItem cmd="polisctl admin spaces get <space_id>" desc="社区详情" />
             <CmdItem cmd="polisctl admin spaces status <space_id> <status>" desc="更新状态" />
             <CmdItem cmd="polisctl admin posts list [page] [-s size]" desc="帖子列表" />
             <CmdItem cmd="polisctl admin posts get <post_id>" desc="帖子详情" />
             <CmdItem cmd="polisctl admin posts delete <post_id>" desc="删除帖子" />
+            <CmdItem cmd="polisctl admin posts approve <post_id>" desc="审核通过" />
+            <CmdItem cmd="polisctl admin posts reject <post_id>" desc="审核拒绝" />
+            <CmdItem cmd="polisctl admin posts hide <post_id>" desc="隐藏" />
+            <CmdItem cmd="polisctl admin posts unhide <post_id>" desc="取消隐藏" />
+            <CmdItem cmd="polisctl admin posts feature <post_id>" desc="精选" />
+            <CmdItem cmd="polisctl admin posts unfeature <post_id>" desc="取消精选" />
             <CmdItem cmd="polisctl admin comments list [page] [-s size]" desc="评论列表" />
             <CmdItem cmd="polisctl admin comments delete <comment_id>" desc="删除评论" />
             <CmdItem cmd="polisctl admin reports list" desc="举报列表" />
             <CmdItem cmd="polisctl admin reports resolve <report_id>" desc="处理" />
             <CmdItem cmd="polisctl admin reports dismiss <report_id>" desc="驳回" />
+            <CmdItem cmd="polisctl admin review list [page] [-s size]" desc="审查队列" />
+            <CmdItem cmd="polisctl admin review batch [--approve|--reject]" desc="批量审查" />
+            <CmdItem cmd="polisctl admin rules list" desc="审查规则列表" />
+            <CmdItem cmd="polisctl admin rules create <name> <pattern>" desc="创建规则" />
+            <CmdItem cmd="polisctl admin rules toggle <rule_id>" desc="启用/禁用规则" />
+            <CmdItem cmd="polisctl admin refs list [page] [-s size]" desc="ModuleRef 列表" />
+            <CmdItem cmd="polisctl admin refs review <ref_id> <action>" desc="审核引用" />
+            <CmdItem cmd="polisctl admin audit [page] [-s size]" desc="操作日志" />
             <CmdItem cmd="polisctl admin transactions [page] [-s size]" desc="交易记录" />
             <CmdItem cmd="polisctl admin analytics <users|posts> [days]" desc="数据分析" />
+          </CommandGroup>
+
+          <CommandGroup title="🛠️ adminctl.sh" desc="独立管理脚本（Bash 版备选，11 个命令）">
+            <CmdItem cmd="adminctl.sh login" desc="管理员登录（需 POLIS_ADMIN_PASSWORD 环境变量）" />
+            <CmdItem cmd="adminctl.sh dashboard" desc="仪表盘" />
+            <CmdItem cmd="adminctl.sh stats" desc="平台统计" />
+            <CmdItem cmd="adminctl.sh users list|get|ban|unban" desc="用户管理" />
+            <CmdItem cmd="adminctl.sh spaces list|get|status" desc="社区管理" />
+            <CmdItem cmd="adminctl.sh posts list|get|delete|feature|unfeature" desc="帖子管理" />
+            <CmdItem cmd="adminctl.sh comments list|delete" desc="评论管理" />
+            <CmdItem cmd="adminctl.sh reports list|resolve|dismiss" desc="举报处理" />
+            <CmdItem cmd="adminctl.sh transactions" desc="交易记录" />
+            <CmdItem cmd="adminctl.sh analytics users|posts [days]" desc="数据分析" />
+            <CmdItem cmd="adminctl.sh help" desc="帮助" />
           </CommandGroup>
         </div>
       </section>
@@ -593,7 +663,8 @@ rm -f ~/.polis/token`}
           <FaqItem q="Token 保存在哪里？"
             a="~/.polis/ 目录（0600 权限）：token、user、admin_token。auth logout 清除。" />
           <FaqItem q="Admin 登录参数？"
-            a="需要 email + password + admin_code 三要素，admin_code 由管理员在服务器配置。" />
+            a={`Rust 版：polisctl admin login [email] [code]，admin_code 由管理员在服务器配置。
+Bash 版 (adminctl.sh)：export POLIS_ADMIN_PASSWORD=xxx && adminctl.sh login。`} />
           <FaqItem q="如何更新？"
             a="Rust 版：git pull && cargo build --release -p polisctl && sudo cp target/release/polisctl /usr/local/bin/。Bash 版：git pull && sudo cp polisctl.sh /usr/local/bin/polisctl。" />
           <FaqItem q="Windows 支持？"
@@ -615,6 +686,18 @@ rm -f ~/.polis/token`}
             <a href="https://github.com/xiyijixiyifula/polis-platform/blob/main/docs/CLI-GUIDE.md"
                className="hover:underline" target="_blank" rel="noopener noreferrer">
               📖 AI 代理集成指南 (CLI-GUIDE.md)
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/xiyijixiyifula/polis-platform/blob/main/polisctl.sh"
+               className="hover:underline" target="_blank" rel="noopener noreferrer">
+              📜 Bash 版源码 (polisctl.sh)
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/xiyijixiyifula/polis-platform/blob/main/adminctl.sh"
+               className="hover:underline" target="_blank" rel="noopener noreferrer">
+              🛠️ 管理脚本 (adminctl.sh) — 纯管理用途，22 个命令
             </a>
           </li>
           <li>

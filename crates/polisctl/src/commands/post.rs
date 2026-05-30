@@ -40,21 +40,64 @@ pub async fn create(
     tags: Option<&str>,
     module: Option<&str>,
     visibility: Option<&str>,
+    content_type: Option<&str>,
+    media_urls: Option<&str>,
+    cover_url: Option<&str>,
 ) -> Result<(), anyhow::Error> {
     let token = config.require_auth()?;
     let tags_json: Vec<&str> = tags.map(|t| t.split(',').map(|s| s.trim()).collect()).unwrap_or_default();
-    let mut body_json = json!({
-        "title": title,
-        "body": body,
-        "tags": tags_json,
-        "module_type": module.unwrap_or("forum"),
-        "content_type": "text"
-    });
-    if let Some(v) = visibility {
-        body_json["visibility"] = json!(v);
+
+    let has_media = media_urls.is_some() || cover_url.is_some();
+    if has_media {
+        // 有媒体附件 → 走创作 API (CreateCreationRequest) + 自动投稿
+        let media_list: Vec<String> = media_urls
+            .map(|m| m.split(',').map(|s| s.trim().to_string()).collect())
+            .unwrap_or_default();
+        let ct = content_type.unwrap_or("text");
+        let mut creation_json = json!({
+            "title": title,
+            "body": body,
+            "tags": tags_json,
+            "content_type": ct,
+            "media_urls": media_list,
+        });
+        if let Some(v) = visibility {
+            creation_json["visibility"] = json!(v);
+        }
+        if let Some(c) = cover_url {
+            creation_json["cover_url"] = json!(c);
+        }
+        let resp = client.post("/api/creations", Some(&token), &creation_json).await?;
+        let data = extract_data(&resp);
+        let creation_id = data["id"].as_str().unwrap_or("");
+        if creation_id.is_empty() {
+            anyhow::bail!("创作创建失败: 未获取到 creation id");
+        }
+        // 自动投稿到社区
+        let submit_json = json!({
+            "creation_id": creation_id,
+            "space_ns": namespace,
+            "module_type": module.unwrap_or("forum"),
+            "message": ""
+        });
+        client.post(&format!("/api/creations/{}/submit", creation_id), Some(&token), &submit_json).await?;
+        print_output(data, config.format);
+        print_success(&format!("Post created ({}): {}", ct, creation_id));
+    } else {
+        // 纯文本 → 走原有 post API
+        let mut body_json = json!({
+            "title": title,
+            "body": body,
+            "tags": tags_json,
+            "module_type": module.unwrap_or("forum"),
+            "content_type": content_type.unwrap_or("text")
+        });
+        if let Some(v) = visibility {
+            body_json["visibility"] = json!(v);
+        }
+        let resp = client.post(&format!("/api/spaces/{}/posts", namespace), Some(&token), &body_json).await?;
+        print_output(extract_data(&resp), config.format);
     }
-    let resp = client.post(&format!("/api/spaces/{}/posts", namespace), Some(&token), &body_json).await?;
-    print_output(extract_data(&resp), config.format);
     Ok(())
 }
 
