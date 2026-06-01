@@ -124,10 +124,17 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  return tabs;
  }, [spaceModules, isOwner]);
 
+ // Content-type route names that have dedicated rendering blocks
+ // even when no module tab matches (e.g. /space/ns/video → SpaceVideoTab).
+ // These must not be reset to 'overview' by the guard below.
+ const DIRECT_RENDER_TABS = new Set(['video', 'code_repo', 'chat']);
+
  const [activeTab, setActiveTab] = useState(urlTab || 'overview');
  useEffect(() => {
  if (spaceModules.length > 0 && !availableTabs.find(t => t.id === activeTab)) {
+ if (!DIRECT_RENDER_TABS.has(activeTab)) {
  setActiveTab(availableTabs[0]?.id || 'overview');
+ }
  }
  }, [spaceModules]);
 
