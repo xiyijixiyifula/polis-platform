@@ -7,9 +7,9 @@
 | 指标 | 数值 |
 |------|------|
 | 涉及文件数 | 52 |
-| 总修复点位 | 140 |
+| 总修复点位 | 144 |
 | 高危文件 (修复 3+ 次) | 14 |
-| 最近更新 | 2026-05-29 (v1.0.43) |
+| 最近更新 | 2026-06-01 (v1.0.47) |
 
 ## 高危文件 ⚠️
 
@@ -136,6 +136,10 @@
 | `web/src/app/creations/new/page.tsx` | 简化模块检查逻辑: normalized===forum复杂判断 → !MODULE_CONFIG[prefillModule] | v1.0.41 | module-breadcrumb-hardcoded |
 | `web/src/components/ContentCard.tsx` | `SubmissionInfo` interface + `adaptCreationItem()` | SubmissionInfo 新增 module_name 字段 + adaptCreationItem 传递 moduleLabel = firstSub?.module_name | v1.0.42 | module-breadcrumb-hardcoded |
 | `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 概览区 route fallback (lines 1081, 1087) | `|| 'posts'` → `|| p.module_type` — 修复 v1.0.41 引入的回归: 自定义模块帖子泄漏到交流Tab | v1.0.43 | module-breadcrumb-hardcoded |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | Posts Tab 发布按钮 (lines 1023-1035) | 大型 glass-card 发布卡片 → 紧凑 header 按钮（匹配自定义模块 UI 风格） | v1.0.44 | — |
+| `web/src/app/creations/new/page.tsx` | `handleModuleChange()` (lines 461-467) | 切换模块类型时检查 moduleAllowedTypes，预填模块支持新内容类型则不清空 submissions | v1.0.44 | — |
+| `web/src/app/creations/new/page.tsx` | `handleVideoUpload()` (lines 343-368) | publish 重试循环新增 `publishOk` 标志 + 响应 body 错误读取，失败后 `setError()` 显示具体原因 | v1.0.47 | — |
+| `web/src/app/creations/new/page.tsx` | `addSubmission()` (lines 398-420) | 社区无匹配模块时拒绝添加 (`!foundModule` → setError + return)，不再 fallback 到 moduleType 静默失败 | v1.0.47 | — |
 | `SpaceSettings.tsx` | `persistModules` | 补充 members keyMap 映射 | v1.0.14 | — |
 | `SpaceSettings.tsx` | `loadModules` | localStorage key 双格式回退 (编码/解码) | v0.2.58 | url-double-encoding |
 | `SpacePageClient.tsx` | params 处理 | decodeURIComponent → encodeURIComponent 防双重编码 | v1.0.11 | url-double-encoding |
@@ -234,3 +238,40 @@
 2. **修改代码后**: 在此表追加一条记录，标注修改内容和 Pattern
 3. **Bug 复发时**: 从此表定位之前的修复代码，复制粘贴修复
 4. **Code Review**: 检查修改是否与历史修复冲突
+
+## 修复配方反向索引 (Pattern → Recipe)
+
+> 当某个修复点位的 Bug 复发时，按 Pattern 名称找到对应配方，直接套用修复。
+
+| Pattern | 修复配方 | 典型修复操作 |
+|---------|----------|-------------|
+| url-double-encoding | [配方](fix-recipes/url-double-encoding.md) | `decodeURIComponent` → `encodeURIComponent` |
+| xattr-contamination | [配方](fix-recipes/xattr-contamination.md) | `COPYFILE_DISABLE=1 tar` + 清理 `._*` |
+| array-map-null | [配方](fix-recipes/array-map-null.md) | `.map(` → `?.map(` 或 `(arr ?? []).map(` |
+| dependency-auto-upgrade | [配方](fix-recipes/dependency-auto-upgrade.md) | 锁定精确版本号 |
+| post-count-sync | [配方](fix-recipes/post-count-sync.md) | 新增 `INSERT INTO posts` 路径后追加 `post_count + 1` |
+| missing-form-field | [配方](fix-recipes/missing-form-field.md) | 逐一对比 useState key 与 JSX input |
+| gateway-route-missing | [配方](fix-recipes/gateway-route-missing.md) | Gateway `is_content`/`is_video` 条件补充 |
+| deploy-path-mismatch | [配方](fix-recipes/deploy-path-mismatch.md) | `systemctl cat <svc>` 检查 ExecStart |
+| atob-base64url | [配方](fix-recipes/atob-base64url.md) | `atob(token.replace(/-/g,'+').replace(/_/g,'/'))` |
+| actions-array-missing | [配方](fix-recipes/actions-array-missing.md) | `actions` 数组追加新端点后缀 |
+| wrong-build-target | [配方](fix-recipes/wrong-build-target.md) | `--target x86_64-unknown-linux-gnu` |
+| module-tab-key-mismatch | [配方](fix-recipes/module-tab-key-mismatch.md) | tab id 使用 `MODULE_CONFIG[key]?.route \|\| key` |
+| module-breadcrumb-hardcoded | [配方](fix-recipes/module-breadcrumb-hardcoded.md) | 替换所有 `'forum'/'交流'` 硬编码为 `getModuleLabel()` + 后端返回 `module_name` |
+| enum-serialization-data-loss | [配方](fix-recipes/enum-serialization-data-loss.md) | `#[serde(untagged)]` 或保留原始字符串 |
+
+## 脆弱文件修改前检查清单
+
+> 修改以下高危文件前，强制逐项检查。
+
+| 文件 | 修复次数 | 修改前必须检查 |
+|------|----------|---------------|
+| `SpacePageClient.tsx` | 11 | [ ] URL 参数编码是否先 decode 再 encode / [ ] 模块 fallback 不使用硬编码 / [ ] .map() 是否防空 / [ ] 新增状态是否影响现有依赖 |
+| `space_routes.rs` | 7 | [ ] actions_suffixes 数组是否包含新端点 / [ ] actions 数组是否同步 / [ ] DELETE 路由映射是否正确 |
+| `content_handler.rs` | 5 | [ ] 新增 INSERT INTO posts 后 post_count +1 / [ ] Visibility 枚举与 DB 同步 / [ ] SQL 参数化 |
+| `SpaceSettings.tsx` | 4 | [ ] localStorage key 双格式回退 / [ ] .map() 防空 / [ ] 表单 useState 与 JSX 一致 |
+| `content_routes.rs` | 4 | [ ] block_private 检查 / [ ] URL 解码 |
+| `main.rs` (gateway) | 4 | [ ] is_content/is_video 条件覆盖 / [ ] 新增 space 端点排除 |
+| `api.ts` | 4 | [ ] ApiResponse<T> 包装 / [ ] 新方法命名一致 |
+| `creations/new/page.tsx` | 3 | [ ] MODULE_CONFIG 映射完整 / [ ] moduleAllowedTypes 检查 / [ ] submissions 清除逻辑 / [ ] 视频上传 publish 是否传 module_type |
+| `module-config.ts` | 1 | [ ] 新函数不对未知 key 返回硬编码 / [ ] getModuleLabel/normalizeModuleType 透传逻辑 |
