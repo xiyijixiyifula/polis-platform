@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   Heart, MessageCircle, Bookmark, Eye, Repeat2,
@@ -10,7 +11,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatCount, stripMarkdown } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
-import { getModuleLabel, getModuleLabelByContentType, buildPostLink } from '@/lib/module-config';
+import { getModuleLabel, getModuleLabelByContentType, buildPostLink, MODULE_CONFIG } from '@/lib/module-config';
 
 // ========== Types ==========
 
@@ -210,6 +211,7 @@ export default function ContentCard({
   submissionCount,
 }: ContentCardProps) {
   const t = useTranslations();
+  const router = useRouter();
   const [liked, setLiked] = useState(isLiked);
   const [bookmarked, setBookmarked] = useState(initBookmarked);
   const [following, setFollowing] = useState(initFollowing);
@@ -266,7 +268,7 @@ export default function ContentCard({
         {displaySpaceOwner && (
           <>
             <span
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = builtProfileLink; }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(builtProfileLink); }}
               className="font-semibold text-primary-600 dark:text-primary-400 hover:underline cursor-pointer truncate max-w-[130px]"
             >
               @{displaySpaceOwner}
@@ -279,7 +281,7 @@ export default function ContentCard({
         {displaySpaceName && (
           <>
             <span
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = builtSpaceLink; }}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(builtSpaceLink); }}
               className="text-primary-600 dark:text-primary-400 hover:underline cursor-pointer truncate max-w-[140px]"
             >
               {displaySpaceName}
@@ -292,7 +294,12 @@ export default function ContentCard({
         <span
           onClick={(e) => {
             e.preventDefault(); e.stopPropagation();
-            if (spaceNs) window.location.href = `/space/${encodeURIComponent(spaceNs)}`;
+            if (!spaceNs) return;
+            const modRoute = MODULE_CONFIG[moduleType || '']?.route;
+            const targetUrl = modRoute && modRoute !== 'posts'
+              ? `/space/${encodeURIComponent(spaceNs)}/${modRoute}`
+              : `/space/${encodeURIComponent(spaceNs)}`;
+            router.push(targetUrl);
           }}
           className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
         >
@@ -363,7 +370,7 @@ export default function ContentCard({
         <span
           onClick={(e) => {
             e.preventDefault(); e.stopPropagation();
-            if (displayAuthorUsername) window.location.href = `/profile/${encodeURIComponent(displayAuthorUsername)}`;
+            if (displayAuthorUsername) router.push(`/profile/${encodeURIComponent(displayAuthorUsername)}`);
           }}
           className="font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 hover:underline cursor-pointer"
         >
@@ -512,7 +519,7 @@ export default function ContentCard({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/space/${encodeURIComponent(sub.space.namespace)}`; }}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/space/${encodeURIComponent(sub.space.namespace)}`); }}
                           className="text-primary-600 dark:text-primary-400 hover:underline cursor-pointer truncate font-medium"
                         >
                           @{sub.space.namespace.split('/')[0]}/{sub.space.title || sub.space.namespace}/{sub.module_name || getModuleLabel(sub.module_type)}
