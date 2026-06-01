@@ -1,6 +1,6 @@
 # 当前任务进度
 
-> 最后更新: 2026-05-29
+> 最后更新: 2026-06-01
 
 ## 追踪模式
 
@@ -8,7 +8,47 @@ LOCAL_ONLY
 
 ## 当前状态
 
-**活跃任务**: 模块架构去交流中心主义改造 (v1.0.41)
+**活跃任务**: 无
+
+### 已完成 (v1.0.47) — 视频发布体验修复 (2026-06-01)
+
+- [x] **BUG-005**: `handleVideoUpload()` publish 失败后显示实际错误信息（不再静默忽略）
+- [x] **BUG-004**: `addSubmission()` 社区不支持当前模块时拒绝添加并提示
+- [x] **BUG-006 排除**: 中文 namespace 查询失败确认为测试拼写错误（缺少"这"字），非代码 bug
+- [x] **浏览器验证**: 创作页模块切换预填保留 ✅ / 发布按钮统一 ✅ / 视频标签页正常 ✅
+- [x] **编译 + GitHub Release (v1.0.47) + 服务器部署**
+
+- [x] **CLI 页面新增命令组**: 💭 聊天室、✉️ 私信、👥 关注、💚 健康检查、🛠️ adminctl.sh
+- [x] **已有命令组扩充**: 社区 (+list/members/root/subspaces/analytics)、帖子 (+pin/featuring/hide/view/download)、投票 (+all)、管理后台 (+approve/reject/hide/unhide/review/rules/refs/audit)
+- [x] **Rust vs Bash 对比表修正**: 新增 chat/message/qa/health/series/tier/admin-review 对比行；纠正 series/tier 高级操作 Bash 支持状态
+- [x] **安全修复**: 移除快速开始中硬编码的旧管理凭据
+- [x] **CLI-GUIDE.md 同步更新**: 管理操作章节补充 review/rules/refs/audit/posts approve-reject 等
+- [x] **编译 + GitHub Release (v1.0.46) + 服务器部署 + 浏览器验证** — 20 个命令组全部显示正确
+
+### 已完成 (v1.0.45) — 全站功能审查 + Bug 修复验证 (2026-05-30)
+
+### 已完成 (v1.0.45) — 全站功能审查 + Bug 修复验证 (2026-05-30)
+
+- [x] **全站 20+ 页面逐一测试** — 首页/发现/趋势/热榜/搜索/社区空间(5个Tab)/帖子详情/创作者中心(仪表盘+内容管理)/创作页(文章↔视频切换)/设置/消息/通知/个人资料/创建社区/关于/更新日志/隐私/AI研究/CLI/管理后台
+- [x] **v1.0.44 Bug 修复验证通过**:
+  - 交流Tab发布按钮已统一为紧凑header按钮（与自定义模块一致）
+  - 创作页文章↔视频切换预填数据正确保留
+- [x] **无新增Bug** — 所有页面渲染正常、按钮功能正确、API请求无异常
+- [x] **已知问题**: PWA manifest icon 404 (非关键)、管理子页面直接URL访问返回404 (客户端Tab切换)
+
+### 已完成 (v1.0.44) — 模块发布按钮统一 + 切换不清除预填
+
+- [x] **Fix 1: 发布按钮统一** — SpacePageClient.tsx Posts Tab 发布按钮从大型 glass-card 改为紧凑 header 按钮（与自定义模块一致）
+- [x] **Fix 2: 模块切换不清除预填** — creations/new/page.tsx handleModuleChange 添加 prefillStillValid 检查，预填模块支持新内容类型时不清空 submissions
+- [x] **浏览器端到端验证** — 用户空间(世界公园) + 测试社区(测试模块发帖验证) 双场景验证通过
+- [x] **新发现 BUG-001** — 视频发布不创建 ModuleRef (video→space_videos 表而非 module_refs 表)，影响自定义模块视频发布
+- [x] **Bug 追踪系统深度增强设计**:
+  - [x] **`scripts/pre-modify-check.sh`** — 修改文件前的风险评估脚本（13个脆弱文件的风险检查+修复配方）
+  - [x] **`docs/bugs/INDEX.md` 增强** — 新增 Bug 生命周期追踪 + 修复紧急程度分级 + 复发预警系统 + 快速参考卡片
+  - [x] **`docs/bugs/fix-points.md` 增强** — 新增修复配方反向索引 + 脆弱文件修改前检查清单
+  - [x] **`docs/KNOWN-ISSUES.md` 更新** — 记录视频 ModuleRef 架构问题
+  - [x] **`CLAUDE.md` 更新** — Bug 修复流程增加 pre-modify-check.sh 步骤
+- [x] **部署**: v1.0.44 已发布到 GitHub Release + 服务器
 
 ### 已完成 (v1.0.36) — Bug 追踪系统深度增强
 
@@ -110,8 +150,17 @@ LOCAL_ONLY
 - [x] **根因**: v1.0.41 引入的回归 — 当 p.module_type 不在 MODULE_CONFIG 中时，fallback 'posts' 导致自定义模块帖子泄漏到交流Tab
 - [x] **编译 + GitHub Release (v1.0.43) + 服务器部署 + 浏览器验证** — 交流Tab不再显示天气预报模块帖子
 
+### 已完成 (v1.0.44) — 发布按钮统一 + 模块切换不清除预填
+
+- [x] **SpacePageClient.tsx Posts Tab** — 大型 glass-card 发布卡片 → 紧凑 header 按钮（"交流"标题 + "发布"按钮），与自定义模块样式一致
+- [x] **creations/new/page.tsx handleModuleChange** — 添加 prefillStillValid 检查：预填模块支持新内容类型时不清空 submissions
+- [x] **编译 + GitHub Release (v1.0.44) + 服务器部署 + 浏览器验证** — 交流模块发布按钮与天气预报一致；文章↔视频切换预填保留
+
 ### 部署版本
 
+v1.0.46 — CLI 页面文档全面更新 (2026-05-30)
+v1.0.45 — 全站功能审查 (无新增Bug) (2026-05-30)
+v1.0.44 — 发布按钮统一 + 模块切换不清除预填 (2026-05-29)
 v1.0.43 — Route fallback 回归修复 (2026-05-29)
 v1.0.42 — Profile 页作品模块名修复 (2026-05-29)
 v1.0.41 — 模块架构去交流中心主义彻底改造 (2026-05-29)
