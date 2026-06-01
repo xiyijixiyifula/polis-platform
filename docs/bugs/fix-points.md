@@ -7,7 +7,7 @@
 | 指标 | 数值 |
 |------|------|
 | 涉及文件数 | 52 |
-| 总修复点位 | 148 |
+| 总修复点位 | 149 |
 | 高危文件 (修复 3+ 次) | 15 |
 | 最近更新 | 2026-06-01 (v1.0.52) |
 
@@ -126,6 +126,7 @@
 
 | 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
 |------|----------|----------|------|---------|
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | DIRECT_RENDER_TABS绕过回退 | v1.0.56 | module-tab-key-mismatch |
 | `web/src/app/space/[...namespace]/SpacePageClient.tsx` | moduleLabel从spaceModules查找自定义模块名,web/src/components/PostCard.tsx:48:module_type不再硬编码为forum,web/src/components/PostCard.tsx:94:内联面包屑使用动态module_label,SpacePageClient多处PostCard调用:传入module_type和module_label | v1.0.40 | module-breadcrumb-hardcoded |
 | `web/src/lib/module-config.ts` | **ROOT CAUSE**: MODULE_ALIASES 删除 article→forum 映射 / getModuleLabel() 未知key返回自身而非'交流' / normalizeModuleType() 去折叠 / getModuleLabelByContentType() moduleType优先 | v1.0.41 | module-breadcrumb-hardcoded |
 | `web/src/components/ContentCard.tsx` | moduleLabel prop新增 / 面包屑优先moduleLabel / adaptCreationItem()去normalizeModuleType / adaptFeedItem()读API module_name | v1.0.41 | module-breadcrumb-hardcoded |

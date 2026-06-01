@@ -10,6 +10,20 @@ LOCAL_ONLY
 
 **活跃任务**: 无
 
+### 已完成 (v1.0.56) — 空间页视频Tab路由解析修复 (2026-06-01)
+
+- [x] **SpacePageClient.tsx 视频Tab路由解析**: 自定义视频模块无标准 module_key='video' 时，'video' URL路由保留原值直接渲染SpaceVideoTab，不再回退到overview
+  - **根因**: 所有模块的 allowed_content_types 均包含 ['video', 'article']，无法基于内容类型区分模块
+  - **修复**: 新增 DIRECT_RENDER_TABS 集合，'video' 等渲染类型不触发回退
+  - **涉及**: `web/src/app/space/[...namespace]/SpacePageClient.tsx:128-144`
+- [x] **编译 + GitHub Release (v1.0.56) + 服务器部署 + 浏览器验证** — 视频Tab正确渲染视频内容
+
+### 已完成 (v1.0.55) — ContentCard 模块标签导航修复 (2026-06-01)
+
+- [x] **ContentCard.tsx 模块标签导航**: window.location.href 全页刷新 → useRouter 客户端路由，moduleType 映射到正确子路由
+  - **根因**: `window.location.href` 导致首页短暂白屏（全页刷新）
+  - **涉及**: `web/src/components/ContentCard.tsx`
+
 ### 已完成 (v1.0.54) — HLS 播放器初始化顺序优化 (2026-06-01)
 
 - [x] **VideoPageClient.tsx HLS 初始化顺序修复**: attachMedia → loadSource（官方推荐顺序）
@@ -183,6 +197,8 @@ LOCAL_ONLY
 
 ### 部署版本
 
+v1.0.56 — 空间页视频Tab路由解析修复 (2026-06-01)
+v1.0.55 — ContentCard 模块标签导航修复 (2026-06-01)
 v1.0.54 — HLS 播放器初始化优化 (2026-06-01)
 v1.0.46 — CLI 页面文档全面更新 (2026-05-30)
 v1.0.45 — 全站功能审查 (无新增Bug) (2026-05-30)
