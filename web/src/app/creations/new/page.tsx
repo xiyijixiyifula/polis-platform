@@ -343,6 +343,8 @@ function NewCreationPageInner() {
       if (submissions.length > 0 && result.id) {
         const spaceIds = submissions.map(s => s.spaceId);
         const token = getToken() || '';
+        let publishOk = false;
+        let publishError = '';
         for (let retry = 0; retry < 3; retry++) {
           try {
             const pubRes = await fetch(`/api/videos/${result.id}/publish`, {
@@ -350,9 +352,19 @@ function NewCreationPageInner() {
               headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
               body: JSON.stringify({ space_ids: spaceIds }),
             });
-            if (pubRes.ok) break;
-          } catch {}
+            if (pubRes.ok) { publishOk = true; break; }
+            try {
+              const errData = await pubRes.json();
+              publishError = errData.message || `服务器错误 (${pubRes.status})`;
+            } catch { publishError = `服务器错误 (${pubRes.status})`; }
+          } catch { publishError = '网络错误，无法连接服务器'; }
           if (retry < 2) await new Promise(r => setTimeout(r, 2000));
+        }
+        if (!publishOk) {
+          setError(`视频已上传成功，但投稿到社区失败：${publishError}`);
+          setUploadStatus('success');
+          setUploadedVideo({ id: result.id, title: result.title || title.trim() });
+          return;
         }
       }
 
@@ -385,8 +397,9 @@ function NewCreationPageInner() {
 
   const addSubmission = async (space: any) => {
     // 查找该空间中接受当前内容类型的模块
-    let mk = moduleType; // fallback: 编辑器类型
+    let mk = moduleType;
     let ml: string | undefined;
+    let foundModule = false;
     try {
       const modRes = await spacesApi.listModules(space.namespace);
       if (modRes.code === 0 && modRes.data) {
@@ -396,9 +409,15 @@ function NewCreationPageInner() {
         if (matchingMod) {
           mk = matchingMod.module_key;
           ml = matchingMod.name;
+          foundModule = true;
         }
       }
     } catch {}
+
+    if (!foundModule) {
+      setError(`社区「${space.title || space.namespace}」未开启${currentModule.label}模块，无法投稿`);
+      return;
+    }
 
     if (submissions.some(s => s.spaceId === space.id && s.moduleType === mk)) return;
     setSubmissions(prev => [...prev, {
