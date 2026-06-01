@@ -20,6 +20,8 @@
 ## 关键 Bug 修复记录
 
 > 防止回退 — 以下 bug 曾经导致线上事故，修复后记录在此
+- **视频大文件上传 Gateway 代理失败 502 (v1.0.52)** — >=2MB 视频上传时 gateway 返回 "Service temporarily unavailable"。根因: 视频服务鉴权失败时 axum 在 body 未消费时关闭连接，reqwest 还在写 body 时连接中断 → SendRequest 错误。修复: Gateway 剥离 hop-by-hop headers + 视频服务 auth 失败时先 drain multipart body 再返回错误。**教训: 所有后端 handler 在返回错误前应确保请求体被消耗。**
+- **视频投稿 403 "目标社区未开启视频模块" (v1.0.53)** — 自定义视频模块 (module_key=`mod_1ade9c1d`) 投稿后 publish 返回 403。根因: `validate_space_for_video_submission` 检查 `spaces.enabled_modules` 硬编码 key=`"video"`，自定义模块 key 不匹配。修复: 改为查 `space_modules` 表用 `allowed_content_types @> '["video"]'::jsonb`。**教训: 视频服务早于 ModuleRef 系统，`spaces.enabled_modules` 是旧字段，涉及模块能力判断应查 `space_modules` 表。**
 - **社区概览页和Feed页帖子面包屑显示模块名为'交流'而非实际模块名(如'天气预报') (v1.0.40)** — 见 [module-breadcrumb-hardcoded](bugs/patterns/module-breadcrumb-hardcoded.md)
 - **自定义模块帖子DB中module_type正确但API返回forum/text，前端tab不显示 (v1.0.39)** — 见 [enum-serialization-data-loss](bugs/patterns/enum-serialization-data-loss.md)
 
@@ -56,6 +58,8 @@
 - **SpaceSettings allowed_content_types null 安全 (v1.0.35)** — `m.allowed_content_types.map()` 缺少空值防御，若 API 返回 null/undefined 则 React 崩溃白屏。用户曾报告"改模块权限后页面空白"但多次浏览器测试未能稳定复现。作为防御性修复: `(m.allowed_content_types ?? []).map()`。见 [array-map-null](bugs/patterns/array-map-null.md)。
 
 - **mtFilter 硬编码模块类型过滤 (v1.0.33)** — SpacePageClient 使用硬编码 Set 过滤帖子模块类型（仅允许 17 种旧模块），自定义模块帖子被过滤掉。修复: 移除 mtFilter，直接追加所有帖子。
+
+- **视频发布不创建 ModuleRef (v1.0.44 发现)** — 视频上传后通过 `/api/videos/{id}/publish` 发布到社区，但该端点只接受 `space_ids` 不接受 `module_type`。Video 系统使用独立的 `space_videos` 表而非 `module_refs` 表，导致视频无法关联到自定义模块 Tab。根因: 视频系统架构早于 ModuleRef/自定义模块系统，未同步升级。影响: 通过自定义模块入口发布的视频不会出现在模块 feed 中。修复方向: 1) PublishRequest 增加 `module_type` 字段; 2) `submit_to_space` 同时写入 `module_refs` 表。
 
 - **管理后台 reported_content SQL Bug** — `get_platform_stats()` 子查询错误使用了 `posts` 表。修复: 改为 `SELECT COUNT(*) FROM reports WHERE status = 'pending'`（v0.3.64）
 

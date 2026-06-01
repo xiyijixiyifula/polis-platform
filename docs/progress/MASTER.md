@@ -10,6 +10,31 @@ LOCAL_ONLY
 
 **活跃任务**: 无
 
+### 已完成 (v1.0.54) — HLS 播放器初始化顺序优化 (2026-06-01)
+
+- [x] **VideoPageClient.tsx HLS 初始化顺序修复**: attachMedia → loadSource（官方推荐顺序）
+- [x] **编译 + GitHub Release (v1.0.54) + 服务器部署 + 浏览器验证** — 视频播放正常
+
+### 已完成 (v1.0.53) — 视频投稿 403 修复 + 内容类型提示 (2026-06-01)
+
+- [x] **视频投稿 403 修复**: `validate_space_for_video_submission` 从查 `spaces.enabled_modules` 硬编码 `"video"` key → 查 `space_modules` 表 `allowed_content_types @> '["video"]'::jsonb`，兼容自定义视频模块 (module_key=`mod_1ade9c1d`)
+  - **根因**: 视频服务早于 ModuleRef 系统，`spaces.enabled_modules` 只存 module_key 字符串列表，无法判断模块是否允许视频内容
+  - **涉及**: `crates/polis-video/src/repo.rs`
+- [x] **模块页内容类型标签**: Posts Tab (交流) 和自定义模块发布区域添加内容类型标签 (文章/视频)
+  - **涉及**: `web/src/app/space/[...namespace]/SpacePageClient.tsx`
+- [x] **创作页过滤验证**: 确认 `availableModuleTypes` 和 `moduleAllowedTypes` 过滤逻辑正常工作
+- [x] **浏览器验证**: 用户视频 (生成古风女孩特写图2.mp4, 3.1MB) 上传成功 → publish 200 → HLS 转码完成 → 视频页面可播放
+- [x] **编译 + GitHub Release (v1.0.53) + 服务器部署**
+
+### 已完成 (v1.0.52) — 视频大文件上传 Gateway 代理修复 (2026-06-01)
+
+- [x] **BUG-007**: >=2MB 视频上传 Gateway 代理返回 "Service temporarily unavailable" (502)
+  - **根因**: 视频服务 `upload_video` handler 鉴权失败时 axum 在 body 未消费时关闭 TCP 连接，gaeway reqwest 仍在发送 body 时连接中断 → `client error (SendRequest)`
+  - **Gateway 修复** (`main.rs`): `proxy_request_with_limit` 转发前剥离 10 个 hop-by-hop headers (Connection, Upgrade, Host, Content-Length 等)，增强错误日志打印 source chain
+  - **Video 服务修复** (`routes.rs`): `upload_video` auth 失败时先 `while let Ok(Some(field)) = multipart.next_field().await { let _ = field.bytes().await; }` drain body 再返回 error
+  - **验证**: 服务器 curl 3MB 文件上传返回 403 (鉴权)，不再是 502; 外网 HTTPS 测试通过
+- [x] **编译 + GitHub Release (v1.0.48→v1.0.52) + 服务器部署**
+
 ### 已完成 (v1.0.47) — 视频发布体验修复 (2026-06-01)
 
 - [x] **BUG-005**: `handleVideoUpload()` publish 失败后显示实际错误信息（不再静默忽略）
@@ -158,6 +183,7 @@ LOCAL_ONLY
 
 ### 部署版本
 
+v1.0.54 — HLS 播放器初始化优化 (2026-06-01)
 v1.0.46 — CLI 页面文档全面更新 (2026-05-30)
 v1.0.45 — 全站功能审查 (无新增Bug) (2026-05-30)
 v1.0.44 — 发布按钮统一 + 模块切换不清除预填 (2026-05-29)

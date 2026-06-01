@@ -104,7 +104,16 @@ pub fn video_routes(handler: Arc<VideoHandler>) -> Router {
 
 /// POST /api/videos — 上传视频 (multipart/form-data)
 async fn upload_video(State(h): State<Arc<VideoHandler>>, headers: HeaderMap, mut multipart: Multipart) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = match require_user(&headers) {
+        Ok(uid) => uid,
+        Err(e) => {
+            // 必须先消耗 body 再返回错误, 避免客户端在发送 body 时连接被关闭
+            while let Ok(Some(field)) = multipart.next_field().await {
+                let _ = field.bytes().await;
+            }
+            return Err(e);
+        }
+    };
     let mut title = String::from("未命名");
     let mut desc = String::new();
     let mut vis = String::from("public");

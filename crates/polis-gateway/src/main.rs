@@ -405,7 +405,7 @@ async fn proxy_request_with_limit(
     limit_bytes: usize,
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let method = req.method().clone();
-    let headers = req.headers().clone();
+    let original_headers = req.headers().clone();
 
     // 读取请求体（根据 limit_bytes 限制大小）
     let body_bytes = axum::body::to_bytes(req.into_body(), limit_bytes)
@@ -418,43 +418,81 @@ async fn proxy_request_with_limit(
             )
         })?;
 
+    // 构建转发 headers：剥离 hop-by-hop 和不应转发的 headers
+    // RFC 7230: hop-by-hop headers 不应该被代理转发
+    let mut fwd_headers = reqwest::header::HeaderMap::new();
+    for (key, value) in original_headers.iter() {
+        let lower = key.as_str().to_lowercase();
+        // 剥离 hop-by-hop headers（由 reqwest 自行管理）
+        if lower == "connection"
+            || lower == "keep-alive"
+            || lower == "proxy-authenticate"
+            || lower == "proxy-authorization"
+            || lower == "te"
+            || lower == "trailer"
+            || lower == "transfer-encoding"
+            || lower == "upgrade"
+            || lower == "host"
+            || lower == "content-length"
+        {
+            continue;
+        }
+        fwd_headers.insert(key.clone(), value.clone());
+    }
+
     tracing::info!("Proxying {} to {} (body: {} bytes)", method, target_url, body_bytes.len());
 
-    // 构建代理请求
-    let proxy_req = client
-        .request(method, target_url)
-        .headers(headers)
-        .body(body_bytes);
+    // 发送请求（带 1 次重试以应对瞬时连接故障）
+    let mut last_error: Option<(StatusCode, Json<ApiResponse<()>>)> = None;
+    for attempt in 0..2 {
+        let proxy_req = client
+            .request(method.clone(), target_url)
+            .headers(fwd_headers.clone())
+            .body(body_bytes.clone());
 
-    // 发送请求
-    match proxy_req.send().await {
-        Ok(resp) => {
-            let status = resp.status();
-            let resp_headers = resp.headers().clone();
-            let resp_body = resp.bytes().await.unwrap_or_default();
+        match proxy_req.send().await {
+            Ok(resp) => {
+                let status = resp.status();
+                let resp_headers = resp.headers().clone();
+                let resp_body = resp.bytes().await.unwrap_or_default();
 
-            let mut response = Response::new(axum::body::Body::from(resp_body));
-            *response.status_mut() = status;
-            for (key, value) in resp_headers.iter() {
-                // 剥离上游 CORS 头，由 gateway 统一设置
-                let lower = key.as_str().to_lowercase();
-                if lower == "transfer-encoding"
-                    || lower == "content-encoding"
-                    || lower.starts_with("access-control-")
-                {
-                    continue;
+                let mut response = Response::new(axum::body::Body::from(resp_body));
+                *response.status_mut() = status;
+                for (key, value) in resp_headers.iter() {
+                    // 剥离上游 CORS 头，由 gateway 统一设置
+                    let lower = key.as_str().to_lowercase();
+                    if lower == "transfer-encoding"
+                        || lower == "content-encoding"
+                        || lower.starts_with("access-control-")
+                    {
+                        continue;
+                    }
+                    response.headers_mut().insert(key.clone(), value.clone());
                 }
-                response.headers_mut().insert(key.clone(), value.clone());
+                return Ok(response);
             }
-            Ok(response)
-        }
-        Err(e) => {
-            tracing::error!("Proxy error: {} (is_connect={}, is_timeout={}, is_body={}, is_decode={})",
-                e, e.is_connect(), e.is_timeout(), e.is_body(), e.is_decode());
-            Err((
-                StatusCode::BAD_GATEWAY,
-                Json(ApiResponse::error(1502, "Service temporarily unavailable")),
-            ))
+            Err(e) => {
+                let is_connect = e.is_connect();
+                // 获取底层错误链以获得更详细的信息
+                let mut source_detail = String::new();
+                if let Some(src) = std::error::Error::source(&e) {
+                    source_detail = format!(" | source: {}", src);
+                }
+                tracing::warn!("Proxy attempt {} failed: {} (is_connect={}, is_timeout={}, is_body={}, is_decode={}, url={}){}",
+                    attempt + 1, e, is_connect, e.is_timeout(), e.is_body(), e.is_decode(), target_url, source_detail);
+                last_error = Some((
+                    StatusCode::BAD_GATEWAY,
+                    Json(ApiResponse::error(1502, "Service temporarily unavailable")),
+                ));
+                // 仅对非连接错误重试（连接错误通常不是瞬时的）
+                if is_connect { break; }
+                if attempt == 0 {
+                    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+                }
+            }
         }
     }
+
+    tracing::error!("Proxy failed after all retries for {}", target_url);
+    Err(last_error.unwrap())
 }

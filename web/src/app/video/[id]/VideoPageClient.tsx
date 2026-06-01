@@ -45,8 +45,8 @@ export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; 
       if (cancelled || !videoEl) return;
       if (Hls.isSupported()) {
         const hls = new Hls({ enableWorker: false });
-        hls.loadSource(src);
         hls.attachMedia(videoEl);
+        hls.loadSource(src);
         hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
           if (data.fatal) {
             switch (data.type) {

@@ -102,6 +102,9 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 ### 自动化流程（推荐）
 
 ```bash
+# 0. 修改代码前 — 评估文件风险（涉及脆弱文件时必执行）
+./scripts/pre-modify-check.sh <文件路径>
+
 # 1. 先诊断 — 查是否有已知配方
 ./scripts/diagnose.sh "<症状描述>"
 
@@ -136,6 +139,8 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 
 | 工具 | 用途 |
 |------|------|
+| `./scripts/pre-modify-check.sh <file>` | 修改文件前的风险评估（脆弱文件检查+修复配方） |
+| `./scripts/pre-modify-check.sh --all` | 列出所有高危脆弱文件 |
 | `./scripts/diagnose.sh "<症状>"` | 症状自动诊断 → 匹配已知 Pattern |
 | `./scripts/bug-record.sh` | 修复后一键更新所有追踪文件 |
 | `./scripts/gen-stats.sh` | 生成趋势/排名统计报告 |

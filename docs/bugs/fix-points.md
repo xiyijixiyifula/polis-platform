@@ -7,9 +7,9 @@
 | 指标 | 数值 |
 |------|------|
 | 涉及文件数 | 52 |
-| 总修复点位 | 144 |
-| 高危文件 (修复 3+ 次) | 14 |
-| 最近更新 | 2026-06-01 (v1.0.47) |
+| 总修复点位 | 148 |
+| 高危文件 (修复 3+ 次) | 15 |
+| 最近更新 | 2026-06-01 (v1.0.52) |
 
 ## 高危文件 ⚠️
 
@@ -21,7 +21,7 @@
 | `crates/polis-content/src/routes/content_routes.rs` | 4 | URL编码, 发帖权限, 上传权限, DefaultBodyLimit | v1.0.24 |
 | `crates/polis-gateway/src/main.rs` | 4 | 查询参数丢失, 路由缺失, Body Limit, modules路由误判 | v1.0.31 |
 | `crates/polis-space/src/routes/space_routes.rs` | 7 | URL编码, DELETE路由, 中文slug, star端点, is_starred, modules CRUD, actions数组遗漏 | v1.0.32 |
-| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 7 | URL编码, 模块导航, 成员列表, 删除按钮, mtFilter, module-tab-key-mismatch, 去交流中心主义 | v1.0.41 |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | 8 | URL编码, 模块导航, 成员列表, 删除按钮, mtFilter, module-tab-key-mismatch, 去交流中心主义, 内容类型标签 | v1.0.53 |
 | `web/src/lib/api.ts` | 4 | URL编码, 类型修复, uploadFile, archive | v1.0.17 |
 | `web/src/components/SpaceSettings.tsx` | 4 | localStorage key, members keyMap, SpaceModulesManager rewrite, allowed_content_types null safety | v1.0.35 |
 | `web/src/app/create/page.tsx` | 2 | title slug, deriveSlug | v1.0.17 |
@@ -140,6 +140,8 @@
 | `web/src/app/creations/new/page.tsx` | `handleModuleChange()` (lines 461-467) | 切换模块类型时检查 moduleAllowedTypes，预填模块支持新内容类型则不清空 submissions | v1.0.44 | — |
 | `web/src/app/creations/new/page.tsx` | `handleVideoUpload()` (lines 343-368) | publish 重试循环新增 `publishOk` 标志 + 响应 body 错误读取，失败后 `setError()` 显示具体原因 | v1.0.47 | — |
 | `web/src/app/creations/new/page.tsx` | `addSubmission()` (lines 398-420) | 社区无匹配模块时拒绝添加 (`!foundModule` → setError + return)，不再 fallback 到 moduleType 静默失败 | v1.0.47 | — |
+| `crates/polis-video/src/repo.rs` | `validate_space_for_video_submission()` (lines 99-129) | `spaces.enabled_modules` 查硬编码 `"video"` key → 查 `space_modules` 表 `allowed_content_types @> '["video"]'::jsonb`，兼容自定义视频模块 | v1.0.53 | — |
+| `web/src/app/space/[...namespace]/SpacePageClient.tsx` | Posts Tab + 自定义模块发布区域 | 交流标题旁 + 自定义模块标题旁添加内容类型标签 (文章/视频) | v1.0.53 | — |
 | `SpaceSettings.tsx` | `persistModules` | 补充 members keyMap 映射 | v1.0.14 | — |
 | `SpaceSettings.tsx` | `loadModules` | localStorage key 双格式回退 (编码/解码) | v0.2.58 | url-double-encoding |
 | `SpacePageClient.tsx` | params 处理 | decodeURIComponent → encodeURIComponent 防双重编码 | v1.0.11 | url-double-encoding |
@@ -197,6 +199,13 @@
 |------|----------|----------|------|---------|
 | `main.rs` | Router 构建 | 新增 `.route("/api/user/{*path}", any(proxy_to_user))` — ban-status/appeal API | v1.0.22 | gateway-route-missing |
 | `main.rs` | `proxy_space_router` (is_content) | 移除 `remaining.contains("/modules")` 避免 modules 路由误判为 content | v1.0.31 | gateway-route-missing |
+| `main.rs` | `proxy_request_with_limit` | 转发前剥离 hop-by-hop headers (Connection, Upgrade, Host, Content-Length 等 10 个)，增强错误日志(source chain) | v1.0.52 | — |
+
+### 后端 — polis-video
+
+| 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
+|------|----------|----------|------|---------|
+| `routes.rs` | `upload_video` | auth 失败时 drain multipart body 再返回错误，防止客户端 body 写入中断 → 502 | v1.0.52 | — |
 
 ### 部署 — infra
 

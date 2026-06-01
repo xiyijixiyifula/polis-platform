@@ -1021,7 +1021,7 @@ setIsStarred(data.data.is_starred ?? false);
  {activeTab === 'posts' && (
  <>
  <div className="flex items-center justify-between mb-4">
- <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">交流</h3>
+ <div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">交流</h3>{(() => { const forumMod = spaceModules.find(m => m.module_key === 'forum'); const forumTypes = forumMod?.allowed_content_types || []; return forumTypes.map(t => (<span key={t} className={`text-[10px] px-1.5 py-0.5 rounded ${t === 'video' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'}`}>{t === 'video' ? '视频' : '文章'}</span>)); })()}</div>
  <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`}
  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors">
  <Plus size={14} />发布
@@ -1951,7 +1951,7 @@ setIsStarred(data.data.is_starred ?? false);
    return (
      <div>
        <div className="flex items-center justify-between mb-4">
-         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{currentMod.name}</h3>
+         <div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{currentMod.name}</h3>{hasArticle && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">文章</span>}{hasVideo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400">视频</span>}</div>
          <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=${encodeURIComponent(currentMod.module_key)}`}
            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors">
            <Plus size={14} />发布

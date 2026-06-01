@@ -6,14 +6,14 @@
 
 | 指标 | 数值 |
 |------|------|
-| 总修复数 | 78 |
+| 总修复数/发现 | 86 |
 | 已归类 Pattern | 12 |
 | 回归链数 | 9 |
 | 总复发次数 | 9（URL编码 ×3 + xattr ×2 + Array.map ×1 + Gateway路由 ×1 + 部署流程 ×1 + 模块标签硬编码 ×2） |
-| 复发率 | 10.3%（9/87） |
+| 复发率 | 10.1%（9/89） |
 | 修复配方数 | 13 |
 | 修复点位地图 | [fix-points.md](fix-points.md) |
-| 最近更新 | 2026-05-29 (v1.0.43) |
+| 最近更新 | 2026-06-01 (新发现 3 个) |
 
 ## 趋势面板
 
@@ -23,7 +23,7 @@
 
 | 月份 | 新增 Bug | 修复 | 复发 | 复发率 |
 |------|---------|------|------|--------|
-| 2026-05 | 36 | 76 | 8 | 9.6% |
+| 2026-05 | 38 | 78 | 8 | 9.3% |
 
 ### 脆弱文件 Top-10（修复次数降序）
 
@@ -31,12 +31,12 @@
 
 | 排名 | 文件 | 修复次数 | 主要风险 | 风险等级 |
 |------|------|----------|----------|----------|
-| 1 | `SpacePageClient.tsx` | 9 | RTE-MAP, RTE-NULL | 🔴 |
+| 1 | `SpacePageClient.tsx` | 11 | RTE-MAP, RTE-NULL | 🔴 |
 | 2 | `space_routes.rs` | 7 | RTE-REG, RTE-ENC | 🔴 |
 | 3 | `content_handler.rs` | 5 | SQL注入, post_count, XSS | 🔴 |
 | 4 | `SpaceSettings.tsx` | 4 | RTE-NULL, RTE-ENC | 🟡 |
 | 5 | `content_routes.rs` | 4 | RTE-ENC, SEC-AUTH | 🟡 |
-| 6 | `main.rs` (gateway) | 4 | RTE-REG, DEP-FLOW | 🔴 |
+| 6 | `main.rs` (gateway) | 5 | RTE-REG, DEP-FLOW | 🔴 |
 | 7 | `api.ts` | 4 | DEP-VER | 🟡 |
 | 8 | `repo.rs` (space) | 3 | post_count, star | 🟡 |
 | 9 | `ManagePageClient.tsx` | 2 | RTE-ENC, UI-FORM | 🟡 |
@@ -220,3 +220,119 @@ module-tab-key-mismatch ██ 1
 | `content_routes.rs` | 3 | 中间件统一权限门控（替代每次手写 block_private 调用） | 🟡 中 |
 | `SpacePageClient.tsx` | 8 | 拆分为多个小组件（post/join/follow/edit 独立管理状态） | 🟢 低 |
 | `types.rs` (Visibility) | 1 | DB 新增 visibility 值 → 同步更新 enum + Display + serde | 🟡 中 |
+
+---
+
+## Bug 生命周期追踪
+
+> 每个 Bug 从发现到关闭的状态流转。每次修复完成后更新对应 Bug 的状态。
+
+### 生命周期状态
+
+```
+🆕 已发现  →  🔍 诊断中  →  📝 方案确定  →  🔧 修复中  →  ✅ 已修复  →  🔒 已验证关闭
+                                    ↓                        ↓
+                                ⏸️ 暂缓修复              ↩️ 复发（回到 🔧）
+```
+
+### 当前活跃 Bug
+
+| Bug ID | 描述 | 发现版本 | 状态 | 关联 Pattern | 阻断原因 |
+|--------|------|----------|------|-------------|----------|
+| BUG-001 | 视频发布不创建 ModuleRef (video→module_refs) | v1.0.44 | 🆕 已发现 | — | 需要后端 PublishRequest 增加 module_type + 写入 module_refs 表 |
+| BUG-002 | 服务器 admin_code 文件与 env var 不一致 | v1.0.25 | ⏸️ 暂缓 | deploy-path-mismatch | 低优先级 — 仅影响管理码修改同步 |
+| BUG-003 | polis-aggregate 未部署 (跨社区精选/热榜功能缺失) | v0.2.x | ⏸️ 暂缓 | — | 需要服务器资源评估 |
+
+### 最近关闭 Bug
+
+| Bug ID | 描述 | 修复版本 | 关闭日期 | 验证方式 |
+|--------|------|----------|----------|----------|
+| BUG-007 | 视频大文件上传 Gateway 代理 502 (Service temporarily unavailable) | v1.0.52 | 2026-06-01 | 服务器 curl 验证: 3MB 文件上传返回 403 (鉴权) 非 502 |
+| BUG-v1.0.44-1 | 发布按钮不一致 (Forum glass-card → compact header) | v1.0.44 | 2026-05-29 | 浏览器验证: 交流/综合发布/天气预报 三模块样式一致 |
+| BUG-v1.0.44-2 | 切换模块清除预填 (article↔video) | v1.0.44 | 2026-05-29 | 浏览器验证: forum/custom module 切换均保留 |
+| BUG-v1.0.43 | 模块Route回退回归 (自定义模块帖子泄露到交流Tab) | v1.0.43 | 2026-05-29 | 概览区手动检查所有模块帖子归属 |
+| BUG-v1.0.42 | Profile页自定义模块名显示 module_key | v1.0.42 | 2026-05-29 | 浏览器验证: 个人主页作品模块标签正确 |
+| BUG-v1.0.39 | 自定义模块枚举序列化丢失 → API 返回 forum/text | v1.0.39 | 2026-05-29 | API 测试: module_type 与 DB 一致 |
+
+## 修复紧急程度分级
+
+> 根据影响范围和用户体验影响，对 Bug 修复进行分级，帮助排优先级。
+
+| 级别 | 代码 | 标准 | 响应时间 | 示例 |
+|------|------|------|----------|------|
+| 🔴 P0 紧急 | CRITICAL | 核心功能不可用 / 数据丢失 / 安全漏洞 | 即时修复 | 页面白屏、API 全站 404、SQL 注入 |
+| 🟠 P1 高优 | HIGH | 主要功能受影响 / 用户体验严重降级 | 24小时内 | 发布按钮不工作、帖子不可见、登录失败 |
+| 🟡 P2 中优 | MEDIUM | 次要功能异常 / UI 不一致 / 边界条件 | 本周内 | 按钮样式不统一、面包屑显示错误、计数延迟 |
+| 🟢 P3 低优 | LOW | 显示优化 / 文案修正 / 未来功能准备 | 下个迭代 | 文案修正、未使用的代码清理、文档更新 |
+
+### 本版本修复分级
+
+| 修复 | 级别 | 理由 |
+|------|------|------|
+| v1.0.44 Fix 1 (发布按钮统一) | 🟡 P2 | UI 一致性，不影响功能 |
+| v1.0.44 Fix 2 (切换不清除预填) | 🟠 P1 | 用户体验严重降级 — 每次切换都需重填 |
+| 新发现 BUG-001 (视频 ModuleRef) | 🟠 P1 | 通过自定义模块发布的视频不出现在模块 feed |
+
+## 复发预警系统
+
+> 以下文件/模式有复发记录，修改时弹出额外警告。
+
+### 复发 Top-5 模式
+
+| 排名 | Pattern | 复发次数 | 最近复发 | 复发间隔 | 预警级别 |
+|------|---------|----------|----------|----------|----------|
+| 1 | url-double-encoding | 3 | v1.0.11 | 多次复发 | 🔴 高 — 每次含中文参数的功能都可能触发 |
+| 2 | module-breadcrumb-hardcoded | 2 | v1.0.43 | 2天 (v1.0.41→v1.0.43) | 🔴 高 — 涉及核心库函数，影响全局 |
+| 3 | xattr-contamination | 2 | v0.3.95 | 4天 | 🟡 中 — 已通过 CLAUDE.md 铁律控制 |
+| 4 | post-count-sync | 1 | v1.0.14 | — | 🟡 中 — 新增 posts 路径时必检查 |
+| 5 | array-map-null | 1 | v1.0.35 | — | 🟢 低 — 数量多但单次修复简单 |
+
+### 复发预防机制
+
+| 机制 | 触发时机 | 覆盖范围 |
+|------|----------|----------|
+| `pre-modify-check.sh <file>` | 修改代码前 | 13 个脆弱文件的风险评估 + 修复配方 |
+| `pre-deploy-check.sh` | 部署前 | 14 类风险自动化检查 |
+| `diagnose.sh "<症状>"` | Bug 报告时 | 12 个已知 Pattern 自动匹配 |
+| `bug-record.sh` | 修复完成后 | 一键更新所有追踪文件 |
+| `install-hooks.sh` | 一次性设置 | Git pre-push hook 自动检查 |
+| CLAUDE.md Bug 修复流程 | 每次修 bug | 强制更新追踪文档 |
+| 修复影响矩阵 (regression-map.md) | 修改前参考 | 修改区域 → 可能触发的回归 |
+
+## 快速参考卡片
+
+> 打印或保存此卡片，修 bug 时快速查阅。
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                  🐛 Polis Bug 处理速查卡                      │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  发现 Bug:                                                  │
+│    $ ./scripts/diagnose.sh "<症状>"                         │
+│                                                             │
+│  修改代码前 (高危文件):                                       │
+│    $ ./scripts/pre-modify-check.sh <文件路径>                │
+│                                                             │
+│  修复完成后:                                                 │
+│    $ ./scripts/bug-record.sh                                │
+│                                                             │
+│  部署前:                                                    │
+│    $ ./scripts/pre-deploy-check.sh                          │
+│                                                             │
+│  复发时:                                                    │
+│    查 docs/bugs/fix-recipes/INDEX.md → 复制粘贴修复          │
+│                                                             │
+│  不知道哪个文件最危险:                                        │
+│    $ ./scripts/pre-modify-check.sh --all                    │
+│                                                             │
+│  回归追踪:                                                   │
+│    查 docs/bugs/regression-map.md                           │
+│                                                             │
+│  新增模式:                                                   │
+│    在 docs/bugs/patterns/ 创建新文件                         │
+│    在 docs/bugs/fix-recipes/ 创建对应配方                    │
+│    更新 docs/bugs/INDEX.md 和 fix-points.md                 │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
