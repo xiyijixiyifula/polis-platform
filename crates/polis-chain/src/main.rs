@@ -92,6 +92,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+/// 安全地 block_on: 自动适应是否在 tokio runtime 内
+fn blocking_run<F: std::future::Future>(f: F) -> F::Output {
+    match tokio::runtime::Handle::try_current() {
+        Ok(handle) => tokio::task::block_in_place(|| handle.block_on(f)),
+        Err(_) => tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(f),
+    }
+}
+
 /// 处理钱包命令
 fn handle_wallet(action: WalletAction) -> Result<(), Box<dyn std::error::Error>> {
     let config = NodeConfig::from_env();
@@ -102,8 +112,7 @@ fn handle_wallet(action: WalletAction) -> Result<(), Box<dyn std::error::Error>>
             CliWallet::create(&config, &password)?;
         }
         WalletAction::Show { password } => {
-            let rt = tokio::runtime::Runtime::new()?;
-            rt.block_on(CliWallet::show(&config, &password))?;
+            blocking_run(CliWallet::show(&config, &password))?;
         }
         WalletAction::Import { password, key_hex } => {
             CliWallet::import_from_hex(&config, &password, &key_hex)?;
@@ -112,15 +121,13 @@ fn handle_wallet(action: WalletAction) -> Result<(), Box<dyn std::error::Error>>
             CliWallet::export(&config, &password)?;
         }
         WalletAction::Balance => {
-            let rt = tokio::runtime::Runtime::new()?;
-            rt.block_on(CliWallet::balance(&config))?;
+            blocking_run(CliWallet::balance(&config))?;
         }
         WalletAction::Sign { password, message } => {
             CliWallet::sign(&config, &password, &message)?;
         }
         WalletAction::Transfer { password, to, amount, memo } => {
-            let rt = tokio::runtime::Runtime::new()?;
-            rt.block_on(CliWallet::transfer(&config, &password, &to, amount, memo.as_deref()))?;
+            blocking_run(CliWallet::transfer(&config, &password, &to, amount, memo.as_deref()))?;
         }
     }
     Ok(())

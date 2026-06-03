@@ -334,20 +334,20 @@ async fn run_event_loop(
                     Some(P2PCommand::BroadcastConsensusMessage(msg)) => {
                         let data = bincode::serialize(&msg).unwrap_or_default();
                         if let Err(e) = swarm.behaviour_mut().gossipsub.publish(consensus_topic.clone(), data) {
-                            tracing::error!("广播共识消息失败: {}", e);
+                            tracing::debug!("广播共识消息跳过 (无对等节点): {}", e);
                         }
                     }
                     Some(P2PCommand::BroadcastTransaction(tx)) => {
                         let data = bincode::serialize(&tx).unwrap_or_default();
                         if let Err(e) = swarm.behaviour_mut().gossipsub.publish(tx_topic.clone(), data) {
-                            tracing::error!("广播交易失败: {}", e);
+                            tracing::debug!("广播交易跳过 (无对等节点): {}", e);
                         }
                     }
                     Some(P2PCommand::BroadcastBlockAnnouncement { block_number, block_hash }) => {
                         let ann = BlockAnnouncementWire { block_number, block_hash };
                         let data = bincode::serialize(&ann).unwrap_or_default();
                         if let Err(e) = swarm.behaviour_mut().gossipsub.publish(block_topic.clone(), data) {
-                            tracing::error!("广播区块公告失败: {}", e);
+                            tracing::debug!("广播区块公告跳过 (无对等节点): {}", e);
                         }
                     }
                     Some(P2PCommand::RequestBlocks { peer, start, end }) => {

@@ -28,7 +28,6 @@ pub struct Block {
     pub header: BlockHeader,
     pub transactions: Vec<SignedTransaction>,
     pub commits: Vec<CommitSeal>,
-    #[serde(skip)]
     pub hash: [u8; 32],
 }
 
