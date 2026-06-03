@@ -58,10 +58,13 @@ LOCAL_ONLY
 - [x] XpBridge 集成链上存证 (CHAIN_API_URL + CHAIN_SITE_ID 环境变量)
 - [x] ContentServiceConfig 添加链配置字段
 
-**Phase 8 待实施** — 前端钱包 UI:
-- [ ] Web 钱包页面
-- [ ] 挖矿页面
-- [ ] 大奖池页面
+**Phase 8 完成** — 前端钱包 UI (v1.5.0):
+- [x] Web 钱包页面 — 5 个页面: 总览/创建/挖矿/奖池/交易记录
+- [x] 链 API 客户端 — `/chain-api` 代理 + TypeScript 接口
+- [x] 挖矿中心 — 轮次倒计时/参与者列表/权重计算/上轮中奖者
+- [x] 大奖池页面 — 进度条/存款表单/顶级存款者/炼金规则
+- [x] 侧边栏导航 + 移动端底部导航
+- [x] 浏览器端到端验证 — 创建钱包→总览→挖矿→奖池 全部通过
 
 **Phase 9 完成** — P2P 网络 + 多节点 (v1.2.0):
 - [x] libp2p P2P 节点实现 (p2p.rs 471行: Gossipsub + Kademlia DHT + mDNS + Noise加密 + Yamux多路复用)
