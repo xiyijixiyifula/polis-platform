@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+use ed25519_dalek::Signer;
 use uuid::Uuid;
 
 /// XP Bridge: 在内容操作时通过 HTTP 调用 user 服务发放经验值，
@@ -9,6 +11,10 @@ pub struct XpBridge {
     chain_api_url: Option<String>,
     /// 站点 ID (SHA256(domain)), 用于链上存证
     site_id: Option<String>,
+    /// 站点 Ed25519 签名密钥 (hex 编码的 32 字节种子)
+    signing_key: Option<ed25519_dalek::SigningKey>,
+    /// 签名 nonce 计数器
+    nonce: AtomicU64,
 }
 
 impl XpBridge {
@@ -18,6 +24,8 @@ impl XpBridge {
             user_service_url,
             chain_api_url: None,
             site_id: None,
+            signing_key: None,
+            nonce: AtomicU64::new(0),
         }
     }
 
@@ -26,6 +34,20 @@ impl XpBridge {
         self.chain_api_url = Some(chain_api_url);
         self.site_id = Some(site_id);
         self
+    }
+
+    /// 设置站点签名密钥 (hex 编码的 32 字节 Ed25519 种子)
+    pub fn with_signing_key(mut self, private_key_hex: &str) -> Result<Self, String> {
+        let seed = hex::decode(private_key_hex)
+            .map_err(|e| format!("无效的私钥 hex: {}", e))?;
+        if seed.len() != 32 {
+            return Err("Ed25519 私钥必须为 32 字节".to_string());
+        }
+        let signing_key = ed25519_dalek::SigningKey::from_bytes(
+            &seed[..32].try_into().map_err(|_| "invalid key bytes")?
+        );
+        self.signing_key = Some(signing_key);
+        Ok(self)
     }
 
     /// 通过内部 API 发放 XP（非阻塞，忽略错误）
@@ -52,14 +74,13 @@ impl XpBridge {
         self.submit_to_chain(user_id, action_type, description).await;
     }
 
-    /// 提交 ActivityProof 到本地链节点
+    /// 提交 ActivityProof 到本地链节点 (带 Ed25519 签名)
     async fn submit_to_chain(&self, user_id: Uuid, action_type: &str, content_hint: &str) {
         let (Some(chain_url), Some(site_id)) = (&self.chain_api_url, &self.site_id) else {
             return;
         };
 
         // user_ref = SHA256(site_id + ":" + username)
-        // 简化: 使用 user_id 的 hex 表示作为用户名
         let username = user_id.to_string().replace('-', "");
         let user_ref = {
             use sha2::{Digest, Sha256};
@@ -73,8 +94,9 @@ impl XpBridge {
         };
 
         let xp_value = xp_for_action(action_type);
+        let nonce = self.nonce.fetch_add(1, Ordering::SeqCst);
 
-        let body = serde_json::json!({
+        let mut body = serde_json::json!({
             "site_id": site_id,
             "user_ref": user_ref,
             "action_type": action_type,
@@ -84,8 +106,18 @@ impl XpBridge {
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs(),
-            "nonce": 0,
+            "nonce": nonce,
         });
+
+        // 如果配置了签名密钥，生成签名
+        if let Some(ref signing_key) = self.signing_key {
+            let msg = format!(
+                "POLIS_ACTIVITY:{}:{}:{}:{}",
+                site_id, user_ref, xp_value, nonce
+            );
+            let signature = signing_key.sign(msg.as_bytes());
+            body["signature"] = serde_json::json!(hex::encode(signature.to_bytes()));
+        }
 
         let url = format!("{}/api/v1/activities", chain_url);
         let _ = self.client.post(&url).json(&body).send().await;

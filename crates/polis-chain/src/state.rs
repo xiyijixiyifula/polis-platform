@@ -36,6 +36,7 @@ pub struct SiteInfo {
     pub registered_at: u64,         // 注册区块高度
     pub reputation_score: u32,      // 0-100
     pub is_active: bool,
+    pub public_key: Option<Vec<u8>>, // Ed25519 公钥 (32 字节)
 }
 
 /// 活动记录 (用于索引)

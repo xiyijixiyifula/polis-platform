@@ -61,6 +61,9 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         // Push
         .route("/api/users/me/push-subscribe", post(subscribe_push))
         .route("/api/users/me/push-unsubscribe", post(unsubscribe_push))
+        // 钱包绑定
+        .route("/api/users/me/bind-wallet/challenge", post(bind_wallet_challenge))
+        .route("/api/users/me/bind-wallet/verify", post(bind_wallet_verify))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
     public.merge(auth).with_state(handler)
 }
@@ -264,4 +267,46 @@ struct AwardXpRequest {
 async fn award_xp_bridge(State(h): State<Arc<UserHandler>>, Json(r): Json<AwardXpRequest>) -> Result<Json<ApiResponse<()>>, AppError> {
     h.award_xp_bridge(r.user_id, &r.action_type, &r.description, r.target_type.as_deref(), r.target_id).await?;
     Ok(Json(ApiResponse::success(())))
+}
+
+// ==================== 钱包绑定 handlers ====================
+
+#[derive(Deserialize)]
+struct BindWalletChallengeRequest {
+    address: String,
+}
+
+async fn bind_wallet_challenge(
+    State(h): State<Arc<UserHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Json(r): Json<BindWalletChallengeRequest>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let nonce = h.bind_wallet.generate_challenge(uid, &r.address).await?;
+    Ok(Json(ApiResponse::success(serde_json::json!({
+        "nonce": nonce,
+        "message": "请使用 CLI 签名: polis-chain wallet sign --data \"<nonce>\"",
+    }))))
+}
+
+#[derive(Deserialize)]
+struct BindWalletVerifyRequest {
+    address: String,
+    public_key_hex: String,
+    nonce: String,
+    signature_hex: String,
+}
+
+async fn bind_wallet_verify(
+    State(h): State<Arc<UserHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    Json(r): Json<BindWalletVerifyRequest>,
+) -> Result<Json<ApiResponse<UserPublic>>, AppError> {
+    let user = h.bind_wallet.verify_and_bind(
+        uid,
+        &r.address,
+        &r.public_key_hex,
+        &r.nonce,
+        &r.signature_hex,
+    ).await?;
+    Ok(Json(ApiResponse::success(user)))
 }

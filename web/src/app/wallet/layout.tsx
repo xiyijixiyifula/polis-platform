@@ -10,6 +10,7 @@ import {
 	Trophy,
 	ListOrdered,
 	Wallet as WalletIcon,
+	Link2,
 	Copy,
 	Check,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ const navItems = [
 	{ href: '/wallet/mining', label: '挖矿', icon: Pickaxe },
 	{ href: '/wallet/pool', label: '奖池', icon: Trophy },
 	{ href: '/wallet/transactions', label: '交易', icon: ListOrdered },
+	{ href: '/wallet/bind', label: '绑定', icon: Link2 },
 ];
 
 export default function WalletLayout({ children }: { children: React.ReactNode }) {

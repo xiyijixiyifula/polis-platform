@@ -21,6 +21,8 @@ pub struct User {
     pub banned: bool,
     pub banned_at: Option<DateTime<Utc>>,
     pub ban_reason: Option<String>,
+    pub chain_address: Option<String>,
+    pub chain_bound_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

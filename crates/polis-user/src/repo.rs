@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 /// 用户数据访问层
+#[derive(Clone)]
 pub struct UserRepo {
     pub pool: PgPool,
 }
@@ -409,5 +410,25 @@ impl UserRepo {
         sqlx::query("DELETE FROM push_subscriptions WHERE user_id = $1 AND endpoint = $2")
             .bind(user_id).bind(endpoint).execute(&self.pool).await?;
         Ok(())
+    }
+
+    // ==================== 链上钱包绑定 ====================
+
+    pub async fn bind_chain_address(&self, user_id: Uuid, address: &str) -> Result<(), AppError> {
+        sqlx::query(
+            "UPDATE users SET chain_address = $2, chain_bound_at = NOW(), updated_at = NOW() WHERE id = $1"
+        )
+        .bind(user_id).bind(address)
+        .execute(&self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn find_by_chain_address(&self, address: &str) -> Result<Option<User>, AppError> {
+        sqlx::query_as::<_, User>(
+            "SELECT * FROM users WHERE chain_address = $1"
+        )
+        .bind(address)
+        .fetch_optional(&self.pool).await
+        .map_err(AppError::from)
     }
 }

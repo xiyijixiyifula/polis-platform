@@ -1,0 +1,3 @@
+-- 036: 添加链上钱包绑定字段
+ALTER TABLE users ADD COLUMN IF NOT EXISTS chain_address VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS chain_bound_at TIMESTAMPTZ;

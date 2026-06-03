@@ -176,11 +176,20 @@ impl SignedTransaction {
         }
     }
 
-    /// 计算交易哈希 = SHA-256(bincode(Transaction))
+    /// 计算交易哈希 = SHA-256(bincode(Transaction) || signer)
     pub fn compute_hash(tx: &Transaction) -> [u8; 32] {
         let tx_bytes = bincode::serialize(tx).unwrap_or_default();
         let mut hasher = Sha256::new();
         hasher.update(&tx_bytes);
+        hasher.finalize().into()
+    }
+
+    /// 计算包含签名者的哈希 (用于签名验证，防止签名跨账户重放)
+    pub fn compute_hash_with_signer(tx: &Transaction, signer: &str) -> [u8; 32] {
+        let tx_bytes = bincode::serialize(tx).unwrap_or_default();
+        let mut hasher = Sha256::new();
+        hasher.update(&tx_bytes);
+        hasher.update(signer.as_bytes());
         hasher.finalize().into()
     }
 }

@@ -12,12 +12,14 @@ use sha2::{Sha256, Digest};
 use crate::auth;
 use crate::config::UserServiceConfig;
 use crate::repo::UserRepo;
+use crate::handlers::bind_wallet::BindWalletHandler;
 
 /// 用户业务逻辑处理器
 pub struct UserHandler {
     pub repo: UserRepo,
     pub config: UserServiceConfig,
     pub nats: Option<NatsClient>,
+    pub bind_wallet: BindWalletHandler,
 }
 
 impl UserHandler {
@@ -26,10 +28,13 @@ impl UserHandler {
         config: UserServiceConfig,
         nats: Option<NatsClient>,
     ) -> Self {
+        let repo = UserRepo::new(pool);
+        let bind_wallet = BindWalletHandler::new(repo.clone());
         Self {
-            repo: UserRepo::new(pool),
+            repo,
             config,
             nats,
+            bind_wallet,
         }
     }
 

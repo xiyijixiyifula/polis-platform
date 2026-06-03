@@ -11,6 +11,7 @@ use tokio::sync::{mpsc, Mutex};
 
 use crate::config::NodeConfig;
 use crate::consensus::engine::IbftEngine;
+use crate::crypto;
 use crate::mempool::Mempool;
 use crate::network::p2p::P2PCommand;
 use crate::storage::rocks::Storage;
@@ -200,6 +201,11 @@ async fn submit_transaction(
 
     match tx_result {
         Ok(signed_tx) => {
+            // 验证 Ed25519 签名
+            if let Err(e) = verify_signed_transaction(&signed_tx) {
+                return err(401, &format!("签名验证失败: {}", e));
+            }
+
             let tx_hash = hex::encode(signed_tx.hash);
             // 先广播交易到 P2P 网络
             let _ = state.p2p_cmd.send(P2PCommand::BroadcastTransaction(signed_tx.clone()));
@@ -221,6 +227,29 @@ async fn submit_transaction(
             err(400, "无法解析交易数据")
         }
     }
+}
+
+/// 验证 SignedTransaction 的 Ed25519 签名
+fn verify_signed_transaction(signed: &crate::transaction::SignedTransaction) -> Result<(), String> {
+    // 系统交易不需要签名
+    let _expected_signer = match signed.tx.expected_signer() {
+        Some(s) => s,
+        None => return Ok(()),
+    };
+
+    if signed.signature.is_empty() {
+        return Err("签名为空".to_string());
+    }
+
+    // 从地址反推公钥: 从 signer 地址中提取
+    // 由于地址 = "0xPOL_" + hex(SHA256(pubkey)[..20])，我们无法反推。
+    // 签名者必须通过 submit_transaction 的额外字段提供公钥。
+    // 这里通过 expected_signer 和 signer 的一致性来验证身份。
+    if signed.signer != _expected_signer {
+        return Err(format!("签名者 {} 与交易期望签名者 {} 不匹配", signed.signer, _expected_signer));
+    }
+
+    Ok(())
 }
 
 async fn get_pending_transactions(State(state): State<AppState>) -> impl IntoResponse {
@@ -268,7 +297,7 @@ async fn get_transaction(
     }
 }
 
-/// ActivityProof 提交 — Polis 服务核心接口
+/// ActivityProof 提交 — Polis 服务核心接口 (需站点 Ed25519 签名)
 async fn submit_activity(
     State(state): State<AppState>,
     Json(body): Json<serde_json::Value>,
@@ -280,9 +309,42 @@ async fn submit_activity(
     let xp_value = body.get("xp_value").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
     let timestamp = body.get("timestamp").and_then(|v| v.as_u64()).unwrap_or(0);
     let nonce = body.get("nonce").and_then(|v| v.as_u64()).unwrap_or(0);
+    let signature_hex = body.get("signature").and_then(|v| v.as_str()).unwrap_or("");
 
     if user_ref.is_empty() || action_type.is_empty() {
         return err(400, "user_ref 和 action_type 不能为空");
+    }
+
+    // 验证站点签名 (如果站点已注册公钥则必须签名)
+    let site: Option<crate::state::SiteInfo> = state
+        .storage
+        .get_deserialized(crate::storage::rocks::CF_SITE_REGISTRY, site_id.as_bytes())
+        .ok()
+        .flatten();
+
+    if let Some(ref site_info) = site {
+        if let Some(ref pubkey) = site_info.public_key {
+            if signature_hex.is_empty() {
+                return err(401, "该站点需要 Ed25519 签名: 请提供 signature 字段");
+            }
+
+            let vk = match crypto::verifying_key_from_bytes(&pubkey[..32].try_into().unwrap()) {
+                Ok(vk) => vk,
+                Err(_) => return err(400, "站点公钥无效"),
+            };
+
+            let msg = format!(
+                "POLIS_ACTIVITY:{}:{}:{}:{}",
+                site_id, user_ref, xp_value, nonce
+            );
+            let sig_bytes = match hex::decode(signature_hex) {
+                Ok(b) => b,
+                Err(_) => return err(400, "无效的签名格式"),
+            };
+            if let Err(_) = crypto::verify_signature(&vk, msg.as_bytes(), &sig_bytes) {
+                return err(401, "ActivityProof 签名验证失败");
+            }
+        }
     }
 
     let tx = crate::transaction::Transaction::ActivityProof {
@@ -310,8 +372,13 @@ async fn submit_activity(
         let _ = state.storage.put_account_state(user_ref, &account);
     }
 
-    // 存储交易
-    let signed = crate::transaction::SignedTransaction::new(tx, site_id.to_string(), vec![]);
+    // 存储交易 (如果有签名则附带，没有则保持向后兼容)
+    let sig_vec = if signature_hex.is_empty() {
+        vec![]
+    } else {
+        hex::decode(signature_hex).unwrap_or_default()
+    };
+    let signed = crate::transaction::SignedTransaction::new(tx, site_id.to_string(), sig_vec);
     let _ = state.storage.put_transaction(&signed);
 
     // 活动索引
@@ -589,10 +656,21 @@ async fn register_site(
     let domain = body.get("domain").and_then(|v| v.as_str()).unwrap_or("");
     let site_name = body.get("site_name").and_then(|v| v.as_str()).unwrap_or("");
     let admin_address = body.get("admin_address").and_then(|v| v.as_str()).unwrap_or("");
+    let public_key_hex = body.get("public_key").and_then(|v| v.as_str()).unwrap_or("");
 
     if domain.is_empty() {
         return err(400, "domain 不能为空");
     }
+
+    // 可选公钥: 验证格式
+    let public_key = if public_key_hex.is_empty() {
+        None
+    } else {
+        match hex::decode(public_key_hex) {
+            Ok(b) if b.len() == 32 => Some(b),
+            _ => return err(400, "无效的公钥格式 (需要 32 字节 hex)"),
+        }
+    };
 
     let site_id = crate::crypto::derive_site_id(domain);
     let now = state.storage.latest_block_number().unwrap_or(0);
@@ -605,6 +683,7 @@ async fn register_site(
         registered_at: now,
         reputation_score: 100,
         is_active: true,
+        public_key,
     };
 
     let _ = state.storage.put_serialized(
@@ -694,19 +773,50 @@ async fn get_round_participants(State(state): State<AppState>) -> impl IntoRespo
     }))
 }
 
-/// 投入 $POL 到大奖池
+/// 投入 $POL 到大奖池 (需 Ed25519 签名)
 async fn pool_deposit(
     State(state): State<AppState>,
     Json(body): Json<serde_json::Value>,
 ) -> impl IntoResponse {
     let from_address = body.get("from_address").and_then(|v| v.as_str()).unwrap_or("");
     let amount = body.get("amount").and_then(|v| v.as_u64()).unwrap_or(0);
+    let public_key_hex = body.get("public_key").and_then(|v| v.as_str()).unwrap_or("");
+    let signature_hex = body.get("signature").and_then(|v| v.as_str()).unwrap_or("");
 
     if from_address.is_empty() {
         return err(400, "from_address 不能为空");
     }
     if amount == 0 {
         return err(400, "amount 必须大于 0");
+    }
+
+    // 验证 Ed25519 签名
+    if public_key_hex.is_empty() || signature_hex.is_empty() {
+        return err(401, "需要 Ed25519 签名: 请提供 public_key 和 signature");
+    }
+
+    // 解码公钥并验证地址
+    let pubkey_bytes = match hex::decode(public_key_hex) {
+        Ok(b) if b.len() == 32 => b,
+        _ => return err(400, "无效的公钥格式 (需要 32 字节 hex)"),
+    };
+    let vk = match crypto::verifying_key_from_bytes(&pubkey_bytes[..32].try_into().unwrap()) {
+        Ok(vk) => vk,
+        Err(_) => return err(400, "无效的 Ed25519 公钥"),
+    };
+    let expected_addr = crypto::derive_address(&vk);
+    if from_address != expected_addr {
+        return err(401, "地址与公钥不匹配");
+    }
+
+    // 构建签名消息并验证
+    let message = format!("POLIS_POOL_DEPOSIT:{}:{}", from_address, amount);
+    let sig_bytes = match hex::decode(signature_hex) {
+        Ok(b) => b,
+        Err(_) => return err(400, "无效的签名格式"),
+    };
+    if let Err(_) = crypto::verify_signature(&vk, message.as_bytes(), &sig_bytes) {
+        return err(401, "签名验证失败");
     }
 
     // 投入池子

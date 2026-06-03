@@ -40,6 +40,7 @@ impl SiteRegistry {
             registered_at: latest_block,
             reputation_score: 100, // 初始满分
             is_active: true,
+            public_key: None,
         };
 
         storage.put_serialized(
