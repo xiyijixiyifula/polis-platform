@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
-import { Search, Bell, User, Plus, Menu, X, Info, FileText, MessageSquare, Globe, PenLine, Shield as ShieldIcon } from 'lucide-react';
+import { Search, Bell, User, Plus, Menu, X, Info, FileText, MessageSquare, Globe, PenLine, Shield as ShieldIcon, Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeToggle } from './ThemeToggle';
 import XpBadge from './XpBadge';
@@ -119,6 +119,10 @@ export function Header() {
             </Link>
             <Link href="/about" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
               {t('footer.about')}
+            </Link>
+            <Link href="/wallet" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
+              <Wallet className="w-4 h-4 inline mr-1" />
+              钱包
             </Link>
             <Link href="/changelog" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
               更新
@@ -285,6 +289,10 @@ export function Header() {
             </Link>
             <Link href="/about" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
               {t('footer.about')}
+            </Link>
+            <Link href="/wallet" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+              <Wallet className="w-4 h-4 inline mr-1" />
+              钱包
             </Link>
             <Link href="/changelog" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
               更新日志

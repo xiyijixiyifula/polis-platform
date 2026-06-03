@@ -10,7 +10,12 @@ const nextConfig = {
   },
   async rewrites() {
     const apiUrl = process.env.POLIS_API_URL || 'http://localhost:8080';
+    const chainApiUrl = process.env.POLIS_CHAIN_API_URL || 'http://localhost:8545';
     return [
+      {
+        source: '/chain-api/:path*',
+        destination: `${chainApiUrl}/api/v1/:path*`,
+      },
       {
         source: '/api/:path*',
         destination: `${apiUrl}/api/:path*`,
