@@ -18,6 +18,7 @@ members = [
     "crates/polis-plugin-engine",
     "crates/polis-admin",
     "crates/polisctl",
+    "crates/polis-chain",
 ]
 
 [workspace.package]
@@ -33,7 +34,7 @@ tokio = { version = "1", features = ["full"] }
 # Web framework
 axum = { version = "0.8", features = ["macros", "ws", "multipart"] }
 tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "trace", "fs"] }
+tower-http = { version = "0.6", features = ["cors", "trace", "fs", "compression-gzip"] }
 
 # Database
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "derive", "macros"] }
@@ -94,6 +95,9 @@ opentelemetry = "0.25"
 opentelemetry-otlp = "0.25"
 metrics = "0.24"
 metrics-exporter-prometheus = "0.16"
+
+# Regex
+regex = "1"
 
 # Async utilities
 futures = "0.3"

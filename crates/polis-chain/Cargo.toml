@@ -1,0 +1,60 @@
+[package]
+name = "polis-chain"
+version = "0.1.0"
+edition = "2021"
+authors = ["Polis Team"]
+description = "Polis Chain — 独立区块链节点 (PoA + IBFT 共识)"
+
+[[bin]]
+name = "polis-chain"
+path = "src/main.rs"
+
+[dependencies]
+# 异步运行时
+tokio = { workspace = true }
+axum = { workspace = true }
+
+# 加密
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+sha2 = { workspace = true }
+hmac = { workspace = true }
+argon2 = { workspace = true }
+hex = { workspace = true }
+rand = "0.8"
+blake3 = "1"
+
+# 序列化
+serde = { workspace = true }
+serde_json = { workspace = true }
+bincode = "1"
+rmp-serde = "1"
+
+# 存储
+rocksdb = "0.22"
+
+# 默克尔树
+rs_merkle = "1"
+
+# HTTP 客户端
+reqwest = { workspace = true }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# P2P 网络
+libp2p = { version = "0.54", features = [
+    "tokio", "tcp", "noise", "yamux", "kad", "mdns",
+    "gossipsub", "request-response", "identify", "ping",
+    "ed25519", "macros",
+] }
+libp2p-request-response = { version = "0.27", features = ["cbor"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+
+# 工具
+chrono = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+dotenvy = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
