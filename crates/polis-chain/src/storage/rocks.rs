@@ -208,6 +208,19 @@ impl Storage {
         self.get_deserialized(CF_STATE, address.as_bytes())
     }
 
+    /// 获取所有账户 (地址 → AccountState)
+    pub fn get_all_accounts(&self) -> ChainResult<Vec<(String, crate::state::AccountState)>> {
+        let entries = self.scan_prefix(CF_STATE, &[])?;
+        let mut accounts = Vec::new();
+        for (key, value) in entries {
+            let address = String::from_utf8(key).unwrap_or_default();
+            if let Ok(account) = bincode::deserialize::<crate::state::AccountState>(&value) {
+                accounts.push((address, account));
+            }
+        }
+        Ok(accounts)
+    }
+
     // ========== 元数据 ==========
 
     /// 写入元数据

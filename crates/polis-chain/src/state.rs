@@ -57,9 +57,9 @@ pub struct MiningRound {
     pub round_id: u64,
     pub start_time: u64,
     pub end_time: u64,
-    pub total_reward: u64,          // 40 $POL
-    pub ticket_count: u32,
-    pub xp_pool: u64,               // 本轮消耗的总 XP
+    pub total_reward: u64,              // 40 $POL
+    pub participant_count: u32,         // 参与人数
+    pub xp_pool: u64,                   // 本轮总 XP (所有参与者 XP 之和)
     pub status: RoundStatus,
     pub winners: Vec<crate::transaction::WinnerEntry>,
     pub random_seed: Option<[u8; 32]>,
@@ -118,19 +118,18 @@ pub struct ValidatorInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChainConfig {
     pub chain_id: String,
-    pub block_time_secs: u64,        // 10 秒
-    pub mining_round_secs: u64,      // 3600 秒 (1 小时)
-    pub mining_reward: u64,          // 40 $POL
-    pub ticket_xp_cost: u64,         // 1 XP = 1 ticket
-    pub max_tickets_per_user: u32,   // 10
-    pub winner_count: u32,           // 3
-    pub pool_target: u64,            // 100,000 $POL
-    pub premium_gold_count: u32,     // 1
-    pub premium_silver_count: u32,   // 2
-    pub premium_bronze_count: u32,   // 3
-    pub min_validator_stake: u64,    // 1,000 $POL
-    pub max_validators: usize,       // 21
-    pub validator_epoch_secs: u64,   // 86400 秒 (24 小时)
+    pub block_time_secs: u64,          // 10 秒
+    pub mining_round_secs: u64,        // 3600 秒 (1 小时)
+    pub mining_reward: u64,            // 40 $POL
+    pub winner_percentage: u32,        // 中奖百分比 (默认 10 = 10%)
+    pub min_xp_to_participate: u64,    // 最低参与 XP 门槛 (默认 1)
+    pub pool_target: u64,              // 100,000 $POL
+    pub premium_gold_count: u32,       // 1
+    pub premium_silver_count: u32,     // 2
+    pub premium_bronze_count: u32,     // 3
+    pub min_validator_stake: u64,      // 1,000 $POL
+    pub max_validators: usize,         // 21
+    pub validator_epoch_secs: u64,     // 86400 秒 (24 小时)
 }
 
 impl Default for ChainConfig {
@@ -140,9 +139,8 @@ impl Default for ChainConfig {
             block_time_secs: 10,
             mining_round_secs: 3600,
             mining_reward: 40,
-            ticket_xp_cost: 1,
-            max_tickets_per_user: 10,
-            winner_count: 3,
+            winner_percentage: 10,
+            min_xp_to_participate: 1,
             pool_target: 100_000,
             premium_gold_count: 1,
             premium_silver_count: 2,

@@ -44,7 +44,7 @@ pub fn create_api_router(state: AppState) -> Router {
         .route("/api/v1/activities/{user_ref}/xp", get(get_user_xp))
         .route("/api/v1/mining/rounds/current", get(get_current_round))
         .route("/api/v1/mining/rounds/{id}", get(get_mining_round))
-        .route("/api/v1/mining/tickets", post(buy_mining_tickets))
+        .route("/api/v1/mining/rounds/current/participants", get(get_round_participants))
         .route("/api/v1/pool/status", get(get_pool_status))
         .route("/api/v1/pool/history", get(get_pool_history))
         .route("/api/v1/pool/deposit", post(pool_deposit))
@@ -406,21 +406,61 @@ async fn get_current_round(State(state): State<AppState>) -> impl IntoResponse {
         .as_secs();
 
     let round_id = now / 3600;
-    let round_start = round_id * 3600;
+
+    // 自动结算上一个轮次 (如果未结算且已超时)
+    if round_id > 0 {
+        let prev_id = round_id - 1;
+        let prev_key = prev_id.to_be_bytes();
+        if let Ok(Some(prev_round)) = state
+            .storage
+            .get_deserialized::<_, crate::state::MiningRound>(
+                crate::storage::rocks::CF_MINING_ROUNDS,
+                prev_key,
+            )
+        {
+            if prev_round.status == crate::state::RoundStatus::Active {
+                let prev_block_hash = state
+                    .storage
+                    .get_block(prev_round.round_id.saturating_sub(1))
+                    .ok()
+                    .flatten()
+                    .map(|b| b.hash)
+                    .unwrap_or([0u8; 32]);
+
+                let config = crate::state::ChainConfig::default();
+                let reward_dist: Vec<u64> = vec![
+                    config.mining_reward * 50 / 100,
+                    config.mining_reward * 30 / 100,
+                    config.mining_reward * 20 / 100,
+                ];
+                let mut prev = prev_round;
+                let _ = crate::mining::round::settle_round(
+                    &state.storage,
+                    &mut prev,
+                    &prev_block_hash,
+                    config.winner_percentage,
+                    config.min_xp_to_participate,
+                    &reward_dist,
+                );
+            }
+        }
+    }
 
     let round_key = round_id.to_be_bytes();
     let round: crate::state::MiningRound = state
         .storage
         .get_deserialized(crate::storage::rocks::CF_MINING_ROUNDS, round_key)
         .unwrap_or(None)
-        .unwrap_or_else(|| crate::mining::round::create_round(round_id, round_start, 3600, 40));
+        .unwrap_or_else(|| {
+            crate::mining::round::create_round(round_id, round_id * 3600, 3600, 40)
+        });
 
     ok(serde_json::json!({
         "round_id": round.round_id,
         "start_time": round.start_time,
         "end_time": round.end_time,
         "total_reward": round.total_reward,
-        "ticket_count": round.ticket_count,
+        "participant_count": round.participant_count,
         "xp_pool": round.xp_pool,
         "status": if round.status == crate::state::RoundStatus::Active { "active" } else { "completed" },
     }))
@@ -617,47 +657,41 @@ async fn get_peers(State(state): State<AppState>) -> impl IntoResponse {
     }))
 }
 
-/// 购买挖矿票
-async fn buy_mining_tickets(
-    State(state): State<AppState>,
-    Json(body): Json<serde_json::Value>,
-) -> impl IntoResponse {
-    let user_address = body.get("user_address").and_then(|v| v.as_str()).unwrap_or("");
-    let ticket_count = body.get("ticket_count").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+/// 查看当前轮次参与者概览
+async fn get_round_participants(State(state): State<AppState>) -> impl IntoResponse {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let round_id = now / 3600;
 
-    if user_address.is_empty() {
-        return err(400, "user_address 不能为空");
-    }
-    if ticket_count == 0 || ticket_count > 10 {
-        return err(400, "ticket_count 必须在 1-10 之间");
-    }
-
-    // 获取或创建当前轮次
-    let mut round = match crate::mining::round::get_or_create_current_round(
-        &state.storage,
-        3600,
-        40,
-    ) {
-        Ok(r) => r,
-        Err(e) => return err(500, &e.to_string()),
+    // 收集所有当前持有 XP 的账户
+    let participants: Vec<serde_json::Value> = match state.storage.get_all_accounts() {
+        Ok(accounts) => accounts
+            .into_iter()
+            .filter(|(_, acc)| acc.available_xp > 0)
+            .map(|(addr, acc)| {
+                serde_json::json!({
+                    "address": addr,
+                    "available_xp": acc.available_xp,
+                    "total_xp": acc.total_xp,
+                })
+            })
+            .collect(),
+        Err(_) => vec![],
     };
 
-    // 购买票
-    match crate::mining::round::buy_tickets(
-        &state.storage,
-        user_address,
-        &mut round,
-        ticket_count,
-        1, // 1 XP per ticket
-    ) {
-        Ok(()) => ok(serde_json::json!({
-            "round_id": round.round_id,
-            "tickets_bought": ticket_count,
-            "xp_spent": ticket_count,
-            "total_tickets_in_round": round.ticket_count,
-        })),
-        Err(e) => err(400, &e.to_string()),
-    }
+    let total_xp: u64 = participants
+        .iter()
+        .filter_map(|p| p.get("available_xp").and_then(|v| v.as_u64()))
+        .sum();
+
+    ok(serde_json::json!({
+        "round_id": round_id,
+        "participant_count": participants.len(),
+        "total_xp_pool": total_xp,
+        "participants": participants,
+    }))
 }
 
 /// 投入 $POL 到大奖池

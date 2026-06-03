@@ -47,6 +47,70 @@ pub fn select_winners(seed: &[u8; 32], total_tickets: u64, winner_count: u32) ->
     winners
 }
 
+/// 按 XP 权重加权抽取赢家索引
+///
+/// 与 select_winners (基于 ticket index) 不同，此函数直接按参与者权重抽选。
+/// 使用累积分布 + 哈希链种子扩展，保证确定性和可验证性。
+pub fn select_weighted_winners(
+    seed: &[u8; 32],
+    participants: &[(String, u64)], // (address, xp_amount)
+    winner_count: u32,
+) -> Vec<u64> {
+    if participants.is_empty() || winner_count == 0 {
+        return Vec::new();
+    }
+
+    let total_xp: u64 = participants.iter().map(|(_, xp)| *xp).sum();
+    if total_xp == 0 {
+        return Vec::new();
+    }
+
+    let count = winner_count.min(participants.len() as u32);
+    let mut rng_seed = *seed;
+    let mut winners = Vec::new();
+    let mut used = std::collections::HashSet::new();
+
+    while winners.len() < count as usize && used.len() < participants.len() {
+        // 哈希链扩展种子
+        let mut hasher = Sha256::new();
+        hasher.update(&rng_seed);
+        hasher.update(&(winners.len() as u64).to_be_bytes());
+        rng_seed = hasher.finalize().into();
+
+        // 随机值 → 累积分布选取
+        let mut rand_val: u64 = 0;
+        for i in 0..8 {
+            rand_val = (rand_val << 8) | (rng_seed[i] as u64);
+        }
+        let target = rand_val % total_xp;
+
+        let mut cumulative = 0u64;
+        let mut selected_idx = 0usize;
+        for (i, (_, xp)) in participants.iter().enumerate() {
+            cumulative += *xp;
+            if cumulative > target && !used.contains(&i) {
+                selected_idx = i;
+                break;
+            }
+        }
+
+        // fallback: 如果所有可选都被 used, 选第一个未使用的
+        if used.contains(&selected_idx) {
+            selected_idx = participants
+                .iter()
+                .enumerate()
+                .find(|(i, _)| !used.contains(i))
+                .map(|(i, _)| i)
+                .unwrap_or(0);
+        }
+
+        used.insert(selected_idx);
+        winners.push(selected_idx as u64);
+    }
+
+    winners
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
