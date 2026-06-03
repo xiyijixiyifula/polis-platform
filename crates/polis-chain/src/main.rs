@@ -156,7 +156,7 @@ async fn run_node() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     // 初始化验证者集合和共识引擎
-    let validator_set = polis_chain::consensus::validator::ValidatorSet::load(&storage)
+    let mut validator_set = polis_chain::consensus::validator::ValidatorSet::load(&storage)
         .unwrap_or_else(|_| {
             polis_chain::consensus::validator::ValidatorSet::new(21, 1_000)
         });
@@ -165,6 +165,24 @@ async fn run_node() -> Result<(), Box<dyn std::error::Error>> {
         .validator_address
         .clone()
         .unwrap_or_else(|| "node".to_string());
+
+    // 加载或生成节点身份密钥 (用于 P2P libp2p + 验证者注册)
+    let node_signing_key = load_or_generate_node_key(&config)?;
+
+    // 创世节点: 如果没有验证者, 自动注册本节点为验证者
+    if validator_set.validators.is_empty() {
+        let validator_info = polis_chain::state::ValidatorInfo {
+            address: node_address.clone(),
+            public_key: node_signing_key.verifying_key().as_bytes().to_vec(),
+            site_id: None,
+            stake_amount: 1_000,
+            joined_at: now,
+            reputation: 100,
+            is_active: true,
+        };
+        validator_set.add_validator(&storage, validator_info)?;
+        tracing::info!("创世验证者已注册: {}", node_address);
+    }
 
     let consensus = Arc::new(tokio::sync::Mutex::new(
         polis_chain::consensus::engine::IbftEngine::new(
@@ -175,8 +193,6 @@ async fn run_node() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     // --- P2P 初始化 ---
-    // 加载或生成节点钱包密钥 (用于 libp2p 身份)
-    let node_signing_key = load_or_generate_node_key(&config)?;
     let libp2p_keypair = polis_chain::crypto::signing_key_to_libp2p_keypair(&node_signing_key);
 
     // 创建 P2P 节点

@@ -63,9 +63,12 @@ impl ConsensusBridge {
                 // 验证并接收提案
                 engine.verify_proposal(&block, round)?;
 
-                // 创建并广播 Prepare 投票
+                // 创建自己的 Prepare 投票并添加到引擎
                 if let Some(ref sk) = self.signing_key {
                     let seal = engine.create_seal(&block.hash, sk);
+                    let _ = engine.add_prepare(seal.clone(), &block.hash);
+
+                    // 广播 Prepare 给其他验证者
                     let prepare = ConsensusWireMessage::Prepare {
                         height,
                         round,
@@ -74,12 +77,28 @@ impl ConsensusBridge {
                     };
                     let _ = self.p2p_cmd
                         .send(P2PCommand::BroadcastConsensusMessage(prepare));
-                }
 
-                // 检查是否已有足够 Prepare (包含自己的隐含投票)
-                if engine.has_quorum_prepares() {
+                    // 检查是否已收集足够 Prepare
+                    let prepared = engine.has_quorum_prepares();
                     drop(engine);
-                    self.broadcast_commit(height, round).await;
+
+                    if prepared {
+                        self.broadcast_commit(height, round).await;
+
+                        // Self-commit 也在本地添加
+                        let mut engine = self.consensus.lock().await;
+                        if let Some(ref sk) = self.signing_key {
+                            let commit_seal = engine.create_seal(&block.hash, sk);
+                            if engine.add_commit(commit_seal, &block.hash).unwrap_or(false) {
+                                if engine.has_quorum_commits() {
+                                    let finalized = engine.finalize_block(&self.storage)?;
+                                    tracing::info!("区块已最终确定: height={}", finalized.header.number);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    drop(engine);
                 }
             }
 
@@ -144,23 +163,53 @@ impl ConsensusBridge {
         let mut engine = self.consensus.lock().await;
         let chain_config = crate::state::ChainConfig::default();
         let block = engine.propose_block(&self.storage, &chain_config, txs)?;
+        let block_hash = block.hash;
+        let height = engine.height;
+        let round = engine.round;
 
+        // 广播 PrePrepare 给其他验证者
         let msg = ConsensusWireMessage::PrePrepare {
-            height: engine.height,
-            round: engine.round,
+            height,
+            round,
             block: block.clone(),
             proposer: self.node_address.clone(),
         };
-
         let _ = self.p2p_cmd
             .send(P2PCommand::BroadcastConsensusMessage(msg));
 
         tracing::info!(
-            "提议区块: height={} round={} hash={}",
-            engine.height,
-            engine.round,
-            hex::encode(block.hash)
+            "提议区块: height={} round={} hash={} txs={}",
+            height,
+            round,
+            hex::encode(block_hash),
+            block.transactions.len()
         );
+
+        // Proposer 自我投票: Prepare + Commit
+        // 单节点模式下直接达到 quorum; 多节点模式下贡献自己的票
+        if let Some(ref sk) = self.signing_key {
+            let seal = engine.create_seal(&block_hash, sk);
+            if engine.add_prepare(seal, &block_hash).unwrap_or(false) {
+                tracing::debug!("自我 Prepare 投票: height={}", height);
+            }
+
+            if engine.has_quorum_prepares() {
+                let seal = engine.create_seal(&block_hash, sk);
+                if engine.add_commit(seal, &block_hash).unwrap_or(false) {
+                    tracing::debug!("自我 Commit 投票: height={}", height);
+                }
+            }
+        }
+
+        // 达到 quorum → 最终确定
+        if engine.has_quorum_commits() {
+            let finalized = engine.finalize_block(&self.storage)?;
+            tracing::info!(
+                "区块已最终确定: height={} hash={}",
+                finalized.header.number,
+                hex::encode(finalized.hash)
+            );
+        }
 
         Ok(())
     }
@@ -292,7 +341,7 @@ pub fn start_consensus_loop(
                             // 已提交，不超时
                         }
                         _ => {
-                            // 超时 → RoundChange
+                            // 超时 → RoundChange → 新一轮
                             tracing::warn!(
                                 "共识超时: height={} round={} phase={:?}",
                                 height, round, phase
@@ -300,6 +349,7 @@ pub fn start_consensus_loop(
                             let mut engine = bridge.consensus.lock().await;
                             engine.on_timeout();
                             let new_round = engine.round;
+                            engine.start_new_round(); // 重置为 Idle, 准备新一轮
                             drop(engine);
 
                             // 广播 RoundChange
