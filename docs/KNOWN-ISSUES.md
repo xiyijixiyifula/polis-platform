@@ -4,6 +4,8 @@
 
 ## 已知技术债务
 
+- **NATS 未部署 — 事件驱动架构静默失效 (v1.0.63 发现)** — 生产服务器未安装 nats-server，所有微服务启动时 NATS 连接失败 (`Connection refused (os error 111)`)。`publish_event()` 返回 None 导致所有跨服务事件（注册/关注/点赞/评论/帖子创建）静默丢失。短期修复: 关键通知改为直接 DB INSERT (v1.0.63 已修关注通知)。长期方案: (1) 部署 NATS Server 或 (2) 改用 PostgreSQL LISTEN/NOTIFY 或 (3) 全改为 DB 直接写入。见 [nats-event-loss](bugs/patterns/nats-event-loss.md)
+
 - ~~微服务缺少独立 `/health` 端点~~ → v0.2.84 已为 4 服务添加
 - `GET /api/spaces` 无公共列表端点，使用 `GET /api/spaces/trending` 替代
 - 部分规划中的微服务（search/chat/video/pay）仅有骨架代码
@@ -20,6 +22,7 @@
 ## 关键 Bug 修复记录
 
 > 防止回退 — 以下 bug 曾经导致线上事故，修复后记录在此
+- **空间页视频Tab无内容：URL /space/ns/video 显示交流Tab内容而非视频 (v1.0.56)** — 见 [module-tab-key-mismatch](bugs/patterns/module-tab-key-mismatch.md)
 - **视频大文件上传 Gateway 代理失败 502 (v1.0.52)** — >=2MB 视频上传时 gateway 返回 "Service temporarily unavailable"。根因: 视频服务鉴权失败时 axum 在 body 未消费时关闭连接，reqwest 还在写 body 时连接中断 → SendRequest 错误。修复: Gateway 剥离 hop-by-hop headers + 视频服务 auth 失败时先 drain multipart body 再返回错误。**教训: 所有后端 handler 在返回错误前应确保请求体被消耗。**
 - **视频投稿 403 "目标社区未开启视频模块" (v1.0.53)** — 自定义视频模块 (module_key=`mod_1ade9c1d`) 投稿后 publish 返回 403。根因: `validate_space_for_video_submission` 检查 `spaces.enabled_modules` 硬编码 key=`"video"`，自定义模块 key 不匹配。修复: 改为查 `space_modules` 表用 `allowed_content_types @> '["video"]'::jsonb`。**教训: 视频服务早于 ModuleRef 系统，`spaces.enabled_modules` 是旧字段，涉及模块能力判断应查 `space_modules` 表。**
 - **社区概览页和Feed页帖子面包屑显示模块名为'交流'而非实际模块名(如'天气预报') (v1.0.40)** — 见 [module-breadcrumb-hardcoded](bugs/patterns/module-breadcrumb-hardcoded.md)

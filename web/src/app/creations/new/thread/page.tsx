@@ -31,7 +31,7 @@ function ThreadPublishInner() {
   const [error, setError] = useState('');
 
   const [title, setTitle] = useState('');
-  const [moduleType, setModuleType] = useState('forum');
+  const [moduleType, setModuleType] = useState('');
   const [visibility, setVisibility] = useState('public');
   const [tags, setTags] = useState('');
   const [publishing, setPublishing] = useState(false);

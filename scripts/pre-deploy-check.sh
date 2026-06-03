@@ -301,6 +301,106 @@ echo ""
 
 fi  # checks 12-14 block
 
+# ─── 15. Argon2 spawn_blocking 检查 ──────────────────────────────
+echo -e "${CYAN}[15] Argon2 spawn_blocking 异步化检查${NC}"
+
+SYNC_ARGON2=$(grep -rn "Argon2::default()" crates/ --include="*.rs" 2>/dev/null | grep -v "spawn_blocking" | grep -v "hash_password_async" | grep -v "verify_password_async" | grep -v "mod test" || true)
+if [[ -n "$SYNC_ARGON2" ]]; then
+    echo "  发现可能阻塞 tokio worker 的同步 Argon2 调用:"
+    echo "$SYNC_ARGON2" | while read line; do echo "    - $line"; done
+    check_warn "存在未包裹 spawn_blocking 的 Argon2 调用 — 高并发下会阻塞 async runtime"
+else
+    check_pass "所有 Argon2 调用已使用 spawn_blocking 异步化"
+fi
+echo ""
+
+# ─── 16. Gateway 连接池配置检查 ──────────────────────────────────
+echo -e "${CYAN}[16] Gateway 连接池配置检查${NC}"
+
+if grep -q "pool_max_idle_per_host(0)" crates/polis-gateway/src/main.rs 2>/dev/null; then
+    check_fail "Gateway pool_max_idle_per_host=0 — 每次请求新建 TCP 连接，高并发下性能极差"
+else
+    check_pass "Gateway HTTP 连接池已启用 (pool_max_idle_per_host > 0)"
+fi
+
+# 检查需要 DB 的服务是否配置了 acquire_timeout
+MISSING_TIMEOUT=""
+for svc in polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-notify polis-pay polis-code polis-store polis-plugin-engine; do
+    svc_file="crates/${svc}/src/main.rs"
+    if [[ -f "$svc_file" ]]; then
+        if ! grep -q "acquire_timeout" "$svc_file" 2>/dev/null; then
+            MISSING_TIMEOUT="$MISSING_TIMEOUT $svc"
+        fi
+    fi
+done
+if [[ -n "$MISSING_TIMEOUT" ]]; then
+    check_warn "以下服务 DB pool 未配置 acquire_timeout:$MISSING_TIMEOUT — 高并发下可能永久阻塞"
+else
+    check_pass "所有服务 DB pool 已配置 acquire_timeout"
+fi
+echo ""
+
+# ─── 17. creations_to_batch N+1 查询检查 ──────────────────────────
+echo -e "${CYAN}[17] N+1 批量查询检查${NC}"
+
+BATCH_FN=$(grep -c "creations_to_batch" crates/polis-content/src/handlers/creation.rs 2>/dev/null || echo "0")
+echo "  creations_to_batch 函数: $([[ "$BATCH_FN" -gt 0 ]] && echo '存在' || echo '缺失!')"
+if [[ "$BATCH_FN" -eq 0 ]]; then
+    check_warn "creations_to_batch 函数缺失 — 作品列表可能仍在逐条 N+1 查询"
+else
+    check_pass "批量查询函数 creations_to_batch 存在"
+fi
+echo ""
+
+# ─── 18. NATS 事件丢失风险检查 ──────────────────────────────────
+echo -e "${CYAN}[18] NATS 事件丢失风险检查${NC}"
+
+# 检查是否有 publish_event 调用但没有直接 DB fallback 的代码
+EVENT_CALLS=$(grep -rn "publish_event(" crates/ --include="*.rs" 2>/dev/null | grep -v "//.*publish_event" | grep -v "let _" | true)
+EVENT_COUNT=$(echo "$EVENT_CALLS" | grep -c "publish_event" || true)
+
+if [[ "$EVENT_COUNT" -gt 0 ]]; then
+    echo "  发现 $EVENT_COUNT 处 publish_event 调用:"
+    echo "$EVENT_CALLS" | head -15
+    check_warn "存在 publish_event 调用 — 确认生产服务器 NATS 已部署，或有直接 DB fallback"
+else
+    check_pass "无 publish_event 调用风险"
+fi
+echo ""
+
+# ─── 19. 服务器基础设施检查 ──────────────────────────────────────
+echo -e "${CYAN}[19] 服务器基础设施检查${NC}"
+
+# 检查是否能 SSH 到服务器并验证关键服务
+if command -v ssh &>/dev/null; then
+    SERVER="root@47.253.123.3"
+    if ssh -o ConnectTimeout=5 "$SERVER" "echo ok" &>/dev/null; then
+        # 检查 NATS
+        NATS_RUNNING=$(ssh "$SERVER" "ps aux | grep -c '[n]ats-server' || echo 0" 2>/dev/null | tr -d '\n\r ')
+        NATS_RUNNING=${NATS_RUNNING:-0}
+        if [[ "$NATS_RUNNING" -gt 0 ]]; then
+            check_pass "NATS Server 正在运行"
+        else
+            check_warn "NATS Server 未运行 — 所有 publish_event 调用静默失效，需直接 DB fallback"
+        fi
+
+        # 检查所有 polis 服务状态
+        echo "  服务运行状态:"
+        for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-web; do
+            STATUS=$(ssh "$SERVER" "systemctl is-active $svc 2>/dev/null" || echo "unknown")
+            case "$STATUS" in
+                active) echo -e "    ${GREEN}$svc: active${NC}" ;;
+                *) echo -e "    ${YELLOW}$svc: $STATUS${NC}" ;;
+            esac
+        done
+    else
+        check_warn "无法连接到服务器 $SERVER — 跳过远程基础设施检查"
+    fi
+else
+    check_warn "ssh 命令不可用 — 跳过远程基础设施检查"
+fi
+echo ""
+
 # ─── 汇总 ─────────────────────────────────────────────────────
 TOTAL=$((PASS + FAIL + WARN))
 echo -e "${CYAN}════════════════════════════════════════════${NC}"

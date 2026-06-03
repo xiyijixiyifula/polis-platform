@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 连接数据库
     let pool = PgPoolOptions::new()
-        .max_connections(20)
+        .max_connections(20).acquire_timeout(std::time::Duration::from_secs(10))
         .connect(&config.database_url)
         .await
         .expect("Failed to connect to PostgreSQL");

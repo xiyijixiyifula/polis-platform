@@ -593,16 +593,22 @@ impl CreationHandler {
         let space = SpaceMini { id: sid, namespace: sns, title: stitle };
 
         let user_id = current_user_id.unwrap_or_default();
+        let creation_ids: Vec<Uuid> = refs.iter().map(|r| r.creation_id).collect();
+        let creations: Vec<Creation> = sqlx::query_as("SELECT * FROM creations WHERE id = ANY($1)")
+            .bind(&creation_ids)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        let creation_map: std::collections::HashMap<Uuid, Creation> = creations.into_iter().map(|c| (c.id, c)).collect();
+        let all_creations: Vec<Creation> = creation_map.values().cloned().collect();
+        let batch_publics = creations_to_batch(&self.pool, &all_creations, user_id).await?;
+        let public_map: std::collections::HashMap<Uuid, CreationPublic> = batch_publics.into_iter().map(|p| (p.id, p)).collect();
+
         let mut public_list = Vec::new();
         for module_ref in refs {
-            let creation: Creation = sqlx::query_as("SELECT * FROM creations WHERE id = $1")
-                .bind(module_ref.creation_id)
-                .fetch_optional(&self.pool)
-                .await
-                .map_err(|e| AppError::Internal(e.to_string()))?
+            let creation_public = public_map.get(&module_ref.creation_id)
+                .cloned()
                 .ok_or(AppError::NotFound("创作数据不存在".to_string()))?;
-
-            let creation_public = creation_to_public(&self.pool, creation, user_id).await?;
 
             public_list.push(ModuleRefPublic {
                 id: module_ref.id,
@@ -749,6 +755,155 @@ impl CreationHandler {
 }
 
 // ==================== 辅助函数 ====================
+
+async fn creations_to_batch(
+    pool: &PgPool,
+    creations: &[Creation],
+    current_user_id: Uuid,
+) -> Result<Vec<CreationPublic>, AppError> {
+    use std::collections::{HashMap, HashSet};
+
+    if creations.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let creation_ids: Vec<Uuid> = creations.iter().map(|c| c.id).collect();
+    let creator_ids: Vec<Uuid> = creations.iter().map(|c| c.creator_id).collect();
+
+    let users: HashMap<Uuid, UserPublic> = sqlx::query_as::<_, polis_core::models::User>(
+        "SELECT * FROM users WHERE id = ANY($1)",
+    )
+    .bind(&creator_ids)
+    .fetch_all(pool)
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .into_iter()
+    .map(|u: polis_core::models::User| (u.id, UserPublic::from(u)))
+    .collect();
+
+    let liked_ids: HashSet<Uuid> = sqlx::query_scalar::<_, Uuid>(
+        "SELECT target_id FROM likes WHERE target_type = 'creation' AND target_id = ANY($1) AND user_id = $2",
+    )
+    .bind(&creation_ids)
+    .bind(current_user_id)
+    .fetch_all(pool)
+    .await
+    .unwrap_or_default()
+    .into_iter()
+    .collect();
+
+    let bookmarked_ids: HashSet<Uuid> = sqlx::query_scalar::<_, Uuid>(
+        "SELECT target_id FROM bookmarks WHERE target_type = 'creation' AND target_id = ANY($1) AND user_id = $2",
+    )
+    .bind(&creation_ids)
+    .bind(current_user_id)
+    .fetch_all(pool)
+    .await
+    .unwrap_or_default()
+    .into_iter()
+    .collect();
+
+    let own_ids: Vec<Uuid> = creations
+        .iter()
+        .filter(|c| c.creator_id == current_user_id)
+        .map(|c| c.id)
+        .collect();
+
+    let mut submissions_map: HashMap<Uuid, Vec<SubmissionInfo>> = HashMap::new();
+    if !own_ids.is_empty() {
+        let subs: Vec<(Uuid, Uuid, String, Option<String>, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String, i64, i64)> =
+            sqlx::query_as(
+                r#"
+                SELECT
+                    r.creation_id, r.id, r.module_type, sm.name as module_name,
+                    r.display_status, r.is_pinned, r.module_views, r.created_at,
+                    s.id, s.namespace, s.title,
+                    COALESCE(s.member_count, 0), COALESCE(s.post_count, 0)
+                FROM community_module_refs r
+                JOIN spaces s ON s.id = r.space_id
+                LEFT JOIN space_modules sm ON sm.space_id = r.space_id AND sm.module_key = r.module_type
+                WHERE r.creation_id = ANY($1)
+                ORDER BY r.created_at DESC
+                "#,
+            )
+            .bind(&own_ids)
+            .fetch_all(pool)
+            .await
+            .unwrap_or_default();
+
+        for (creation_id, ref_id, module_type, module_name, display_status, is_pinned, module_views, submitted_at, space_id, ns, title, member_count, post_count) in subs {
+            submissions_map.entry(creation_id).or_default().push(SubmissionInfo {
+                ref_id,
+                space: SpaceMini { id: space_id, namespace: ns, title },
+                module_type,
+                module_name,
+                display_status,
+                is_pinned,
+                module_views,
+                submitted_at,
+                community_member_count: member_count,
+                community_post_count: post_count,
+                community_level: None,
+                community_xp: None,
+                community_like_count: 0,
+                community_comment_count: 0,
+            });
+        }
+    }
+
+    let mut result = Vec::with_capacity(creations.len());
+    for creation in creations {
+        let creator = users.get(&creation.creator_id).cloned().unwrap_or(UserPublic {
+            id: creation.creator_id,
+            username: "unknown".to_string(),
+            display_name: "Unknown".to_string(),
+            avatar_url: None,
+            bio: String::new(),
+            verified: false,
+            notification_prefs: serde_json::Value::Null,
+            created_at: creation.created_at,
+            total_likes: 0,
+            post_count: 0,
+        });
+        let media_urls: Vec<String> = creation.media_urls
+            .as_array()
+            .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .unwrap_or_default();
+        let tags: Vec<String> = creation.tags
+            .as_array()
+            .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .unwrap_or_default();
+        result.push(CreationPublic {
+            id: creation.id,
+            creator,
+            content_type: creation.content_type.clone(),
+            title: creation.title.clone(),
+            body: creation.body.clone(),
+            cover_url: creation.cover_url.clone(),
+            media_urls,
+            visibility: match creation.visibility.as_str() {
+                "private" => polis_core::models::Visibility::Private,
+                "unlisted" => polis_core::models::Visibility::Unlisted,
+                _ => polis_core::models::Visibility::Public,
+            },
+            view_count: creation.view_count,
+            like_count: creation.like_count,
+            comment_count: creation.comment_count,
+            bookmark_count: creation.bookmark_count,
+            share_count: creation.share_count,
+            is_liked: liked_ids.contains(&creation.id),
+            is_bookmarked: bookmarked_ids.contains(&creation.id),
+            has_password: creation.password_hash.is_some(),
+            tags,
+            status: creation.status.clone(),
+            created_at: creation.created_at,
+            updated_at: creation.updated_at,
+            submissions: submissions_map.get(&creation.id).cloned().unwrap_or_default(),
+        });
+    }
+
+    Ok(result)
+}
 
 async fn creation_to_public(
     pool: &PgPool,

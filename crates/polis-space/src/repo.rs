@@ -82,11 +82,14 @@ impl SpaceRepo {
         // Hash password if provided
         let password_hash: Option<String> = match &req.password {
             Some(pwd) if !pwd.is_empty() => {
-                let salt = SaltString::generate(&mut OsRng);
-                let hash = Argon2::default()
-                    .hash_password(pwd.as_bytes(), &salt)
-                    .map_err(|_| AppError::Validation("密码哈希失败".to_string()))?
-                    .to_string();
+                let pwd = pwd.to_string();
+                let hash = tokio::task::spawn_blocking(move || {
+                    let salt = SaltString::generate(&mut OsRng);
+                    Argon2::default()
+                        .hash_password(pwd.as_bytes(), &salt)
+                        .map(|h| h.to_string())
+                        .map_err(|_| AppError::Validation("密码哈希失败".to_string()))
+                }).await.map_err(|e| AppError::Internal(e.to_string()))??;
                 Some(hash)
             }
             _ => None,
@@ -101,8 +104,7 @@ impl SpaceRepo {
                 banner_url = CASE WHEN $5 = '' THEN NULL ELSE COALESCE($5, banner_url) END,
                 visibility = COALESCE($6, visibility),
                 custom_rules = COALESCE($7, custom_rules),
-                enabled_modules = COALESCE($8, enabled_modules),
-                password_hash = COALESCE($9, password_hash),
+                password_hash = COALESCE($8, password_hash),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
@@ -115,7 +117,6 @@ impl SpaceRepo {
         .bind(&req.banner_url)
         .bind(&req.visibility.as_ref().map(|v| v.to_string()))
         .bind(&req.custom_rules)
-        .bind(&req.enabled_modules.as_ref().map(|m| serde_json::to_value(m).unwrap_or_default()))
         .bind(&password_hash)
         .fetch_one(&self.pool)
         .await?;
@@ -668,9 +669,13 @@ impl SpaceRepo {
         .flatten();
         match hash {
             Some(h) => {
-                let parsed = PasswordHash::new(&h)
-                    .map_err(|_| AppError::Internal("密码验证失败".to_string()))?;
-                Ok(Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok())
+                let pwd = password.to_string();
+                let h2 = h.clone();
+                Ok(tokio::task::spawn_blocking(move || {
+                    let parsed = PasswordHash::new(&h2)
+                        .map_err(|_| AppError::Internal("密码验证失败".to_string()))?;
+                    Ok::<_, AppError>(Argon2::default().verify_password(pwd.as_bytes(), &parsed).is_ok())
+                }).await.map_err(|e| AppError::Internal(e.to_string()))??)
             }
             None => Ok(false),
         }
@@ -717,15 +722,18 @@ impl SpaceRepo {
 
         let sort_order = max_order.unwrap_or(-1) + 1;
 
+        let icon = req.icon.clone().unwrap_or_else(|| "📄".to_string());
+
         let m = sqlx::query_as::<_, SpaceModule>(
-            r#"INSERT INTO space_modules (space_id, name, module_key, mode, allowed_content_types, sort_order)
-               VALUES ($1, $2, $3, $4, $5, $6) RETURNING *"#
+            r#"INSERT INTO space_modules (space_id, name, module_key, mode, allowed_content_types, icon, sort_order)
+               VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"#
         )
         .bind(space_id)
         .bind(&req.name)
         .bind(&module_key)
         .bind(&mode)
         .bind(&types)
+        .bind(&icon)
         .bind(sort_order)
         .fetch_one(&self.pool).await?;
 
@@ -746,12 +754,13 @@ impl SpaceRepo {
             .map(|t| serde_json::to_value(t).unwrap_or(existing.allowed_content_types.clone()))
             .unwrap_or(existing.allowed_content_types);
         let is_active = req.is_active.unwrap_or(existing.is_active);
+        let icon = req.icon.clone().unwrap_or(existing.icon);
 
         let m = sqlx::query_as::<_, SpaceModule>(
-            r#"UPDATE space_modules SET name=$1, mode=$2, allowed_content_types=$3, is_active=$4
-               WHERE space_id=$5 AND module_key=$6 RETURNING *"#
+            r#"UPDATE space_modules SET name=$1, mode=$2, allowed_content_types=$3, icon=$4, is_active=$5
+               WHERE space_id=$6 AND module_key=$7 RETURNING *"#
         )
-        .bind(&name).bind(&mode).bind(&types).bind(is_active)
+        .bind(&name).bind(&mode).bind(&types).bind(&icon).bind(is_active)
         .bind(space_id).bind(module_key)
         .fetch_optional(&self.pool).await?;
 

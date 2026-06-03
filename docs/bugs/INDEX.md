@@ -6,14 +6,14 @@
 
 | 指标 | 数值 |
 |------|------|
-| 总修复数/发现 | 86 |
-| 已归类 Pattern | 12 |
+| 总修复数/发现 | 94 |
+| 已归类 Pattern | 14 |
 | 回归链数 | 9 |
 | 总复发次数 | 9（URL编码 ×3 + xattr ×2 + Array.map ×1 + Gateway路由 ×1 + 部署流程 ×1 + 模块标签硬编码 ×2） |
-| 复发率 | 10.1%（9/89） |
-| 修复配方数 | 13 |
+| 复发率 | 9.6%（9/94） |
+| 修复配方数 | 15 |
 | 修复点位地图 | [fix-points.md](fix-points.md) |
-| 最近更新 | 2026-06-01 (新发现 3 个) |
+| 最近更新 | 2026-06-02 (v1.0.63 关注通知修复 + 通知去重 + 帖子权限提示) |
 
 ## 趋势面板
 
@@ -57,6 +57,7 @@ missing-form-field     ██ 1
 wrong-build-target     ██ 1
 dependency-auto-upgrade ██ 1
 module-tab-key-mismatch ██ 1
+nats-event-loss         ██ 1
 ```
 
 ### 修复有效性追踪
@@ -87,6 +88,7 @@ module-tab-key-mismatch ██ 1
 | 部署后功能无变化 / `file` 命令显示 Mach-O 非 ELF | [wrong-build-target](patterns/wrong-build-target.md) | [配方](fix-recipes/wrong-build-target.md) | `file` 检查二进制格式 |
 | 社区模块Tab点击空白 / Tab选中无内容 | [module-tab-key-mismatch](patterns/module-tab-key-mismatch.md) | [配方](fix-recipes/module-tab-key-mismatch.md) | 对比 tab id 与渲染块条件 |
 | 模块名显示为'交流' / 自定义模块标签不对 / 作品面包屑模块名错误 | [module-breadcrumb-hardcoded](patterns/module-breadcrumb-hardcoded.md) | [配方](fix-recipes/module-breadcrumb-hardcoded.md) | grep -rn "交流\|'forum'" web/src/ --include="*.tsx" |
+| 关注/注册/评论通知不工作 / NATS Connection refused / 服务启动日志 NATS 警告 | [nats-event-loss](patterns/nats-event-loss.md) | [配方](fix-recipes/nats-event-loss.md) | `ps aux \| grep nats` 检查 NATS 是否运行 |
 
 ## Pattern 列表
 
@@ -105,6 +107,7 @@ module-tab-key-mismatch ██ 1
 | 交叉编译目标错误 | 0 | v1.0.32 (2026-05-28) | 🔴 高 | [wrong-build-target.md](patterns/wrong-build-target.md) |
 | 模块Tab键值不匹配 | 0 | v1.0.34 (2026-05-29) | 🔴 高 | [module-tab-key-mismatch.md](patterns/module-tab-key-mismatch.md) |
 | 模块标签硬编码回退 | 2 | v1.0.43 (2026-05-29) | 🔴 高 | [module-breadcrumb-hardcoded.md](patterns/module-breadcrumb-hardcoded.md) |
+| NATS 事件丢失 | 0 | v1.0.63 (2026-06-02) | 🔴 高 | [nats-event-loss.md](patterns/nats-event-loss.md) |
 
 ## 修复配方库
 
@@ -124,6 +127,7 @@ module-tab-key-mismatch ██ 1
 | 部署后功能无变化，二进制格式不对 | [wrong-build-target](fix-recipes/wrong-build-target.md) | 3 分钟 |
 | 社区模块Tab点击空白无内容 | [module-tab-key-mismatch](fix-recipes/module-tab-key-mismatch.md) | 5 分钟 |
 | 模块标签显示为'交流'（首页/社区/个人主页/帖子详情） | [module-breadcrumb-hardcoded](fix-recipes/module-breadcrumb-hardcoded.md) | 30 分钟（根因修复涉及8文件20+点位） |
+| 关注后对方收不到通知 / NATS 日志报 Connection refused | [nats-event-loss](fix-recipes/nats-event-loss.md) | 15 分钟 |
 
 → [完整配方索引](fix-recipes/INDEX.md)
 
@@ -145,7 +149,7 @@ module-tab-key-mismatch ██ 1
 ./scripts/pre-deploy-check.sh --strict  # 严格模式（任何问题都阻断）
 ```
 
-自动检查以下 12 类风险：xattr 污染 / .map() 防空 / JWT atob / actions 数组 / Gateway 路由 / post_count 同步 / JWT exp 校验 / SQL 注入 / 二进制格式 / 工作区状态 / Visibility 枚举 / 表单字段完整性。
+自动检查以下 19 类风险：xattr 污染 / .map() 防空 / JWT atob / actions 数组 / Gateway 路由 / post_count 同步 / JWT exp 校验 / SQL 注入 / 二进制格式 / 工作区状态 / Visibility 枚举 / 表单字段完整性 / Pattern frontmatter / fix-points 一致性 / 回归风险评分 / Argon2 spawn_blocking / Gateway 连接池 / N+1 批量查询 / NATS 事件丢失 + 服务器基础设施。
 
 ---
 
@@ -299,6 +303,52 @@ module-tab-key-mismatch ██ 1
 | CLAUDE.md Bug 修复流程 | 每次修 bug | 强制更新追踪文档 |
 | 修复影响矩阵 (regression-map.md) | 修改前参考 | 修改区域 → 可能触发的回归 |
 
+## 模式成熟度模型 (Pattern Maturity Model)
+
+> 每个 Bug Pattern 从发现到根除经历 4 个阶段。阶段越高，复发概率越低。
+
+### 成熟度阶段定义
+
+```
+Stage 1 🔴 被动响应    Stage 2 🟠 配方化      Stage 3 🟡 自动化        Stage 4 🟢 已根除
+   │                      │                      │                      │
+   │ 首次发现并修复        │ 复发≥1次后创建       │ 复发≥2次后添加        │ 架构层面解决
+   │ 仅有 timeline 记录    │ fix-recipes 配方     │ 自动化检查脚本        │ 不再可能复发
+   │ 无配方可复用          │ 再次复发可复制粘贴   │ 部署前自动拦截        │ Pattern 可归档
+   └──────────────────────┴──────────────────────┴──────────────────────┘
+```
+
+### 各 Pattern 当前成熟度
+
+| Pattern | 阶段 | 首次发现 | 配方 | 自动化检查 | 根除方案 | 升级阻碍 |
+|---------|------|----------|------|-----------|---------|----------|
+| url-double-encoding | 🟠 Stage 2 | v0.2.54 | ✅ | ❌ | 统一编解码工具函数 | 涉及全站URL处理，改动大 |
+| xattr-contamination | 🟡 Stage 3 | v0.3.91 | ✅ | ✅ pre-deploy-check | CLAUDE.md 铁律 + auto-dev.sh | 人为操作可能遗漏 |
+| array-map-null | 🟠 Stage 2 | v0.2.x | ✅ | ⚠️ 部分 (pre-deploy) | ESLint 规则强制 | ESLint 规则未配置 |
+| post-count-sync | 🟠 Stage 2 | v1.0.14 | ✅ | ❌ | DB 触发器 | 触发器影响性能 |
+| atob-base64url | 🟡 Stage 3 | v1.0.29 | ✅ | ✅ pre-deploy-check | jwt-decode 库替换 | — |
+| gateway-route-missing | 🟠 Stage 2 | v1.0.22 | ✅ | ❌ | 路由自动注册宏 | 架构改动大 |
+| actions-array-missing | 🟠 Stage 2 | v1.0.32 | ✅ | ❌ | handle_auth_path 自动提取 | 需要重构路由注册 |
+| wrong-build-target | 🟡 Stage 3 | v1.0.32 | ✅ | ✅ pre-deploy-check | CI/CD pipeline | 服务器资源不足 |
+| module-tab-key-mismatch | 🟠 Stage 2 | v1.0.34 | ✅ | ❌ | 统一键空间 (module_key) | 本次重构进行中 |
+| module-breadcrumb-hardcoded | 🟠 Stage 2 | v1.0.40 | ✅ | ❌ | MODULE_CONFIG 完全移除 | 本次重构进行中 |
+| nats-event-loss | 🟠 Stage 2 | v1.0.63 | ✅ | ❌ | 部署 NATS Server 或全部改为 DB 直接写入 | 需评估服务器资源 |
+| missing-form-field | 🟠 Stage 2 | v1.0.20 | ✅ | ❌ | React Hook Form + Zod | 需要全面改造表单 |
+| deploy-path-mismatch | 🟠 Stage 2 | v1.0.27 | ✅ | ⚠️ pre-deploy 部分检查 | 统一部署脚本 | — |
+| dependency-auto-upgrade | 🟡 Stage 3 | v1.0.12 | ✅ | ✅ (package.json 锁定) | Renovate/Dependabot 配置 | — |
+
+### 阶段晋升路线图
+
+| 下一步 | Pattern | 行动 | 预计效果 |
+|--------|---------|------|----------|
+| Stage 2→3 | url-double-encoding | pre-deploy 添加 `%25` 自动检测 | 部署前自动拦截 |
+| Stage 2→3 | post-count-sync | pre-deploy 添加 `INSERT INTO posts` 后检查 post_count | 新增路径自动警告 |
+| Stage 2→3 | module-tab-key-mismatch | 本次重构完成后归档 | 键空间统一后不再可能 |
+| Stage 2→3 | module-breadcrumb-hardcoded | 本次重构完成后归档 | MODULE_CONFIG 移除后不再可能 |
+| Stage 3→4 | xattr-contamination | GitHub Actions 全自动打包部署 | 消除手动操作 |
+
+---
+
 ## 快速参考卡片
 
 > 打印或保存此卡片，修 bug 时快速查阅。
@@ -320,6 +370,9 @@ module-tab-key-mismatch ██ 1
 │  部署前:                                                    │
 │    $ ./scripts/pre-deploy-check.sh                          │
 │                                                             │
+│  服务器基础设施检查:                                          │
+│    $ ./scripts/infra-check.sh                               │
+│                                                             │
 │  复发时:                                                    │
 │    查 docs/bugs/fix-recipes/INDEX.md → 复制粘贴修复          │
 │                                                             │
@@ -333,6 +386,16 @@ module-tab-key-mismatch ██ 1
 │    在 docs/bugs/patterns/ 创建新文件                         │
 │    在 docs/bugs/fix-recipes/ 创建对应配方                    │
 │    更新 docs/bugs/INDEX.md 和 fix-points.md                 │
+│                                                             │
+│  周度统计:                                                   │
+│    $ ./scripts/weekly-bug-report.sh                         │
+│    $ ./scripts/weekly-bug-report.sh --monthly               │
+│                                                             │
+│  查看模式成熟度:                                              │
+│    查 INDEX.md → 模式成熟度模型                              │
+│                                                             │
+│  查看修复有效性:                                              │
+│    查 regression-map.md → 修复有效性评分                     │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```

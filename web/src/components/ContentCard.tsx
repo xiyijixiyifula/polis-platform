@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import InlineRefs from './InlineRefs';
 import {
   Heart, MessageCircle, Bookmark, Eye, Repeat2,
   Pencil, Trash2, Send, ChevronDown, ChevronUp, Play,
@@ -11,7 +12,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatCount, stripMarkdown } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
-import { getModuleLabel, getModuleLabelByContentType, buildPostLink, MODULE_CONFIG } from '@/lib/module-config';
+import { getModuleLabel, getModuleLabelByContentType, buildPostLink } from '@/lib/module-config';
 
 // ========== Types ==========
 
@@ -148,7 +149,7 @@ export interface ContentCardProps {
 
 // ========== Module Labels ==========
 // Re-export from unified module-config
-export { getModuleLabel, getModuleLabelByContentType, getModuleEmoji, MODULE_CONFIG, VALID_MODULE_KEYS } from '@/lib/module-config';
+export { getModuleLabel, getModuleLabelByContentType, getModuleEmoji } from '@/lib/module-config';
 
 function getTypeEmoji(type?: string): string {
   if (type === 'poll') return '📊';
@@ -295,9 +296,8 @@ export default function ContentCard({
           onClick={(e) => {
             e.preventDefault(); e.stopPropagation();
             if (!spaceNs) return;
-            const modRoute = MODULE_CONFIG[moduleType || '']?.route;
-            const targetUrl = modRoute && modRoute !== 'posts'
-              ? `/space/${encodeURIComponent(spaceNs)}/${modRoute}`
+            const targetUrl = moduleType
+              ? `/space/${encodeURIComponent(spaceNs)}/${moduleType}`
               : `/space/${encodeURIComponent(spaceNs)}`;
             router.push(targetUrl);
           }}
@@ -344,14 +344,14 @@ export default function ContentCard({
 
       {/* ===== Content Preview ===== */}
       {contentPreview && !isVideo && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 pl-5">
-          {contentPreview}
-        </p>
+        <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2 mb-2 pl-5">
+          <InlineRefs text={contentPreview} />
+        </div>
       )}
       {contentPreview && isVideo && (
-        <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mb-2 pl-5">
-          {contentPreview}
-        </p>
+        <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1 mb-2 pl-5">
+          <InlineRefs text={contentPreview} />
+        </div>
       )}
 
       {/* ===== Author Row ===== */}
@@ -664,7 +664,7 @@ export function adaptFeedItem(item: any): ContentCardProps {
 export function adaptCreationItem(creation: any): ContentCardProps {
   const creator = creation.creator || {};
   const firstSub = creation.submissions?.[0];
-  const rawType = firstSub?.module_type || creation.content_type || 'forum';
+  const rawType = firstSub?.module_type || creation.content_type || '';
 
   return {
     id: creation.id,

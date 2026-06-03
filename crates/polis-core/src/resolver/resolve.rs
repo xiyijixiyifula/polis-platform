@@ -49,18 +49,10 @@ pub async fn resolve_space_enabled_modules(pool: &PgPool, space_id: Uuid) -> Res
     .map_err(|e| AppError::Database(e))?;
 
     if rows.is_empty() {
-        return Ok(vec!["forum".to_string()]);
+        return Ok(vec![]);
     }
 
-    let mut modules: Vec<String> = rows.into_iter().map(|(k,)| k).collect();
-
-    // forum/article 别名兼容
-    if modules.contains(&"forum".to_string()) && !modules.contains(&"article".to_string()) {
-        modules.push("article".to_string());
-    }
-    if modules.contains(&"article".to_string()) && !modules.contains(&"forum".to_string()) {
-        modules.push("forum".to_string());
-    }
+    let modules: Vec<String> = rows.into_iter().map(|(k,)| k).collect();
     Ok(modules)
 }
 

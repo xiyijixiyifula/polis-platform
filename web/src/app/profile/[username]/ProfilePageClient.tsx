@@ -114,9 +114,9 @@ export default function UserProfilePage({ username }: { username: string }) {
   const [showRefDialog, setShowRefDialog] = useState(false);
   const [refPostId, setRefPostId] = useState('');
   const [refIsCreation, setRefIsCreation] = useState(false);
-  const [refPostModuleType, setRefPostModuleType] = useState('forum'); // 源帖子的模块类型
+  const [refPostModuleType, setRefPostModuleType] = useState('');
   const [refSpaceNs, setRefSpaceNs] = useState('');
-  const [refModuleType, setRefModuleType] = useState('forum');
+  const [refModuleType, setRefModuleType] = useState('');
   const [refSubmitting, setRefSubmitting] = useState(false);
   const [refError, setRefError] = useState('');
   const [refSuccess, setRefSuccess] = useState('');
@@ -319,12 +319,8 @@ export default function UserProfilePage({ username }: { username: string }) {
       const res = await fetch(`/api/users/${encodeURIComponent(user.username)}/spaces`);
       const data = await res.json();
       if (data.code === 0 && Array.isArray(data.data)) {
-        // 过滤：只显示启用了相同模块类型的社区
-        const filtered = data.data.filter((s: any) => {
-          const mods = s.enabled_modules;
-          if (!mods || !Array.isArray(mods)) return refPostModuleType === 'forum';
-          return mods.includes(refPostModuleType);
-        });
+        // 显示所有社区（模块兼容性由后端验证）
+        const filtered = data.data;
         setRefUserSpaces(filtered);
       }
     } catch {}

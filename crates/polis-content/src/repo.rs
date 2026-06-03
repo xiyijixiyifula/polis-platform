@@ -1,5 +1,5 @@
 use polis_core::error::AppError;
-use polis_core::models::{Post, PostReference, Comment, Pagination, UserPublic, Series, SpaceTier, Subscription, DirectMessage};
+use polis_core::models::{Post, PostReference, Comment, Pagination, UserPublic, User, Series, SpaceTier, Subscription, DirectMessage, Hashtag, Tip, EditorPick, CommunityEvent, WeeklyTopic};
 use sqlx::PgPool;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -245,7 +245,13 @@ impl ContentRepo {
             if let Some(ref hash) = p.password_hash {
                 let parsed = PasswordHash::new(hash)
                     .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
-                if Argon2::default().verify_password(password.as_bytes(), &parsed).is_err() {
+                let pwd3 = password.to_string();
+                let hash3 = hash.to_string();
+                let verified3 = tokio::task::spawn_blocking(move || {
+                    let parsed = PasswordHash::new(&hash3).map_err(|_| ())?;
+                    Argon2::default().verify_password(pwd3.as_bytes(), &parsed).map_err(|_| ())
+                }).await.is_ok();
+                if !verified3 {
                     return Ok(None);
                 }
             }
@@ -331,6 +337,8 @@ impl ContentRepo {
         body: &str,
         parent_id: Option<Uuid>,
     ) -> Result<Comment, AppError> {
+        let mut tx = self.pool.begin().await.map_err(|e| AppError::Internal(e.to_string()))?;
+
         let comment = sqlx::query_as::<_, Comment>(
             r#"
             INSERT INTO comments (post_id, author_id, body, parent_id)
@@ -342,13 +350,15 @@ impl ContentRepo {
         .bind(author_id)
         .bind(body)
         .bind(parent_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await?;
 
         sqlx::query("UPDATE posts SET comment_count = comment_count + 1 WHERE id = $1")
             .bind(post_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
+
+        tx.commit().await.map_err(|e| AppError::Internal(e.to_string()))?;
 
         Ok(comment)
     }
@@ -437,41 +447,71 @@ impl ContentRepo {
         target_id: Uuid,
         user_id: Uuid,
     ) -> Result<bool, AppError> {
+        let mut tx = self.pool.begin().await.map_err(|e| AppError::Internal(e.to_string()))?;
+
         let existing = sqlx::query_scalar::<_, Option<Uuid>>(
             "SELECT id FROM likes WHERE target_type = $1 AND target_id = $2 AND user_id = $3",
         )
         .bind(target_type)
         .bind(target_id)
         .bind(user_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await?;
 
-        if let Some(_) = existing {
-            // 取消点赞
+        let result = if let Some(_) = existing {
             sqlx::query("DELETE FROM likes WHERE target_type = $1 AND target_id = $2 AND user_id = $3")
                 .bind(target_type)
                 .bind(target_id)
                 .bind(user_id)
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await?;
 
-            // 递减计数
-            self.decrement_like_count(target_type, target_id).await?;
-            Ok(false)
+            match target_type {
+                "post" => {
+                    sqlx::query("UPDATE posts SET like_count = GREATEST(like_count - 1, 0) WHERE id = $1")
+                        .bind(target_id).execute(&mut *tx).await?;
+                }
+                "comment" => {
+                    sqlx::query("UPDATE comments SET like_count = GREATEST(like_count - 1, 0) WHERE id = $1")
+                        .bind(target_id).execute(&mut *tx).await?;
+                }
+                "creation" => {
+                    sqlx::query("UPDATE creations SET like_count = GREATEST(like_count - 1, 0) WHERE id = $1")
+                        .bind(target_id).execute(&mut *tx).await?;
+                }
+                _ => {}
+            }
+            false
         } else {
-            // 点赞
             sqlx::query(
                 "INSERT INTO likes (target_type, target_id, user_id) VALUES ($1, $2, $3)",
             )
             .bind(target_type)
             .bind(target_id)
             .bind(user_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
 
-            self.increment_like_count(target_type, target_id).await?;
-            Ok(true)
-        }
+            match target_type {
+                "post" => {
+                    sqlx::query("UPDATE posts SET like_count = like_count + 1 WHERE id = $1")
+                        .bind(target_id).execute(&mut *tx).await?;
+                }
+                "comment" => {
+                    sqlx::query("UPDATE comments SET like_count = like_count + 1 WHERE id = $1")
+                        .bind(target_id).execute(&mut *tx).await?;
+                }
+                "creation" => {
+                    sqlx::query("UPDATE creations SET like_count = like_count + 1 WHERE id = $1")
+                        .bind(target_id).execute(&mut *tx).await?;
+                }
+                _ => {}
+            }
+            true
+        };
+
+        tx.commit().await.map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(result)
     }
 
     async fn increment_like_count(&self, target_type: &str, target_id: Uuid) -> Result<(), AppError> {
@@ -799,17 +839,19 @@ impl ContentRepo {
     }
 
     pub async fn vote_poll(&self, poll_id: Uuid, option_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+        let mut tx = self.pool.begin().await.map_err(|e| AppError::Internal(e.to_string()))?;
         let existing: Option<(Uuid,)> = sqlx::query_as(
             "SELECT id FROM poll_votes WHERE poll_id = $1 AND user_id = $2"
-        ).bind(poll_id).bind(user_id).fetch_optional(&self.pool).await?;
+        ).bind(poll_id).bind(user_id).fetch_optional(&mut *tx).await?;
         if existing.is_some() {
             return Err(AppError::Forbidden("你已经投过票了".to_string()));
         }
         sqlx::query("INSERT INTO poll_votes (poll_id, option_id, user_id) VALUES ($1, $2, $3)")
             .bind(poll_id).bind(option_id).bind(user_id)
-            .execute(&self.pool).await?;
+            .execute(&mut *tx).await?;
         sqlx::query("UPDATE poll_options SET vote_count = vote_count + 1 WHERE id = $1")
-            .bind(option_id).execute(&self.pool).await?;
+            .bind(option_id).execute(&mut *tx).await?;
+        tx.commit().await.map_err(|e| AppError::Internal(e.to_string()))?;
         Ok(())
     }
 
@@ -1736,7 +1778,6 @@ impl ContentRepo {
 
     /// 创建通知
     pub async fn create_notification(&self, user_id: Uuid, typ: &str, actor_id: Uuid, target_type: &str, target_id: Uuid, content: &str) -> Result<(), AppError> {
-        // 不给自己发通知
         if user_id == actor_id {
             return Ok(());
         }
@@ -1746,6 +1787,232 @@ impl ContentRepo {
         .bind(user_id).bind(typ).bind(actor_id).bind(target_type).bind(target_id).bind(content)
         .execute(&self.pool).await?;
         Ok(())
+    }
+
+    pub async fn find_user_by_username(&self, username: &str) -> Result<Option<User>, AppError> {
+        sqlx::query_as::<_, User>(
+            "SELECT * FROM users WHERE LOWER(username) = LOWER($1)"
+        )
+        .bind(username).fetch_optional(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    // ===== #Hashtags =====
+
+    pub async fn upsert_hashtag(&self, tag: &str, normalized: &str) -> Result<(), AppError> {
+        sqlx::query(
+            "INSERT INTO hashtags (tag, normalized_tag) VALUES ($1, $2) ON CONFLICT (normalized_tag) DO UPDATE SET post_count = hashtags.post_count + 1, total_use_count = hashtags.total_use_count + 1, last_used_at = now()"
+        )
+        .bind(tag).bind(normalized).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    pub async fn create_hashtag_mapping(&self, normalized_tag: &str, target_type: &str, target_id: Uuid) -> Result<(), AppError> {
+        let hashtag_id: Option<Uuid> = sqlx::query_scalar("SELECT id FROM hashtags WHERE normalized_tag = $1")
+            .bind(normalized_tag).fetch_optional(&self.pool).await?;
+        if let Some(hid) = hashtag_id {
+            sqlx::query("INSERT INTO hashtag_mappings (hashtag_id, target_type, target_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+                .bind(hid).bind(target_type).bind(target_id).execute(&self.pool).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn get_trending_hashtags(&self, limit: i64) -> Result<Vec<Hashtag>, AppError> {
+        sqlx::query_as::<_, Hashtag>(
+            "SELECT * FROM hashtags ORDER BY total_use_count DESC, last_used_at DESC LIMIT $1"
+        )
+        .bind(limit).fetch_all(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    pub async fn get_posts_by_hashtag(&self, normalized_tag: &str, page: u32, page_size: u32) -> Result<(Vec<Post>, Pagination), AppError> {
+        let offset = ((page - 1) * page_size) as i64;
+        let limit = page_size as i64;
+        let posts = sqlx::query_as::<_, Post>(
+            "SELECT p.* FROM posts p JOIN hashtag_mappings hm ON p.id = hm.target_id JOIN hashtags h ON hm.hashtag_id = h.id WHERE h.normalized_tag = $1 AND p.is_deleted = false AND hm.target_type = 'post' ORDER BY p.created_at DESC LIMIT $2 OFFSET $3"
+        )
+        .bind(normalized_tag).bind(limit).bind(offset).fetch_all(&self.pool).await?;
+        let total: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM posts p JOIN hashtag_mappings hm ON p.id = hm.target_id JOIN hashtags h ON hm.hashtag_id = h.id WHERE h.normalized_tag = $1 AND p.is_deleted = false"
+        )
+        .bind(normalized_tag).fetch_one(&self.pool).await?;
+        let total_pages = ((total as f64) / (page_size as f64)).ceil() as u32;
+        Ok((posts, Pagination { page, page_size, total: total as u64, total_pages }))
+    }
+
+    // ===== Tips 打赏 =====
+
+    pub async fn create_tip(&self, sender_id: Uuid, receiver_id: Uuid, target_type: &str, target_id: Uuid, amount: i32, message: Option<&str>, is_anonymous: bool) -> Result<Tip, AppError> {
+        sqlx::query_as::<_, Tip>(
+            "INSERT INTO tips (sender_id, receiver_id, target_type, target_id, amount, message, is_anonymous) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
+        )
+        .bind(sender_id).bind(receiver_id).bind(target_type).bind(target_id).bind(amount).bind(message).bind(is_anonymous)
+        .fetch_one(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    pub async fn get_tips_received(&self, user_id: Uuid, page: u32, page_size: u32) -> Result<Vec<Tip>, AppError> {
+        let offset = ((page - 1) * page_size) as i64;
+        sqlx::query_as::<_, Tip>(
+            "SELECT * FROM tips WHERE receiver_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3"
+        )
+        .bind(user_id).bind(page_size as i64).bind(offset).fetch_all(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    pub async fn get_tip_leaderboard(&self, period: &str, limit: i64) -> Result<Vec<(Uuid, i64, i32)>, AppError> {
+        let col = match period { "weekly" => "weekly_amount", "monthly" => "monthly_amount", _ => "all_time_amount" };
+        let query = format!("SELECT user_id, {} as amount, {} FROM tip_leaderboard ORDER BY {} DESC LIMIT $1", col, col, col);
+        let rows: Vec<(Uuid, i64, i32)> = sqlx::query_as(&query).bind(limit).fetch_all(&self.pool).await?;
+        Ok(rows)
+    }
+
+    // ===== Editor Picks 编辑精选 =====
+
+    pub async fn get_active_editor_picks(&self, pick_type: &str) -> Result<Vec<EditorPick>, AppError> {
+        sqlx::query_as::<_, EditorPick>(
+            "SELECT * FROM editor_picks WHERE is_active = true AND pick_type = $1 ORDER BY sort_order LIMIT 20"
+        )
+        .bind(pick_type).fetch_all(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    pub async fn create_editor_pick(&self, target_type: &str, target_id: Uuid, title_override: Option<&str>, desc_override: Option<&str>, pick_type: &str, sort_order: i32, picked_by: Option<Uuid>) -> Result<EditorPick, AppError> {
+        sqlx::query_as::<_, EditorPick>(
+            "INSERT INTO editor_picks (target_type, target_id, title_override, description_override, pick_type, sort_order, picked_by) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"
+        )
+        .bind(target_type).bind(target_id).bind(title_override).bind(desc_override).bind(pick_type).bind(sort_order).bind(picked_by)
+        .fetch_one(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    pub async fn delete_editor_pick(&self, id: Uuid) -> Result<(), AppError> {
+        sqlx::query("UPDATE editor_picks SET is_active = false WHERE id = $1")
+            .bind(id).execute(&self.pool).await?;
+        Ok(())
+    }
+
+    // ===== Leaderboard 排行榜 =====
+
+    pub async fn get_leaderboard(&self, period: &str, limit: i64) -> Result<Vec<(Uuid, i64, i32, i32)>, AppError> {
+        let since = match period {
+            "weekly" => "NOW() - INTERVAL '7 days'",
+            "monthly" => "NOW() - INTERVAL '30 days'",
+            _ => "'1970-01-01'",
+        };
+        let query = format!(
+            "SELECT u.id, \
+             (COALESCE(COUNT(c.id), 0) * 10 + COALESCE(SUM(c.like_count), 0)::int8 * 5 + COALESCE(SUM(c.comment_count), 0)::int8 * 2)::int8 AS score, \
+             COALESCE(SUM(c.view_count), 0)::int4 AS total_views, \
+             COALESCE(COUNT(c.id), 0)::int4 AS post_count \
+             FROM users u \
+             LEFT JOIN creations c ON c.creator_id = u.id AND c.created_at >= {} \
+             GROUP BY u.id \
+             ORDER BY score DESC \
+             LIMIT $1",
+            since
+        );
+        let rows: Vec<(Uuid, i64, i32, i32)> = sqlx::query_as(&query).bind(limit).fetch_all(&self.pool).await?;
+        Ok(rows)
+    }
+
+    // ===== Community Events 社区活动 =====
+
+    pub async fn get_active_events(&self, space_id: Option<Uuid>) -> Result<Vec<CommunityEvent>, AppError> {
+        if let Some(sid) = space_id {
+            sqlx::query_as::<_, CommunityEvent>(
+                "SELECT * FROM community_events WHERE space_id = $1 AND status = 'active' ORDER BY start_at DESC"
+            )
+            .bind(sid).fetch_all(&self.pool).await
+            .map_err(AppError::from)
+        } else {
+            sqlx::query_as::<_, CommunityEvent>(
+                "SELECT * FROM community_events WHERE status = 'active' ORDER BY start_at DESC LIMIT 50"
+            )
+            .fetch_all(&self.pool).await
+            .map_err(AppError::from)
+        }
+    }
+
+    pub async fn get_event_by_id(&self, event_id: Uuid) -> Result<Option<CommunityEvent>, AppError> {
+        sqlx::query_as::<_, CommunityEvent>("SELECT * FROM community_events WHERE id = $1")
+            .bind(event_id).fetch_optional(&self.pool).await
+            .map_err(AppError::from)
+    }
+
+    pub async fn create_event(&self, space_id: Uuid, creator_id: Uuid, title: &str, description: Option<&str>, cover_url: Option<&str>, event_type: &str, start_at: Option<chrono::DateTime<chrono::Utc>>, end_at: Option<chrono::DateTime<chrono::Utc>>, rules: serde_json::Value, prizes: serde_json::Value) -> Result<CommunityEvent, AppError> {
+        sqlx::query_as::<_, CommunityEvent>(
+            "INSERT INTO community_events (space_id, creator_id, title, description, cover_url, event_type, start_at, end_at, rules, prizes) VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, now()), $8, $9, $10) RETURNING *"
+        )
+        .bind(space_id).bind(creator_id).bind(title).bind(description).bind(cover_url).bind(event_type).bind(start_at).bind(end_at).bind(rules).bind(prizes)
+        .fetch_one(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    pub async fn join_event(&self, event_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        let existing: Option<Uuid> = sqlx::query_scalar("SELECT id FROM event_participants WHERE event_id = $1 AND user_id = $2")
+            .bind(event_id).bind(user_id).fetch_optional(&self.pool).await?;
+        if existing.is_some() {
+            return Ok(false);
+        }
+        sqlx::query("INSERT INTO event_participants (event_id, user_id) VALUES ($1, $2)")
+            .bind(event_id).bind(user_id).execute(&self.pool).await?;
+        sqlx::query("UPDATE community_events SET participant_count = participant_count + 1 WHERE id = $1")
+            .bind(event_id).execute(&self.pool).await?;
+        Ok(true)
+    }
+
+    // ===== Weekly Topics 每周话题 =====
+
+    pub async fn get_active_weekly_topic(&self) -> Result<Option<WeeklyTopic>, AppError> {
+        sqlx::query_as::<_, WeeklyTopic>(
+            "SELECT * FROM weekly_topics WHERE is_active = true AND now() BETWEEN start_at AND end_at ORDER BY start_at DESC LIMIT 1"
+        )
+        .fetch_optional(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    pub async fn get_weekly_topic_by_key(&self, topic_key: &str) -> Result<Option<WeeklyTopic>, AppError> {
+        sqlx::query_as::<_, WeeklyTopic>("SELECT * FROM weekly_topics WHERE topic_key = $1")
+            .bind(topic_key).fetch_optional(&self.pool).await
+            .map_err(AppError::from)
+    }
+
+    pub async fn create_weekly_topic(&self, topic_key: &str, title: &str, description: Option<&str>, cover_url: Option<&str>, topic_type: &str, end_at: Option<chrono::DateTime<chrono::Utc>>, created_by: Option<Uuid>) -> Result<WeeklyTopic, AppError> {
+        sqlx::query_as::<_, WeeklyTopic>(
+            "INSERT INTO weekly_topics (topic_key, title, description, cover_url, topic_type, end_at, created_by) VALUES ($1, $2, $3, $4, $5, COALESCE($6, now() + INTERVAL '7 days'), $7) ON CONFLICT (topic_key) DO UPDATE SET title = $2, description = $3, cover_url = $4, topic_type = $5, end_at = COALESCE($6, now() + INTERVAL '7 days') RETURNING *"
+        )
+        .bind(topic_key).bind(title).bind(description).bind(cover_url).bind(topic_type).bind(end_at).bind(created_by)
+        .fetch_one(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    // ===== Recommendations 推荐系统 =====
+
+    pub async fn get_recommended_posts(&self, user_id: Uuid, limit: i64) -> Result<Vec<Post>, AppError> {
+        sqlx::query_as::<_, Post>(
+            "SELECT p.* FROM posts p JOIN memberships m ON p.space_id = m.space_id WHERE m.user_id = $1 AND p.is_deleted = false AND p.author_id != $1 ORDER BY p.like_count + p.comment_count * 2 DESC LIMIT $2"
+        )
+        .bind(user_id).bind(limit).fetch_all(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    pub async fn get_recommended_spaces(&self, user_id: Uuid, limit: i64) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows: Vec<serde_json::Value> = sqlx::query_scalar(
+            "SELECT json_build_object('id', s.id, 'namespace', s.namespace, 'title', s.title, 'icon_url', s.icon_url, 'member_count', s.member_count) FROM spaces s WHERE s.status = 'active' AND s.visibility = 'public' AND s.id NOT IN (SELECT space_id FROM memberships WHERE user_id = $1) ORDER BY s.member_count DESC LIMIT $2"
+        )
+        .bind(user_id).bind(limit).fetch_all(&self.pool).await?;
+        Ok(rows)
+    }
+
+    pub async fn get_recommended_users(&self, user_id: Uuid, limit: i64) -> Result<Vec<UserPublic>, AppError> {
+        let rows: Vec<(Uuid, String, String, Option<String>, String, bool, serde_json::Value, chrono::DateTime<chrono::Utc>, i64, i64)> = sqlx::query_as(
+            "SELECT u.id, u.username, u.display_name, u.avatar_url, u.bio, u.verified, u.notification_prefs, u.created_at, COALESCE(l.total_likes, 0)::int8 as total_likes, COALESCE(pc.post_count, 0)::int8 as post_count FROM users u LEFT JOIN (SELECT author_id, SUM(like_count) as total_likes FROM posts WHERE is_deleted = false GROUP BY author_id) l ON u.id = l.author_id LEFT JOIN (SELECT author_id, COUNT(*) as post_count FROM posts WHERE is_deleted = false GROUP BY author_id) pc ON u.id = pc.author_id WHERE u.id != $1 AND u.id NOT IN (SELECT followee_id FROM follows WHERE follower_id = $1 AND followee_type = 'user') ORDER BY COALESCE(pc.post_count, 0) DESC LIMIT $2"
+        )
+        .bind(user_id).bind(limit).fetch_all(&self.pool).await?;
+        Ok(rows.into_iter().map(|(id, username, display_name, avatar_url, bio, verified, notification_prefs, created_at, total_likes, post_count)| UserPublic {
+            id, username, display_name, avatar_url, bio, verified, notification_prefs, created_at, total_likes, post_count
+        }).collect())
     }
 
 }

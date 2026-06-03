@@ -3,21 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Check } from 'lucide-react';
 import { getModuleLabel } from '@/lib/module-config';
+import type { SpaceModule } from '@/lib/api';
 
 interface Space {
   id: string;
   namespace: string;
   title: string;
-  enabled_modules: string[] | string; // API 可能返回 JSON 字符串
-}
-
-/** 安全地将 enabled_modules 转为数组 */
-function safeModules(raw: string[] | string | any): string[] {
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string') {
-    try { const parsed = JSON.parse(raw); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
-  }
-  return [];
 }
 
 interface SubmitDialogProps {
@@ -32,6 +23,8 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
   const [search, setSearch] = useState('');
   const [selectedSpace, setSelectedSpace] = useState<Space | null>(null);
   const [selectedModule, setSelectedModule] = useState<string>('');
+  const [spaceModules, setSpaceModules] = useState<SpaceModule[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
@@ -53,7 +46,6 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
-      // 防御性处理：API 可能返回纯数组或分页对象 { items: [...] }
       if (data.data) {
         const spaces = Array.isArray(data.data) ? data.data
           : (Array.isArray(data.data.items) ? data.data.items : []);
@@ -61,6 +53,22 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
         setFiltered(spaces);
       }
     } catch { /* 静默失败 */ } finally { setFetching(false); }
+  };
+
+  const fetchSpaceModules = async (spaceNs: string) => {
+    setModulesLoading(true);
+    setSpaceModules([]);
+    try {
+      const res = await fetch(`/api/spaces/${encodeURIComponent(spaceNs)}/modules`);
+      const data = await res.json();
+      if (data.code === 0 && data.data) setSpaceModules(data.data);
+    } catch { /* 静默失败 */ } finally { setModulesLoading(false); }
+  };
+
+  const handleSelectSpace = (space: Space) => {
+    setSelectedSpace(space);
+    setSelectedModule('');
+    fetchSpaceModules(space.namespace);
   };
 
   const handleSubmit = async () => {
@@ -126,7 +134,7 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
             <div className="space-y-1 py-2">
               {filtered.map((space) => (
                 <button key={space.id}
-                  onClick={() => { setSelectedSpace(space); setSelectedModule(''); }}
+                  onClick={() => handleSelectSpace(space)}
                   className={`w-full text-left flex items-center gap-3 p-3 rounded-lg transition ${
                     selectedSpace?.id === space.id
                       ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700'
@@ -146,21 +154,27 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
           )}
         </div>
 
-        {/* 模块选择 */}
+        {/* 模块选择 — 从 API 动态加载 */}
         {selectedSpace && (
           <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
             <div className="text-xs text-gray-500 mb-2">选择模块：</div>
             <div className="flex flex-wrap gap-2">
-              {safeModules(selectedSpace.enabled_modules).map((mod) => (
-                <button key={mod} onClick={() => setSelectedModule(mod)}
-                  className={`px-3 py-1.5 text-xs rounded-full border transition ${
-                    selectedModule === mod
-                      ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary-400'
-                  }`}>
-                  {getModuleLabel(mod)}
-                </button>
-              ))}
+              {modulesLoading ? (
+                <span className="text-xs text-gray-400">加载模块...</span>
+              ) : spaceModules.length === 0 ? (
+                <span className="text-xs text-gray-400">该社区暂无可用模块</span>
+              ) : (
+                spaceModules.map((mod) => (
+                  <button key={mod.module_key} onClick={() => setSelectedModule(mod.module_key)}
+                    className={`px-3 py-1.5 text-xs rounded-full border transition ${
+                      selectedModule === mod.module_key
+                        ? 'bg-primary-600 text-white border-primary-600'
+                        : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:border-primary-400'
+                    }`}>
+                    {mod.icon && <span className="mr-1">{mod.icon}</span>}{mod.name}
+                  </button>
+                ))
+              )}
             </div>
           </div>
         )}

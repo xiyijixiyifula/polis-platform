@@ -81,11 +81,14 @@ async fn agent_login(
 
     let (user_id, password_hash) = user.ok_or(AppError::Forbidden("Agent 不存在".to_string()))?;
 
-    use argon2::{Argon2, PasswordHash, PasswordVerifier};
-    let parsed = PasswordHash::new(&password_hash).map_err(|e| AppError::Internal(e.to_string()))?;
-    Argon2::default()
-        .verify_password(req.password.as_bytes(), &parsed)
-        .map_err(|_| AppError::Forbidden("密码错误".to_string()))?;
+    let pwd = req.password.clone();
+    let hash = password_hash.clone();
+    tokio::task::spawn_blocking(move || {
+        use argon2::{Argon2, PasswordHash, PasswordVerifier};
+        let parsed = PasswordHash::new(&hash).map_err(|e| AppError::Internal(e.to_string()))?;
+        Argon2::default().verify_password(pwd.as_bytes(), &parsed)
+            .map_err(|_| AppError::Forbidden("密码错误".to_string()))
+    }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
     let claims = serde_json::json!({

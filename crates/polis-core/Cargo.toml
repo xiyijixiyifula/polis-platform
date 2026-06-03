@@ -15,4 +15,5 @@ sqlx = { workspace = true }
 axum = { workspace = true }
 jsonwebtoken = { workspace = true }
 http = "1"
+regex = { workspace = true }
 tokio = { workspace = true }

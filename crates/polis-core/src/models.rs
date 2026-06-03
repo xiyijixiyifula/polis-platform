@@ -133,7 +133,6 @@ pub struct SpacePublic {
     pub banner_url: Option<String>,
     pub visibility: Visibility,
     pub status: SpaceStatus,
-    pub enabled_modules: Option<Vec<String>>,
     pub member_count: i64,
     pub post_count: i64,
     pub follower_count: i64,
@@ -159,7 +158,6 @@ impl From<Space> for SpacePublic {
             banner_url: s.banner_url,
             visibility: serde_json::from_str(&format!("\"{}\"", s.visibility)).unwrap_or_default(),
             status: serde_json::from_str(&format!("\"{}\"", s.status)).unwrap_or_default(),
-            enabled_modules: serde_json::from_value(s.enabled_modules.clone()).ok(),
             member_count: s.member_count,
             post_count: s.post_count,
             follower_count: 0,
@@ -179,7 +177,6 @@ pub struct CreateSpaceRequest {
     pub title: String,
     pub description: Option<String>,
     pub visibility: Option<Visibility>,
-    pub enabled_modules: Option<Vec<String>>,
 }
 
 /// 更新社区请求
@@ -192,7 +189,6 @@ pub struct UpdateSpaceRequest {
     pub visibility: Option<Visibility>,
     pub password: Option<String>,
     pub custom_rules: Option<serde_json::Value>,
-    pub enabled_modules: Option<Vec<String>>,
 }
 
 // ==================== 自定义模块 ====================
@@ -206,6 +202,7 @@ pub struct SpaceModule {
     pub module_key: String,
     pub mode: String,
     pub allowed_content_types: serde_json::Value,
+    pub icon: String,
     pub sort_order: i32,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
@@ -220,6 +217,7 @@ pub struct SpaceModulePublic {
     pub module_key: String,
     pub mode: String,
     pub allowed_content_types: Vec<String>,
+    pub icon: String,
     pub sort_order: i32,
     pub is_active: bool,
     pub created_at: DateTime<Utc>,
@@ -234,6 +232,7 @@ impl From<SpaceModule> for SpaceModulePublic {
             module_key: m.module_key,
             mode: m.mode,
             allowed_content_types: serde_json::from_value(m.allowed_content_types).unwrap_or_default(),
+            icon: m.icon,
             sort_order: m.sort_order,
             is_active: m.is_active,
             created_at: m.created_at,
@@ -248,6 +247,7 @@ pub struct CreateModuleRequest {
     pub module_key: Option<String>,
     pub mode: Option<String>,
     pub allowed_content_types: Option<Vec<String>>,
+    pub icon: Option<String>,
 }
 
 /// 更新自定义模块请求
@@ -256,6 +256,7 @@ pub struct UpdateModuleRequest {
     pub name: Option<String>,
     pub mode: Option<String>,
     pub allowed_content_types: Option<Vec<String>>,
+    pub icon: Option<String>,
     pub is_active: Option<bool>,
 }
 
@@ -1354,6 +1355,484 @@ pub struct AuditLogQuery {
     pub actor_type: Option<String>,
     pub page: Option<u32>,
     pub page_size: Option<u32>,
+}
+
+// ==================== 用户经验值与等级系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct UserXp {
+    pub user_id: Uuid,
+    pub total_xp: i64,
+    pub current_level: i32,
+    pub daily_xp: i32,
+    pub daily_xp_date: Option<chrono::NaiveDate>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserXpPublic {
+    pub user_id: Uuid,
+    pub total_xp: i64,
+    pub current_level: i32,
+    pub level_title: String,
+    pub level_icon: String,
+    pub xp_to_next_level: i64,
+    pub daily_xp: i32,
+    pub daily_xp_limit: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct UserXpLog {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub action_type: String,
+    pub xp_gained: i32,
+    pub description: String,
+    pub target_type: Option<String>,
+    pub target_id: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct UserLevel {
+    pub level: i32,
+    pub title: String,
+    pub icon: String,
+    pub required_xp: i64,
+    pub perks: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct XpConfig {
+    pub id: Uuid,
+    pub action_type: String,
+    pub xp_amount: i32,
+    pub daily_limit: i32,
+    pub description: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct XpAction {
+    pub action: String,
+    pub label: String,
+    pub xp: i32,
+}
+
+/// 每日登录请求
+#[derive(Debug, Deserialize)]
+pub struct DailyLoginRequest {
+    pub bonus_code: Option<String>,
+}
+
+/// 每日登录响应
+#[derive(Debug, Serialize)]
+pub struct DailyLoginResponse {
+    pub xp_gained: i32,
+    pub streak_days: i32,
+    pub total_xp: i64,
+    pub current_level: i32,
+}
+
+// ==================== 新手任务系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct OnboardingQuest {
+    pub id: Uuid,
+    pub quest_key: String,
+    pub title: String,
+    pub description: String,
+    pub icon: String,
+    pub xp_reward: i32,
+    pub sort_order: i32,
+    pub is_active: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct UserQuest {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub quest_key: String,
+    pub is_completed: bool,
+    pub is_claimed: bool,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub claimed_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserQuestPublic {
+    pub quest_key: String,
+    pub title: String,
+    pub description: String,
+    pub icon: String,
+    pub xp_reward: i32,
+    pub is_completed: bool,
+    pub is_claimed: bool,
+}
+
+/// 新手任务完成请求
+#[derive(Debug, Deserialize)]
+pub struct CompleteQuestRequest {
+    pub quest_key: String,
+}
+
+// ==================== 徽章系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct UserBadge {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub badge_key: String,
+    pub badge_name: String,
+    pub badge_icon: String,
+    pub badge_description: String,
+    pub earned_at: DateTime<Utc>,
+}
+
+// ==================== 邀请系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct InviteCode {
+    pub id: Uuid,
+    pub code: String,
+    pub inviter_id: Uuid,
+    pub invitee_id: Option<Uuid>,
+    pub status: String,
+    pub created_at: DateTime<Utc>,
+    pub redeemed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct InviteReward {
+    pub id: Uuid,
+    pub inviter_id: Uuid,
+    pub invitee_id: Uuid,
+    pub reward_type: String,
+    pub xp_amount: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct InviteInfo {
+    pub code: String,
+    pub invite_url: String,
+    pub total_invited: i64,
+    pub total_rewards_xp: i64,
+    pub invitees: Vec<UserPublic>,
+}
+
+/// 兑换邀请码请求
+#[derive(Debug, Deserialize)]
+pub struct RedeemInviteRequest {
+    pub code: String,
+}
+
+// ==================== 通知系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Notification {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub notification_type: String,
+    pub title: String,
+    pub body: Option<String>,
+    pub link: Option<String>,
+    pub is_read: bool,
+    pub metadata: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
+// ==================== Push 通知订阅 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PushSubscription {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub endpoint: String,
+    pub p256dh_key: String,
+    pub auth_key: String,
+    pub user_agent: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub last_used_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PushSubscribeRequest {
+    pub endpoint: String,
+    pub p256dh_key: String,
+    pub auth_key: String,
+    pub user_agent: Option<String>,
+}
+
+// ==================== #话题标签系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Hashtag {
+    pub id: Uuid,
+    pub tag: String,
+    pub normalized_tag: String,
+    pub post_count: i64,
+    pub creation_count: i64,
+    pub total_use_count: i64,
+    pub last_used_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct HashtagMapping {
+    pub id: Uuid,
+    pub hashtag_id: Uuid,
+    pub target_type: String,
+    pub target_id: Uuid,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct HashtagWithCount {
+    pub tag: String,
+    pub normalized_tag: String,
+    pub post_count: i64,
+    pub creation_count: i64,
+    pub total_use_count: i64,
+}
+
+// ==================== 编辑精选系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct EditorPick {
+    pub id: Uuid,
+    pub target_type: String,
+    pub target_id: Uuid,
+    pub title_override: Option<String>,
+    pub description_override: Option<String>,
+    pub pick_type: String,
+    pub sort_order: i32,
+    pub is_active: bool,
+    pub picked_by: Option<Uuid>,
+    pub picked_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateEditorPickRequest {
+    pub target_type: String,
+    pub target_id: Uuid,
+    pub title_override: Option<String>,
+    pub description_override: Option<String>,
+    pub pick_type: Option<String>,
+    pub sort_order: Option<i32>,
+}
+
+// ==================== 创作者认证与排行榜 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CreatorCertification {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub cert_type: String,
+    pub cert_level: i32,
+    pub cert_reason: Option<String>,
+    pub certified_by: Option<Uuid>,
+    pub is_active: bool,
+    pub certified_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CreatorScore {
+    pub user_id: Uuid,
+    pub total_posts: i32,
+    pub total_likes_received: i32,
+    pub total_comments_received: i32,
+    pub total_views: i64,
+    pub total_tips_received: i32,
+    pub total_followers: i32,
+    pub weekly_score: i64,
+    pub monthly_score: i64,
+    pub all_time_score: i64,
+    pub weekly_rank: Option<i32>,
+    pub monthly_rank: Option<i32>,
+    pub all_time_rank: Option<i32>,
+    pub last_calculated_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LeaderboardEntry {
+    pub user_id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_url: Option<String>,
+    pub score: i64,
+    pub rank: i32,
+    pub total_posts: i32,
+    pub total_likes_received: i32,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateCertificationRequest {
+    pub user_id: Uuid,
+    pub cert_type: String,
+    pub cert_level: Option<i32>,
+    pub cert_reason: Option<String>,
+}
+
+// ==================== 社区活动系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct CommunityEvent {
+    pub id: Uuid,
+    pub space_id: Uuid,
+    pub creator_id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub cover_url: Option<String>,
+    pub event_type: String,
+    pub start_at: DateTime<Utc>,
+    pub end_at: Option<DateTime<Utc>>,
+    pub max_participants: Option<i32>,
+    pub rules: serde_json::Value,
+    pub prizes: serde_json::Value,
+    pub status: String,
+    pub participant_count: i32,
+    pub submission_count: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct EventParticipant {
+    pub id: Uuid,
+    pub event_id: Uuid,
+    pub user_id: Uuid,
+    pub submission_id: Option<Uuid>,
+    pub status: String,
+    pub registered_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateEventRequest {
+    pub title: String,
+    pub description: Option<String>,
+    pub cover_url: Option<String>,
+    pub event_type: Option<String>,
+    pub start_at: Option<DateTime<Utc>>,
+    pub end_at: Option<DateTime<Utc>>,
+    pub max_participants: Option<i32>,
+    pub rules: Option<serde_json::Value>,
+    pub prizes: Option<serde_json::Value>,
+}
+
+// ==================== 每周话题 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct WeeklyTopic {
+    pub id: Uuid,
+    pub topic_key: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub cover_url: Option<String>,
+    pub topic_type: String,
+    pub start_at: DateTime<Utc>,
+    pub end_at: DateTime<Utc>,
+    pub is_active: bool,
+    pub created_by: Option<Uuid>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateWeeklyTopicRequest {
+    pub topic_key: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub cover_url: Option<String>,
+    pub topic_type: Option<String>,
+    pub end_at: Option<DateTime<Utc>>,
+}
+
+// ==================== 打赏系统 ====================
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Tip {
+    pub id: Uuid,
+    pub sender_id: Uuid,
+    pub receiver_id: Uuid,
+    pub target_type: String,
+    pub target_id: Uuid,
+    pub amount: i32,
+    pub message: Option<String>,
+    pub is_anonymous: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct TipLeaderboard {
+    pub user_id: Uuid,
+    pub total_tips_received: i32,
+    pub total_amount_received: i64,
+    pub total_tips_sent: i32,
+    pub weekly_amount: i64,
+    pub monthly_amount: i64,
+    pub all_time_amount: i64,
+    pub weekly_rank: Option<i32>,
+    pub monthly_rank: Option<i32>,
+    pub all_time_rank: Option<i32>,
+    pub last_updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CreateTipRequest {
+    pub target_type: Option<String>,
+    pub target_id: Uuid,
+    pub amount: Option<i32>,
+    pub message: Option<String>,
+    pub is_anonymous: Option<bool>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct TipLeaderboardEntry {
+    pub user_id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_url: Option<String>,
+    pub total_amount_received: i64,
+    pub total_tips_received: i32,
+    pub rank: i32,
+}
+
+// ==================== AI 助手 ====================
+
+#[derive(Debug, Deserialize)]
+pub struct AiSuggestionRequest {
+    pub content_type: String,   // "title" | "summary" | "tags" | "outline"
+    pub context: String,        // 文章内容或主题
+    pub tone: Option<String>,   // "professional" | "casual" | "humorous"
+}
+
+#[derive(Debug, Serialize)]
+pub struct AiSuggestionResponse {
+    pub suggestions: Vec<String>,
+    pub content_type: String,
+}
+
+// ==================== 推荐系统 ====================
+
+#[derive(Debug, Deserialize)]
+pub struct RecommendationQuery {
+    pub limit: Option<u32>,
+    pub include_type: Option<String>, // "posts" | "spaces" | "users" | "all"
+}
+
+#[derive(Debug, Serialize)]
+pub struct RecommendationResult {
+    pub posts: Vec<serde_json::Value>,
+    pub spaces: Vec<serde_json::Value>,
+    pub users: Vec<UserPublic>,
+    pub topics: Vec<HashtagWithCount>,
 }
 
 // Re-export commonly used types

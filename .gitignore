@@ -33,3 +33,16 @@ web/out/
 polis-release-*
 *.network-response
 release-*.tar.gz
+
+# Deploy binaries (built locally, not for git)
+deploy/polis-admin
+deploy/polis-content
+deploy/polis-gateway
+deploy/polis-notify
+deploy/polis-space
+deploy/polis-user
+deploy/polis-video
+
+# Screenshots in project root
+/*.png
+test-video.mp4

@@ -31,57 +31,13 @@ impl NotifyHandler {
     /// 处理 NATS 事件并创建通知
     pub async fn handle_event(&self, subject: &str, payload: &serde_json::Value) {
         match subject {
-            // 帖子被点赞 → 通知帖子作者
+            // CONTENT_POST_LIKED / CONTENT_COMMENT_CREATED — 通知由 content handler 直接写入 DB，
+            // notify service 不再重复创建，仅记录事件日志。
             polis_core::events::subjects::CONTENT_POST_LIKED => {
-                let target_type = payload.get("target_type").and_then(|v| v.as_str()).unwrap_or("");
-                let target_id_str = payload.get("target_id").and_then(|v| v.as_str()).unwrap_or("");
-                let user_id_str = payload.get("user_id").and_then(|v| v.as_str()).unwrap_or("");
-
-                // Only handle post likes (not comment likes for now)
-                if target_type == "post" {
-                    if let Ok(target_id) = Uuid::parse_str(target_id_str) {
-                        if let Ok(actor_id) = Uuid::parse_str(user_id_str) {
-                            if let Some(post_author_id) = self.find_post_author(target_id).await {
-                                // Don't notify if user liked their own post
-                                if post_author_id != actor_id {
-                                    let actor_name = self.find_user_display_name(actor_id).await.unwrap_or_else(|| "有人".to_string());
-                                    let content = format!("{} 赞了你的帖子", actor_name);
-                                    if let Err(e) = self.create_notification(
-                                        post_author_id, "like",
-                                        Some(actor_id), Some("post"), Some(target_id),
-                                        &content,
-                                    ).await {
-                                        tracing::warn!("Failed to create like notification: {}", e);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                tracing::debug!("Received CONTENT_POST_LIKED event (notification handled by content handler)");
             }
-            // 新评论 → 通知帖子作者
             polis_core::events::subjects::CONTENT_COMMENT_CREATED => {
-                let post_id_str = payload.get("post_id").and_then(|v| v.as_str()).unwrap_or("");
-                let author_id_str = payload.get("author_id").and_then(|v| v.as_str()).unwrap_or("");
-
-                if let Ok(post_id) = Uuid::parse_str(post_id_str) {
-                    if let Ok(comment_author_id) = Uuid::parse_str(author_id_str) {
-                        if let Some(post_author_id) = self.find_post_author(post_id).await {
-                            // Don't notify if author commented on their own post
-                            if post_author_id != comment_author_id {
-                                let actor_name = self.find_user_display_name(comment_author_id).await.unwrap_or_else(|| "有人".to_string());
-                                let content = format!("{} 评论了你的帖子", actor_name);
-                                if let Err(e) = self.create_notification(
-                                    post_author_id, "comment",
-                                    Some(comment_author_id), Some("post"), Some(post_id),
-                                    &content,
-                                ).await {
-                                    tracing::warn!("Failed to create comment notification: {}", e);
-                                }
-                            }
-                        }
-                    }
-                }
+                tracing::debug!("Received CONTENT_COMMENT_CREATED event (notification handled by content handler)");
             }
             // 新帖子创建 → 通知社区成员（简化：仅通知社区创建者）
             polis_core::events::subjects::CONTENT_POST_CREATED => {

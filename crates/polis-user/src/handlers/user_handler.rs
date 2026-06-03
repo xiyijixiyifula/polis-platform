@@ -64,8 +64,7 @@ impl UserHandler {
         }
 
         // 哈希密码
-        let password_hash = auth::hash_password(&req.password)
-            .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
+        let password_hash = auth::hash_password_async(req.password.clone()).await?;
 
         // 创建用户
         let display_name = req.display_name.unwrap_or_else(|| req.username.clone());
@@ -122,8 +121,7 @@ impl UserHandler {
             ));
         }
 
-        let valid = auth::verify_password(&req.password, &user.password_hash)
-            .map_err(|e| AppError::Internal(format!("Password verify error: {}", e)))?;
+        let valid = auth::verify_password_async(req.password.clone(), user.password_hash.clone()).await?;
 
         if !valid {
             return Err(AppError::Unauthorized);
@@ -287,12 +285,10 @@ impl UserHandler {
     pub async fn change_password(&self, user_id: Uuid, old_password: &str, new_password: &str) -> Result<(), AppError> {
         let user = self.repo.find_by_id(user_id).await?
             .ok_or(AppError::NotFound("User not found".to_string()))?;
-        let valid = crate::auth::verify_password(old_password, &user.password_hash)
-            .map_err(|_| AppError::Internal("Password verify error".to_string()))?;
+        let valid = crate::auth::verify_password_async(old_password.to_string(), user.password_hash.clone()).await?;
         if !valid { return Err(AppError::Forbidden("Wrong password".to_string())); }
         if new_password.len() < 8 { return Err(AppError::Validation("Password must be at least 8 characters".to_string())); }
-        let new_hash = crate::auth::hash_password(new_password)
-            .map_err(|e| AppError::Internal(format!("Hash error: {}", e)))?;
+        let new_hash = crate::auth::hash_password_async(new_password.to_string()).await?;
         sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
             .bind(&new_hash).bind(user_id)
             .execute(&self.repo.pool).await?;
@@ -341,8 +337,7 @@ impl UserHandler {
             return Err(AppError::Forbidden("重置令牌已过期或已使用".to_string()));
         }
 
-        let new_hash = crate::auth::hash_password(new_password)
-            .map_err(|e| AppError::Internal(format!("Hash error: {}", e)))?;
+        let new_hash = crate::auth::hash_password_async(new_password.to_string()).await?;
 
         sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
             .bind(&new_hash).bind(record.1)
@@ -369,6 +364,23 @@ impl UserHandler {
             sqlx::query("INSERT INTO follows (follower_id, followee_type, followee_id) VALUES ($1, $2, $3)")
                 .bind(follower_id).bind(followee_type).bind(followee_id)
                 .execute(&self.repo.pool).await?;
+            // 发布关注事件 + 直接创建通知（NATS 可能未部署）
+            if followee_type == "user" {
+                let _ = self.publish_event(subjects::USER_FOLLOWED, serde_json::json!({
+                    "follower_id": follower_id.to_string(),
+                    "followed_id": followee_id.to_string(),
+                })).await;
+                // 直接创建通知（不走 NATS，确保在没有 NATS 的环境也能工作）
+                let follower_name = sqlx::query_scalar::<_, String>(
+                    "SELECT display_name FROM users WHERE id = $1"
+                ).bind(follower_id).fetch_optional(&self.repo.pool).await.ok().flatten().unwrap_or_else(|| "有人".to_string());
+                let content = format!("{} 关注了你", follower_name);
+                let _ = sqlx::query(
+                    "INSERT INTO notifications (user_id, type, actor_id, target_type, target_id, content) VALUES ($1, $2, $3, $4, $5, $6)"
+                )
+                .bind(followee_id).bind("follow").bind(follower_id).bind("user").bind(follower_id).bind(&content)
+                .execute(&self.repo.pool).await;
+            }
             Ok(true)
         }
     }
@@ -439,5 +451,161 @@ impl UserHandler {
                ORDER BY u.display_name"#
         ).bind(user_id).fetch_all(&self.repo.pool).await?;
         Ok(rows.into_iter().map(|r| r.0).collect())
+    }
+
+    // ==================== XP 系统 ====================
+
+    pub async fn get_user_xp(&self, user_id: Uuid) -> Result<serde_json::Value, AppError> {
+        use polis_core::models::{UserLevel, UserXpPublic};
+        let xp = self.repo.get_or_create_user_xp(user_id).await?;
+        let levels: Vec<UserLevel> = sqlx::query_as::<_, UserLevel>("SELECT * FROM user_levels ORDER BY level")
+            .fetch_all(&self.repo.pool).await?;
+        let current_level = levels.iter().find(|l| l.level == xp.current_level);
+        let next_level = levels.iter().find(|l| l.level == xp.current_level + 1);
+        let xp_to_next = next_level.map(|l| l.required_xp - xp.total_xp).unwrap_or(0);
+        let public = UserXpPublic {
+            user_id: xp.user_id,
+            total_xp: xp.total_xp,
+            current_level: xp.current_level,
+            level_title: current_level.map(|l| l.title.clone()).unwrap_or_default(),
+            level_icon: current_level.map(|l| l.icon.clone()).unwrap_or_default(),
+            xp_to_next_level: xp_to_next,
+            daily_xp: xp.daily_xp,
+            daily_xp_limit: 100,
+        };
+        Ok(serde_json::to_value(public).map_err(|e| AppError::Internal(e.to_string()))?)
+    }
+
+    pub async fn get_xp_logs(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let logs = self.repo.get_user_xp_logs(user_id, 50).await?;
+        Ok(logs.iter().map(|l| serde_json::json!({
+            "id": l.id,
+            "action_type": l.action_type,
+            "xp_gained": l.xp_gained,
+            "description": l.description,
+            "created_at": l.created_at,
+        })).collect())
+    }
+
+    pub async fn daily_login(&self, user_id: Uuid) -> Result<serde_json::Value, AppError> {
+        use polis_core::models::DailyLoginResponse;
+        let (daily, date) = self.repo.get_daily_xp(user_id).await?;
+        let today = chrono::Utc::now().date_naive();
+        if date == Some(today) {
+            return Err(AppError::Validation("今日已签到".to_string()));
+        }
+        let xp_gained = 5;
+        let new_total = self.repo.award_xp(user_id, "daily_login", xp_gained, "每日签到", None, None).await?;
+        self.repo.set_daily_xp(user_id, daily + xp_gained).await?;
+        let xp = self.repo.get_or_create_user_xp(user_id).await?;
+        let resp = DailyLoginResponse {
+            xp_gained,
+            streak_days: 1,
+            total_xp: new_total,
+            current_level: xp.current_level,
+        };
+        Ok(serde_json::to_value(resp).map_err(|e| AppError::Internal(e.to_string()))?)
+    }
+
+    pub async fn award_xp_bridge(&self, user_id: Uuid, action_type: &str, description: &str, target_type: Option<&str>, target_id: Option<Uuid>) -> Result<(), AppError> {
+        let xp_amount = match action_type {
+            "post_created" => 50,
+            "comment_created" => 5,
+            "like_received" => 10,
+            "follow_user" => 3,
+            "share_content" => 2,
+            "join_space" => 5,
+            "first_tip" => 20,
+            _ => 1,
+        };
+        self.repo.award_xp(user_id, action_type, xp_amount, description, target_type, target_id).await?;
+        Ok(())
+    }
+
+    // ==================== 新手任务 ====================
+
+    pub async fn get_onboarding_status(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        use polis_core::models::UserQuestPublic;
+        let quests = self.repo.get_onboarding_quests().await?;
+        let user_quests = self.repo.get_user_quests(user_id).await?;
+        Ok(quests.iter().map(|q| {
+            let uq = user_quests.iter().find(|uq| uq.quest_key == q.quest_key);
+            let pq = UserQuestPublic {
+                quest_key: q.quest_key.clone(),
+                title: q.title.clone(),
+                description: q.description.clone(),
+                icon: q.icon.clone(),
+                xp_reward: q.xp_reward,
+                is_completed: uq.map(|u| u.is_completed).unwrap_or(false),
+                is_claimed: uq.map(|u| u.is_claimed).unwrap_or(false),
+            };
+            serde_json::to_value(pq).unwrap_or_default()
+        }).collect())
+    }
+
+    pub async fn complete_onboarding_quest(&self, user_id: Uuid, quest_key: &str) -> Result<bool, AppError> {
+        self.repo.complete_quest(user_id, quest_key).await
+    }
+
+    pub async fn claim_quest_reward(&self, user_id: Uuid, quest_key: &str) -> Result<serde_json::Value, AppError> {
+        let xp = self.repo.claim_quest(user_id, quest_key).await?;
+        match xp {
+            Some(amount) => {
+                self.repo.award_xp(user_id, "quest_completed", amount, &format!("完成任务: {}", quest_key), None, None).await?;
+                Ok(serde_json::json!({"claimed": true, "xp_gained": amount}))
+            }
+            None => Err(AppError::Validation("任务未完成或已领取".to_string())),
+        }
+    }
+
+    // ==================== 徽章 ====================
+
+    pub async fn get_badges(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let badges = self.repo.get_user_badges(user_id).await?;
+        Ok(badges.iter().map(|b| serde_json::json!({
+            "badge_key": b.badge_key,
+            "badge_name": b.badge_name,
+            "badge_icon": b.badge_icon,
+            "badge_description": b.badge_description,
+            "earned_at": b.earned_at,
+        })).collect())
+    }
+
+    // ==================== 邀请系统 ====================
+
+    pub async fn create_invite(&self, user_id: Uuid) -> Result<serde_json::Value, AppError> {
+
+        let code = self.repo.create_invite_code(user_id).await?;
+        let count = self.repo.count_invitees(user_id).await?;
+        let rewards = self.repo.get_invite_rewards(user_id).await?;
+        let total_xp: i64 = rewards.iter().map(|r| r.xp_amount as i64).sum();
+        Ok(serde_json::json!({
+            "code": code.code,
+            "invite_url": format!("https://mzgw.com/invite?code={}", code.code),
+            "total_invited": count,
+            "total_rewards_xp": total_xp,
+        }))
+    }
+
+    pub async fn redeem_invite(&self, invitee_id: Uuid, code: &str) -> Result<serde_json::Value, AppError> {
+        let inviter_id = self.repo.redeem_invite(code, invitee_id).await?
+            .ok_or(AppError::NotFound("邀请码无效或已被使用".to_string()))?;
+        if inviter_id == invitee_id {
+            return Err(AppError::Validation("不能使用自己的邀请码".to_string()));
+        }
+        self.repo.create_invite_reward(inviter_id, invitee_id, 100).await?;
+        self.repo.award_xp(inviter_id, "invite_accepted", 100, "邀请好友加入", None, None).await?;
+        self.repo.award_xp(invitee_id, "invite_joined", 50, "通过邀请码加入", None, None).await?;
+        Ok(serde_json::json!({"redeemed": true, "xp_gained": 50}))
+    }
+
+    // ==================== Push 订阅 ====================
+
+    pub async fn subscribe_push(&self, user_id: Uuid, req: polis_core::models::PushSubscribeRequest) -> Result<(), AppError> {
+        self.repo.save_push_subscription(user_id, &req.endpoint, &req.p256dh_key, &req.auth_key, req.user_agent.as_deref()).await
+    }
+
+    pub async fn unsubscribe_push(&self, user_id: Uuid, endpoint: &str) -> Result<(), AppError> {
+        self.repo.delete_push_subscription(user_id, endpoint).await
     }
 }

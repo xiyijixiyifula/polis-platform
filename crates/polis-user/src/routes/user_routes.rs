@@ -3,7 +3,7 @@ use axum::{extract::{Path, State}, middleware, routing::{get, post, put}, Json, 
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, LoginRequest, LoginResponse, RegisterRequest, UpdateUserRequest, UserPublic};
+use polis_core::models::{ApiResponse, LoginRequest, LoginResponse, RegisterRequest, UpdateUserRequest, UserPublic, PushSubscribeRequest, RedeemInviteRequest, CompleteQuestRequest};
 use crate::handlers::user_handler::UserHandler;
 use crate::middleware::auth::auth_middleware;
 
@@ -33,7 +33,9 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/users/{username}/followers", get(get_followers))
         .route("/api/users/{username}/following", get(get_following))
         .route("/api/user/ban-status", get(ban_status))
-        .route("/api/user/appeal", post(submit_appeal));
+        .route("/api/user/appeal", post(submit_appeal))
+        // XP bridge (跨服务内部调用，无需认证)
+        .route("/api/internal/xp/award", post(award_xp_bridge));
     let auth = Router::new()
         .route("/api/users/me", get(get_my_profile).put(update_profile))
         .route("/api/users/me/password", put(change_password))
@@ -43,6 +45,22 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/users/{username}/follow", post(follow_by_username).delete(unfollow_by_username))
         .route("/api/contacts/mutual", get(get_mutual_contacts))
         .route("/api/auth/logout", post(logout))
+        // XP 系统
+        .route("/api/users/me/xp", get(get_my_xp))
+        .route("/api/users/me/xp/logs", get(get_my_xp_logs))
+        .route("/api/users/me/daily-login", post(daily_login))
+        // 新手任务
+        .route("/api/users/me/onboarding", get(get_onboarding))
+        .route("/api/users/me/onboarding/complete", post(complete_quest))
+        .route("/api/users/me/onboarding/claim", post(claim_quest))
+        // 徽章
+        .route("/api/users/me/badges", get(get_my_badges))
+        // 邀请
+        .route("/api/users/me/invites", get(get_invites).post(create_invite))
+        .route("/api/auth/redeem-invite", post(redeem_invite))
+        // Push
+        .route("/api/users/me/push-subscribe", post(subscribe_push))
+        .route("/api/users/me/push-unsubscribe", post(unsubscribe_push))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
     public.merge(auth).with_state(handler)
 }
@@ -179,4 +197,71 @@ async fn submit_appeal(
     Ok(Json(ApiResponse::success(serde_json::json!({
         "message": "申诉已提交，管理员将在1-3个工作日内审核",
     }))))
+}
+
+// ==================== XP 系统 handlers ====================
+
+async fn get_my_xp(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    Ok(Json(ApiResponse::success(h.get_user_xp(uid).await?)))
+}
+
+async fn get_my_xp_logs(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
+    Ok(Json(ApiResponse::success(h.get_xp_logs(uid).await?)))
+}
+
+async fn daily_login(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    Ok(Json(ApiResponse::success(h.daily_login(uid).await?)))
+}
+
+async fn get_onboarding(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
+    Ok(Json(ApiResponse::success(h.get_onboarding_status(uid).await?)))
+}
+
+async fn complete_quest(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<CompleteQuestRequest>) -> Result<Json<ApiResponse<bool>>, AppError> {
+    Ok(Json(ApiResponse::success(h.complete_onboarding_quest(uid, &r.quest_key).await?)))
+}
+
+async fn claim_quest(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<CompleteQuestRequest>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    Ok(Json(ApiResponse::success(h.claim_quest_reward(uid, &r.quest_key).await?)))
+}
+
+async fn get_my_badges(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>) -> Result<Json<ApiResponse<Vec<serde_json::Value>>>, AppError> {
+    Ok(Json(ApiResponse::success(h.get_badges(uid).await?)))
+}
+
+async fn get_invites(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    Ok(Json(ApiResponse::success(h.create_invite(uid).await?)))
+}
+
+async fn create_invite(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    Ok(Json(ApiResponse::success(h.create_invite(uid).await?)))
+}
+
+async fn redeem_invite(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<RedeemInviteRequest>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    Ok(Json(ApiResponse::success(h.redeem_invite(uid, &r.code).await?)))
+}
+
+async fn subscribe_push(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<PushSubscribeRequest>) -> Result<Json<ApiResponse<()>>, AppError> {
+    h.subscribe_push(uid, r).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+async fn unsubscribe_push(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<serde_json::Value>) -> Result<Json<ApiResponse<()>>, AppError> {
+    let endpoint = r.get("endpoint").and_then(|v| v.as_str()).unwrap_or("");
+    h.unsubscribe_push(uid, endpoint).await?;
+    Ok(Json(ApiResponse::success(())))
+}
+
+/// POST /api/internal/xp/award — 跨服务 XP bridge
+#[derive(Deserialize)]
+struct AwardXpRequest {
+    user_id: Uuid,
+    action_type: String,
+    description: String,
+    target_type: Option<String>,
+    target_id: Option<Uuid>,
+}
+async fn award_xp_bridge(State(h): State<Arc<UserHandler>>, Json(r): Json<AwardXpRequest>) -> Result<Json<ApiResponse<()>>, AppError> {
+    h.award_xp_bridge(r.user_id, &r.action_type, &r.description, r.target_type.as_deref(), r.target_id).await?;
+    Ok(Json(ApiResponse::success(())))
 }

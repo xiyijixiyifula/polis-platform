@@ -81,6 +81,35 @@ export function decodeSpaceFromUrl(encoded: string): string {
   return encoded.replace(/~/g, '/');
 }
 
+/** 解析文本中的 @提及 和 #话题，返回结构化数组供渲染使用 */
+export function parseInlineRefs(text: string): Array<{ type: 'text' | 'mention' | 'hashtag'; value: string }> {
+  if (!text) return [];
+  const re = /(@[一-鿿\w]+|#[一-鿿\w]+)/g;
+  const parts = text.split(re);
+  return parts.filter(Boolean).map((part) => {
+    if (part.startsWith('@')) return { type: 'mention', value: part.slice(1) };
+    if (part.startsWith('#')) return { type: 'hashtag', value: part.slice(1) };
+    return { type: 'text', value: part };
+  });
+}
+
+/** 将正文中的 @提及 和 #话题 转换为 Markdown 链接，供 CherryRender/Markdown 渲染器使用 */
+export function convertInlineRefsToMarkdown(text: string): string {
+  if (!text) return text;
+  // 保护代码块和行内代码
+  const codeBlocks: string[] = [];
+  let protected_ = text.replace(/```[\s\S]*?```/g, (m) => { codeBlocks.push(m); return `\x00CODEBLOCK${codeBlocks.length - 1}\x00`; });
+  protected_ = protected_.replace(/`[^`]+`/g, (m) => { codeBlocks.push(m); return `\x00CODEBLOCK${codeBlocks.length - 1}\x00`; });
+  // 保护已有链接 [text](url)
+  protected_ = protected_.replace(/\[([^\]]*)\]\([^)]+\)/g, (m) => { codeBlocks.push(m); return `\x00CODEBLOCK${codeBlocks.length - 1}\x00`; });
+  // 转换 @提及 和 #话题
+  protected_ = protected_.replace(/(^|\s)@([一-鿿\w]+)/g, '$1[@$2](/profile/$2)');
+  protected_ = protected_.replace(/(^|\s)#([一-鿿\w]+)/g, '$1[#$2](/hashtag/$2)');
+  // 恢复保护的内容
+  protected_ = protected_.replace(/\x00CODEBLOCK(\d+)\x00/g, (_, i) => codeBlocks[parseInt(i)] || '');
+  return protected_;
+}
+
 /** 估算阅读时间 (基于中英文混合内容, 300字/分钟) */
 export function estimateReadTime(body: string): string {
   if (!body) return '1 分钟';

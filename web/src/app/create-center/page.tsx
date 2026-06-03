@@ -22,17 +22,8 @@ interface ContentItem {
   space: { namespace: string; title: string };
 }
 
-const SUBMIT_MODULE_TYPES = [
-  { value: 'forum', label: '交流' },
-  { value: 'article', label: '文章' },
-  { value: 'share', label: '分享' },
-  { value: 'wiki', label: '知识库' },
-  { value: 'qa', label: '问答' },
-  { value: 'novel', label: '小说' },
-  { value: 'game', label: '游戏' },
-  { value: 'mini_app', label: '小程序' },
-  { value: 'video', label: '视频' },
-];
+// 常用模块键 — 用于UI快速选择，实际可用模块由后端动态返回
+const COMMON_MODULE_KEYS = ['forum', 'share', 'wiki', 'qa', 'novel', 'game', 'video', 'chat', 'series', 'polls'];
 
 export default function CreateCenterPage() {
   const [contents, setContents] = useState<ContentItem[]>([]);
@@ -46,7 +37,7 @@ export default function CreateCenterPage() {
   const [submitSearch, setSubmitSearch] = useState('');
   const [submitResults, setSubmitResults] = useState<any[]>([]);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [submitModule, setSubmitModule] = useState('forum');
+  const [submitModule, setSubmitModule] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
@@ -135,7 +126,7 @@ export default function CreateCenterPage() {
 
   const openSubmitModal = (item: ContentItem) => {
     setSubmitModal({ creationId: item.id, creationTitle: item.title || '(无标题)' });
-    setSubmitModule(item.module_type || 'forum');
+    setSubmitModule(item.module_type || '');
     setSubmitSearch('');
     setSubmitResults([]);
     setSubmitError('');
@@ -287,16 +278,21 @@ export default function CreateCenterPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">投稿到哪个模块</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {SUBMIT_MODULE_TYPES.map(m => (
-                    <button key={m.value} type="button" onClick={() => setSubmitModule(m.value)}
+                  {COMMON_MODULE_KEYS.map(key => (
+                    <button key={key} type="button" onClick={() => setSubmitModule(key)}
                       className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                        submitModule === m.value
+                        submitModule === key
                           ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400'
                           : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300'
                       }`}>
-                      {m.label}
+                      {key}
                     </button>
                   ))}
+                  {submitModule && !COMMON_MODULE_KEYS.includes(submitModule) && (
+                    <span className="text-xs px-3 py-1.5 rounded-full border border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-400">
+                      {submitModule}
+                    </span>
+                  )}
                 </div>
               </div>
 

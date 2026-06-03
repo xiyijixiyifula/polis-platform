@@ -1,9 +1,21 @@
-# Cross-compilation: macOS arm64 → Linux x86_64 via zig cc
-# Prerequisites: brew install zig
-# zig linker wrapper at deploy/zig-cc-linker.sh
+# Cross-compilation: macOS arm64 → Linux x86_64 / Windows x86_64
+# Prerequisites: brew install x86_64-unknown-linux-gnu-binutils mingw-w64
 
 [target.x86_64-unknown-linux-gnu]
-linker = "deploy/zig-cc-linker.sh"
+linker = "x86_64-unknown-linux-gnu-gcc"
+
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+
+[env]
+CC_x86_64_unknown_linux_gnu = "x86_64-unknown-linux-gnu-gcc"
+CXX_x86_64_unknown_linux_gnu = "x86_64-unknown-linux-gnu-g++"
+AR_x86_64_unknown_linux_gnu = "x86_64-unknown-linux-gnu-ar"
+CC_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-gcc"
+CXX_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-g++"
+AR_x86_64_pc_windows_gnu = "x86_64-w64-mingw32-ar"
+# Workaround: RocksDB Windows headers missing <cstdint> includes
+CXXFLAGS_x86_64_pc_windows_gnu = "-include cstdint"
 
 [unstable]
 # Enable unstable features if needed

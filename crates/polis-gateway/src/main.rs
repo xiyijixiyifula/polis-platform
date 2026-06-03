@@ -14,7 +14,7 @@ use axum::{
 use polis_core::models::ApiResponse;
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
-use tower_http::trace::TraceLayer;
+use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 use tracing_subscriber::EnvFilter;
 
 use crate::config::GatewayConfig;
@@ -47,9 +47,11 @@ async fn main() -> anyhow::Result<()> {
     let config = GatewayConfig::from_env();
     let state = Arc::new(GatewayState {
         client: reqwest::Client::builder()
-            .http1_only()
-            .pool_max_idle_per_host(0)
-            .timeout(std::time::Duration::from_secs(300))
+            .pool_max_idle_per_host(32)
+            .pool_idle_timeout(std::time::Duration::from_secs(90))
+            .tcp_keepalive(std::time::Duration::from_secs(60))
+            .timeout(std::time::Duration::from_secs(30))
+            .connect_timeout(std::time::Duration::from_secs(5))
             .build()?,
         config: config.clone(),
         rate_limits: Mutex::new(HashMap::new()),
@@ -126,6 +128,19 @@ async fn main() -> anyhow::Result<()> {
         // 代理路由 - 管理后台服务
         .route("/api/admin/{*path}", any(proxy_to_admin))
         .route("/api/admin", any(proxy_to_admin))
+        // 代理路由 - 新功能 (v1.1.0)
+        .route("/api/hashtags", any(proxy_to_content))
+        .route("/api/hashtags/{*path}", any(proxy_to_content))
+        .route("/api/editor-picks", any(proxy_to_content))
+        .route("/api/leaderboard", any(proxy_to_content))
+        .route("/api/leaderboard/{*path}", any(proxy_to_content))
+        .route("/api/tips", any(proxy_to_content))
+        .route("/api/tips/{*path}", any(proxy_to_content))
+        .route("/api/weekly-topic", any(proxy_to_content))
+        .route("/api/weekly-topic/{*path}", any(proxy_to_content))
+        .route("/api/recommendations", any(proxy_to_content))
+        .route("/api/events", any(proxy_to_content))
+        .route("/api/events/{*path}", any(proxy_to_content))
         // 健康检查 - Gateway 自身
         .route("/health", get(health_check))
         .route("/api/health", get(health_check))
@@ -142,6 +157,7 @@ async fn main() -> anyhow::Result<()> {
             rate_limit_middleware,
         ))
         .layer(TraceLayer::new_for_http())
+        .layer(CompressionLayer::new())
         .with_state(state);
 
     let addr = format!("{}:{}", config.host, config.port);
@@ -440,7 +456,7 @@ async fn proxy_request_with_limit(
         fwd_headers.insert(key.clone(), value.clone());
     }
 
-    tracing::info!("Proxying {} to {} (body: {} bytes)", method, target_url, body_bytes.len());
+    tracing::debug!("Proxying {} to {} (body: {} bytes)", method, target_url, body_bytes.len());
 
     // 发送请求（带 1 次重试以应对瞬时连接故障）
     let mut last_error: Option<(StatusCode, Json<ApiResponse<()>>)> = None;

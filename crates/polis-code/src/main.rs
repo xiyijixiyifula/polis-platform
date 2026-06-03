@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::fs::create_dir_all(&config.repos_root).await.ok();
 
     let pool = PgPoolOptions::new()
-        .max_connections(10)
+        .max_connections(10).acquire_timeout(std::time::Duration::from_secs(10))
         .connect(&config.database_url)
         .await?;
 

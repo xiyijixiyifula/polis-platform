@@ -1,6 +1,6 @@
 # 当前任务进度
 
-> 最后更新: 2026-06-01
+> 最后更新: 2026-06-03
 
 ## 追踪模式
 
@@ -8,7 +8,172 @@ LOCAL_ONLY
 
 ## 当前状态
 
-**活跃任务**: 无
+**活跃任务**: Polis Chain 区块链开发 (Phase 1-7 + P2P 完成 → 待前端钱包 UI)
+
+### 进行中 — Polis Chain 独立区块链 (2026-06-03)
+
+**Phase 1 完成** — 核心数据结构 + 存储层 + 钱包:
+- [x] `crates/polis-chain/` crate 创建 (35+ 源文件)
+- [x] 核心数据结构: Block, Transaction (9 种类型), AccountState, ChainConfig
+- [x] Ed25519 签名/验证 + SHA-256 加密工具
+- [x] RocksDB 存储层 (11 个 Column Family)
+- [x] 创世区块生成
+- [x] 钱包: Ed25519 密钥生成 + Argon2 加密存储 + 恢复
+- [x] 编译通过 + 21 个单元测试全部通过
+
+**Phase 2 完成** — P2P 网络 + IBFT 共识 (核心逻辑):
+- [x] IBFT 共识引擎 (ConsensusPhase 状态机: Idle/PrePrepared/Prepared/Committed/RoundChange)
+- [x] 验证者集合管理 (轮换提议者/法定人数计算/动态增删)
+- [x] 共识引擎测试: quorum threshold, proposer round-robin
+- [x] libp2p P2P 网络层 → Phase 9 完成
+- [x] 多节点区块同步协议 → Phase 9 完成
+
+**Phase 3 完成** — HTTP REST API (v1 冻结):
+- [x] axum HTTP server (19 endpoints)
+- [x] 交易提交/查询 handlers
+- [x] ActivityProof 提交 (核心 — Polis 服务调用接口)
+- [x] 挖矿/池子/钱包 API
+- [x] 站点注册 API
+
+**Phase 4 完成** — 挖矿 + 大奖池:
+- [x] 挖矿轮次管理 (每小时一轮, 40 $POL 奖励)
+- [x] VRF 可验证抽奖 (SHA-256 哈希链)
+- [x] 大奖池炼金逻辑 (100K $POL 烧毁 → 1🥇+2🥈+3🥉)
+- [x] 稀有币铸造与存储
+
+**Phase 5 完成** — 钱包 CLI:
+- [x] create/show/import/export/balance/sign 命令
+- [x] 加密密钥存储 (Argon2 + XOR)
+- [x] 钱包导入/导出 (hex 私钥)
+
+**Phase 6 完成** — 站点注册 + 防作弊:
+- [x] 站点注册/激活/停用/信誉管理
+- [x] 信誉计算引擎 (4 维度: 用户多样性/行为质量/历史一致性/链上承诺)
+- [x] 惩罚/罚没引擎 (4 级: Minor/Moderate/Severe/Critical)
+- [x] CUSUM 异常检测
+
+**Phase 7 完成** — Polis 平台集成:
+- [x] Mempool 交易池 (支持去重/nonce排序/批量打包)
+- [x] 后台区块生产循环 (每 10s 自动出块)
+- [x] XpBridge 集成链上存证 (CHAIN_API_URL + CHAIN_SITE_ID 环境变量)
+- [x] ContentServiceConfig 添加链配置字段
+
+**Phase 8 待实施** — 前端钱包 UI:
+- [ ] Web 钱包页面
+- [ ] 挖矿页面
+- [ ] 大奖池页面
+
+**Phase 9 完成** — P2P 网络 + 多节点 (v1.2.0):
+- [x] libp2p P2P 节点实现 (p2p.rs 471行: Gossipsub + Kademlia DHT + mDNS + Noise加密 + Yamux多路复用)
+- [x] 共识桥接 (consensus_bridge.rs 330行: IBFT PrePrepare/Prepare/Commit/RoundChange 事件驱动)
+- [x] 事件路由 (event_router.rs: P2PEvent → Mempool/ConsensusBridge/BlockSynchronizer 分发)
+- [x] 区块同步协议 (sync.rs 185行: 请求-响应同步 + 缺失区块追赶 + 乱序缓冲有序写入)
+- [x] 节点发现 (discovery.rs: Kademlia DHT + mDNS `_polis-chain._tcp.local`)
+- [x] CLI 钱包扩展 (transfer/show/balance 命令 + 链上查询)
+- [x] GitHub Release v1.2.0 (macOS ARM 预编译二进制)
+- [ ] 多节点集成测试 (同机4节点启动验证)
+- [ ] Linux/Windows 预编译二进制 (RocksDB C++ 交叉编译受限，需源码构建)
+
+### 已完成 (v1.1.0) — 用户粘性增强：16 项功能全面改造 (2026-06-02)
+
+- [x] **数据库迁移** — 6 个新表迁移 (030-035): XP等级、Push通知、话题标签、编辑精选、社区活动、打赏
+- [x] **F1 Web Push 通知** — ServiceWorker + push 订阅 API + 前端工具库
+- [x] **F2 @提及系统** — 发帖/评论时解析 @username 并创建通知
+- [x] **F3 #话题标签** — 话题解析/聚合/热门/TrendingHashtags/HashtagLink
+- [x] **F4 社交分享优化** — Twitter/X + Telegram + WhatsApp 多渠道 + 增强 OG meta
+- [x] **F5 用户经验值与等级** — XP发放/等级体系(Lv.1-20)/XpBadge/XpBridge 跨服务
+- [x] **F6 编辑精选** — EditorPicks 横向滚动轮播 + 管理后台
+- [x] **F7 新手指引任务** — 7步任务向导 + 任务完成API
+- [x] **F8 邀请奖励系统** — 邀请码生成/兑换/双方各100XP/InviteCard
+- [x] **F9 规则推荐引擎** — posts/spaces/users 三维推荐/Recommendations组件
+- [x] **F10 内容系列增强** — 系列详情页/前后导航
+- [x] **F11 社区活动** — EventCard/events页面/活动参与
+- [x] **F12 创作者打赏** — TipButton/打赏排行榜
+- [x] **F15 创作者认证+排行榜** — LeaderboardCard/周月总排行
+- [x] **F16 每周话题** — WeeklyTopicBanner 横幅组件
+
+**前端新增**:
+- 14个新组件: XpBadge, HashtagLink, TrendingHashtags, EditorPicks, WeeklyTopicBanner, TipButton, LeaderboardCard, EventCard, Recommendations, InviteCard, InlineRefs
+- 5个新页面: /hashtag/[tag], /leaderboard, /invites, /events, /events/[id]
+- 增强: ShareButton (多渠道), ContentCard (@提及渲染), PostCard (话题链接), FeedLayout (集成新组件), layout.tsx (OG meta)
+- ServiceWorker + push-notifications.ts
+
+**后端新增**:
+- xp_bridge.rs — 跨服务 XP 发放 (content→user HTTP bridge)
+- mention.rs / hashtag.rs — @mention 和 #hashtag 正则解析
+- 30+ 新 struct 到 models.rs
+- 50+ 新 repo methods 跨 polis-user/polis-content/polis-space
+- 30+ 新 API routes 跨 4 个微服务
+- Gateway 12 条新代理路由
+
+**部署**: GitHub Release v1.1.0 → 服务器 47.253.123.3 → 7 服务全部 active → www.mzgw.com HTTP 200 ✅
+
+### 已完成 (v1.1.0-fixes) — 6 项 Bug 修复 + 前端集成补充 (2026-06-02)
+
+- [x] **hashtag 页面 React 错误 #438** — Next.js 14 下 `params` 是同步对象不是 Promise，移除 `use()` 包装，直接访问 `params.tag`
+- [x] **帖子详情页 @提及/#话题 链接渲染** — 新增 `convertInlineRefsToMarkdown()` 工具函数，将 @username 和 #tag 转换为 Markdown 链接，保护代码块/行内代码/已有链接
+- [x] **打赏按钮 (TipButton) 集成到帖子详情页** — PostPageClient 操作栏新增 TipButton 组件
+- [x] **Web Push 订阅按钮集成到设置页** — 通知偏好 tab 新增"浏览器推送通知"区域，含订阅/取消订阅按钮，自动检测浏览器支持状态
+- [x] **部署时 `standalone/.next/static` 缺失** — Next.js standalone 模式需要 `static` 目录在 `.next/standalone/.next/static`，部署脚本需复制 static 到 standalone
+- [x] **浏览器端到端验证** — hashtag 页不再崩溃、帖子详情 @mention/#hashtag 可点击、打赏按钮显示、设置页 push 按钮显示
+
+**部署**: 前端 build → GitHub Release v1.1.0 (覆盖 web package) → 服务器 47.253.123.3 部署 → 浏览器验证通过 ✅
+
+### 已完成 (v1.0.63) — 关注通知修复 + 通知去重 + 帖子权限提示 (2026-06-02)
+
+- [x] **关注通知不工作** — `toggle_follow` 添加直接 DB INSERT INTO notifications（NATS 未部署 fallback）+ publish_event 保留。**关键发现: 生产服务器未部署 NATS**，所有跨服务事件静默丢失
+- [x] **点赞/评论通知重复** — Notify service 移除 CONTENT_POST_LIKED/CONTENT_COMMENT_CREATED 的重复 DB 写入，Content handler 为唯一通知创建路径
+- [x] **帖子权限错误提示** — api.ts 携带 HTTP status + PostPageClient 区分 403 vs 404
+- [x] **新 Pattern: nats-event-loss** — NATS 未部署导致事件丢失的修复模式+配方
+- [x] **编译 + GitHub Release (v1.0.63) + 服务器部署** — polis-user 二进制已更新，关注通知验证通过
+- [x] **Bug 追踪文档全面更新** — timeline/fix-points/INDEX/KNOWN-ISSUES/regression-map + 新 Pattern + 新配方
+
+### 已完成 (v1.0.62) — 消息页用户名修复 + 创作页文案修正 + 多用户互动测试 (2026-06-02)
+
+- [x] **消息页用户名显示修复** — `/messages/[userId]` 显示 UUID → real name: 后端 `search_users` SQL 增加 `OR id::text = $2`，前端 fallback → '未知用户'
+- [x] **创作页文案修正** — "选择发布模块 — 模块决定创作方式" → "选择发布作品类型 — 选择你要创作的内容类型，目前支持文章和视频"
+- [x] **多用户互动测试** — 4 个用户 (tester1/tester2/tester33/tester44) 注册/关注/点赞/评论/私信 — 全部正常，跨用户数据一致性验证通过
+- [x] **权限控制验证** — 非社区成员无法查看社区帖子（正常行为）
+- [x] **编译 + GitHub Release (v1.0.62) + 服务器部署** — 所有服务正常运行，修复已验证通过
+
+### 已完成 (v1.0.61) — 全面功能测试 + Admin Layout 修复 (2026-06-02)
+
+- [x] **前端测试 (30+ 功能点)** — 首页/探索/空间/帖子/登录/注册/个人主页/设置/消息/通知/关于/更新日志/创建社区/创作中心/创作编辑/搜索/Admin 登录/仪表盘/用户管理/社区管理
+- [x] **API 测试** — 注册/登录/Admin登录/点赞/评论/搜索 — 全部通过
+- [x] **功能测试** — 发布帖子/点赞/评论/搜索/登出 — 全部通过
+- [x] **Admin Layout token 验证修复** — localStorage token 无效时显示空数据+401，新增 mount 时 API 验证
+- [x] **v1.0.60 → v1.0.61** — 修复 React Hooks 违规 (#310)，将 token 验证合并到 mount useEffect
+- [x] **编译 + GitHub Release + 服务器部署** — 已验证 Admin 仪表盘正常
+
+### 已完成 (v1.0.59) — 高并发性能优化 7 项 (2026-06-02)
+
+- [x] **Argon2 spawn_blocking (14处, 7 crate)** — 密码哈希/验证异步化，避免阻塞 tokio worker
+- [x] **Gateway 连接池** — pool_max_idle 0→32 + tcp_keepalive + pool_idle_timeout
+- [x] **N+1 批量查询** — creations_to_batch() 函数，60-80 SQL → 4-5 bulk 查询
+- [x] **数据库事务** — toggle_like/create_comment/vote_poll 计数更新事务化
+- [x] **连接池超时** — 11 个微服务 acquire_timeout=10s
+- [x] **响应压缩** — Gateway CompressionLayer + Nginx gzip + Next.js compress
+- [x] **Nginx 优化** — upstream keepalive + /_next/static/ 1年缓存
+- [x] **编译 + GitHub Release (v1.0.59) + 服务器部署 + 浏览器验证** — 所有服务正常运行，gzip 生效
+
+### Bug 追踪系统增强
+
+- [x] **pre-deploy-check.sh** — 新增 3 项检查 (Argon2 spawn_blocking, 连接池, N+1 批量查询)
+- [x] **timeline/2026.md** — 记录 v1.0.59 性能优化
+- [x] **fix-points.md** — 新增 29 个修复点位 (v1.0.59 涉及)
+- [x] **INDEX.md** — 更新统计数字 + 检查类别 14→18
+
+### 已完成 (v1.0.58) — forum 模块去特殊化：交流=普通自定义模块 (2026-06-01)
+
+- [x] **SpacePageClient.tsx** — 删除 forum Tab 独立渲染块(~150行)，forum 从 KNOWN_TABS 移除，进入动态模块通用渲染
+- [x] **动态模块回退增强** — 加入排序选择器、显示已隐藏开关、公告渲染、分页导航（之前仅 forum 独有）
+- [x] **前端回退清理** — 10 处 `|| 'forum'` → `|| ''`（module-config, api.ts, PostCard, ContentCard, PostPage, Profile, create-center, thread）
+- [x] **后端提交参数强化** — SubmitReferenceRequest.module_type 从 Option 改为必填 String
+- [x] **编译 + GitHub Release (v1.0.58) + 服务器部署 + 浏览器验证** — 首页正常，无 JS 错误
+
+### 已完成 (v1.0.57) — 模块系统去中心化重构 (2026-06-01)
+
+- [x] MODULE_CONFIG 完全移除 + 动态模块 Tab 渲染 + 数据库迁移 + 全量清空
 
 ### 已完成 (v1.0.56) — 空间页视频Tab路由解析修复 (2026-06-01)
 
@@ -197,6 +362,7 @@ LOCAL_ONLY
 
 ### 部署版本
 
+v1.0.63 — 关注通知修复 + 通知去重 + 帖子权限提示 + NATS 缺失发现 (2026-06-02)
 v1.0.56 — 空间页视频Tab路由解析修复 (2026-06-01)
 v1.0.55 — ContentCard 模块标签导航修复 (2026-06-01)
 v1.0.54 — HLS 播放器初始化优化 (2026-06-01)

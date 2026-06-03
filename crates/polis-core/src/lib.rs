@@ -5,3 +5,5 @@ pub mod types;
 pub mod resolver;
 pub mod admin;
 pub mod auth;
+pub mod mention;
+pub mod hashtag;

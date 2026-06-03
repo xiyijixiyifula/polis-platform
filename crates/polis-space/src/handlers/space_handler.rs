@@ -68,8 +68,8 @@ impl SpaceHandler {
             .visibility
             .unwrap_or_default()
             .to_string();
-        // 新系统不再使用旧 enabled_modules，创建默认"交流"模块
-        let enabled_modules = serde_json::json!(["forum"]);
+        // 所有模块由 space_modules 表管理，不再使用旧 enabled_modules
+        let enabled_modules = serde_json::json!([]);
 
         let description = req.description.unwrap_or_default();
 
@@ -94,7 +94,8 @@ impl SpaceHandler {
             name: "交流".to_string(),
             module_key: Some("forum".to_string()),
             mode: Some("free".to_string()),
-            allowed_content_types: Some(vec!["article".to_string()]),
+            allowed_content_types: Some(vec!["article".to_string(), "video".to_string()]),
+            icon: Some("💬".to_string()),
         }).await;
 
         // 将创建者添加为 Owner
@@ -604,6 +605,7 @@ impl SpaceHandler {
             module_key: req.module_key.clone(),
             mode: req.mode.clone(),
             allowed_content_types: req.allowed_content_types.clone(),
+            icon: req.icon.clone(),
         }).await?;
 
         Ok(m.into())

@@ -3,6 +3,7 @@ use argon2::{
     Argon2,
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
+use polis_core::error::AppError;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -32,6 +33,30 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, argon2::passw
     Ok(argon2
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok())
+}
+
+/// 异步密码哈希（spawn_blocking 避免阻塞 async runtime）
+pub async fn hash_password_async(password: String) -> Result<String, AppError> {
+    tokio::task::spawn_blocking(move || {
+        let salt = SaltString::generate(&mut OsRng);
+        let hash = Argon2::default()
+            .hash_password(password.as_bytes(), &salt)
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(hash.to_string())
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+}
+
+/// 异步密码验证（spawn_blocking 避免阻塞 async runtime）
+pub async fn verify_password_async(password: String, hash: String) -> Result<bool, AppError> {
+    tokio::task::spawn_blocking(move || {
+        let parsed = PasswordHash::new(&hash)
+            .map_err(|e| AppError::Internal(e.to_string()))?;
+        Ok(Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok())
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
 }
 
 /// 生成 JWT Access Token

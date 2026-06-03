@@ -372,10 +372,14 @@ impl AdminHandler {
 
         let (user_id, api_key_hash) = agent.ok_or(AppError::Forbidden("Agent 不存在".to_string()))?;
 
-        use argon2::{Argon2, PasswordHash, PasswordVerifier};
-        let parsed = PasswordHash::new(&api_key_hash).map_err(|_| AppError::Forbidden("认证失败".to_string()))?;
-        Argon2::default().verify_password(req.api_key.as_bytes(), &parsed)
-            .map_err(|_| AppError::Forbidden("API Key 无效".to_string()))?;
+        let ak = req.api_key.clone();
+        let hash = api_key_hash.clone();
+        tokio::task::spawn_blocking(move || {
+            use argon2::{Argon2, PasswordHash, PasswordVerifier};
+            let parsed = PasswordHash::new(&hash).map_err(|_| AppError::Forbidden("认证失败".to_string()))?;
+            Argon2::default().verify_password(ak.as_bytes(), &parsed)
+                .map_err(|_| AppError::Forbidden("API Key 无效".to_string()))
+        }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
         // 更新最后活跃
         let _ = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")

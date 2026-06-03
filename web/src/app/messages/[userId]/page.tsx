@@ -74,10 +74,10 @@ export default function ConversationPage() {
           if (data.code === 0 && Array.isArray(data.data) && data.data.length > 0) {
             setOtherUser(data.data[0]);
           } else {
-            setOtherUser({ id: userId, username: userId.substring(0, 8), display_name: userId.substring(0, 8), avatar_url: null, bio: '', verified: false, created_at: '' });
+            setOtherUser({ id: userId, username: '未知用户', display_name: '未知用户', avatar_url: null, bio: '', verified: false, created_at: '' });
           }
         } catch {
-          setOtherUser({ id: userId, username: userId.substring(0, 8), display_name: userId.substring(0, 8), avatar_url: null, bio: '', verified: false, created_at: '' });
+          setOtherUser({ id: userId, username: '未知用户', display_name: '未知用户', avatar_url: null, bio: '', verified: false, created_at: '' });
         }
       } catch {}
     };

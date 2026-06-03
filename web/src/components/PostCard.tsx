@@ -5,6 +5,7 @@ import { Pin, EyeOff, Star } from 'lucide-react';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
+import HashtagLink from './HashtagLink';
 import { buildPostLink, getModuleLabel } from '@/lib/module-config';
 
 interface PostCardProps {
@@ -47,7 +48,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
     type: 'post',
     space: { namespace: post.space_ns, title: post.space_name },
     author: post.author || {},
-    module_type: post.module_type || 'forum',
+    module_type: post.module_type || '',
   });
 
   const postLink = buildPostLink(post.id, post.space_ns);
@@ -123,10 +124,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
           {post.tags && post.tags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {post.tags.map((tag) => (
-                <Link key={tag} href={`/search?tag=${encodeURIComponent(tag)}`}
-                  className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-purple-100 dark:hover:bg-purple-900 hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
-                  #{tag}
-                </Link>
+                <HashtagLink key={tag} tag={tag} className="rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-0.5 text-xs hover:bg-purple-100 dark:hover:bg-purple-900 hover:text-purple-600 dark:hover:text-purple-400 transition-colors" />
               ))}
             </div>
           )}

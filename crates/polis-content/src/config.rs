@@ -7,6 +7,11 @@ pub struct ContentServiceConfig {
     pub database_url: String,
     pub nats_url: String,
     pub max_upload_size_mb: u64,
+    pub user_service_url: String,
+    /// Polis Chain 节点 API URL (可选, 用于链上存证)
+    pub chain_api_url: Option<String>,
+    /// 站点 ID (SHA256(domain)), 用于链上存证
+    pub chain_site_id: Option<String>,
 }
 
 impl ContentServiceConfig {
@@ -24,6 +29,10 @@ impl ContentServiceConfig {
                 .unwrap_or_else(|_| "60".to_string())
                 .parse()
                 .unwrap_or(60),
+            user_service_url: env::var("USER_SERVICE_URL")
+                .unwrap_or_else(|_| "http://localhost:3001".to_string()),
+            chain_api_url: env::var("CHAIN_API_URL").ok(),
+            chain_site_id: env::var("CHAIN_SITE_ID").ok(),
         }
     }
 }

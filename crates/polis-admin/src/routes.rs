@@ -131,15 +131,18 @@ async fn admin_login(
     let display_name: String = user_row.get("display_name");
     let password_hash: String = user_row.get("password_hash");
 
-    use argon2::{
-        password_hash::{PasswordHash, PasswordVerifier},
-        Argon2,
-    };
-    let parsed_hash = PasswordHash::new(&password_hash)
-        .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
-    Argon2::default()
-        .verify_password(req.password.as_bytes(), &parsed_hash)
-        .map_err(|_| AppError::Unauthorized)?;
+    let pwd = req.password.clone();
+    let hash = password_hash.clone();
+    tokio::task::spawn_blocking(move || {
+        use argon2::{
+            password_hash::{PasswordHash, PasswordVerifier},
+            Argon2,
+        };
+        let parsed_hash = PasswordHash::new(&hash)
+            .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
+        Argon2::default().verify_password(pwd.as_bytes(), &parsed_hash)
+            .map_err(|_| AppError::Unauthorized)
+    }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
     let token = crate::auth::generate_admin_token(user_id, "admin", &handler.config)
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;

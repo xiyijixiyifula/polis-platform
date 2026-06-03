@@ -15,7 +15,7 @@ import NovelCard, { adaptPostToNovel } from '@/components/NovelCard';
 import QACard from '@/components/QACard';
 import { Pencil, Trash2, ImageIcon } from 'lucide-react';
 import { formatCount } from '@/lib/utils';
-import { getModuleLabel, getModuleEmoji, buildPostLink, MODULE_CONFIG } from '@/lib/module-config';
+import { getModuleLabel, getModuleEmoji, buildPostLink } from '@/lib/module-config';
 import type { Space, Post, Series, SpaceTier, Subscription, SpaceModule } from '@/lib/api';
 import { spaces as apiSpaces, tiers, subscribe, getToken } from '@/lib/api';
 import { SpaceAnalytics, SpaceAnalyticsMini } from '@/components/SpaceAnalytics';
@@ -47,14 +47,9 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  const [spaceModules, setSpaceModules] = useState<SpaceModule[]>([]);
 
  // Handle sub-routes — base set covers all legacy + common module keys
- const BASE_SUB_ROUTES = new Set([
- 'overview', 'members', 'analytics',
- 'posts', 'polls', 'announcements', 'video', 'code_repo', 'qa',
- 'series', 'membership', 'novel', 'game', 'mini_app',
- 'share', 'wiki', 'chat', 'store', 'course',
- ]);
+ const SYSTEM_SUB_ROUTES = new Set(['overview', 'members', 'analytics']);
  const knownSubRoutes = useMemo(() => {
- const routes = new Set(BASE_SUB_ROUTES);
+ const routes = new Set(SYSTEM_SUB_ROUTES);
  spaceModules.forEach(m => routes.add(m.module_key));
  return routes;
  }, [spaceModules]);
@@ -98,43 +93,27 @@ export default function SpacePage({ rawNamespace }: { rawNamespace: string | str
  const [isStarred, setIsStarred] = useState(false);
  const [starLoading, setStarLoading] = useState(false);
 
- // Icon map for module tabs
- const MODULE_ICONS: Record<string, React.ElementType> = {
- forum: MessageCircle, share: Share2, wiki: Library, series: BookOpen,
- membership: Crown, video: Video, code_repo: Code, qa: HelpCircle,
- polls: BarChart3, announcements: Megaphone, chat: MessageSquare,
- store: ShoppingBag, course: GraduationCap, novel: BookText,
- game: Gamepad2, mini_app: AppWindow,
- };
-
- // Active tab - dynamic from space modules
+ // Active tab - dynamic from space modules (tab id = module_key)
  const availableTabs = useMemo(() => {
- const tabs: { id: string; label: string; icon: React.ElementType }[] = [
- { id: 'overview', label: '概览', icon: Layout },
+ const tabs: { id: string; label: string; icon: string }[] = [
+ { id: 'overview', label: '概览', icon: '🏠' },
  ];
  spaceModules.forEach(m => {
  tabs.push({
- id: MODULE_CONFIG[m.module_key]?.route || m.module_key,
+ id: m.module_key,
  label: m.name,
- icon: MODULE_ICONS[m.module_key] || FileText,
+ icon: (m as any).icon || '📄',
  });
  });
- tabs.push({ id: 'members', label: '成员', icon: UserCheck });
- if (isOwner) tabs.push({ id: 'analytics', label: '分析', icon: TrendingUp });
+ tabs.push({ id: 'members', label: '成员', icon: '👥' });
+ if (isOwner) tabs.push({ id: 'analytics', label: '分析', icon: '📊' });
  return tabs;
  }, [spaceModules, isOwner]);
-
- // Content-type route names that have dedicated rendering blocks
- // even when no module tab matches (e.g. /space/ns/video → SpaceVideoTab).
- // These must not be reset to 'overview' by the guard below.
- const DIRECT_RENDER_TABS = new Set(['video', 'code_repo', 'chat']);
 
  const [activeTab, setActiveTab] = useState(urlTab || 'overview');
  useEffect(() => {
  if (spaceModules.length > 0 && !availableTabs.find(t => t.id === activeTab)) {
- if (!DIRECT_RENDER_TABS.has(activeTab)) {
  setActiveTab(availableTabs[0]?.id || 'overview');
- }
  }
  }, [spaceModules]);
 
@@ -383,7 +362,7 @@ setIsStarred(data.data.is_starred ?? false);
 	 setPostTotalPages(postsData.pagination.total_pages);
 	 }
 	 // Include all module types for client-side tab filtering
-	 const mtFilter = new Set<string>([...Object.keys(MODULE_CONFIG), ...spaceModules.map(m => m.module_key)]);
+	 const mtFilter = new Set<string>(spaceModules.map(m => m.module_key));
 	 setPosts(allPosts.filter((p: any) => mtFilter.has(p.module_type || '')));
 	 }
  if (featuredData.code === 0) setFeatured(featuredData.data || []);
@@ -727,7 +706,6 @@ setIsStarred(data.data.is_starred ?? false);
  <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700 gap-0.5">
  <div className="flex-1 flex items-center gap-0.5 overflow-x-auto">
  {availableTabs.map((tab) => {
- const Icon = tab.icon;
  return (
  <button
  key={tab.id}
@@ -738,7 +716,7 @@ setIsStarred(data.data.is_starred ?? false);
  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
  }`}
  >
- <Icon className="h-4 w-4" />
+ <span className="text-base">{tab.icon}</span>
  {tab.label}
  </button>
  );
@@ -933,7 +911,7 @@ setIsStarred(data.data.is_starred ?? false);
  <div className="space-y-1">
  {posts.slice(0, 20).map((post) => {
  const moduleIcon = getModuleEmoji(post.module_type);
- const moduleLabel = MODULE_CONFIG[post.module_type]?.label || spaceModules.find(m => m.module_key === post.module_type)?.name || post.module_type || '交流';
+ const moduleLabel = spaceModules.find(m => m.module_key === post.module_type)?.name || post.module_type || '交流';
  const author = (post.author || {}) as any;
  const authorUsername = author.username || '';
  const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
@@ -1024,159 +1002,6 @@ setIsStarred(data.data.is_starred ?? false);
  </div>
  )}
 
- {/* === Posts Tab (交流) === */}
- {activeTab === 'posts' && (
- <>
- <div className="flex items-center justify-between mb-4">
- <div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">交流</h3>{(() => { const forumMod = spaceModules.find(m => m.module_key === 'forum'); const forumTypes = forumMod?.allowed_content_types || []; return forumTypes.map(t => (<span key={t} className={`text-[10px] px-1.5 py-0.5 rounded ${t === 'video' ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'}`}>{t === 'video' ? '视频' : '文章'}</span>)); })()}</div>
- <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`}
- className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors">
- <Plus size={14} />发布
- </Link>
- </div>
-
- {/* Sort selector + Show hidden toggle */}
- <div className="flex items-center gap-2 mb-4 flex-wrap">
- <span className="text-xs text-gray-500 dark:text-gray-400">排序:</span>
- <select
- value={postSort}
- onChange={(e) => setPostSort(e.target.value)}
- className="text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-transparent"
- >
- <option value="newest">最新</option>
- <option value="views">最多浏览</option>
- <option value="likes">最多点赞</option>
- </select>
- {isOwner && (
- <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer ml-2">
- <input
- type="checkbox"
- checked={showHiddenPosts}
- onChange={(e) => setShowHiddenPosts(e.target.checked)}
- className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
- />
- 显示已隐藏
- </label>
- )}
- </div>
-
- {/* Normal announcements in posts feed */}
- {announcements.filter(a => a.importance === 'normal').length > 0 && (
- <div className="mb-4 space-y-2">
- <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
- <Megaphone className="h-3 w-3" /> 公告
- </h4>
- {announcements.filter(a => a.importance === 'normal').map(ann => (
- <div key={ann.id} className="glass-card py-2.5 px-4">
- <p className="text-sm font-medium text-gray-900 dark:text-white">{ann.title}</p>
- <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{ann.body}</p>
- </div>
- ))}
- </div>
- )}
-
- {postLoading ? (
- <div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载帖子...</div>
- ) : posts.filter(p => {
-   if (!p.module_type) return true;
-   const route = MODULE_CONFIG[p.module_type]?.route || p.module_type;
-   return route === 'posts';
- }).length > 0 ? (
- <div className="space-y-3">
- {posts.filter(p => {
-   if (!p.module_type) return true;
-   const route = MODULE_CONFIG[p.module_type]?.route || p.module_type;
-   return route === 'posts';
- }).map((post) => (
- <PostCard key={post.id} post={{
- id: post.id,
- title: post.title,
- body: post.body,
- author: post.author,
- space_id: post.space_id,
- space_ns: cleanNamespace,
- space_name: space?.title,
- like_count: post.like_count,
- comment_count: post.comment_count,
- view_count: post.view_count,
- created_at: post.created_at,
- tags: post.tags,
- is_pinned: post.is_pinned,
- is_hidden: post.is_hidden,
- module_type: post.module_type,
- }} canPin={isOwner && !post.is_hidden} onTogglePin={() => togglePin(post.id, post.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(post.id)} isFeatured={post.is_featured} canFeature={isOwner && !post.is_hidden} onToggleFeature={() => toggleFeature(post.id, post.is_featured)} canUnhide={isOwner && post.is_hidden} onToggleUnhide={() => toggleUnhide(post.id)} />
- ))}
- </div>
- ) : (
- <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
- <MessageCircle className="h-10 w-10 mx-auto mb-3 opacity-30" />
- <p>暂无帖子</p>
- </div>
- )}
-
- {/* 分页导航 */}
- {postTotalPages > 1 && (
- <div className="mt-4 flex items-center justify-center gap-2">
- <button
- onClick={() => goToPostPage(postPage - 1)}
- disabled={postPage <= 1}
- className="px-3 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
- >
- ← 上一页
- </button>
-
- {(() => {
- const pages: (number | string)[] = [];
- const maxShow = 7;
- const p = postPage;
- const t = postTotalPages;
- if (t <= maxShow) {
- for (let i = 1; i <= t; i++) pages.push(i);
- } else {
- pages.push(1);
- if (p > 3) pages.push('...');
- const start = Math.max(2, p - 1);
- const end = Math.min(t - 1, p + 1);
- for (let i = start; i <= end; i++) pages.push(i);
- if (p < t - 2) pages.push('...');
- pages.push(t);
- }
- return pages.map((pg, i) =>
- typeof pg === 'number' ? (
- <button
- key={i}
- onClick={() => goToPostPage(pg)}
- className={'w-9 h-9 rounded-full text-sm font-medium transition-colors ' +
- (pg === postPage
- ? 'bg-primary-500 text-white shadow-sm'
- : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800')
- }
- >
- {pg}
- </button>
- ) : (
- <span key={i} className="px-1 text-gray-400 select-none">…</span>
- )
- );
- })()}
-
- <button
- onClick={() => goToPostPage(postPage + 1)}
- disabled={postPage >= postTotalPages}
- className="px-3 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
- >
- 下一页 →
- </button>
- </div>
- )}
-
- {postTotalPages > 0 && posts.length > 0 && (
- <div className="mt-2 pb-8 text-center text-xs text-gray-400">
- 第 {postPage}/{postTotalPages} 页
- </div>
- )}
- </>
- )}
 
  {/* === Series Tab === */}
  {activeTab === 'series' && (
@@ -1947,61 +1772,149 @@ setIsStarred(data.data.is_starred ?? false);
  </div>
  )}
 
- {/* === 动态模块通用渲染 (自定义 module_key 的 fallback) === */}
- {(() => {
-   const KNOWN_TABS = new Set(['overview','posts','wiki','share','polls','announcements','members','chat','video','code_repo','qa','novel','game','mini_app','store','course','analytics','series','membership']);
-   const currentMod = spaceModules.find(m => (MODULE_CONFIG[m.module_key]?.route || m.module_key) === activeTab);
-   if (!currentMod || KNOWN_TABS.has(activeTab)) return null;
-   const hasArticle = !currentMod.allowed_content_types || currentMod.allowed_content_types.includes('article');
-   const hasVideo = !currentMod.allowed_content_types || currentMod.allowed_content_types.includes('video');
-   const filteredPosts = posts.filter((p: any) => p.module_type === currentMod.module_key);
-   return (
-     <div>
-       <div className="flex items-center justify-between mb-4">
-         <div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{currentMod.name}</h3>{hasArticle && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">文章</span>}{hasVideo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400">视频</span>}</div>
-         <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=${encodeURIComponent(currentMod.module_key)}`}
-           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors">
-           <Plus size={14} />发布
-         </Link>
-       </div>
-       {postLoading ? (
-         <div className="glass-card py-8 text-center text-gray-400">加载中...</div>
-       ) : filteredPosts.length > 0 ? (
-         <div className="space-y-2">
-           {filteredPosts.map((p: any) => (
-             <PostCard key={p.id} post={{
-               id: p.id,
-               title: p.title,
-               body: p.body,
-               author: p.author,
-               space_id: p.space_id,
-               space_ns: cleanNamespace,
-               space_name: space?.title,
-               like_count: p.like_count,
-               comment_count: p.comment_count,
-               view_count: p.view_count,
-               created_at: p.created_at,
-               tags: p.tags,
-               is_pinned: p.is_pinned,
-               is_hidden: p.is_hidden,
-               module_type: p.module_type,
-               module_label: currentMod.name,
-               }} canPin={isOwner && !p.is_hidden} onTogglePin={() => togglePin(p.id, p.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(p.id)} isFeatured={p.is_featured} canFeature={isOwner && !p.is_hidden} onToggleFeature={() => toggleFeature(p.id, p.is_featured)} canUnhide={isOwner && p.is_hidden} onToggleUnhide={() => toggleUnhide(p.id)} />
-           ))}
-         </div>
-       ) : (
-         <div className="glass-card py-8 text-center text-gray-400 dark:text-gray-500">
-           <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
-           <p className="text-sm">还没有内容</p>
-           <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=${encodeURIComponent(currentMod.module_key)}`}
-             className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
-             发布第一篇帖子
-           </Link>
-         </div>
-       )}
-     </div>
-   );
- })()}
+	 {/* === 动态模块通用渲染 (所有模块统一走此路径 — 包括 forum) === */}
+	 {(() => {
+	   const KNOWN_TABS = new Set(['overview','wiki','share','polls','announcements','members','chat','video','code_repo','qa','novel','game','mini_app','store','course','analytics','series','membership']);
+	   const currentMod = spaceModules.find(m => m.module_key === activeTab);
+	   if (!currentMod || KNOWN_TABS.has(activeTab)) return null;
+	   const hasArticle = !currentMod.allowed_content_types || currentMod.allowed_content_types.includes('article');
+	   const hasVideo = !currentMod.allowed_content_types || currentMod.allowed_content_types.includes('video');
+	   const filteredPosts = posts.filter((p: any) => p.module_type === currentMod.module_key);
+	   return (
+	     <div>
+	       <div className="flex items-center justify-between mb-4">
+	         <div className="flex items-center gap-2"><h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{currentMod.name}</h3>{hasArticle && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">文章</span>}{hasVideo && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400">视频</span>}</div>
+	         <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=${encodeURIComponent(currentMod.module_key)}`}
+	           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors">
+	           <Plus size={14} />发布
+	         </Link>
+	       </div>
+
+	       {/* 排序 + 显示已隐藏 */}
+	       <div className="flex items-center gap-2 mb-4 flex-wrap">
+	         <span className="text-xs text-gray-500 dark:text-gray-400">排序:</span>
+	         <select
+	           value={postSort}
+	           onChange={(e) => setPostSort(e.target.value)}
+	           className="text-xs px-2 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:ring-1 focus:ring-primary-500 focus:border-transparent"
+	         >
+	           <option value="newest">最新</option>
+	           <option value="views">最多浏览</option>
+	           <option value="likes">最多点赞</option>
+	         </select>
+	         {isOwner && (
+	           <label className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 cursor-pointer ml-2">
+	             <input
+	               type="checkbox"
+	               checked={showHiddenPosts}
+	               onChange={(e) => setShowHiddenPosts(e.target.checked)}
+	               className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+	             />
+	             显示已隐藏
+	           </label>
+	         )}
+	       </div>
+
+	       {/* Normal announcements */}
+	       {announcements.filter(a => a.importance === 'normal').length > 0 && (
+	         <div className="mb-4 space-y-2">
+	           <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1">
+	             <Megaphone className="h-3 w-3" /> 公告
+	           </h4>
+	           {announcements.filter(a => a.importance === 'normal').map(ann => (
+	             <div key={ann.id} className="glass-card py-2.5 px-4">
+	               <p className="text-sm font-medium text-gray-900 dark:text-white">{ann.title}</p>
+	               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{ann.body}</p>
+	             </div>
+	           ))}
+	         </div>
+	       )}
+
+	       {postLoading ? (
+	         <div className="glass-card py-8 text-center text-gray-400">加载中...</div>
+	       ) : filteredPosts.length > 0 ? (
+	         <div className="space-y-2">
+	           {filteredPosts.map((p: any) => (
+	             <PostCard key={p.id} post={{
+	               id: p.id,
+	               title: p.title,
+	               body: p.body,
+	               author: p.author,
+	               space_id: p.space_id,
+	               space_ns: cleanNamespace,
+	               space_name: space?.title,
+	               like_count: p.like_count,
+	               comment_count: p.comment_count,
+	               view_count: p.view_count,
+	               created_at: p.created_at,
+	               tags: p.tags,
+	               is_pinned: p.is_pinned,
+	               is_hidden: p.is_hidden,
+	               module_type: p.module_type,
+	               module_label: currentMod.name,
+	               }} canPin={isOwner && !p.is_hidden} onTogglePin={() => togglePin(p.id, p.is_pinned)} canHide={isOwner} onToggleHide={() => toggleHide(p.id)} isFeatured={p.is_featured} canFeature={isOwner && !p.is_hidden} onToggleFeature={() => toggleFeature(p.id, p.is_featured)} canUnhide={isOwner && p.is_hidden} onToggleUnhide={() => toggleUnhide(p.id)} />
+	           ))}
+	         </div>
+	       ) : (
+	         <div className="glass-card py-8 text-center text-gray-400 dark:text-gray-500">
+	           <PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
+	           <p className="text-sm">还没有内容</p>
+	           <Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=${encodeURIComponent(currentMod.module_key)}`}
+	             className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
+	             发布第一篇帖子
+	           </Link>
+	         </div>
+	       )}
+
+	       {/* 分页 */}
+	       {postTotalPages > 1 && (
+	         <div className="mt-4 flex items-center justify-center gap-2">
+	           <button onClick={() => goToPostPage(postPage - 1)} disabled={postPage <= 1}
+	             className="px-3 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">
+	             ← 上一页
+	           </button>
+	           {(() => {
+	             const pages: (number | string)[] = [];
+	             const maxShow = 7;
+	             const p = postPage;
+	             const t = postTotalPages;
+	             if (t <= maxShow) {
+	               for (let i = 1; i <= t; i++) pages.push(i);
+	             } else {
+	               pages.push(1);
+	               if (p > 3) pages.push('...');
+	               const start = Math.max(2, p - 1);
+	               const end = Math.min(t - 1, p + 1);
+	               for (let i = start; i <= end; i++) pages.push(i);
+	               if (p < t - 2) pages.push('...');
+	               pages.push(t);
+	             }
+	             return pages.map((pg, i) =>
+	               typeof pg === 'number' ? (
+	                 <button key={i} onClick={() => goToPostPage(pg)}
+	                   className={'w-9 h-9 rounded-full text-sm font-medium transition-colors ' +
+	                     (pg === postPage ? 'bg-primary-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800')}>
+	                   {pg}
+	                 </button>
+	               ) : (
+	                 <span key={i} className="px-1 text-gray-400 select-none">…</span>
+	               )
+	             );
+	           })()}
+	           <button onClick={() => goToPostPage(postPage + 1)} disabled={postPage >= postTotalPages}
+	             className="px-3 py-2 rounded-full text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800">
+	             下一页 →
+	           </button>
+	         </div>
+	       )}
+	       {postTotalPages > 0 && filteredPosts.length > 0 && (
+	         <div className="mt-2 pb-8 text-center text-xs text-gray-400">
+	           第 {postPage}/{postTotalPages} 页
+	         </div>
+	       )}
+	     </div>
+	   );
+	 })()}
 
  {/* === Analytics Tab (空间创建者专属) === */}
  {activeTab === 'analytics' && isOwner && (

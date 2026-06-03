@@ -94,6 +94,10 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 - 前端: 只打 `.next/` 和 `public/`，不打 `node_modules`（standalone 自带）
 - 后端: 从 `target/x86_64-unknown-linux-gnu/release/` 取 Linux 二进制
 - 服务器前端部署: 先 `rm -rf /opt/polis-web/.next` 再解压
+- **⚠️ 解压后必须复制 static**: `cp -r /opt/polis-web/.next/static /opt/polis-web/.next/standalone/.next/static`
+  - 原因: Next.js standalone server 从 `.next/standalone/.next/static` 提供静态文件
+  - 不执行此步骤 → `/_next/static/*` 全部 404 → 页面白屏
+  - 然后 `systemctl restart polis-web`
 
 ---
 

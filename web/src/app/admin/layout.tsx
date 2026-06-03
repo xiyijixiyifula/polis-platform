@@ -11,6 +11,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     setMounted(true);
+    // Validate admin token — stale/invalid tokens cause empty data with 401
+    const token = localStorage.getItem('polis_admin_token');
+    if (token) {
+      fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => {
+          if (res.status === 401) {
+            localStorage.removeItem('polis_admin_token');
+            window.location.href = '/admin/login';
+          }
+        })
+        .catch(() => {});
+    }
   }, []);
 
   // Login page does not need the admin layout

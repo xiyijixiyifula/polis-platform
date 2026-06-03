@@ -62,7 +62,6 @@ export interface Space {
   follower_count: number;
   star_count: number;
   has_password: boolean;
-  enabled_modules?: string[];
   created_at: string;
   level?: number;
   xp?: number;
@@ -209,7 +208,9 @@ async function request<T>(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.message || 'Request failed');
+    const err: any = new Error(data.message || `请求失败 (${response.status})`);
+    err.status = response.status;
+    throw err;
   }
 
   return data;
@@ -269,7 +270,7 @@ export const spaces = {
 
   get: (namespace: string) => request<Space>(`/spaces/${encodeNs(namespace)}`),
 
-  update: (namespace: string, data: { title?: string; description?: string; icon_url?: string; banner_url?: string; enabled_modules?: string[]; visibility?: string; password?: string }) =>
+  update: (namespace: string, data: { title?: string; description?: string; icon_url?: string; banner_url?: string; visibility?: string; password?: string }) =>
     request<Space>(`/spaces/${encodeNs(namespace)}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   /** 上传文件 (base64) — 返回 { id, filename, file_size, mime_type }，通过 /api/files/{id} 访问 */
@@ -358,14 +359,14 @@ export const spaces = {
     request<SpaceModule[]>(`/spaces/${encodeNs(namespace)}/modules`),
 
   /** 创建自定义模块 */
-  createModule: (namespace: string, data: { name: string; module_key?: string; mode?: string; allowed_content_types?: string[] }) =>
+  createModule: (namespace: string, data: { name: string; module_key?: string; mode?: string; allowed_content_types?: string[]; icon?: string }) =>
     request<SpaceModule>(`/spaces/${encodeNs(namespace)}/modules`, {
       method: 'POST',
       body: JSON.stringify(data),
     }),
 
   /** 更新自定义模块 */
-  updateModule: (namespace: string, moduleKey: string, data: { name?: string; mode?: string; allowed_content_types?: string[]; is_active?: boolean }) =>
+  updateModule: (namespace: string, moduleKey: string, data: { name?: string; mode?: string; allowed_content_types?: string[]; icon?: string; is_active?: boolean }) =>
     request<SpaceModule>(`/spaces/${encodeNs(namespace)}/modules/${encodeURIComponent(moduleKey)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -384,6 +385,7 @@ export interface SpaceModule {
   module_key: string;
   mode: 'free' | 'creator_only';
   allowed_content_types: string[];
+  icon: string;
   sort_order: number;
   is_active: boolean;
   created_at: string;
@@ -539,7 +541,7 @@ export const posts = {
   create: (namespace: string, data: { title: string; body: string; module_type?: string; tags?: string[]; visibility?: string; password?: string }) =>
     request<Post>(`/spaces/${encodeNs(namespace)}/posts`, {
       method: 'POST',
-      body: JSON.stringify({ ...data, content_type: 'text', module_type: data.module_type || 'forum' }),
+      body: JSON.stringify({ ...data, content_type: 'text', module_type: data.module_type || '' }),
     }),
 
   list: (namespace: string, params?: { page?: number; page_size?: number; module?: string; sort?: string }) => {
@@ -1050,4 +1052,196 @@ export const threads = {
 
   archive: (threadId: string) =>
     request<any>(`/threads/${threadId}/archive`, { method: 'POST' }),
+};
+
+// ==================== XP 经验值系统 ====================
+
+export interface XpInfo {
+  user_id: string;
+  total_xp: number;
+  current_level: number;
+  level_title: string;
+  level_icon: string;
+  xp_to_next_level: number;
+  daily_xp: number;
+  daily_xp_limit: number;
+}
+
+export interface XpLog {
+  id: string;
+  action_type: string;
+  xp_gained: number;
+  description: string;
+  created_at: string;
+}
+
+export interface DailyLoginResponse {
+  xp_gained: number;
+  streak_days: number;
+  total_xp: number;
+  current_level: number;
+}
+
+export const xp = {
+  getMyXp: () => request<XpInfo>('/users/me/xp'),
+  getXpLogs: () => request<XpLog[]>('/users/me/xp/logs'),
+  dailyLogin: () => request<DailyLoginResponse>('/users/me/daily-login', { method: 'POST' }),
+};
+
+// ==================== 新手任务 ====================
+
+export interface OnboardingQuest {
+  quest_key: string;
+  title: string;
+  description: string;
+  icon: string;
+  xp_reward: number;
+  is_completed: boolean;
+  is_claimed: boolean;
+}
+
+export const onboarding = {
+  getStatus: () => request<OnboardingQuest[]>('/users/me/onboarding'),
+  complete: (questKey: string) =>
+    request<boolean>('/users/me/onboarding/complete', { method: 'POST', body: JSON.stringify({ quest_key: questKey }) }),
+  claim: (questKey: string) =>
+    request<{ claimed: boolean; xp_gained: number }>('/users/me/onboarding/claim', { method: 'POST', body: JSON.stringify({ quest_key: questKey }) }),
+};
+
+// ==================== 徽章 ====================
+
+export interface Badge {
+  badge_key: string;
+  badge_name: string;
+  badge_icon: string;
+  badge_description: string;
+  earned_at: string;
+}
+
+export const badges = {
+  getMyBadges: () => request<Badge[]>('/users/me/badges'),
+};
+
+// ==================== 邀请 ====================
+
+export interface InviteInfo {
+  code: string;
+  invite_url: string;
+  total_invited: number;
+  total_rewards_xp: number;
+}
+
+export const invites = {
+  create: () => request<InviteInfo>('/users/me/invites', { method: 'POST' }),
+  get: () => request<InviteInfo>('/users/me/invites'),
+  redeem: (code: string) =>
+    request<{ redeemed: boolean; xp_gained: number }>('/auth/redeem-invite', { method: 'POST', body: JSON.stringify({ code }) }),
+};
+
+// ==================== Push 通知 ====================
+
+export const pushNotifications = {
+  subscribe: (subscription: { endpoint: string; keys: { p256dh: string; auth: string } }) =>
+    request<void>('/users/me/push-subscribe', {
+      method: 'POST',
+      body: JSON.stringify({
+        endpoint: subscription.endpoint,
+        p256dh_key: subscription.keys.p256dh,
+        auth_key: subscription.keys.auth,
+        user_agent: navigator.userAgent,
+      }),
+    }),
+  unsubscribe: (endpoint: string) =>
+    request<void>('/users/me/push-unsubscribe', { method: 'POST', body: JSON.stringify({ endpoint }) }),
+};
+
+// ==================== #话题标签 ====================
+
+export interface Hashtag {
+  id: string;
+  tag: string;
+  normalized_tag: string;
+  post_count: number;
+  creation_count: number;
+  total_use_count: number;
+}
+
+export const hashtags = {
+  trending: () => request<Hashtag[]>('/hashtags/trending'),
+  getPosts: (tag: string, params?: { page?: number; page_size?: number }) => {
+    const search = new URLSearchParams();
+    if (params?.page) search.set('page', String(params.page));
+    if (params?.page_size) search.set('page_size', String(params.page_size));
+    const qs = search.toString();
+    return request<{ items: any[]; pagination: any }>(`/hashtags/${encodeURIComponent(tag)}/posts${qs ? `?${qs}` : ''}`);
+  },
+};
+
+// ==================== 编辑精选 ====================
+
+export interface EditorPick {
+  id: string;
+  target_type: string;
+  target_id: string;
+  title_override?: string;
+  description_override?: string;
+  pick_type: string;
+  sort_order: number;
+  post?: any;
+}
+
+export const editorPicks = {
+  get: () => request<EditorPick[]>('/editor-picks'),
+};
+
+// ==================== 排行榜 ====================
+
+export interface LeaderboardEntry {
+  user_id: string;
+  username: string;
+  display_name: string;
+  avatar_url?: string;
+  score: number;
+  rank: number;
+  total_posts: number;
+}
+
+export const leaderboard = {
+  get: (period?: 'weekly' | 'monthly' | 'all_time') =>
+    request<LeaderboardEntry[]>(`/leaderboard${period ? `/${period}` : ''}`),
+};
+
+// ==================== 打赏 ====================
+
+export const tips = {
+  create: (data: { target_type?: string; target_id: string; amount?: number; message?: string; is_anonymous?: boolean }) =>
+    request<any>('/tips', { method: 'POST', body: JSON.stringify(data) }),
+  getLeaderboard: (period?: 'weekly' | 'monthly' | 'all_time') =>
+    request<LeaderboardEntry[]>(`/tips/leaderboard${period ? `/${period}` : ''}`),
+};
+
+// ==================== 社区活动 ====================
+
+export const events = {
+  list: (spaceId?: string) => {
+    const qs = spaceId ? `?space_id=${spaceId}` : '';
+    return request<any[]>(`/events${qs}`);
+  },
+  join: (eventId: string) =>
+    request<boolean>(`/events/${eventId}/join`, { method: 'POST' }),
+};
+
+// ==================== 每周话题 ====================
+
+export const weeklyTopic = {
+  getActive: () => request<any>('/weekly-topic'),
+};
+
+// ==================== 推荐 ====================
+
+export const recommendations = {
+  get: (includeType?: 'posts' | 'spaces' | 'users' | 'all') => {
+    const qs = includeType ? `?include_type=${includeType}` : '';
+    return request<{ posts: any[]; spaces: any[]; users: any[] }>(`/recommendations${qs}`);
+  },
 };

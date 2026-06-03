@@ -12,6 +12,11 @@ import {
 } from 'lucide-react';
 import { getSpaceVisual } from '@/components/SpaceCard';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
+import EditorPicks from '@/components/EditorPicks';
+import WeeklyTopicBanner from '@/components/WeeklyTopicBanner';
+import TrendingHashtags from '@/components/TrendingHashtags';
+import Recommendations from '@/components/Recommendations';
+import LeaderboardCard from '@/components/LeaderboardCard';
 import { getToken } from '@/lib/api';
 
 export default function FeedLayout() {
@@ -239,6 +244,10 @@ export default function FeedLayout() {
             </div>
           </div>
 
+          {/* Editor Picks + Weekly Topic */}
+          <EditorPicks />
+          <WeeklyTopicBanner />
+
           {/* Tabs */}
           <div className="sticky top-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
             <div className="flex">
@@ -429,6 +438,12 @@ export default function FeedLayout() {
                 </div>
               )}
             </div>
+
+            <TrendingHashtags />
+
+            <LeaderboardCard type="creators" />
+
+            <Recommendations />
 
             <div className="glass-card p-4 overflow-hidden">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">

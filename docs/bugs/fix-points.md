@@ -6,10 +6,10 @@
 
 | 指标 | 数值 |
 |------|------|
-| 涉及文件数 | 52 |
-| 总修复点位 | 149 |
-| 高危文件 (修复 3+ 次) | 15 |
-| 最近更新 | 2026-06-01 (v1.0.52) |
+| 涉及文件数 | 63 |
+| 总修复点位 | 190 |
+| 高危文件 (修复 3+ 次) | 18 |
+| 最近更新 | 2026-06-02 (v1.0.63) |
 
 ## 高危文件 ⚠️
 
@@ -59,6 +59,8 @@
 | `repo.rs` | `create_module` / `update_module` / `delete_module` / `list_modules` / `get_module` | Module CRUD 5 个 DB 方法 | v1.0.30 | — |
 | `routes/space_routes.rs` | `handle_auth_path` (actions array) | 追加 "/modules" 到 actions 数组 | v1.0.32 | actions-array-missing |
 | `routes/space_routes.rs` | Route config (line 65-67) | .delete(delete_space) → .delete(handle_auth_path) | v1.0.32 | — |
+| `repo.rs` | `update` / `verify_password` | 2处 Argon2 spawn_blocking 异步化 | v1.0.59 | — |
+| `handlers/space_handler.rs` | (多处) | Argon2 调用迁移至 auth::hash_password_async | v1.0.59 | — |
 
 ### 后端 — polis-content
 
@@ -78,6 +80,13 @@
 | `repo.rs` | feed SQL (3处) + PostRow tuple + JSON | feed查询 LEFT JOIN space_modules + SELECT sm.name as module_name → PostRow新增Option<String> → JSON响应新增module_name字段 | v1.0.41 | module-breadcrumb-hardcoded |
 | `handlers/creation.rs` | `creation_to_public()` SQL + tuple | LEFT JOIN space_modules ON space_id AND module_key → SELECT sm.name as module_name → tuple 11→12元素 → SubmissionInfo 含 module_name | v1.0.42 | module-breadcrumb-hardcoded |
 | `handlers/creation.rs` | `get_submissions()` SQL + tuple | 同上: LEFT JOIN space_modules + tuple 11→12元素 + SubmissionInfo 含 module_name | v1.0.42 | module-breadcrumb-hardcoded |
+| `handlers/content_handler.rs` | (3处 Argon2 hash) | Argon2 密码哈希 spawn_blocking 异步化 | v1.0.59 | — |
+| `handlers/agent_handler.rs` | (2 hash + 1 verify) | Argon2 spawn_blocking 异步化 (合并2次hash为1次) | v1.0.59 | — |
+| `routes/agent_routes.rs` | (1 verify) | Argon2 spawn_blocking 异步化 | v1.0.59 | — |
+| `routes/content_routes.rs` | (1 verify) | Argon2 spawn_blocking 异步化 (修复变量名 stored_hash→hash_str) | v1.0.59 | — |
+| `repo.rs` | (1 verify + 3事务) | Argon2 spawn_blocking + toggle_like/create_comment/vote_poll 事务化 | v1.0.59 | — |
+| `handlers/creation.rs` | `creations_to_batch()` | 新增批量查询函数: 用户+点赞+收藏+投稿 4次查询替代 N+1 | v1.0.59 | — |
+| `main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
 
 ### 后端 — polis-admin
 
@@ -100,6 +109,9 @@
 | `stats.rs` | `list_all_posts` | SQL 新增 visibility/hidden_until 字段 | v1.0.19 | — |
 | `routes.rs` | `update_admin_code_handler` | 验证码不匹配 Unauthorized → Validation，错误码 401→400 | v1.0.21 | — |
 | `admin_handler.rs` | `resolve_report_with_action` | 新增 ("user","unban") + ("appeal","unban") match arm → 解封用户 | v1.0.22 | — |
+| `admin_handler.rs` | (1 verify) | Argon2 API key 验证 spawn_blocking 异步化 | v1.0.59 | — |
+| `routes.rs` | (1 verify) | Admin 登录 Argon2 spawn_blocking 异步化 | v1.0.59 | — |
+| `main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
 
 ### 后端 — polis-user
 
@@ -109,6 +121,16 @@
 | `handlers/user_handler.rs` | `get_ban_status` | 公开查询封禁状态 (无需JWT): banned/banned_at/ban_reason | v1.0.22 | — |
 | `handlers/user_handler.rs` | `submit_appeal` | 被封用户申诉: 校验 banned + reason≥10字 → INSERT INTO reports | v1.0.22 | — |
 | `routes/user_routes.rs` | ban_status + submit_appeal | 新增 2 条公开路由 GET /api/user/ban-status + POST /api/user/appeal | v1.0.22 | — |
+| `auth.rs` | `hash_password_async` / `verify_password_async` | 新增 Argon2 异步包装函数 (spawn_blocking) | v1.0.59 | — |
+| `handlers/user_handler.rs` | (5处 Argon2) | register/login/change_password 等 5处 → 异步版本 | v1.0.59 | — |
+| `handlers/user_handler.rs` | `toggle_follow` (line 353-386) | INSERT INTO follows 后直接 INSERT INTO notifications (NATS 未部署 fallback) + publish_event 保留 | v1.0.63 | nats-event-loss |
+| `main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
+
+### 后端 — polis-notify
+
+| 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
+|------|----------|----------|------|---------|
+| `handler.rs` | `handle_event` (line 33-41) | 移除 CONTENT_POST_LIKED/CONTENT_COMMENT_CREATED 的重复 DB 写入（Content handler 已是唯一通知创建路径） | v1.0.63 | nats-event-loss |
 
 ### 后端 — polis-core
 
@@ -141,6 +163,9 @@
 | `web/src/app/creations/new/page.tsx` | `handleModuleChange()` (lines 461-467) | 切换模块类型时检查 moduleAllowedTypes，预填模块支持新内容类型则不清空 submissions | v1.0.44 | — |
 | `web/src/app/creations/new/page.tsx` | `handleVideoUpload()` (lines 343-368) | publish 重试循环新增 `publishOk` 标志 + 响应 body 错误读取，失败后 `setError()` 显示具体原因 | v1.0.47 | — |
 | `web/src/app/creations/new/page.tsx` | `addSubmission()` (lines 398-420) | 社区无匹配模块时拒绝添加 (`!foundModule` → setError + return)，不再 fallback 到 moduleType 静默失败 | v1.0.47 | — |
+| `web/src/app/creations/new/page.tsx` | 模块类型选择标签文案 (lines 656-658) | "选择发布模块 — 模块决定创作方式" → "选择发布作品类型 — 选择你要创作的内容类型，目前支持文章和视频" | v1.0.62 | — |
+| `web/src/app/messages/[userId]/page.tsx` | fallback 兜底用户名 (line 77, 80) | `userId.substring(0,8)` → `'未知用户'`，避免在搜索失败时显示截断 UUID | v1.0.62 | user-search-no-id-match |
+| `crates/polis-user/src/repo.rs` | `search_users()` (line 108) | SQL 增加 `OR id::text = $2`，支持按 UUID 精确搜索用户 | v1.0.62 | user-search-no-id-match |
 | `crates/polis-video/src/repo.rs` | `validate_space_for_video_submission()` (lines 99-129) | `spaces.enabled_modules` 查硬编码 `"video"` key → 查 `space_modules` 表 `allowed_content_types @> '["video"]'::jsonb`，兼容自定义视频模块 | v1.0.53 | — |
 | `web/src/app/space/[...namespace]/SpacePageClient.tsx` | Posts Tab + 自定义模块发布区域 | 交流标题旁 + 自定义模块标题旁添加内容类型标签 (文章/视频) | v1.0.53 | — |
 | `SpaceSettings.tsx` | `persistModules` | 补充 members keyMap 映射 | v1.0.14 | — |
@@ -193,6 +218,9 @@
 | `app/space/[...namespace]/SpacePageClient.tsx` | availableTabs (tab id) + 通用fallback | 模块Tab id 从 module_key 改为 MODULE_CONFIG route 映射 + 自定义模块渲染fallback | v1.0.34 | module-tab-key-mismatch |
 | `app/creations/new/page.tsx` | 整个文件简化 | 模块类型 17→2 (文章/视频)，移除 unlisted/密码/Thread/QA | v1.0.33 | — |
 | `app/profile/[username]/ProfilePageClient.tsx` | Works tab subtabs | 从动态模块子选项卡改为固定 概览/视频/文章 三个子tab | v1.0.33 | — |
+| `admin/layout.tsx` | useEffect mount | 新增 token 有效性 API 验证 (`/api/admin/stats`)，无效 token 清除并跳转登录页，避免空数据+401 | v1.0.61 | — |
+| `api.ts` | `request()` (line 210) | HTTP 错误时携带 `err.status = response.status`，让调用方能区分 403 vs 404 | v1.0.63 | — |
+| `post/[id]/PostPageClient.tsx` | catch block (line 131-137) | 区分 403 (需加入社区) / 404 (帖子不存在) 错误提示 + tryLoadAsCreation fallback | v1.0.63 | — |
 
 ### 后端 — polis-gateway
 
@@ -201,6 +229,9 @@
 | `main.rs` | Router 构建 | 新增 `.route("/api/user/{*path}", any(proxy_to_user))` — ban-status/appeal API | v1.0.22 | gateway-route-missing |
 | `main.rs` | `proxy_space_router` (is_content) | 移除 `remaining.contains("/modules")` 避免 modules 路由误判为 content | v1.0.31 | gateway-route-missing |
 | `main.rs` | `proxy_request_with_limit` | 转发前剥离 hop-by-hop headers (Connection, Upgrade, Host, Content-Length 等 10 个)，增强错误日志(source chain) | v1.0.52 | — |
+| `main.rs` | reqwest Client 构建 | pool_max_idle 0→32 + tcp_keepalive(60s) + pool_idle_timeout(90s) + connect_timeout(5s) | v1.0.59 | — |
+| `main.rs` | Router layers | 新增 CompressionLayer (gzip) + 日志 info!→debug! | v1.0.59 | — |
+| `main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
 
 ### 后端 — polis-video
 
@@ -208,12 +239,27 @@
 |------|----------|----------|------|---------|
 | `routes.rs` | `upload_video` | auth 失败时 drain multipart body 再返回错误，防止客户端 body 写入中断 → 502 | v1.0.52 | — |
 
+### 后端 — 其他服务 (acquire_timeout)
+
+| 文件 | 函数/位置 | 修复内容 | 版本 | Pattern |
+|------|----------|----------|------|---------|
+| `polis-aggregate/src/main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
+| `polis-video/src/main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
+| `polis-notify/src/main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
+| `polis-pay/src/main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
+| `polis-code/src/main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
+| `polis-store/src/main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
+| `polis-plugin-engine/src/main.rs` | DB pool | 新增 .acquire_timeout(Duration::from_secs(10)) | v1.0.59 | — |
+
 ### 部署 — infra
 
 | 文件 | 位置 | 修复内容 | 版本 | Pattern |
 |------|------|----------|------|---------|
 | `deploy/nginx-polis.conf` | server 块 | server_tokens off + 移除 X-XSS-Protection | v1.0.13 | — |
 | 部署流程 | tar 打包 | COPYFILE_DISABLE=1 防 xattr 污染 | v0.3.91 | xattr-contamination |
+| `deploy/nginx-polis.conf` | 全局 + upstream + location | gzip压缩(comp_level=5) + upstream keepalive(16/32) + `/_next/static/` 1年缓存 | v1.0.59 | — |
+| `Cargo.toml` | workspace dependencies | tower-http 新增 compression-gzip feature | v1.0.59 | — |
+| `web/next.config.js` | nextConfig | compress: true (Next.js 内置压缩) | v1.0.59 | — |
 
 ### CLI — polisctl
 

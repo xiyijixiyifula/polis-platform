@@ -4,6 +4,8 @@ use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
 use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscription, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, Pagination, Post, PostPublic, PostReference, SeriesPublic, UpdatePostRequest, UnlockPostRequest, UserPublic, PaginationParams,
 };
+use polis_core::mention;
+use polis_core::hashtag;
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -11,6 +13,7 @@ use uuid::Uuid;
 use crate::config::ContentServiceConfig;
 use crate::repo::ContentRepo;
 use crate::handlers::webhook_handler::WebhookDispatcher;
+use crate::xp_bridge::XpBridge;
 
 pub struct ContentHandler {
     pub repo: ContentRepo,
@@ -18,17 +21,23 @@ pub struct ContentHandler {
     pub config: ContentServiceConfig,
     pub nats: Option<NatsClient>,
     pub webhook: Arc<WebhookDispatcher>,
+    pub xp: XpBridge,
 }
 
 impl ContentHandler {
     pub fn new(pool: PgPool, config: ContentServiceConfig, nats: Option<NatsClient>) -> Self {
         let webhook = Arc::new(WebhookDispatcher::new(pool.clone()));
+        let mut xp = XpBridge::new(config.user_service_url.clone());
+        if let (Some(chain_url), Some(site_id)) = (&config.chain_api_url, &config.chain_site_id) {
+            xp = xp.with_chain(chain_url.clone(), site_id.clone());
+        }
         Self {
             repo: ContentRepo::new(pool.clone()),
             pool,
             config,
             nats,
             webhook,
+            xp,
         }
     }
 
@@ -47,14 +56,20 @@ impl ContentHandler {
             .map(|t| serde_json::to_value(t).unwrap_or_default())
             .unwrap_or(serde_json::Value::Array(vec![]));
         let visibility = req.visibility.unwrap_or_default().to_string();
-        let password_hash = req.password.as_deref().map(|p| {
-            use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
-            use argon2::Argon2;
-            let salt = SaltString::generate(&mut OsRng);
-            Argon2::default().hash_password(p.as_bytes(), &salt)
-                .map(|h| h.to_string())
-                .unwrap_or_default()
-        });
+        let password_hash = match req.password.as_deref() {
+            Some(p) if !p.is_empty() => {
+                use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+                use argon2::Argon2;
+                let salt = SaltString::generate(&mut OsRng);
+                let p = p.to_string();
+                Some(tokio::task::spawn_blocking(move || {
+                    Argon2::default().hash_password(p.as_bytes(), &salt)
+                        .map(|h| h.to_string())
+                        .unwrap_or_default()
+                }).await.unwrap_or_default())
+            }
+            _ => None,
+        };
 
         let post = self
             .repo
@@ -86,6 +101,32 @@ impl ContentHandler {
             "module_type": module_type,
             "title": req.title,
         })).await;
+
+        // XP: 发帖奖励
+        self.xp.on_post_created(author_id).await;
+
+        // Process @mentions
+        let mentioned_users = mention::parse_mentions(&req.body);
+        for mentioned_name in &mentioned_users {
+            if let Ok(Some(user)) = self.repo.find_user_by_username(mentioned_name).await {
+                if user.id != author_id {
+                    let actor_name = self.find_user_name(author_id).await.unwrap_or_else(|| "有人".to_string());
+                    let content = format!("{} 在帖子中提到了你", actor_name);
+                    self.create_notification(
+                        user.id, "mention",
+                        Some(author_id), Some("post"), Some(post.id),
+                        &content,
+                    ).await;
+                }
+            }
+        }
+
+        // Process #hashtags
+        let hashtags = hashtag::parse_hashtags(&req.body);
+        for (raw_tag, normalized) in &hashtags {
+            let _ = self.repo.upsert_hashtag(raw_tag, normalized).await;
+            let _ = self.repo.create_hashtag_mapping(normalized, "post", post.id).await;
+        }
 
         Ok(post)
     }
@@ -561,16 +602,20 @@ impl ContentHandler {
         // 前端发 undefined/null → serde 反序列为 None → 不更新密码
         // 前端发具体密码 → 更新
         // 前端发空字符串 "" → 清除密码
-        let password_hash: Option<String> = req.password
-            .and_then(|p| if p.is_empty() { None } else { Some(p) })
-            .map(|p| {
+        let password_hash: Option<String> = match req.password
+            .and_then(|p| if p.is_empty() { None } else { Some(p) }) {
+            Some(p) => {
                 use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
                 use argon2::Argon2;
                 let salt = SaltString::generate(&mut OsRng);
-                Argon2::default().hash_password(p.as_bytes(), &salt)
-                    .map(|h| h.to_string())
-                    .unwrap_or_default()
-            });
+                Some(tokio::task::spawn_blocking(move || {
+                    Argon2::default().hash_password(p.as_bytes(), &salt)
+                        .map(|h| h.to_string())
+                        .unwrap_or_default()
+                }).await.unwrap_or_default())
+            }
+            None => None,
+        };
 
         let updated = self.repo.update_post(
             post_id,
@@ -796,20 +841,25 @@ impl ContentHandler {
         }
 
         // 检查目标社区存在、可见性、模块开启
-        let space_info: (String, serde_json::Value) = sqlx::query_as(
-            "SELECT visibility, enabled_modules FROM spaces WHERE id = $1 AND status = 'active'"
+        let space_info: (String,) = sqlx::query_as(
+            "SELECT visibility FROM spaces WHERE id = $1 AND status = 'active'"
         )
         .bind(space_id)
         .fetch_optional(&self.pool)
         .await?
         .ok_or(AppError::NotFound("Space not found".to_string()))?;
 
-        let (visibility, enabled_modules) = space_info;
+        let (visibility,) = space_info;
 
-        // 检查社区是否开启了对应模块
-        let has_module = enabled_modules.as_array()
-            .map(|m| m.iter().any(|v| v.as_str() == Some(module_type)))
-            .unwrap_or(false);
+        // 检查社区是否开启了对应模块（从 space_modules 表查询）
+        let has_module: (bool,) = sqlx::query_as(
+            "SELECT EXISTS(SELECT 1 FROM space_modules WHERE space_id = $1 AND module_key = $2 AND is_active = true)"
+        )
+        .bind(space_id)
+        .bind(module_type)
+        .fetch_one(&self.pool)
+        .await?;
+        let has_module = has_module.0;
         if !has_module {
             return Err(AppError::Forbidden(format!("目标社区未开启「{}」模块", module_type)));
         }
@@ -914,6 +964,8 @@ impl ContentHandler {
                             Some(user_id), Some("post"), Some(target_id),
                             &content,
                         ).await;
+                        // XP: 收到点赞
+                        self.xp.on_like_received(post.author_id, Some("post"), Some(target_id)).await;
                     }
                 }
             }
@@ -956,6 +1008,25 @@ impl ContentHandler {
             "post_id": post_id.to_string(),
             "author_id": author_id.to_string(),
         })).await;
+
+        // XP: 评论奖励
+        self.xp.on_comment_created(author_id).await;
+
+        // Process @mentions in comments
+        let mentioned_users = mention::parse_mentions(&req.body);
+        for mentioned_name in &mentioned_users {
+            if let Ok(Some(user)) = self.repo.find_user_by_username(mentioned_name).await {
+                if user.id != author_id {
+                    let actor_name = self.find_user_name(author_id).await.unwrap_or_else(|| "有人".to_string());
+                    let content = format!("{} 在评论中提到了你", actor_name);
+                    self.create_notification(
+                        user.id, "mention",
+                        Some(author_id), Some("comment"), Some(comment.id),
+                        &content,
+                    ).await;
+                }
+            }
+        }
 
         // Webhook: content.commented
         self.webhook.dispatch("content.commented", serde_json::json!({
@@ -1422,14 +1493,19 @@ impl ContentHandler {
         let code: String = Uuid::new_v4().to_string().chars().take(8).collect();
         let expires_at = expires_hours.map(|h| chrono::Utc::now() + chrono::Duration::hours(h));
         let has_password = password.is_some();
-        let password_hash: Option<String> = password.map(|p| {
-            use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
-            use argon2::Argon2;
-            let salt = SaltString::generate(&mut OsRng);
-            Argon2::default().hash_password(p.as_bytes(), &salt)
-                .map(|h| h.to_string())
-                .unwrap_or_default()
-        });
+        let password_hash: Option<String> = match password {
+            Some(p) => {
+                use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
+                use argon2::Argon2;
+                let salt = SaltString::generate(&mut OsRng);
+                Some(tokio::task::spawn_blocking(move || {
+                    Argon2::default().hash_password(p.as_bytes(), &salt)
+                        .map(|h| h.to_string())
+                        .unwrap_or_default()
+                }).await.unwrap_or_default())
+            }
+            None => None,
+        };
         let _share = self.repo.create_share_link(fid, &code, password_hash.as_deref(), expires_at, None).await?;
         Ok(serde_json::json!({ "code": code, "file_id": fid.to_string(), "expires_at": expires_at.map(|t| t.to_rfc3339()), "has_password": has_password }))
     }
@@ -1469,6 +1545,154 @@ impl ContentHandler {
     pub async fn get_space_analytics(&self, space_id: Uuid) -> Result<serde_json::Value, AppError> {
         let stats = self.repo.get_space_analytics(space_id).await?;
         Ok(stats)
+    }
+
+    // ==================== #Hashtags ====================
+
+    pub async fn get_trending_hashtags(&self) -> Result<Vec<serde_json::Value>, AppError> {
+        let tags = self.repo.get_trending_hashtags(20).await?;
+        Ok(tags.iter().map(|t| serde_json::json!({
+            "id": t.id, "tag": t.tag, "normalized_tag": t.normalized_tag,
+            "post_count": t.post_count, "creation_count": t.creation_count,
+            "total_use_count": t.total_use_count,
+        })).collect())
+    }
+
+    pub async fn get_posts_by_hashtag(&self, tag: &str, page: u32, page_size: u32) -> Result<serde_json::Value, AppError> {
+        let (posts, pagination) = self.repo.get_posts_by_hashtag(&tag.to_lowercase(), page, page_size).await?;
+        let items: Vec<serde_json::Value> = posts.iter().map(|p| serde_json::json!({
+            "id": p.id, "title": p.title, "body": p.body, "author_id": p.author_id,
+            "like_count": p.like_count, "comment_count": p.comment_count,
+            "created_at": p.created_at,
+        })).collect();
+        Ok(serde_json::json!({"items": items, "pagination": pagination}))
+    }
+
+    // ==================== Tips 打赏 ====================
+
+    pub async fn create_tip(&self, sender_id: Uuid, receiver_id: Uuid, target_type: &str, target_id: Uuid, amount: i32, message: Option<&str>, is_anonymous: bool) -> Result<serde_json::Value, AppError> {
+        if sender_id == receiver_id {
+            return Err(AppError::Validation("不能给自己打赏".to_string()));
+        }
+        let tip = self.repo.create_tip(sender_id, receiver_id, target_type, target_id, amount, message, is_anonymous).await?;
+        // Notify receiver
+        let sender_name = self.find_user_name(sender_id).await.unwrap_or_else(|| "有人".to_string());
+        let content = format!("{} 给你打赏了 {} 积分", sender_name, amount);
+        self.create_notification(receiver_id, "tip", Some(sender_id), Some(target_type), Some(target_id), &content).await;
+        // XP: first tip
+        self.xp.on_first_tip(sender_id).await;
+        Ok(serde_json::to_value(&tip).map_err(|e| AppError::Internal(e.to_string()))?)
+    }
+
+    pub async fn get_tips_received(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
+        let tips = self.repo.get_tips_received(user_id, 1, 50).await?;
+        Ok(tips.iter().map(|t| serde_json::to_value(t).unwrap_or_default()).collect())
+    }
+
+    pub async fn get_tip_leaderboard(&self, period: &str) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows = self.repo.get_tip_leaderboard(period, 20).await?;
+        let user_ids: Vec<Uuid> = rows.iter().map(|r| r.0).collect();
+        let users = self.repo.find_users_batch(&user_ids).await?;
+        Ok(rows.iter().enumerate().map(|(i, (uid, amount, _))| {
+            let u = users.get(uid);
+            serde_json::json!({
+                "user_id": uid, "username": u.map(|u| &u.username), "display_name": u.map(|u| &u.display_name),
+                "avatar_url": u.and_then(|u| u.avatar_url.as_deref()),
+                "total_amount_received": amount, "rank": (i + 1) as i32,
+            })
+        }).collect())
+    }
+
+    // ==================== Editor Picks ====================
+
+    pub async fn get_editor_picks(&self) -> Result<Vec<serde_json::Value>, AppError> {
+        let picks = self.repo.get_active_editor_picks("daily").await?;
+        let post_ids: Vec<Uuid> = picks.iter().filter(|p| p.target_type == "post").map(|p| p.target_id).collect();
+        let posts = self.repo.find_posts_by_ids(&post_ids).await.unwrap_or_default();
+        Ok(picks.iter().map(|p| {
+            let post = posts.iter().find(|pp| pp.id == p.target_id);
+            serde_json::json!({
+                "id": p.id, "target_type": p.target_type, "target_id": p.target_id,
+                "title_override": p.title_override, "description_override": p.description_override,
+                "pick_type": p.pick_type, "sort_order": p.sort_order,
+                "post": post.map(|pp| serde_json::json!({
+                    "id": pp.id, "title": pp.title, "body": pp.body, "like_count": pp.like_count,
+                })),
+            })
+        }).collect())
+    }
+
+    // ==================== Leaderboard 排行榜 ====================
+
+    pub async fn get_leaderboard(&self, period: &str) -> Result<Vec<serde_json::Value>, AppError> {
+        let rows = self.repo.get_leaderboard(period, 20).await?;
+        let user_ids: Vec<Uuid> = rows.iter().map(|r| r.0).collect();
+        let users = self.repo.find_users_batch(&user_ids).await?;
+        Ok(rows.iter().enumerate().map(|(i, (uid, score, _, post_count))| {
+            let u = users.get(uid);
+            serde_json::json!({
+                "user_id": uid, "username": u.map(|u| &u.username), "display_name": u.map(|u| &u.display_name),
+                "avatar_url": u.and_then(|u| u.avatar_url.as_deref()),
+                "score": score, "rank": (i + 1) as i32, "total_posts": post_count,
+            })
+        }).collect())
+    }
+
+    // ==================== Community Events ====================
+
+    pub async fn get_active_events(&self, space_id: Option<Uuid>) -> Result<Vec<serde_json::Value>, AppError> {
+        let events = self.repo.get_active_events(space_id).await?;
+        Ok(events.iter().map(|e| serde_json::to_value(e).unwrap_or_default()).collect())
+    }
+
+    pub async fn create_event(&self, space_id: Uuid, creator_id: Uuid, req: polis_core::models::CreateEventRequest) -> Result<serde_json::Value, AppError> {
+        let event = self.repo.create_event(
+            space_id, creator_id, &req.title, req.description.as_deref(), req.cover_url.as_deref(),
+            req.event_type.as_deref().unwrap_or("challenge"), req.start_at, req.end_at,
+            req.rules.unwrap_or(serde_json::json!({})), req.prizes.unwrap_or(serde_json::json!([])),
+        ).await?;
+        Ok(serde_json::to_value(&event).map_err(|e| AppError::Internal(e.to_string()))?)
+    }
+
+    pub async fn join_event(&self, event_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
+        self.repo.join_event(event_id, user_id).await
+    }
+
+    // ==================== Weekly Topics ====================
+
+    pub async fn get_active_weekly_topic(&self) -> Result<Option<serde_json::Value>, AppError> {
+        let topic = self.repo.get_active_weekly_topic().await?;
+        Ok(topic.map(|t| serde_json::to_value(t).unwrap_or_default()))
+    }
+
+    pub async fn create_weekly_topic(&self, req: polis_core::models::CreateWeeklyTopicRequest, created_by: Option<Uuid>) -> Result<serde_json::Value, AppError> {
+        let topic = self.repo.create_weekly_topic(
+            &req.topic_key, &req.title, req.description.as_deref(), req.cover_url.as_deref(),
+            req.topic_type.as_deref().unwrap_or("discussion"), req.end_at, created_by,
+        ).await?;
+        Ok(serde_json::to_value(&topic).map_err(|e| AppError::Internal(e.to_string()))?)
+    }
+
+    // ==================== Recommendations ====================
+
+    pub async fn get_recommendations(&self, user_id: Uuid, include_type: Option<&str>) -> Result<serde_json::Value, AppError> {
+        let include = include_type.unwrap_or("all");
+        let mut result = serde_json::json!({"posts": [], "spaces": [], "users": []});
+        if include == "all" || include == "posts" {
+            let posts = self.repo.get_recommended_posts(user_id, 10).await?;
+            result["posts"] = serde_json::json!(posts.iter().map(|p| serde_json::json!({
+                "id": p.id, "title": p.title, "body": p.body, "like_count": p.like_count, "comment_count": p.comment_count,
+            })).collect::<Vec<_>>());
+        }
+        if include == "all" || include == "spaces" {
+            let spaces = self.repo.get_recommended_spaces(user_id, 5).await?;
+            result["spaces"] = serde_json::json!(spaces);
+        }
+        if include == "all" || include == "users" {
+            let users = self.repo.get_recommended_users(user_id, 5).await?;
+            result["users"] = serde_json::json!(users);
+        }
+        Ok(result)
     }
 
 }

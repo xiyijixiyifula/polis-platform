@@ -21,7 +21,7 @@ hmac = { workspace = true }
 argon2 = { workspace = true }
 hex = { workspace = true }
 rand = "0.8"
-blake3 = "1"
+blake3 = { version = "1", default-features = false, features = ["std", "pure"] }
 
 # 序列化
 serde = { workspace = true }

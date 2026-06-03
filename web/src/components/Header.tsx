@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Bell, User, Plus, Menu, X, Info, FileText, MessageSquare, Globe, PenLine, Shield as ShieldIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { ThemeToggle } from './ThemeToggle';
+import XpBadge from './XpBadge';
 
 const LOCALES: { code: string; nativeName: string }[] = [
   { code: 'zh', nativeName: '中文' },
@@ -191,6 +192,10 @@ export function Header() {
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="hidden sm:block">
+            <XpBadge />
           </div>
 
           {isLoggedIn ? (

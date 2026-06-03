@@ -11,7 +11,7 @@ import {
   File as FileIcon, CircleCheck, CloudUpload, Eye,
 } from 'lucide-react';
 import { series as seriesApi, getToken, spaces as spacesApi, type Series } from '@/lib/api';
-import { normalizeModuleType, MODULE_CONFIG } from '@/lib/module-config';
+import { getModuleLabel } from '@/lib/module-config';
 
 const AUTOSAVE_KEY = 'polis_creation_draft';
 
@@ -50,10 +50,6 @@ function NewCreationPageInner() {
 
   // 根据 URL 参数确定初始模块类型
   const getInitialModule = (): string => {
-    if (prefillModule) {
-      if (!MODULE_CONFIG[prefillModule]) return 'article';
-      return normalizeModuleType(prefillModule);
-    }
     if (prefillType === 'video') return 'video';
     return 'article';
   };
@@ -95,9 +91,9 @@ function NewCreationPageInner() {
           setBody(c.body || '');
           setTags(Array.isArray(c.tags) ? c.tags.join(', ') : (c.tags || ''));
           setVisibility(c.visibility || 'public');
-          setModuleType(normalizeModuleType(c.content_type));
+          setModuleType(c.content_type === 'video' ? 'video' : 'article');
           if (c.space_ns && c.module_type) {
-            setSubmissions([{ spaceId: c.space_id || '', spaceNs: c.space_ns, spaceTitle: c.space_title || c.space_ns, moduleType: normalizeModuleType(c.module_type) }]);
+            setSubmissions([{ spaceId: c.space_id || '', spaceNs: c.space_ns, spaceTitle: c.space_title || c.space_ns, moduleType: c.module_type }]);
           }
         } else {
           setEditError(data.message || '加载创作数据失败');
@@ -657,9 +653,9 @@ function NewCreationPageInner() {
         {/* ========== 模块选择（一级 - 决定创作方案） ========== */}
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-            {isEditMode ? '当前模块' : '选择发布模块'}
+            {isEditMode ? '当前模块' : '选择发布作品类型'}
             <span className="text-xs text-gray-400 font-normal">
-              {isEditMode ? ' — 编辑模式下不可更改模块类型' : ' — 模块决定创作方式'}
+              {isEditMode ? ' — 编辑模式下不可更改模块类型' : ' — 选择你要创作的内容类型，目前支持文章和视频'}
             </span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">

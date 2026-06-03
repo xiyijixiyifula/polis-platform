@@ -38,22 +38,22 @@ impl AgentHandler {
         let api_key = format!("pk_{}", Uuid::new_v4().to_string().replace('-', ""));
         let api_key_prefix = &api_key[..8];
 
-        // 哈希密码
-        use argon2::{
-            password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
-            Argon2,
-        };
-        let salt = SaltString::generate(&mut OsRng);
-        let argon2 = Argon2::default();
-        let password_hash = argon2
-            .hash_password(req.password.as_bytes(), &salt)
-            .map_err(|e| AppError::Internal(e.to_string()))?
-            .to_string();
-
-        let api_key_hash = argon2
-            .hash_password(api_key.as_bytes(), &salt)
-            .map_err(|e| AppError::Internal(e.to_string()))?
-            .to_string();
+        // 哈希密码 (spawn_blocking)
+        let pwd = req.password.clone();
+        let ak = api_key.clone();
+        let (password_hash, api_key_hash) = tokio::task::spawn_blocking(move || {
+            use argon2::{
+                password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+                Argon2,
+            };
+            let salt = SaltString::generate(&mut OsRng);
+            let argon2 = Argon2::default();
+            let ph = argon2.hash_password(pwd.as_bytes(), &salt)
+                .map_err(|e| AppError::Internal(e.to_string()))?.to_string();
+            let akh = argon2.hash_password(ak.as_bytes(), &salt)
+                .map_err(|e| AppError::Internal(e.to_string()))?.to_string();
+            Ok::<_, AppError>((ph, akh))
+        }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
         // 创建 user 记录
         let user: (Uuid,) = sqlx::query_as(
@@ -113,14 +113,16 @@ impl AgentHandler {
 
         let agent = agent.ok_or(AppError::Forbidden("Agent 不存在或已禁用".to_string()))?;
 
-        // 验证 API Key
-        use argon2::{Argon2, PasswordHash, PasswordVerifier};
+        // 验证 API Key (spawn_blocking)
         let api_key_hash = agent.api_key_hash.ok_or(AppError::Forbidden("Agent 未设置 API Key".to_string()))?;
-        let parsed_hash = PasswordHash::new(&api_key_hash)
-            .map_err(|e| AppError::Internal(e.to_string()))?;
-        Argon2::default()
-            .verify_password(api_key.as_bytes(), &parsed_hash)
-            .map_err(|_| AppError::Forbidden("API Key 无效".to_string()))?;
+        let ak = api_key.to_string();
+        let hash = api_key_hash.to_string();
+        tokio::task::spawn_blocking(move || {
+            use argon2::{Argon2, PasswordHash, PasswordVerifier};
+            let parsed = PasswordHash::new(&hash).map_err(|e| AppError::Internal(e.to_string()))?;
+            Argon2::default().verify_password(ak.as_bytes(), &parsed)
+                .map_err(|_| AppError::Forbidden("API Key 无效".to_string()))
+        }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
         // 更新最后活跃时间
         let _ = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")

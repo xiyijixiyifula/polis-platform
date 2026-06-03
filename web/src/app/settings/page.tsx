@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Bell, BellOff } from 'lucide-react';
+import { registerServiceWorker, subscribeToPush } from '@/lib/push-notifications';
 
 interface NotificationPrefs {
   liked?: boolean;
@@ -19,6 +21,8 @@ export default function SettingsPage() {
   });
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
 
   const getToken = () => localStorage.getItem('polis_access_token');
 
@@ -79,6 +83,46 @@ export default function SettingsPage() {
 
   const toggleNotif = (key: keyof NotificationPrefs) => {
     setNotifPrefs(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  useEffect(() => {
+    setPushSupported('serviceWorker' in navigator && 'PushManager' in window);
+    if (pushSupported) {
+      navigator.serviceWorker?.getRegistration().then(reg => {
+        if (reg) {
+          reg.pushManager.getSubscription().then(sub => setPushEnabled(!!sub));
+        }
+      });
+    }
+  }, [pushSupported]);
+
+  const togglePush = async () => {
+    if (pushEnabled) {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg) {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await sub.unsubscribe();
+          try {
+            const { pushNotifications } = await import('@/lib/api');
+            await pushNotifications.unsubscribe(sub.endpoint);
+          } catch {}
+        }
+      }
+      setPushEnabled(false);
+      setMsg('🔕 已关闭推送通知');
+    } else {
+      const registration = await registerServiceWorker();
+      if (registration) {
+        const sub = await subscribeToPush(registration);
+        if (sub) {
+          setPushEnabled(true);
+          setMsg('🔔 已开启推送通知');
+          return;
+        }
+      }
+      setMsg('❌ 推送订阅失败，请检查浏览器权限');
+    }
   };
 
   if (loading) {
@@ -163,6 +207,28 @@ export default function SettingsPage() {
               />
             </label>
           ))}
+          {pushSupported && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">浏览器推送通知</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                开启后，即使关闭网页也能收到新消息提醒。需要浏览器授予通知权限。
+              </p>
+              <button
+                onClick={togglePush}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  pushEnabled
+                    ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400'
+                    : 'bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/20 dark:text-primary-400'
+                }`}
+              >
+                {pushEnabled ? (
+                  <><BellOff className="h-4 w-4" /> 关闭推送</>
+                ) : (
+                  <><Bell className="h-4 w-4" /> 开启推送通知</>
+                )}
+              </button>
+            </div>
+          )}
           <button onClick={updateProfile} className="btn-primary mt-4">保存偏好</button>
         </div>
       )}

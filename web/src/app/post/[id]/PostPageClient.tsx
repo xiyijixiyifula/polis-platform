@@ -4,12 +4,13 @@ import React, { useEffect, useState, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Bookmark, Share2, ChevronLeft, Flag, ArrowRight, Clock, Download, Edit3, Trash2, BookOpen, UserPlus, UserCheck, MessageSquare } from 'lucide-react';
-import { formatDate, formatCount, estimateReadTime, stripMarkdown } from '@/lib/utils';
+import { formatDate, formatCount, estimateReadTime, stripMarkdown, convertInlineRefsToMarkdown } from '@/lib/utils';
 import { buildPostLink, getModuleLabel } from '@/lib/module-config';
 import { posts, series, creations, getToken, Comment, Post, type Series } from '@/lib/api';
 import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
 import { StructuredDataRender } from '@/components/StructuredDataRender';
+import TipButton from '@/components/TipButton';
 
 /** Decode JWT payload to extract user ID */
 function getCurrentUserId(): string | null {
@@ -27,12 +28,12 @@ function adaptCreationToPost(c: any): Post {
   return {
     id: c.id,
     space_id: '',
-    module_type: c.submissions?.[0]?.module_type || c.content_type || 'forum',
+    module_type: c.submissions?.[0]?.module_type || c.content_type || '',
     author: c.creator || null,
     author_id: c.creator?.id,
     title: c.title || '',
     body: c.body || '',
-    content_type: c.content_type || 'forum',
+    content_type: c.content_type || '',
     tags: c.tags || [],
     media_urls: c.media_urls || [],
     visibility: c.visibility,
@@ -128,11 +129,11 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
         if (spaceFromUrl) {
           try {
             res = await posts.get(spaceFromUrl, postId);
-          } catch {
+          } catch (err: any) {
             // 空间 API 失败时降级为创作（creation）显示
             const loaded = await tryLoadAsCreation(postId, { setPost, setLikeCount, setLiked, setBookmarked });
             if (loaded) { setLoading(false); return; }
-            setError('帖子不存在或已被删除');
+            setError(err?.status === 403 ? '需要加入社区才能查看此帖子' : '帖子不存在或已被删除');
             setLoading(false);
             return;
           }
@@ -662,7 +663,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
               (post.content_type === 'json_data' || post.content_type === 'table_data') ? (
                 <StructuredDataRender content_type={post.content_type} body={post.body!} />
               ) : (
-                <CherryRender markdown={post.body} />
+                <CherryRender markdown={convertInlineRefsToMarkdown(post.body || '')} />
               )
             )}
           </>
@@ -687,6 +688,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
             className={`flex items-center gap-1.5 text-sm transition-colors ${bookmarked ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`}>
             <Bookmark className={`h-5 w-5 ${bookmarked ? 'fill-current' : ''}`} />
           </button>
+          <TipButton targetId={post.id} targetType="post" />
           <a href={`https://www.mzgw.com/api/posts/${post.id}/download`}
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
             title="下载 Markdown">
@@ -833,7 +835,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
                         <span className="text-xs text-gray-400">{formatDate(comment.created_at)}</span>
                       </div>
                       <div className="mt-0.5">
-                        <CherryRender markdown={comment.body} />
+                        <CherryRender markdown={convertInlineRefsToMarkdown(comment.body || '')} />
                       </div>
                       <div className="mt-1.5 flex items-center gap-3">
                         <button

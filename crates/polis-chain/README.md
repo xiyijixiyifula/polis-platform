@@ -15,15 +15,21 @@
 | 平台 | 文件 | 状态 |
 |------|------|------|
 | macOS (Apple Silicon) | `polis-chain-darwin-arm64.tar.gz` | 预编译 |
-| Linux (x86_64) | 源码构建 | `cargo build --release` |
-| Windows (x86_64) | 源码构建 | `cargo build --release` |
+| Linux (x86_64) | `polis-chain-linux-x86_64.tar.gz` | 预编译 |
+| Windows (x86_64) | `polis-chain-windows-x86_64.tar.gz` | 预编译 |
 
 ```bash
-# macOS
+# macOS (Apple Silicon)
 tar -xzf polis-chain-darwin-arm64.tar.gz
-sudo mv polis-chain-darwin-arm64 /usr/local/bin/polis-chain
+sudo mv polis-chain /usr/local/bin/polis-chain
 
-# Linux / Windows — 从源码构建 (见下方)
+# Linux (x86_64)
+tar -xzf polis-chain-linux-x86_64.tar.gz
+sudo mv polis-chain /usr/local/bin/polis-chain
+
+# Windows (x86_64)
+tar -xzf polis-chain-windows-x86_64.tar.gz
+# 将 polis-chain.exe 添加到 PATH
 ```
 
 ### 启动节点
@@ -204,24 +210,25 @@ curl -X POST http://localhost:8545/api/v1/mining/tickets \
 git clone https://github.com/xiyijixiyifula/polis-platform.git
 cd polis-platform
 
-# 构建
+# 本机构建
 cargo build --release -p polis-chain
 
 # 运行
 ./target/release/polis-chain run
 ```
 
-### 交叉编译
+### 交叉编译 (macOS → Linux/Windows)
 
 ```bash
-# Linux x86_64 (需要 zig)
+# 前置条件
+brew install x86_64-unknown-linux-gnu-binutils mingw-w64
+rustup target add x86_64-unknown-linux-gnu x86_64-pc-windows-gnu
+
+# Linux x86_64
 cargo build --release -p polis-chain --target x86_64-unknown-linux-gnu
 
-# Windows
+# Windows x86_64
 cargo build --release -p polis-chain --target x86_64-pc-windows-gnu
-
-# macOS ARM (默认)
-cargo build --release -p polis-chain --target aarch64-apple-darwin
 ```
 
 ---

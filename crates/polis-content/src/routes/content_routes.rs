@@ -6,7 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, PostReference, SeriesPublic, UpdatePostRequest, UnlockPostRequest, PaginationParams, SendMessageRequest, MarkMessagesReadRequest, CreateTierRequest, UpdateTierRequest};
+use polis_core::models::{ApiResponse, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, PostReference, SeriesPublic, UpdatePostRequest, UnlockPostRequest, PaginationParams, SendMessageRequest, MarkMessagesReadRequest, CreateTierRequest, UpdateTierRequest, CreateTipRequest};
 use polis_core::resolver::resolve::{resolve_space_id, resolve_space_enabled_modules};
 use crate::handlers::content_handler::ContentHandler;
 use crate::handlers::chat_handler::ChatHandler;
@@ -186,7 +186,22 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         // 系列（专栏）公开接口
         .route("/api/tiers/space/{*ns}", get(list_tiers_route))
         .route("/api/series/{id}", get(get_series_route))
-        .route("/api/series/space/{*ns}", get(list_series_route));
+        .route("/api/series/space/{*ns}", get(list_series_route))
+        // #话题标签
+        .route("/api/hashtags/trending", get(trending_hashtags))
+        .route("/api/hashtags/{tag}/posts", get(hashtag_posts))
+        // 编辑精选
+        .route("/api/editor-picks", get(get_editor_picks))
+        // 排行榜
+        .route("/api/leaderboard", get(get_leaderboard_default))
+        .route("/api/leaderboard/{period}", get(get_leaderboard_route))
+        // 打赏排行榜
+        .route("/api/tips/leaderboard", get(get_tip_leaderboard_default))
+        .route("/api/tips/leaderboard/{period}", get(get_tip_leaderboard_route))
+        // 每周话题
+        .route("/api/weekly-topic", get(get_weekly_topic))
+        // 社区活动
+        .route("/api/events", get(get_events_route));
 
     // 需要认证的路由
     let auth = Router::new()
@@ -251,6 +266,12 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/messages/delete", post(batch_delete_conversations_route))
         .route("/api/messages/conversations/{user_id}/mute", post(mute_conversation_route))
         .route("/api/messages/conversations/{user_id}/mute", delete(unmute_conversation_route))
+        // 打赏
+        .route("/api/tips", post(create_tip_route))
+        // 社区活动
+        .route("/api/events/{id}/join", post(join_event_route))
+        // 推荐
+        .route("/api/recommendations", get(get_recommendations_route))
         .route_layer(middleware::from_fn_with_state(handler.clone(), auth_middleware));
 
     let share_routes = Router::new()
@@ -325,7 +346,13 @@ async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, heade
 
             let hash_str = row.1.as_deref().unwrap_or("");
             if let Ok(parsed) = PasswordHash::new(hash_str) {
-                if Argon2::default().verify_password(pwd.as_bytes(), &parsed).is_ok() {
+                let pwd2 = pwd.to_string();
+                let hash2 = hash_str.to_string();
+                let verified = tokio::task::spawn_blocking(move || {
+                    let parsed = PasswordHash::new(&hash2).map_err(|_| ())?;
+                    Argon2::default().verify_password(pwd2.as_bytes(), &parsed).map_err(|_| ())
+                }).await.is_ok();
+                if verified {
                     return Ok(());
                 }
             }
@@ -378,7 +405,7 @@ async fn handle_public_content(
                 false
             };
             let enabled = resolve_space_enabled_modules(&h.pool, space_id).await
-                .unwrap_or_else(|_| vec!["forum".to_string(), "article".to_string()]);
+                .unwrap_or_else(|_| vec![]);
             let (posts, pagination) = h.get_posts(space_id, q.pagination, q.module, q.sort, enabled, include_hidden).await?;
             Ok(json_ok(ApiResponse::success_with_pagination(posts, pagination)))
         }
@@ -734,7 +761,7 @@ async fn save_draft_route(
     let tags = req.tags.as_ref()
         .map(|t| serde_json::to_value(t).unwrap_or_default())
         .unwrap_or(serde_json::Value::Array(vec![]));
-    let module_type = req.module_type.unwrap_or_else(|| "forum".to_string());
+    let module_type = req.module_type.unwrap_or_else(|| "article".to_string());
     let draft_id = h.save_draft(uid, req.space_id, &req.title, &req.body, &module_type, &tags).await?;
     Ok(json_ok(ApiResponse::success(serde_json::json!({"id": draft_id}))))
 }
@@ -1336,7 +1363,7 @@ async fn delete_post_by_id_route(
 #[derive(Deserialize)]
 struct SubmitReferenceRequest {
     space_ns: String,
-    module_type: Option<String>,
+    module_type: String,
 }
 
 async fn submit_reference_route(
@@ -1346,8 +1373,7 @@ async fn submit_reference_route(
     Json(r): Json<SubmitReferenceRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let space_id = resolve_space_id(&h.pool, &r.space_ns).await?;
-    let module_type = r.module_type.unwrap_or_else(|| "forum".to_string());
-    let ref_row: PostReference = h.submit_reference(post_id, space_id, &module_type, uid).await?;
+    let ref_row: PostReference = h.submit_reference(post_id, space_id, &r.module_type, uid).await?;
     Ok(json_ok(ApiResponse::success(ref_row)))
 }
 
@@ -1620,4 +1646,78 @@ async fn unmute_conversation_route(
     let dm = MessageHandler::new(h.pool.clone());
     dm.unmute_conversation(uid, other_user_id).await?;
     Ok(json_ok(ApiResponse::success(serde_json::json!({"muted": false}))))
+}
+
+// ==================== #Hashtags 路由 ====================
+
+async fn trending_hashtags(State(h): State<Arc<ContentHandler>>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_trending_hashtags().await?)))
+}
+
+#[derive(Deserialize)]
+struct HashtagPostsQuery { page: Option<u32>, page_size: Option<u32> }
+async fn hashtag_posts(State(h): State<Arc<ContentHandler>>, Path(tag): Path<String>, Query(q): Query<HashtagPostsQuery>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_posts_by_hashtag(&tag, q.page.unwrap_or(1), q.page_size.unwrap_or(20)).await?)))
+}
+
+// ==================== Editor Picks 路由 ====================
+
+async fn get_editor_picks(State(h): State<Arc<ContentHandler>>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_editor_picks().await?)))
+}
+
+// ==================== Leaderboard 路由 ====================
+
+async fn get_leaderboard_default(State(h): State<Arc<ContentHandler>>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_leaderboard("monthly").await?)))
+}
+async fn get_leaderboard_route(State(h): State<Arc<ContentHandler>>, Path(period): Path<String>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_leaderboard(&period).await?)))
+}
+
+// ==================== Tips 路由 ====================
+
+async fn create_tip_route(State(h): State<Arc<ContentHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<CreateTipRequest>) -> Result<Json<serde_json::Value>, AppError> {
+    let target_type = r.target_type.as_deref().unwrap_or("post");
+    // Get receiver_id: for posts, it's the author
+    let receiver_id = if target_type == "post" {
+        h.repo.find_post_by_id(r.target_id).await?.map(|p| p.author_id).ok_or(AppError::NotFound("Post not found".to_string()))?
+    } else {
+        r.target_id // for other types, use target_id directly
+    };
+    let amount = r.amount.unwrap_or(1);
+    let is_anonymous = r.is_anonymous.unwrap_or(false);
+    Ok(json_ok(ApiResponse::success(h.create_tip(uid, receiver_id, target_type, r.target_id, amount, r.message.as_deref(), is_anonymous).await?)))
+}
+
+async fn get_tip_leaderboard_default(State(h): State<Arc<ContentHandler>>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_tip_leaderboard("monthly").await?)))
+}
+async fn get_tip_leaderboard_route(State(h): State<Arc<ContentHandler>>, Path(period): Path<String>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_tip_leaderboard(&period).await?)))
+}
+
+// ==================== Weekly Topic 路由 ====================
+
+async fn get_weekly_topic(State(h): State<Arc<ContentHandler>>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_active_weekly_topic().await?)))
+}
+
+// ==================== Community Events 路由 ====================
+
+#[derive(Deserialize)]
+struct EventsQuery { space_id: Option<Uuid> }
+async fn get_events_route(State(h): State<Arc<ContentHandler>>, Query(q): Query<EventsQuery>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_active_events(q.space_id).await?)))
+}
+async fn join_event_route(State(h): State<Arc<ContentHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Path(id): Path<Uuid>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.join_event(id, uid).await?)))
+}
+
+// ==================== Recommendations 路由 ====================
+
+#[derive(Deserialize)]
+struct RecommendationsQuery { include_type: Option<String> }
+async fn get_recommendations_route(State(h): State<Arc<ContentHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Query(q): Query<RecommendationsQuery>) -> Result<Json<serde_json::Value>, AppError> {
+    Ok(json_ok(ApiResponse::success(h.get_recommendations(uid, q.include_type.as_deref()).await?)))
 }
