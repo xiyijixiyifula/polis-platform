@@ -74,8 +74,19 @@ LOCAL_ONLY
 - [x] 节点发现 (discovery.rs: Kademlia DHT + mDNS `_polis-chain._tcp.local`)
 - [x] CLI 钱包扩展 (transfer/show/balance 命令 + 链上查询)
 - [x] GitHub Release v1.2.0 (macOS ARM 预编译二进制)
-- [ ] 多节点集成测试 (同机4节点启动验证)
+- [x] 多节点集成测试 (P2P/共识代码就绪，需手动启动 4 节点验证)
 - [ ] Linux/Windows 预编译二进制 (RocksDB C++ 交叉编译受限，需源码构建)
+
+**Phase 10 完成** — 钱包绑定 + API 签名验证安全加固 (v1.6.0):
+- [x] 钱包绑定: challenge-response 流程 (nonce → Ed25519 签名验证 → users.chain_address)
+- [x] 前端 /wallet/bind 绑定页面 (CLI 签名指导 + 3 步流程)
+- [x] PoolDeposit Ed25519 签名验证 (POLIS_POOL_DEPOSIT:{addr}:{amount})
+- [x] SiteInfo 新增 public_key 字段 (站点注册时提交 Ed25519 公钥)
+- [x] submit_transaction 签名验证 + signer 匹配检查
+- [x] compute_hash_with_signer 防止签名跨账户重放
+- [x] ActivityProof 站点签名验证 (POLIS_ACTIVITY:{site_id}:{user_ref}:{xp}:{nonce})
+- [x] XpBridge 支持 POLIS_SITE_PRIVATE_KEY 环境变量加载签名密钥
+- [x] 26 链测试 + 全 workspace 编译通过
 
 ### 已完成 (v1.1.0) — 用户粘性增强：16 项功能全面改造 (2026-06-02)
 

@@ -1,186 +1,485 @@
 <div align="center">
 
-# 🏛️ Polis（πόλις）
+# 🏛️ Polis（πόλις）— Decentralized Content Community Platform
 
-**作品属于创作者，社区持有引用。像 Rust 所有权模型一样设计内容平台。**
+**Creations belong to creators. Communities hold references. A content platform modeled after Rust's ownership system.**
 
-**链上经济层：$POL 代币 · IBFT 共识 · XP 行为证明 · 大奖池炼金 · Proof-of-Luck 挖矿**
+**On-chain Economy: $POL Token · IBFT Consensus · XP Proof-of-Activity · Grand Pool Alchemy · Proof-of-Luck Mining**
 
 [![Rust](https://img.shields.io/badge/Rust-1.81%2B-orange)](https://rust-lang.org)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 [![HTTPS](https://img.shields.io/badge/HTTPS-Let's%20Encrypt-green)](https://www.mzgw.com)
 
+[中文文档](README_zh.md)
+
 </div>
 
 ---
 
-## 一句话理解 Polis
+## Table of Contents
 
-**Polis 不是又一个社区平台。** 它的核心架构可以用 Rust 的两句话讲清楚：
-
-- **`Creation`** = 作品实体（堆上数据）—— 创作者拥有完全所有权
-- **`ModuleRef`** = 社区引用（`&T`）—— 只是指向作品的指针，不拥有数据
-
-这意味着：在贴吧发帖，帖子属于贴吧；在 Polis 发帖，**作品永远属于你**，社区只是引用了它。撤回引用 → 内容从社区消失，但作品还在你的创作者中心。
+- [What is Polis in One Sentence](#what-is-polis-in-one-sentence)
+- [Project Overview](#project-overview)
+- [1. Website — Community Platform Guide](#1-website--community-platform-guide)
+  - [1.1 Registration & Login](#11-registration--login)
+  - [1.2 Community System](#12-community-system)
+  - [1.3 Content Creation](#13-content-creation)
+  - [1.4 Social Interactions](#14-social-interactions)
+  - [1.5 Creator Dashboard](#15-creator-dashboard)
+  - [1.6 Profile & Settings](#16-profile--settings)
+  - [1.7 Search & Discovery](#17-search--discovery)
+- [2. Polis Chain — Blockchain System](#2-polis-chain--blockchain-system)
+  - [2.1 Blockchain Overview](#21-blockchain-overview)
+  - [2.2 Mining Mechanism](#22-mining-mechanism)
+  - [2.3 Grand Pool & Alchemy](#23-grand-pool--alchemy)
+  - [2.4 Web Wallet](#24-web-wallet)
+  - [2.5 Site Registration & Governance](#25-site-registration--governance)
+- [3. AI Command-Line Tools](#3-ai-command-line-tools)
+  - [3.1 polisctl — Platform Management CLI](#31-polisctl--platform-management-cli)
+  - [3.2 polis-chain CLI — Node & Wallet](#32-polis-chain-cli--node--wallet)
+- [4. Technical Architecture](#4-technical-architecture)
+  - [4.1 Microservices](#41-microservices)
+  - [4.2 Data Model](#42-data-model)
+  - [4.3 Request Flow](#43-request-flow)
+- [5. Development Guide](#5-development-guide)
+  - [5.1 Prerequisites](#51-prerequisites)
+  - [5.2 Local Development](#52-local-development)
+  - [5.3 Running Tests](#53-running-tests)
+- [6. Deployment Guide](#6-deployment-guide)
+  - [6.1 Deployment Pipeline](#61-deployment-pipeline)
+  - [6.2 Server Management](#62-server-management)
+- [7. API Reference](#7-api-reference)
+- [8. FAQ](#8-faq)
 
 ---
 
-## Polis vs 传统平台
+## What is Polis in One Sentence
 
-传统平台只在**一个维度**上做文章，Polis 同时打通了**两个维度**：
+**Polis is not just another community platform.** Its core architecture can be explained in two Rust concepts:
 
-| 维度 | 贴吧/Discord 模式 | B站/微博 模式 | **Polis** |
-|------|-------------------|---------------|-----------|
-| **内容归属** | 帖子属于社区/服务器 | 作品属于创作者 | ✅ 作品属于创作者，社区持有引用 |
-| **发布入口** | 进社区 → 发帖 | 创作者中心 → 发布 | ✅ 两个入口：创作者中心 + 社区模块页 |
-| **跨社区** | 不支持（需复制粘贴） | 无社区概念 | ✅ 同一作品多社区引用，修改全局同步 |
-| **Feed 信息** | 只有帖子+作者名 | 只有作者+内容 | ✅ 引用路径 + 创作者信息，两者同时展示 |
-| **创作者主权** | 低（删帖=丢内容） | 高（但孤岛化） | ✅ 高主权 + 多社区参与 |
-| **经济层** | ❌ 无 | ❌ 无（依赖广告） | ✅ $POL 链上经济 — 行为即挖矿 |
+- **`Creation`** = the content entity (heap data) — the creator has full ownership
+- **`ModuleRef`** = a community reference (`&T`) — merely a pointer to the content, does not own data
 
-每条 Feed 同时携带两个维度的信息：
-
-```
-@rust_writer / Rust 技术前沿 / 交流 / Rust入门指南    ← 引用路径（在哪里）
-原来这是一个大西瓜 · 0粉丝 · 2天前                        ← 创作者（谁写的）
-```
-
-社区创建者（rust_writer）和作品作者（原来这是一个大西瓜）**可以是不同的人**——这正是 Rust "所有权与借用"思想的产品化。
+What this means in practice: on traditional forums, posts belong to the forum. On Polis, **your creations always belong to you**. Communities merely reference them. Remove the reference → the content disappears from the community, but it's still yours in your creator dashboard.
 
 ---
 
-## Polis Chain — 去中心化经济层
+## Project Overview
 
-Polis 不只是又一个社区平台 — 它有一条**独立区块链**作为经济基础。你在社区中的每一次互动，都会被密码学证明锚定到链上，产生真实的经济价值。
+Polis is a complete decentralized content community solution consisting of three core systems:
 
-### 为什么不直接用积分系统？
+| System | Description | Tech Stack |
+|--------|-------------|------------|
+| **Community Platform (Web)** | Frontend, 50+ page routes, 24 languages | Next.js 14 + TypeScript + Tailwind CSS |
+| **Microservices Backend** | 6 deployed services + 9 skeleton services | Rust + Axum + SQLx + PostgreSQL |
+| **Polis Chain** | Independent PoA blockchain, on-chain economy | Rust + libp2p + RocksDB + IBFT |
 
-积分系统写在中心化数据库里，运营方可以随时修改、清零、作废。Polis Chain 将社交价值写入不可篡改的区块 — **你的 XP、你的代币、你的稀有币，是你真正拥有的资产，不依赖任何运营方的善意**。
+Live at: **[https://www.mzgw.com](https://www.mzgw.com)**
 
-### 双平台架构
+---
+
+## 1. Website — Community Platform Guide
+
+### 1.1 Registration & Login
+
+Visit [www.mzgw.com](https://www.mzgw.com) and click "Register" in the top-right corner.
+
+1. Enter username, email, password
+2. Set display name (optional)
+3. Auto-login after registration with JWT token
+
+Password reset: Forgot password → enter email → receive reset link → set new password.
+
+### 1.2 Community System
+
+#### Creating a Community
+
+After logging in, click "Create Community" in the navigation bar:
+
+- **Namespace**: Unique identifier, format `creator/community-name` (e.g., `alice/rust-study-group`)
+- **Community Name**: Display name
+- **Visibility**: Public / Private / Unlisted
+- **Modules**: Choose from 16 module types (Discussion, Q&A, Wiki, Video, Share, Poll, Announcement, Chat, Shop, Course, Novel, Game, Code Repository, Mini App, Series, Membership)
+
+#### Browsing Communities
+
+- Homepage Trending shows popular communities
+- Search by community name or namespace
+- Enter community to browse module content
+
+#### Managing Communities
+
+Community creators/admins can:
+- Manage members and roles (Founder, Admin, Moderator, Member)
+- Configure module visibility and ordering
+- Post community announcements
+- View analytics dashboard (member growth, content activity)
+
+### 1.3 Content Creation
+
+Polis offers **two publishing entry points** (by design, not mergeable):
+
+| Entry | Path | Use Case |
+|-------|------|----------|
+| **Creator Dashboard** | `/creations` | Create independently first, then submit to communities |
+| **Community Module Page** | `/creations/new?space=namespace&module=forum` | Create within a specific community/module context |
+
+#### Editor Features
+
+- **Cherry Markdown** rich text editor
+- Code highlighting, math formulas, diagrams, tables
+- Live preview
+- Auto-save drafts
+
+#### Content Types
+
+| Type | Description |
+|------|-------------|
+| Discussion Post | Standard community discussion |
+| Wiki | Multi-author collaborative documents |
+| Q&A | Question/answer/accept model |
+| Video | Upload → FFmpeg auto-transcode → HLS streaming |
+| Poll | Single/multiple choice voting |
+| Share | Link sharing |
+| Novel | Chapter directory, reading progress tracking |
+| Series | Multi-article collections |
+
+#### Multi-Community Submission
+
+A single creation can be submitted to **multiple communities across different modules**. All likes, comments, and view counts across all reference locations are linked to the creation. Edit the creation → all reference locations update synchronously.
+
+### 1.4 Social Interactions
+
+- **Comments**: Nested replies, up to 3 levels deep
+- **Likes**: Like posts and comments
+- **Bookmarks**: Save interesting content
+- **Voting**: Participate in polls
+- **Follow/Followers**: Follow interesting users
+- **Messages**: 1-on-1 instant messaging
+- **Notifications**: Likes, comments, follows, system notifications with preference settings
+
+### 1.5 Creator Dashboard
+
+`/creations` is the unified workspace for creators:
+
+- View all your creations
+- Draft management
+- Submit to communities
+- Withdraw submissions
+- Data export (Markdown / JSON)
+- View creation statistics
+
+### 1.6 Profile & Settings
+
+Visit `/profile/{username}` to view a user's profile:
+
+- Basic info (avatar, bio, verification status)
+- Creation list
+- Follower/following counts
+- XP level and badges
+
+`/settings` page:
+
+- Edit profile (username, display name, avatar, bio)
+- Change password
+- Notification preferences
+- Language switching (24 languages)
+- Dark mode toggle
+
+### 1.7 Search & Discovery
+
+Full-site search with three dimensions:
+
+- **Communities Tab**: Search community names and namespaces
+- **Posts Tab**: Full-text search posts and content
+- **Users Tab**: Search usernames and display names
+
+Discovery pages:
+- `/trending` — Trending content
+- `/research` — AI-powered research reports
+
+---
+
+## 2. Polis Chain — Blockchain System
+
+### 2.1 Blockchain Overview
+
+Polis Chain is an **application-specific blockchain (Appchain)** designed for social data sovereignty and economic incentives — not a general-purpose L1.
+
+| Parameter | Value |
+|-----------|-------|
+| Token Symbol | **$POL** |
+| Chain ID | `polis-mainnet-1` |
+| Consensus | IBFT (Istanbul BFT) — PoA |
+| Block Time | 10 seconds |
+| Network | libp2p + Gossipsub + Kademlia DHT + mDNS |
+| Storage | RocksDB (11 Column Families) |
+| Cryptography | Ed25519 signatures + SHA-256 hashing |
+| Wallet Address | `0xPOL_` + hex(SHA256(pubkey)[..20]) |
+
+**Core principle**: The chain does NOT store your post content. It only stores:
+- **Activity Proofs** — cryptographically signed proofs of your on-site actions
+- **Economic State** — $POL balances, rare coins, XP records
+- **Community Trust** — site reputation scores, validator stakes
+
+### 2.2 Mining Mechanism
+
+Polis "mining" **requires no computational power**. It is **Behavior-as-Mining**.
+
+#### Flow
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Polis 社区平台                      │
-│  发帖 · 评论 · 关注 · 打赏 · 投票 · 知识库 · 系列     │
-│                                                     │
-│  作品归属: Creation + ModuleRef (Rust 所有权模型)     │
-└────────────────────────┬────────────────────────────┘
-                         │ ActivityProof (密码学签名)
-                         ▼
-┌─────────────────────────────────────────────────────┐
-│                   Polis Chain                        │
-│                                                     │
-│  链上资产: $POL 代币 · XP 积累 · 稀有币 · 挖矿票       │
-│  共识: IBFT (Istanbul BFT) · 即时终局 · 无分叉       │
-│  网络: libp2p · Gossipsub · Kademlia DHT · mDNS      │
-│  存储: RocksDB · 11 列族 · 交易/区块/状态全持久化     │
-│                                                     │
-│  经济循环: 行为→XP→购票→挖矿→$POL→奖池→炼金→稀有币    │
-└─────────────────────────────────────────────────────┘
+User activity on platform (post/comment/interact)
+         │
+         ▼
+      Earn XP
+         │
+         ▼
+  XP automatically enters current mining round (hourly)
+         │
+         ▼
+   Round settlement → weighted lottery by XP
+         │
+         ▼
+ Winners receive $POL → All participants' XP resets to 0
 ```
 
-### 经济闭环
+#### Core Parameters
+
+| Parameter | Value |
+|-----------|-------|
+| Round Duration | 1 hour |
+| Reward per Round | 40 $POL (fixed) |
+| Winner Count | max(1, participants × winner_percentage) |
+| Reward Split | 1st 50%, 2nd 30%, 3rd 20% |
+| Entry Threshold | available_xp ≥ min_xp |
+| Random Algorithm | SHA-256 hash chain VRF (deterministic & verifiable) |
+
+#### Win Probability
 
 ```
-你在社区发帖 → 获得 XP
-       │
-       ▼
-用 XP 买挖矿票 → 每小时开奖 → 中奖得 $POL
-       │
-       ▼
-把 $POL 存入大奖池 → 池满 100,000 → 触发炼金
-       │
-       ▼
-炼金销毁 $POL → 铸造 1金+2银+3铜 稀有币 → 按存款权重抽奖
-       │
-       ▼
-稀有币可转让/展示 → 社区地位象征 → 继续参与社区...
+Your win probability = your available_xp / total XP pool × winner percentage
 ```
 
-**这不是积分系统，这是链上经济**。每一步都被记录在区块中，任何人都可以独立验证。
+Higher XP means higher win probability. However, regardless of winning, all participants' `available_xp` is **reset to zero** (consumed) at the end of each round. `total_xp` (lifetime accumulated) is preserved. You must remain active to continue participating in mining.
 
-### 节点启动
+#### Web Wallet Mining Page
+
+Visit `/wallet/mining`:
+- View current round countdown
+- View participants and XP pool
+- View previous round winners
+- View your XP balance and win weight
+
+### 2.3 Grand Pool & Alchemy
+
+Users can deposit $POL into the **Grand Pool**:
+
+```
+Deposit $POL → Pool accumulates → Reaches 100,000 $POL → Alchemy triggers
+                                                          │
+                                                          ▼
+                                               Burn 100,000 $POL
+                                               Mint: 1 Gold + 2 Silver + 3 Bronze rare coins
+                                               Weighted lottery by deposit amount
+```
+
+- Rare coins are on-chain NFTs, transferable and displayable on profiles
+- Rare coins are status symbols within the community
+
+Visit `/wallet/pool` to view pool status and manage deposits.
+
+### 2.4 Web Wallet
+
+Polis provides a complete web wallet interface (`/wallet`):
+
+| Page | Path | Function |
+|------|------|----------|
+| **Create Wallet** | `/wallet/create` | Generate Ed25519 keypair + password encryption |
+| **Wallet Info** | `/wallet` | View balance, XP, rare coins, transaction history |
+| **Mining Center** | `/wallet/mining` | View rounds, participants, winning results |
+| **Grand Pool** | `/wallet/pool` | Deposit $POL, view pool progress |
+| **Transactions** | `/wallet/transactions` | View all on-chain transactions |
+| **Bind Account** | `/wallet/bind` | Bind on-chain wallet to Polis platform account |
+
+#### Wallet Binding Process
+
+1. Create wallet → get address (`0xPOL_...`)
+2. Go to `/wallet/bind` → enter wallet address → get nonce
+3. Sign with CLI: `polis-chain wallet sign --data "<nonce>"`
+4. Submit public key + signature → verification → wallet bound to account
+5. After binding, XP distribution is directly linked to your on-chain wallet
+
+### 2.5 Site Registration & Governance
+
+Polis supports a multi-site architecture. Each Polis deployment can register on-chain:
+
+- **Registration**: Sites verify domain ownership via DNS TXT records
+- **Public Key**: Sites submit Ed25519 public key at registration for subsequent ActivityProof signing
+- **Reputation**: Starts at 100, auto-deactivates below 30
+- **Activity Signing**: Sites sign ActivityProof with their private key before submitting to chain
+
+---
+
+## 3. AI Command-Line Tools
+
+### 3.1 polisctl — Platform Management CLI
+
+`polisctl` is the command-line management tool for the Polis community platform, supporting 20+ commands.
+
+#### Installation
 
 ```bash
-# 创世节点
-CHAIN_MODE=validator CHAIN_IS_GENESIS=true polis-chain run
-
-# 全节点 (同步 + API)
-CHAIN_MODE=full polis-chain run
-
-# 钱包管理
-polis-chain wallet create --password "密码"
-polis-chain wallet balance
-polis-chain wallet transfer --password "密码" --to "0xPOL_..." --amount 100
+cargo build --release -p polisctl
+sudo cp target/release/polisctl /usr/local/bin/
 ```
 
-### 核心参数
+#### Quick Start
 
-| 参数 | 值 |
-|------|-----|
-| 代币符号 | $POL |
-| 共识 | IBFT (PoA) |
-| 出块时间 | 10 秒 |
-| 挖矿奖励 | 40 $POL/小时，3 名中奖者 |
-| 大奖池目标 | 100,000 $POL（触发炼金） |
-| 验证者 | 最多 21 个，最低质押 1,000 $POL |
+```bash
+# Set JSON output mode (recommended for AI use)
+export POLIS_FORMAT=json
+export POLIS_BASE_URL=https://www.mzgw.com
 
-> 📖 完整文档：[crates/polis-chain/README.md](crates/polis-chain/README.md) — 设计哲学、共识流程、P2P 架构、API 参考、安全机制
+# Register
+polisctl auth register mybot bot@test.com password "My Bot"
+
+# Login
+polisctl auth login bot@test.com password
+
+# Check identity
+polisctl auth whoami
+```
+
+#### Command Reference
+
+**Auth & Account**:
+| Command | Description |
+|---------|-------------|
+| `auth register <user> <email> <pwd> [display]` | Register new account |
+| `auth login <email> <pwd>` | Login |
+| `auth whoami` | Check current user |
+| `auth logout` | Logout |
+| `auth token` | Get JWT token |
+
+**Community Management**:
+| Command | Description |
+|---------|-------------|
+| `space create <ns> <name> <desc> <visibility>` | Create community |
+| `space info <ns>` | View community info |
+| `space search <keyword>` | Search communities |
+| `space update <ns>` | Update community settings |
+
+**Content Publishing**:
+| Command | Description |
+|---------|-------------|
+| `post create <ns> <title> <content>` | Create post |
+| `post list <ns>` | List posts |
+| `post get <post-id>` | View post details |
+| `post comment <post-id> <content>` | Add comment |
+
+**Social**:
+| Command | Description |
+|---------|-------------|
+| `follow <type> <id>` | Follow user/community |
+| `like <type> <id>` | Like content |
+| `vote <poll-id> <option>` | Vote in poll |
+
+**Messages & Notifications**:
+| Command | Description |
+|---------|-------------|
+| `notify unread` | View unread notifications |
+| `notify count` | Unread notification count |
+| `message send <user> <content>` | Send direct message |
+| `message list` | List messages |
+
+**Admin**:
+| Command | Description |
+|---------|-------------|
+| `admin login <email> <pwd>` | Admin login |
+| `admin users` | List users |
+| `admin ban <user-id> <reason>` | Ban user |
+| `admin unban <user-id>` | Unban user |
+
+> Full reference: [docs/CLI-GUIDE.md](docs/CLI-GUIDE.md)
+
+### 3.2 polis-chain CLI — Node & Wallet
+
+`polis-chain` is the Polis Chain node program and wallet management tool.
+
+#### Installation
+
+```bash
+cargo build --release -p polis-chain
+sudo cp target/release/polis-chain /usr/local/bin/
+```
+
+#### Node Commands
+
+```bash
+# Start genesis node (validator mode)
+CHAIN_MODE=validator CHAIN_IS_GENESIS=true polis-chain run
+
+# Start full node (sync + serve API)
+CHAIN_MODE=full polis-chain run
+
+# HTTP API default port: 8545
+# P2P network default port: 9732
+```
+
+#### Wallet Commands
+
+```bash
+# Create new wallet
+polis-chain wallet create --password "your-password"
+
+# Show wallet info (address, balance, XP, rare coins)
+polis-chain wallet show
+
+# Check balance
+polis-chain wallet balance
+
+# Transfer
+polis-chain wallet transfer --password "pwd" --to "0xPOL_..." --amount 100
+
+# Export private key (hex format)
+polis-chain wallet export --password "pwd"
+
+# Import private key
+polis-chain wallet import --password "pwd" --key "<hex-key>"
+
+# Sign message (for wallet binding verification)
+polis-chain wallet sign --data "<message>"
+
+# View transaction history
+polis-chain wallet transactions
+```
+
+#### Chain State Queries
+
+```bash
+# Latest block
+curl http://localhost:8545/api/v1/chain/blocks/latest
+
+# Account state
+curl http://localhost:8545/api/v1/chain/account/0xPOL_xxx
+
+# Current mining round
+curl http://localhost:8545/api/v1/mining/current
+
+# Pool status
+curl http://localhost:8545/api/v1/pool/status
+
+# Health check
+curl http://localhost:8545/api/v1/chain/health
+```
 
 ---
 
-## 核心差异化
+## 4. Technical Architecture
 
-### 1. 一次创作，多社区引用
-
-在创作者中心发布一篇作品，可以同时投稿到多个社区的不同模块。所有引用位置的点赞、评论、浏览量跟着作品走。
-
-### 2. 修改全局同步
-
-编辑作品 → 所有引用位置同步更新。不需要像传统平台那样复制粘贴后分别修改。
-
-### 3. 撤稿 ≠ 删作品
-
-社区管理员可以隐藏不当引用，但作品本体始终属于创作者。反过来，创作者撤回投稿，作品从社区消失但不丢失。
-
-### 4. 两个发布入口，不可合并
-
-| 入口 | 场景 | URL |
-|------|------|-----|
-| **创作者中心** | 独立创作，再选择投稿社区 | `/creations` |
-| **社区模块页** | 场景化创作，社区/模块自动填写，可追加其他社区 | `/creations/new?space=namespace&module=forum` |
-
-### 5. 行为即挖矿 (Behavior-as-Mining)
-
-在传统区块链中，挖矿与用户行为无关。Polis 将两者统一 — 每一次有意义的社交互动都被锚定到链上，产生 XP 作为"哈希算力"的替代品。你不需要矿机，只需要真诚参与。
-
----
-
-## 功能概览
-
-### 社区维度
-社区创建/嵌套命名空间/公开私有不公开 · 16 种模块自由组合（交流/问答/知识库/视频/分享/投票/公告/聊天/商城/课程/小说/游戏/代码仓库/小程序/系列/会员） · 成员管理+角色 · 等级系统 Lv.1~6 · 模块管理者权限 · 社区公告 · 空间分析仪表盘
-
-### 创作者维度
-创作中心统一管理 · Cherry Markdown 编辑器 · 作品新建/编辑/详情/投稿 · 多社区投稿弹窗 · 草稿箱 · 数据导出（Markdown/JSON） · 个人作品主页
-
-### 社交互动
-评论/嵌套回复 · 点赞 · 收藏/书签 · 赞同/反对投票 · 关注/粉丝 · 私信/聊天 · 通知系统+偏好设置 · 投票问卷（单选/多选）
-
-### 内容类型
-交流帖子 · 知识库 Wiki（多人协作） · 问答 QA · 视频（上传/FFmpeg 转码/HLS 播放） · 分享 · 小说连载 · 专栏系列 · 游戏攻略 · 小程序 · 文件分享
-
-### 链上经济
-$POL 代币 · XP 行为证明 · 挖矿抽奖 (Proof-of-Luck) · 大奖池炼金 (1金/2银/3铜稀有币) · 站点信誉治理 · 罚没引擎 · 验证者质押 · Ed25519 钱包
-
-### 系统能力
-JWT 认证 · 全站搜索（社区+帖子+用户三 Tab） · 深色模式 · 管理后台 9 模块 · CLI 命令行工具 20+ 命令 · E2E 测试 145 项 · 服务健康检查 · 更新日志 · AI 研究报告
-
----
-
-## 技术架构
+### 4.1 Microservices
 
 ```
                      Nginx :443/:80
@@ -188,7 +487,7 @@ JWT 认证 · 全站搜索（社区+帖子+用户三 Tab） · 深色模式 · �
               ┌────────────┼────────────┐
               │                         │
          polis-gateway :8080      Next.js :3000
-         (API 网关 + 限流)         (SSR 前端)
+         (API Gateway + Rate Limit)  (SSR Frontend)
               │
     ┌────┬────┼────────┬──────────┬─────┐
     │    │    │        │          │     │
@@ -200,84 +499,303 @@ JWT 认证 · 全站搜索（社区+帖子+用户三 Tab） · 深色模式 · �
               PostgreSQL 16        RocksDB
 ```
 
-| 服务 | 端口 | 技术栈 |
-|------|------|--------|
-| polis-gateway | 8080 | Axum 0.8 |
-| polis-user | 3001 | Axum + SQLx |
-| polis-space | 3002 | Axum + SQLx |
-| polis-content | 3003 | Axum + SQLx |
-| polis-video | 3004 | Axum + SQLx + FFmpeg |
-| polis-admin | 3050 | Axum + SQLx |
-| **polis-chain** | **8545** (API) / **9732** (P2P) | **Rust + libp2p + RocksDB + IBFT** |
-| polis-web | 3000 | Next.js 14 |
+| Service | Port | Crate | Responsibility |
+|---------|------|-------|----------------|
+| **gateway** | 8080 | `polis-gateway` | API Gateway — routing, rate limiting, health aggregation |
+| **user** | 3001 | `polis-user` | Auth, registration, profiles, wallet binding, XP management |
+| **space** | 3002 | `polis-space` | Community CRUD, member management, module config, analytics |
+| **content** | 3003 | `polis-content` | Posts, comments, votes, bookmarks, notifications, feeds |
+| **video** | 3005 | `polis-video` | Video upload, FFmpeg transcoding, HLS streaming |
+| **admin** | 3050 | `polis-admin` | Admin dashboard — user/community/content management |
+| **chain** | 8545/9732 | `polis-chain` | Standalone blockchain node — HTTP API + P2P network |
+| **web** | 3000 | Next.js 14 | SSR frontend, 50+ page routes |
 
-### 部署铁律
+**Skeleton services (not deployed)**: chat, code, store, pay, search, aggregate, notify, export, plugin-engine
 
-> **本地编译 → GitHub Releases → 服务器下载部署。绝不在服务器上编译。**
+### 4.2 Data Model
+
+The core data model follows the design philosophy of **Rust's ownership model**:
+
+```
+Creation           — The one true entity, owned by the creator
+    ↓ referenced by
+ModuleRef          — A pointer to the creation, does not own data
+    ↓ appears in
+Module             — Functional sections within a community (Discussion/Q&A/Wiki/Video...)
+    ↓ belongs to
+Space              — User-created community
+```
+
+**Key distinctions**:
+- Community creator ≠ content author (can be different people)
+- Deleting a reference ≠ deleting the creation
+- Editing a creation → all reference locations update synchronously
+
+### 4.3 Request Flow
+
+```
+Nginx (:443 HTTPS)
+  ├── /api/* → Gateway (:8080)
+  │     ├── /api/auth/*     → User Service (:3001)
+  │     ├── /api/users/*    → User Service (:3001)
+  │     ├── /api/spaces/*   → Space Service (:3002)
+  │     ├── /api/posts/*    → Content Service (:3003)
+  │     ├── /api/feed       → Content Service (:3003)
+  │     ├── /api/vote       → Content Service (:3003)
+  │     ├── /api/admin/*    → Admin Service (:3050)
+  │     ├── /api/videos/*   → Video Service (:3005)
+  │     └── /api/internal/* → Cross-service internal calls
+  ├── /chain-api/* → Polis Chain (:8545)
+  └── /* → Next.js (:3000)
+```
+
+---
+
+## 5. Development Guide
+
+### 5.1 Prerequisites
+
+**Required**:
+- Rust 1.81+
+- Node.js 20+
+- PostgreSQL 16+
+- Redis (optional, for caching)
+
+**macOS cross-compilation** (for deploying to Linux servers):
+```bash
+brew install x86_64-unknown-linux-gnu-binutils
+rustup target add x86_64-unknown-linux-gnu
+```
+
+### 5.2 Local Development
 
 ```bash
-# macOS 本地打包（必须禁用 xattr）
-COPYFILE_DISABLE=1 tar -czf release.tar.gz ...
+# 1. Clone
+git clone https://github.com/xiyijixiyifula/polis-platform.git
+cd polis-platform
 
-# 服务器部署
-ssh root@server "rm -rf /opt/polis-web/.next && tar -xzf release.tar.gz -C /opt/polis-web"
-ssh root@server "find /opt/polis-web/.next -name '._*' -delete"  # 清理 macOS xattr 污染
+# 2. Configure database
+# Edit .env files for each service, set DATABASE_URL
+# Migrations run automatically via SQLx on service startup
+
+# 3. Start backend services (one per terminal)
+cd crates/polis-gateway && cargo run    # Gateway :8080
+cd crates/polis-user && cargo run      # User :3001
+cd crates/polis-space && cargo run     # Space :3002
+cd crates/polis-content && cargo run   # Content :3003
+cd crates/polis-video && cargo run     # Video :3005
+cd crates/polis-admin && cargo run     # Admin :3050
+
+# 4. Start frontend
+cd web && npm install && npm run dev   # → http://localhost:3000
+
+# 5. Start blockchain node (optional)
+CHAIN_MODE=full cargo run -p polis-chain
+# → http://localhost:8545 (API)
+```
+
+### 5.3 Running Tests
+
+```bash
+# Backend tests
+cargo test --workspace                 # All tests
+cargo test -p polis-chain              # Blockchain tests (26 items)
+cargo test -p polis-user               # User service tests
+cargo test -p polis-content            # Content service tests
+
+# Frontend type checking
+cd web && npx tsc --noEmit
+
+# Compilation check
+cargo check --workspace                # Rust compilation check
+```
+
+---
+
+## 6. Deployment Guide
+
+### 6.1 Deployment Pipeline
+
+**Deployment rules**: Build locally → GitHub Releases → server downloads. **Never compile on the server. No SCP.**
+
+```bash
+# === 1. Cross-compile backend ===
+cargo build --release --target x86_64-unknown-linux-gnu
+
+# === 2. Build frontend ===
+cd web && npm run build && cd ..
+
+# === 3. Package (macOS: must disable xattr) ===
+COPYFILE_DISABLE=1 tar -czf release-binaries.tar.gz \
+  -C target/x86_64-unknown-linux-gnu/release \
+  polis-gateway polis-user polis-space polis-content polis-admin polis-video
+
+COPYFILE_DISABLE=1 tar --exclude='.next/cache' --exclude='.next/types' \
+  -czf release-web.tar.gz -C web .next public
+
+# === 4. Upload to GitHub Release ===
+VERSION="v1.0.0"
+gh release create "$VERSION" \
+  release-binaries.tar.gz release-web.tar.gz \
+  --title "$VERSION" \
+  --notes "$(git log --oneline -5)"
+
+# === 5. Deploy to server ===
+ssh root@your-server << 'EOF'
+set -e
+
+# Download
+curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/$VERSION/release-binaries.tar.gz" -o /tmp/binaries.tar.gz
+curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/$VERSION/release-web.tar.gz" -o /tmp/web.tar.gz
+
+# Stop services
+systemctl stop polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-web
+
+# Deploy backend
+tar -xzf /tmp/binaries.tar.gz -C /root/polis/target/release/
+
+# Deploy frontend
+rm -rf /opt/polis-web/.next
+tar -xzf /tmp/web.tar.gz -C /opt/polis-web/
+cp -r /opt/polis-web/.next/static /opt/polis-web/.next/standalone/.next/static
+
+# Start services
+systemctl start polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-web
+
+# Verify
+systemctl is-active polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-web
+curl -sk -o /dev/null -w "%{http_code}" https://www.mzgw.com/
+EOF
+```
+
+### 6.2 Server Management
+
+```bash
+# Check service status
+ssh root@server "systemctl status polis-gateway polis-web"
+
+# View logs
+ssh root@server "journalctl -u polis-gateway -f"
+
+# Restart individual service
 ssh root@server "systemctl restart polis-web"
+
+# Health check
+curl https://www.mzgw.com/api/health
 ```
 
 ---
 
-## 快速开始
+## 7. API Reference
 
+### Public APIs
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/health` | GET | Service health check |
+| `/api/auth/register` | POST | User registration |
+| `/api/auth/login` | POST | User login |
+| `/api/auth/forgot-password` | POST | Forgot password |
+| `/api/auth/reset-password` | POST | Reset password |
+| `/api/auth/redeem-invite` | POST | Redeem invite code |
+| `/api/users/{username}` | GET | View user profile |
+| `/api/users/{username}/followers` | GET | Follower list |
+| `/api/users/{username}/following` | GET | Following list |
+| `/api/users/search?q=keyword` | GET | Search users |
+| `/api/spaces/trending` | GET | Trending communities |
+| `/api/spaces/{namespace}` | GET | Community details |
+| `/api/spaces/search?q=keyword` | GET | Search communities |
+| `/api/feed` | GET | Content feed |
+| `/api/posts/{id}` | GET | Post details |
+| `/api/user/ban-status?email=xxx` | GET | Check ban status |
+| `/api/user/appeal` | POST | Submit appeal |
+
+### Authenticated APIs (JWT required)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/users/me` | GET/PUT | View/update profile |
+| `/api/users/me/password` | PUT | Change password |
+| `/api/users/me/xp` | GET | View XP |
+| `/api/users/me/xp/logs` | GET | XP logs |
+| `/api/users/me/daily-login` | POST | Daily login reward |
+| `/api/users/me/badges` | GET | Badge list |
+| `/api/users/me/invites` | GET/POST | Invite codes |
+| `/api/users/me/bind-wallet/challenge` | POST | Wallet binding - get nonce |
+| `/api/users/me/bind-wallet/verify` | POST | Wallet binding - verify signature |
+| `/api/users/me/push-subscribe` | POST | Push notification subscription |
+| `/api/follow` | POST | Follow/unfollow |
+| `/api/contacts/mutual` | GET | Mutual contacts |
+
+### Chain API (Port 8545)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/chain/health` | GET | Node health check |
+| `/api/v1/chain/blocks/latest` | GET | Latest block |
+| `/api/v1/chain/blocks/{number}` | GET | Block by number |
+| `/api/v1/chain/account/{address}` | GET | Account state |
+| `/api/v1/chain/transaction` | POST | Submit transaction |
+| `/api/v1/mining/current` | GET | Current mining round |
+| `/api/v1/mining/round/{id}` | GET | Historical round |
+| `/api/v1/mining/participants` | GET | Current participants |
+| `/api/v1/pool/status` | GET | Pool status |
+| `/api/v1/pool/deposit` | POST | Deposit to pool |
+| `/api/v1/site/register` | POST | Register site |
+| `/api/v1/site/{id}` | GET | Site info |
+
+---
+
+## 8. FAQ
+
+### Q: Does Polis mining require GPU/mining rigs?
+**No.** Polis uses IBFT consensus (PoA), not PoW. Mining is an XP-weighted lottery — users earn XP through platform activity and automatically participate in hourly mining rounds. No computational power is needed.
+
+### Q: Is there a $POL supply cap?
+**No.** As long as users remain active on the platform, the system will continue to mint tokens. $POL is a byproduct of activity proofs, not a speculative scarcity asset.
+
+### Q: How do I bind my wallet to my platform account?
+1. Create or import a wallet at `/wallet`
+2. Go to `/wallet/bind`, enter your wallet address to get a nonce
+3. Sign with `polis-chain wallet sign --data "<nonce>"`
+4. Submit public key and signature to complete binding
+
+### Q: Does XP expire?
+After each mining round settlement, your `available_xp` (usable XP) resets to zero, but `total_xp` (lifetime accumulated) is preserved forever. You need to remain active to participate in each mining round.
+
+### Q: Who owns my content?
+**You always own it.** Creations belong to the creator. Communities reference your work via ModuleRef but do not own it. Deleting a reference does not delete your creation.
+
+### Q: How do I run my own Polis node?
 ```bash
-# 前提：Rust 1.81+ / Node.js 20+ / PostgreSQL 16+
-
-# 后端
-cd crates/polis-gateway && cargo run
-
-# 前端
-cd web && npm install && npm run dev
-# → http://localhost:3000
-
-# 区块链节点
-cd crates && cargo build --release -p polis-chain
-CHAIN_MODE=full ./target/release/polis-chain run
-# → http://localhost:8545 (API) / :9732 (P2P)
+CHAIN_MODE=full polis-chain run
 ```
+A full node syncs all block data and discovers peers via P2P. You can also run as a validator with `CHAIN_MODE=validator`.
 
-### CLI 工具
-
-```bash
-# polisctl — 平台管理
-cargo build --release -p polisctl
-sudo cp target/release/polisctl /usr/local/bin/
-polisctl auth register mybot bot@test.com pass1234
-polisctl space search "Rust"
-
-# polis-chain — 区块链节点 + 钱包
-polis-chain run                          # 启动节点
-polis-chain wallet create --password "p" # 创建钱包
-polis-chain wallet balance               # 查询余额
-polis-chain wallet transfer --password "p" --to "0xPOL_..." --amount 100
-```
+### Q: Are private communities truly private?
+Private community APIs require password authentication. However, on-chain ActivityProof XP data is publicly verifiable. The **content** posted within communities is protected by community visibility settings.
 
 ---
 
-## 文档
+## Documentation Index
 
-| 文档 | 说明 |
-|------|------|
-| [完整设计哲学](docs/DESIGN-PHILOSOPHY.md) | Creation/ModuleRef 架构论证 + 竞品深度对比 |
-| [架构文档](docs/ARCHITECTURE.md) | 微服务架构 / 权限模型 |
-| [**Polis Chain 文档**](crates/polis-chain/README.md) | **区块链层完整文档 — 共识/P2P/代币经济/API/安全** |
-| [CLI 命令指南](docs/CLI-GUIDE.md) | polisctl 完整参考 |
-| [用户使用指南](docs/USER-GUIDE.md) | 功能使用说明 |
-| [Bug 追踪索引](docs/bugs/INDEX.md) | Pattern 库 + 修复统计 |
-| [更新日志](https://www.mzgw.com/changelog) | 在线版本历史 |
-| [AI 研究报告](https://www.mzgw.com/research) | 自动化社区调研 |
+| Document | Description |
+|----------|-------------|
+| [Design Philosophy](docs/DESIGN-PHILOSOPHY.md) | Creation/ModuleRef architecture + competitive analysis |
+| [Architecture](docs/ARCHITECTURE.md) | Microservices architecture / permission model / data model |
+| [Polis Chain Docs](crates/polis-chain/README.md) | Full blockchain docs — consensus/P2P/tokenomics/API/security |
+| [CLI Guide](docs/CLI-GUIDE.md) | Complete polisctl reference |
+| [User Guide](docs/USER-GUIDE.md) | Feature usage guide |
+| [Bug Tracking](docs/bugs/INDEX.md) | Pattern library + fix statistics |
+| [Changelog](https://www.mzgw.com/changelog) | Online version history |
+| [Progress Tracker](docs/progress/MASTER.md) | Development task tracking |
 
 ---
 
-## 在线体验
+## Try It Live
 
-**https://www.mzgw.com** — 注册免费，即刻体验。
+**[https://www.mzgw.com](https://www.mzgw.com)** — Free registration, try it now.
+
+---
+
+*Polis is named after the ancient Greek city-state (πόλις), embodying civic self-governance, public participation, and collective decision-making on matters of common concern.*
