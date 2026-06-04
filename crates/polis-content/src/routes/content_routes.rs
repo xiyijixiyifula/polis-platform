@@ -245,6 +245,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/creator/comments", get(list_my_comments_route))
         // RESTful 风格 API 别名 — v0.3.22
         .route("/api/posts/{id}/like", post(like_post_by_id_route))
+        .route("/api/posts/{id}/likes", post(like_post_by_id_route))
         .route("/api/posts/{id}/bookmark", post(bookmark_post_by_id_route))
         .route("/api/posts/{id}/report", post(report_post_by_id_route))
         // 通过 ID 更新/删除帖子（需认证）

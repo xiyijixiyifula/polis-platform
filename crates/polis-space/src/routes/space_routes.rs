@@ -72,7 +72,9 @@ async fn handle_public_path(
     req: Request,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let path = req.uri().path().to_string();
-    let remaining = path.strip_prefix("/api/spaces/").unwrap_or("");
+    let remaining = path.strip_prefix("/api/spaces/")
+        .or_else(|| path.strip_prefix("/api/space/"))
+        .unwrap_or("");
     if remaining.is_empty() || remaining == "trending" {
         return Err(AppError::NotFound("Invalid path".to_string()));
     }
@@ -173,7 +175,9 @@ async fn handle_auth_path(
     let path = req.uri().path().to_string();
     let method = req.method().clone();
 
-    let remaining = path.strip_prefix("/api/spaces/").unwrap_or("");
+    let remaining = path.strip_prefix("/api/spaces/")
+        .or_else(|| path.strip_prefix("/api/space/"))
+        .unwrap_or("");
     if remaining.is_empty() {
         return Err(AppError::NotFound("Invalid path".to_string()));
     }
