@@ -507,7 +507,7 @@ function NewCreationPageInner() {
               className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shrink-0">
               <Minimize2 className="h-5 w-5" />
             </button>
-            <input type="text" placeholder="输入标题..."
+            <input id="creation-fullscreen-title" name="creation-fullscreen-title" type="text" placeholder="输入标题..."
               className="flex-1 min-w-0 bg-transparent text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
               value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
@@ -695,14 +695,14 @@ function NewCreationPageInner() {
           {/* Visibility + Tags */}
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm text-gray-500 dark:text-gray-400">可见性:</span>
-            <select value={visibility}
+            <select id="creation-visibility" name="creation-visibility" value={visibility}
               onChange={(e) => setVisibility(e.target.value)}
               className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
               {VISIBILITY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label} — {opt.desc}</option>)}
             </select>
             <div className="flex items-center gap-1.5 ml-2">
               <Tag size={13} className="text-gray-400" />
-              <input type="text" value={tags} onChange={(e) => setTags(e.target.value)}
+              <input id="creation-tags" name="creation-tags" type="text" value={tags} onChange={(e) => setTags(e.target.value)}
                 placeholder="标签 (逗号分隔)" className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent w-44" />
             </div>
           </div>
@@ -712,7 +712,7 @@ function NewCreationPageInner() {
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-gray-400" />
               <span className="text-xs text-gray-500 dark:text-gray-400">收录到系列:</span>
-              <select value={selectedSeriesId} onChange={(e) => setSelectedSeriesId(e.target.value)}
+              <select id="creation-series" name="creation-series" value={selectedSeriesId} onChange={(e) => setSelectedSeriesId(e.target.value)}
                 className="text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-1.5 focus:ring-2 focus:ring-primary-500 focus:border-transparent">
                 <option value="">不收录</option>
                 {seriesList.map((s) => <option key={s.id} value={s.id}>{s.title} ({s.post_count || 0}篇)</option>)}
@@ -723,7 +723,7 @@ function NewCreationPageInner() {
 
           {/* ========== 投稿到社区（所有模块共用） ========== */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label htmlFor="creation-space-search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               投稿到社区 <span className="text-xs text-gray-400 font-normal">(可选，可多选)</span>
             </label>
             {submissions.length > 0 && (
@@ -742,7 +742,7 @@ function NewCreationPageInner() {
                 {currentModule.label}
               </div>
               <div className="relative flex-1">
-                <input type="text" value={spaceQuery} onChange={(e) => handleSpaceSearch(e.target.value)}
+                <input id="creation-space-search" name="creation-space-search" type="text" value={spaceQuery} onChange={(e) => handleSpaceSearch(e.target.value)}
                   onFocus={() => { if (spaceResults.length > 0) setShowSpaceDropdown(true); }}
                   onBlur={() => setTimeout(() => setShowSpaceDropdown(false), 200)}
                   placeholder="搜索社区名称..."
@@ -769,7 +769,7 @@ function NewCreationPageInner() {
           <>
             {/* Title */}
             <div>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+              <input id="creation-article-title" name="creation-article-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)}
                 placeholder="给你的作品起个标题..."
                 className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 transition-all" />
             </div>
@@ -783,14 +783,14 @@ function NewCreationPageInner() {
             {/* Toolbar */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <input ref={attachFileInputRef} type="file" className="hidden" onChange={e => {
+                <input id="creation-attachment" name="creation-attachment" ref={attachFileInputRef} type="file" className="hidden" onChange={e => {
                   const f = e.target.files?.[0]; if (f) handleAttachmentUpload(f); e.target.value = '';
                 }} />
                 <button type="button" onClick={() => attachFileInputRef.current?.click()}
                   className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
                   <Paperclip className="h-3.5 w-3.5" />附件
                 </button>
-                <input ref={mdFileInputRef} type="file" accept=".md,.zip" className="hidden" onChange={e => {
+                <input id="creation-md-import" name="creation-md-import" ref={mdFileInputRef} type="file" accept=".md,.zip" className="hidden" onChange={e => {
                   const f = e.target.files?.[0]; if (f) handleImportMd(f); e.target.value = '';
                 }} />
                 <button type="button" onClick={() => mdFileInputRef.current?.click()}
@@ -856,7 +856,7 @@ function NewCreationPageInner() {
                     ? 'border-primary-400 bg-primary-50/50 dark:bg-primary-900/10'
                     : 'border-gray-300 dark:border-gray-600 hover:border-primary-400'
                 }`}>
-                <input ref={videoFileInputRef} type="file" accept="video/*" className="hidden"
+                <input id="creation-video-file" name="creation-video-file" ref={videoFileInputRef} type="file" accept="video/*" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) setVideoFile(f); e.target.value = ''; }} />
                 {videoFile ? (
                   <div>
@@ -877,14 +877,14 @@ function NewCreationPageInner() {
 
               {/* Title */}
               <div>
-                <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+                <input id="creation-video-title" name="creation-video-title" type="text" value={title} onChange={(e) => setTitle(e.target.value)}
                   placeholder="视频标题..."
                   className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-lg font-medium text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 transition-all" />
               </div>
 
               {/* Description */}
               <div>
-                <textarea value={videoDesc} onChange={(e) => setVideoDesc(e.target.value)}
+                <textarea id="creation-video-description" name="creation-video-description" value={videoDesc} onChange={(e) => setVideoDesc(e.target.value)}
                   rows={3} placeholder="视频描述（可选）..."
                   className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900 transition-all resize-none" />
               </div>

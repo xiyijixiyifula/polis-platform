@@ -123,10 +123,12 @@ function NewPollForm() {
       <form onSubmit={handleSubmit} className="card space-y-5 p-6">
         {/* Community selector */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">目标社区</label>
+          <label htmlFor="poll-space" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">目标社区</label>
           <div className="relative">
             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <select
+              id="poll-space"
+              name="poll-space"
               value={selectedSpace}
               onChange={(e) => { setSelectedSpace(e.target.value); setError(''); }}
               className="input-field pl-10 appearance-none cursor-pointer"
@@ -152,12 +154,12 @@ function NewPollForm() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">投票标题</label>
-          <input className="input-field" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="输入投票问题" required />
+          <label htmlFor="poll-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">投票标题</label>
+          <input id="poll-title" name="poll-title" className="input-field" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="输入投票问题" required />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">说明（可选）</label>
-          <textarea className="input-field resize-none" rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="投票补充说明..." />
+          <label htmlFor="poll-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">说明（可选）</label>
+          <textarea id="poll-description" name="poll-description" className="input-field resize-none" rows={2} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="投票补充说明..." />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">投票类型</label>
@@ -181,7 +183,7 @@ function NewPollForm() {
           <div className="space-y-2">
             {options.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input className="input-field flex-1" placeholder={`选项 ${i + 1}`}
+                <input id={`poll-option-${i}`} name={`poll-option-${i}`} className="input-field flex-1" placeholder={`选项 ${i + 1}`}
                   value={opt} onChange={(e) => updateOption(i, e.target.value)} required={i < 2} />
                 {options.length > 2 && (
                   <button type="button" onClick={() => removeOption(i)} className="text-gray-400 hover:text-red-500 p-1">

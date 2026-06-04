@@ -75,6 +75,9 @@
 ### 1. 部署流程（不可更改）
 **本地编译 → GitHub Releases → 服务器下载部署**，严禁在服务器上编译。
 
+**一键部署**: `./deploy.sh` 自动执行完整流程（交叉编译→打包→Release→服务器部署→验证）。
+也支持 `./deploy.sh --backend`、`./deploy.sh --frontend`、`./deploy.sh --check`。
+
 ### 2. 禁止 SCP（不可违反）
 **严禁使用 `scp` 向服务器传输大文件。** 本地在中国、服务器在美国，跨太平洋 SCP 传输大文件会丢包或卡死。
 
@@ -94,10 +97,11 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 - 前端: 只打 `.next/` 和 `public/`，不打 `node_modules`（standalone 自带）
 - 后端: 从 `target/x86_64-unknown-linux-gnu/release/` 取 Linux 二进制
 - 服务器前端部署: 先 `rm -rf /opt/polis-web/.next` 再解压
-- **⚠️ 解压后必须复制 static**: `cp -r /opt/polis-web/.next/static /opt/polis-web/.next/standalone/.next/static`
-  - 原因: Next.js standalone server 从 `.next/standalone/.next/static` 提供静态文件
-  - 不执行此步骤 → `/_next/static/*` 全部 404 → 页面白屏
-  - 然后 `systemctl restart polis-web`
+- **⚠️ 解压后必须复制 static 和 public**:
+  - `cp -r /opt/polis-web/.next/static /opt/polis-web/.next/standalone/.next/static`
+  - `cp -r /opt/polis-web/public /opt/polis-web/.next/standalone/public`
+  - 原因: Next.js standalone server 从 `.next/standalone/.next/static` 提供静态文件，从 `.next/standalone/public` 提供 public 资源
+  - 不执行 → `/_next/static/*` 全部 404 → 页面白屏
 
 ---
 

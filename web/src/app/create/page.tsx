@@ -96,10 +96,12 @@ export default function CreateSpacePage() {
       <div className="card space-y-5">
         {/* 社区名称 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="create-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             社区名称 <span className="text-red-400">*</span>
           </label>
           <input
+            id="create-title"
+            name="create-title"
             type="text"
             className="input-field text-base"
             placeholder="如：编程技术交流 或 my-project"
@@ -125,10 +127,12 @@ export default function CreateSpacePage() {
 
         {/* 简介 */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label htmlFor="create-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             社区简介 <span className="text-gray-400 font-normal">（可选）</span>
           </label>
           <textarea
+            id="create-description"
+            name="create-description"
             className="input-field resize-none"
             rows={3}
             placeholder="简单介绍一下你的社区..."

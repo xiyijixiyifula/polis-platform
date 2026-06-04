@@ -1,0 +1,20 @@
+[Unit]
+Description=Polis Aggregate Service (Content Auto-Featuring & Trending)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/polis/target/release
+ExecStart=/usr/local/bin/polis-aggregate
+Restart=always
+RestartSec=5
+Environment=DATABASE_URL=postgres://polis@localhost/polis
+Environment=NATS_URL=nats://localhost:4222
+Environment=AGGREGATE_PORT=3011
+Environment=RUST_LOG=info
+StandardOutput=append:/root/polis/aggregate.log
+StandardError=append:/root/polis/aggregate.log
+
+[Install]
+WantedBy=multi-user.target

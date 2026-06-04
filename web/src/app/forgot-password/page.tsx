@@ -56,8 +56,8 @@ export default function ForgotPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit} className="card space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">注册邮箱</label>
-              <input type="email" className="input-field" placeholder="your@email.com" required
+              <label htmlFor="forgot-email" className="block text-sm font-medium text-gray-700 mb-1">注册邮箱</label>
+              <input id="forgot-email" name="forgot-email" type="email" className="input-field" placeholder="your@email.com" required
                 value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <button type="submit" className="btn-primary w-full py-2.5" disabled={loading}>

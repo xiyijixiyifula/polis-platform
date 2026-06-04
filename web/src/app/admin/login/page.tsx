@@ -44,18 +44,18 @@ export default function AdminLoginPage() {
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl p-6 space-y-4 shadow-xl">
           {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm p-3 rounded-lg">{error}</div>}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">邮箱</label>
-            <input type="email" className="input-field" placeholder="admin@polis.app" required
+            <label htmlFor="admin-login-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">邮箱</label>
+            <input id="admin-login-email" name="admin-login-email" type="email" className="input-field" placeholder="admin@polis.app" required
               value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">密码</label>
-            <input type="password" className="input-field" placeholder="请输入密码"
+            <label htmlFor="admin-login-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">密码</label>
+            <input id="admin-login-password" name="admin-login-password" type="password" className="input-field" placeholder="请输入密码"
               value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">管理员验证码</label>
-            <input type="text" className="input-field" placeholder="请输入管理员验证码"
+            <label htmlFor="admin-login-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">管理员验证码</label>
+            <input id="admin-login-code" name="admin-login-code" type="text" className="input-field" placeholder="请输入管理员验证码"
               value={form.admin_code} onChange={(e) => setForm({ ...form, admin_code: e.target.value })} required />
           </div>
           <button type="submit" className="btn-primary w-full py-2.5" disabled={loading}>

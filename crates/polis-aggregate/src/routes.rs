@@ -13,9 +13,9 @@ use crate::handler::AggregateHandler;
 
 pub fn aggregate_routes(handler: Arc<AggregateHandler>) -> Router {
     Router::new()
-        .route("/api/root/:slug/featured", get(get_featured))
-        .route("/api/root/:slug/trending", get(get_trending))
-        .route("/api/root/:slug/subspaces", get(get_sub_spaces))
+        .route("/api/aggregate/root/{slug}/featured", get(get_featured))
+        .route("/api/aggregate/root/{slug}/trending", get(get_trending))
+        .route("/api/aggregate/root/{slug}/subspaces", get(get_sub_spaces))
         .with_state(handler)
 }
 

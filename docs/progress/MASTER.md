@@ -1,6 +1,6 @@
 # 当前任务进度
 
-> 最后更新: 2026-06-03
+> 最后更新: 2026-06-04
 
 ## 追踪模式
 
@@ -78,6 +78,21 @@ LOCAL_ONLY
 - [ ] Linux/Windows 预编译二进制 (RocksDB C++ 交叉编译受限，需源码构建)
 
 **Phase 10 完成** — 钱包绑定 + API 签名验证安全加固 (v1.6.0):
+
+### 已完成 (v1.6.2) — polis-aggregate 部署 + 表单可访问性修复 (2026-06-04)
+
+- [x] **polis-aggregate 服务部署** — 内容自动精选/趋势计算/子社区聚合
+  - NATS 订阅 `content.post.created` 事件，质量分公式: likes×2 + comments×3 + log(views+1)×5
+  - 阈值 >= 10.0 自动标记精选，3 个 REST API: featured/trending/subspaces
+  - systemd service + Gateway 代理路由 `/api/aggregate/root/{slug}/*`
+- [x] **表单可访问性 WCAG 修复** — 5 个页面添加 id/name/htmlFor 属性
+  - create/page.tsx, polls/new/page.tsx, creations/new/page.tsx, admin/login/page.tsx, forgot-password/page.tsx
+  - 共 22 个表单控件修复（label+input/textarea/select/file 完整关联）
+- [x] **logrotate 日志轮转** — 每日轮转，7 天保留，50MB 上限，compress + copytruncate
+- [x] **PostgreSQL 定时备份** — cron 每日凌晨 3 点 pg_dump，7 天保留
+- [x] **服务器部署**: v1.6.2 GitHub Release → 8 服务全部 active
+
+### 已完成 (v1.6.1) — 全面修复 (2026-06-03)
 - [x] 钱包绑定: challenge-response 流程 (nonce → Ed25519 签名验证 → users.chain_address)
 - [x] 前端 /wallet/bind 绑定页面 (CLI 签名指导 + 3 步流程)
 - [x] PoolDeposit Ed25519 签名验证 (POLIS_POOL_DEPOSIT:{addr}:{amount})
@@ -376,6 +391,7 @@ LOCAL_ONLY
 
 ### 部署版本
 
+v1.6.2 — polis-aggregate 部署 + Gateway 聚合路由 + 表单可访问性 5 页修复 (2026-06-04)
 v1.0.63 — 关注通知修复 + 通知去重 + 帖子权限提示 + NATS 缺失发现 (2026-06-02)
 v1.0.56 — 空间页视频Tab路由解析修复 (2026-06-01)
 v1.0.55 — ContentCard 模块标签导航修复 (2026-06-01)
@@ -452,9 +468,9 @@ v1.0.24 — 平台设置系统 + 上传大小可配置 + 网站初始化 + 安�
 
 ### 待处理
 
-- [ ] 部署 polis-aggregate (代码已有，未部署)
-- [ ] 配置 logrotate 日志轮转
-- [ ] PostgreSQL 定时备份
+- [x] 部署 polis-aggregate (代码已有，未部署)
+- [x] 配置 logrotate 日志轮转
+- [x] PostgreSQL 定时备份
 - [x] 深入功能测试 (2026-05-27) — 12 个管理页面 + 前端核心功能 + 登录/申诉流程 + API 端点全量验证，无新增 Bug
 - [x] 视频无法播放问题诊断 — 根因: 服务器 HLS 文件全部丢失 (数据持久化问题)，非代码 Bug，与 v1.0.22/23 修复无关
 - [ ] 恢复丢失的视频文件（无备份，无法恢复）

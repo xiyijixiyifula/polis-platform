@@ -10,6 +10,7 @@ pub struct GatewayConfig {
     pub search_service_url: String,
     pub admin_service_url: String,
     pub video_service_url: String,
+    pub aggregate_service_url: String,
     pub rate_limit_per_minute: u32,
     pub max_upload_bytes: usize,
     pub max_video_bytes: usize,
@@ -43,6 +44,8 @@ impl GatewayConfig {
                 .unwrap_or_else(|_| "http://localhost:3050".to_string()),
             video_service_url: env::var("VIDEO_SERVICE_URL")
                 .unwrap_or_else(|_| "http://localhost:3005".to_string()),
+            aggregate_service_url: env::var("AGGREGATE_SERVICE_URL")
+                .unwrap_or_else(|_| "http://localhost:3011".to_string()),
             rate_limit_per_minute: env::var("RATE_LIMIT_PER_MINUTE")
                 .unwrap_or_else(|_| "60".to_string())
                 .parse()

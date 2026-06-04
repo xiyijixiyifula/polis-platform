@@ -79,6 +79,10 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/search", any(proxy_to_space))
         .route("/api/spaces", any(proxy_space_router))
         .route("/api/spaces/{*path}", any(proxy_space_router))
+        // 代理路由 - 聚合服务 (精选/趋势/子社区)
+        .route("/api/aggregate/root/{slug}/featured", any(proxy_to_aggregate))
+        .route("/api/aggregate/root/{slug}/trending", any(proxy_to_aggregate))
+        .route("/api/aggregate/root/{slug}/subspaces", any(proxy_to_aggregate))
         // 代理路由 - 根社区
         .route("/api/root/{*path}", any(proxy_to_space))
         // 代理路由 - 内容服务 (帖子, 投票, 投票/问卷, 草稿, 通知, 书签列表, 公告)
@@ -400,6 +404,16 @@ async fn proxy_to_admin(
 ) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
     let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
     let target_url = format!("{}{}", state.config.admin_service_url, path_and_query);
+    proxy_request(&state.client, &target_url, req, state.config.max_upload_bytes).await
+}
+
+/// 代理请求到聚合服务
+async fn proxy_to_aggregate(
+    State(state): State<Arc<GatewayState>>,
+    req: Request,
+) -> Result<Response, (StatusCode, Json<ApiResponse<()>>)> {
+    let path_and_query = req.uri().path_and_query().map(|pq| pq.as_str()).unwrap_or_else(|| req.uri().path());
+    let target_url = format!("{}{}", state.config.aggregate_service_url, path_and_query);
     proxy_request(&state.client, &target_url, req, state.config.max_upload_bytes).await
 }
 

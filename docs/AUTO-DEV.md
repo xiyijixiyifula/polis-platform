@@ -8,6 +8,32 @@
 - 版本号递增、更新日志同步、测试通过才部署
 - 每次完成后更新本文档的版本号和进度
 
+## 一键部署 (推荐)
+
+```bash
+# 全量部署 (Rust 交叉编译 + 前端构建 + Release + 服务器部署 + 验证)
+./deploy.sh
+
+# 仅部署后端
+./deploy.sh --backend
+
+# 仅部署前端
+./deploy.sh --frontend
+
+# 仅检查服务器状态
+./deploy.sh --check
+
+# 指定版本号
+./deploy.sh --version v1.0.0
+
+# 仅本地构建+打包 (不上传、不部署)
+./deploy.sh --dry-run
+```
+
+脚本自动执行: git push → 交叉编译 → 构建前端 → 打包 → GitHub Release → 服务器部署 → 重启服务 → 验证。
+
+---
+
 ## 工作循环
 
 ### 阶段 1: 读取当前状态
@@ -31,6 +57,11 @@
 | 4 | 完整流程 | 注册→登录→发布→互动 |
 
 ### 阶段 4: 部署
+
+**推荐: 使用 `./deploy.sh` 一键部署**，它自动执行以下所有步骤。
+
+<details>
+<summary>手动部署步骤 (仅供参考)</summary>
 
 ```bash
 # === 1. 推送代码 ===
@@ -85,10 +116,18 @@ cp /tmp/polis-deploy/rust/* /root/polis/target/release/
 chmod +x /root/polis/target/release/polis-*
 
 # 部署前端 (必须先清空避免残留)
-rm -rf /opt/polis-web/.next
+rm -rf /opt/polis-web/.next /opt/polis-web/public
 cp -r /tmp/polis-deploy/frontend/.next /opt/polis-web/.next
+cp -r /tmp/polis-deploy/frontend/public /opt/polis-web/public
 find /opt/polis-web/.next -name '._*' -delete
 rm -rf /opt/polis-web/.next/cache
+
+# ⚠️ 关键: 复制 static 和 public 到 standalone 目录
+# Next.js standalone server 从 .next/standalone/.next/static 提供 JS/CSS
+# 不执行 → /_next/static/* 全部 404 → 页面白屏
+rm -rf /opt/polis-web/.next/standalone/.next/static
+cp -r /opt/polis-web/.next/static /opt/polis-web/.next/standalone/.next/static
+cp -r /opt/polis-web/public /opt/polis-web/.next/standalone/public
 
 rm -rf /tmp/polis-release.tar.gz /tmp/polis-deploy
 
@@ -104,15 +143,17 @@ curl -sk -o /dev/null -w "HTTP %{http_code}\n" https://www.mzgw.com/
 rm -rf "$RELEASE_DIR" "polis-release-${VERSION}.tar.gz"
 ```
 
+</details>
+
 ## 部署铁律
 
 1. **绝不**在服务器上执行 `cargo build` / `npm run build` / `npm install`
 2. 本地打包必须 `COPYFILE_DISABLE=1` 避免 macOS xattr 污染
-3. 服务器部署前端必须 `rm -rf /opt/polis-web/.next` 再复制
-4. 部署后运行 `systemctl is-active` 确认所有服务正常
+3. 服务器部署前端必须 `rm -rf /opt/polis-web/.next` 再复制，**随后必须复制 static 和 public 到 standalone**
+4. **⚠️ 必须执行**: `cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public`，否则 JS/CSS 全部 404，页面白屏
+5. 部署后运行 `systemctl is-active` 确认所有服务正常
 
 ## 已知限制
 
 - 无蓝绿/滚动部署（重启时有 ~3 秒中断）
-- 日志无自动轮转（待配置 logrotate）
-- GitHub Actions CI/CD 尚未配置（纯手动触发）
+- GitHub Actions CI/CD 尚未配置（可手动触发 `./deploy.sh`）
