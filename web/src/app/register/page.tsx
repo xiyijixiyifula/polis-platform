@@ -54,8 +54,10 @@ export default function RegisterPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">用户名</label>
+            <label htmlFor="reg-username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">用户名</label>
             <input
+              id="reg-username"
+              name="username"
               type="text"
               className="input-field mt-1"
               placeholder="支持中英文、数字、特殊符号"
@@ -69,8 +71,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">邮箱</label>
+            <label htmlFor="reg-email" className="block text-sm font-medium text-gray-700">邮箱</label>
             <input
+              id="reg-email"
+              name="email"
               type="email"
               className="input-field mt-1"
               placeholder="your@email.com"
@@ -81,8 +85,10 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">密码</label>
+            <label htmlFor="reg-password" className="block text-sm font-medium text-gray-700">密码</label>
             <input
+              id="reg-password"
+              name="password"
               type="password"
               className="input-field mt-1"
               placeholder="至少 8 位"

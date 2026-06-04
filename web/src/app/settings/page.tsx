@@ -153,13 +153,13 @@ export default function SettingsPage() {
       {tab === 'profile' && (
         <div className="card space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">显示名称</label>
-            <input className="input-field" value={profile.display_name}
+            <label htmlFor="settings-display-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">显示名称</label>
+            <input id="settings-display-name" name="display_name" className="input-field" value={profile.display_name}
               onChange={(e) => setProfile({ ...profile, display_name: e.target.value })} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">个人简介</label>
-            <textarea className="input-field resize-none" rows={3} value={profile.bio}
+            <label htmlFor="settings-bio" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">个人简介</label>
+            <textarea id="settings-bio" name="bio" className="input-field resize-none" rows={3} value={profile.bio}
               onChange={(e) => setProfile({ ...profile, bio: e.target.value })} />
           </div>
           <button onClick={updateProfile} className="btn-primary">保存</button>
@@ -169,18 +169,18 @@ export default function SettingsPage() {
       {tab === 'password' && (
         <div className="card space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">当前密码</label>
-            <input type="password" className="input-field" value={password.old}
+            <label htmlFor="settings-old-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">当前密码</label>
+            <input id="settings-old-password" name="old_password" type="password" className="input-field" value={password.old}
               onChange={(e) => setPassword({ ...password, old: e.target.value })} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">新密码</label>
-            <input type="password" className="input-field" value={password.new}
+            <label htmlFor="settings-new-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">新密码</label>
+            <input id="settings-new-password" name="new_password" type="password" className="input-field" value={password.new}
               onChange={(e) => setPassword({ ...password, new: e.target.value })} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">确认新密码</label>
-            <input type="password" className="input-field" value={password.confirm}
+            <label htmlFor="settings-confirm-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">确认新密码</label>
+            <input id="settings-confirm-password" name="confirm_password" type="password" className="input-field" value={password.confirm}
               onChange={(e) => setPassword({ ...password, confirm: e.target.value })} />
           </div>
           <button onClick={changePassword} className="btn-primary">修改密码</button>
@@ -197,9 +197,11 @@ export default function SettingsPage() {
             { key: 'invited' as const, label: '社区邀请通知' },
             { key: 'system' as const, label: '系统公告' },
           ].map(({ key, label }) => (
-            <label key={key} className="flex items-center justify-between py-2 cursor-pointer">
+            <label key={key} htmlFor={`notif-${key}`} className="flex items-center justify-between py-2 cursor-pointer">
               <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
               <input
+                id={`notif-${key}`}
+                name={`notif_${key}`}
                 type="checkbox"
                 checked={notifPrefs[key] ?? true}
                 onChange={() => toggleNotif(key)}

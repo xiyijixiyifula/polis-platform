@@ -139,7 +139,8 @@ export default function PoolPage() {
 					{!address ? (
 						<div className="text-center py-6">
 							<Wallet className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-							<p className="text-sm text-gray-500 mb-3">请先连接钱包</p>
+							<p className="text-sm text-gray-500 mb-1">请先连接钱包</p>
+							<p className="text-xs text-gray-400 mb-3">存入 $POL 参与奖池累积，满 10 万自动炼金铸造稀有币</p>
 							<Link href="/wallet/create" className="btn-primary text-sm">
 								创建钱包
 							</Link>

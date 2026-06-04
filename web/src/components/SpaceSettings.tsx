@@ -30,7 +30,7 @@ export default function SpaceModulesManager({ namespace, onClose }: Props) {
     try {
       const res = await spaces.listModules(namespace);
       if (res.code === 0 && res.data) setModules(res.data);
-    } catch (_) {}
+    } catch (e) { console.error('Failed to fetch modules:', e); }
     setLoading(false);
   };
 
@@ -52,7 +52,7 @@ export default function SpaceModulesManager({ namespace, onClose }: Props) {
         setNewMode('free');
         setNewTypes(['article']);
       }
-    } catch (_) {}
+    } catch (e) { console.error('Failed to create module:', e); }
     setSaving(false);
   };
 
@@ -69,7 +69,7 @@ export default function SpaceModulesManager({ namespace, onClose }: Props) {
         setModules(prev => prev.map(m => m.module_key === moduleKey ? res.data! : m));
         setEditingKey(null);
       }
-    } catch (_) {}
+    } catch (e) { console.error('Failed to update module:', e); }
     setSaving(false);
   };
 
@@ -81,7 +81,7 @@ export default function SpaceModulesManager({ namespace, onClose }: Props) {
       if (res.code === 0 && res.data?.deleted) {
         setModules(prev => prev.filter(m => m.module_key !== moduleKey));
       }
-    } catch (_) {}
+    } catch (e) { console.error('Failed to delete module:', e); }
     setSaving(false);
   };
 

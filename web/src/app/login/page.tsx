@@ -65,8 +65,10 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">邮箱</label>
+            <label htmlFor="login-email" className="block text-sm font-medium text-gray-700">邮箱</label>
             <input
+              id="login-email"
+              name="email"
               type="email"
               className="input-field mt-1"
               placeholder="your@email.com"
@@ -77,8 +79,10 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">密码</label>
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700">密码</label>
             <input
+              id="login-password"
+              name="password"
               type="password"
               className="input-field mt-1"
               placeholder="输入密码"
@@ -88,8 +92,10 @@ export default function LoginPage() {
             />
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer select-none">
+          <label htmlFor="login-remember" className="flex items-center gap-2 cursor-pointer select-none">
             <input
+              id="login-remember"
+              name="remember"
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}

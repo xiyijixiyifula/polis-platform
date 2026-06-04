@@ -7,11 +7,9 @@ pub struct GatewayConfig {
     pub user_service_url: String,
     pub space_service_url: String,
     pub content_service_url: String,
-    #[allow(dead_code)]
     pub search_service_url: String,
     pub admin_service_url: String,
     pub video_service_url: String,
-    #[allow(dead_code)]
     pub rate_limit_per_minute: u32,
     pub max_upload_bytes: usize,
     pub max_video_bytes: usize,

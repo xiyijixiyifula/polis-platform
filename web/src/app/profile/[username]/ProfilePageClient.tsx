@@ -171,7 +171,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         if (spData.code === 0 && spData.data) {
           setUserSpaces(spData.data);
         }
-      } catch {}
+      } catch (e) { console.error('Failed to load user spaces:', e); }
 
       await loadFollowCounts();
       setLoading(false);
@@ -187,7 +187,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         const res = await fetch('/api/bookmarks', { headers: getAuthHeaders() });
         const data = await res.json();
         if (data.code === 0 && data.data) setBookmarks(data.data);
-      } catch {}
+      } catch (e) { console.error('Failed to load bookmarks:', e); }
       setBookmarksLoading(false);
     })();
   }, [isSelf, username]);
@@ -201,7 +201,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         const res = await fetch('/api/liked-posts', { headers: getAuthHeaders() });
         const data = await res.json();
         if (data.code === 0 && data.data) setLikedPosts(data.data);
-      } catch {}
+      } catch (e) { console.error('Failed to load liked posts:', e); }
       setLikedLoading(false);
     })();
   }, [isSelf, username]);
@@ -214,7 +214,7 @@ export default function UserProfilePage({ username }: { username: string }) {
       try {
         const res = await videos.myVideos(1, 50);
         if (res.code === 0 && res.data) setMyVideos(Array.isArray(res.data) ? res.data : []);
-      } catch {}
+      } catch (e) { console.error('Failed to load videos:', e); }
       setVideosLoading(false);
     })();
   }, [isSelf, username]);
@@ -228,7 +228,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         const res = await fetch('/api/my/contents?page=1&page_size=50', { headers: getAuthHeaders() });
         const data = await res.json();
         if (data.code === 0 && data.data?.items) setMyContents(data.data.items);
-      } catch {}
+      } catch (e) { console.error('Failed to load my contents:', e); }
       setContentsLoading(false);
     })();
   }, [isSelf, username]);
@@ -245,7 +245,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         });
         const data = await res.json();
         if (data.data) setMyCreations(Array.isArray(data.data) ? data.data : []);
-      } catch {}
+      } catch (e) { console.error('Failed to load creations:', e); }
       setCreationsLoading(false);
     })();
   }, [isSelf, username]);
@@ -262,7 +262,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         if (data.code === 0 && data.data) {
           setMyCreations(Array.isArray(data.data) ? data.data : []);
         }
-      } catch {}
+      } catch (e) { console.error('Failed to load public creations:', e); }
       setCreationsLoading(false);
     })();
   }, [isSelf, username]);
@@ -303,7 +303,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         setRefUserResults(data.data);
         setRefShowUserDropdown(true);
       }
-    } catch {}
+    } catch (e) { console.error('Failed to search users:', e); }
     setRefUserLoading(false);
   };
 
@@ -323,7 +323,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         const filtered = data.data;
         setRefUserSpaces(filtered);
       }
-    } catch {}
+    } catch (e) { console.error('Failed to load user spaces for ref:', e); }
     setRefSpacesLoading(false);
   };
 
@@ -365,11 +365,11 @@ export default function UserProfilePage({ username }: { username: string }) {
     try {
       const fRes = await follow.followers(username);
       if (fRes.code === 0 && fRes.data) setFollowerCount(fRes.data.length);
-    } catch {}
+    } catch (e) { console.error('Failed to load followers count:', e); }
     try {
       const fgRes = await follow.following(username);
       if (fgRes.code === 0 && fgRes.data) setFollowingCount(fgRes.data.length);
-    } catch {}
+    } catch (e) { console.error('Failed to load following count:', e); }
   };
 
   const loadFollowers = async () => {
@@ -379,7 +379,7 @@ export default function UserProfilePage({ username }: { username: string }) {
     try {
       const res = await follow.followers(username);
       if (res.code === 0 && res.data) setFollowers(res.data);
-    } catch {}
+    } catch (e) { console.error('Failed to load followers:', e); }
     setListLoading(false);
     setShowFollowers(true);
   };
@@ -391,7 +391,7 @@ export default function UserProfilePage({ username }: { username: string }) {
     try {
       const res = await follow.following(username);
       if (res.code === 0 && res.data) setFollowingList(res.data);
-    } catch {}
+    } catch (e) { console.error('Failed to load following:', e); }
     setListLoading(false);
     setShowFollowing(true);
   };

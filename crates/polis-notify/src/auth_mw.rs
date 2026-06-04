@@ -4,13 +4,12 @@ use jsonwebtoken::{decode, DecodingKey};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use polis_core::error::AppError;
-use crate::handler::NotifyHandler;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims { sub: String, token_type: String, exp: usize }
 
 pub async fn auth_middleware(
-    State(_handler): State<Arc<NotifyHandler>>,
+    _: State<Arc<crate::handler::NotifyHandler>>,
     mut req: Request, next: Next,
 ) -> Result<Response, AppError> {
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");

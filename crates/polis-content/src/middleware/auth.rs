@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use polis_core::error::AppError;
-use crate::handlers::content_handler::ContentHandler;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -21,7 +20,7 @@ struct Claims {
 
 /// JWT 认证中间件
 pub async fn auth_middleware(
-    State(_handler): State<Arc<ContentHandler>>,
+    _: State<Arc<crate::handlers::content_handler::ContentHandler>>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {

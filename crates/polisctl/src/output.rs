@@ -138,13 +138,6 @@ fn value_display_len(v: &Value) -> usize {
 pub fn print_success(msg: &str) {
     eprintln!("\x1b[32m✓ {}\x1b[0m", msg);
 }
-
-/// Print an info message
-#[allow(dead_code)]
-pub fn print_info(msg: &str) {
-    eprintln!("\x1b[34mℹ {}\x1b[0m", msg);
-}
-
 /// Extract data field from API response
 pub fn extract_data(value: &Value) -> &Value {
     value.get("data").unwrap_or(value)

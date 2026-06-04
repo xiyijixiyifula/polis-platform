@@ -11,8 +11,6 @@ use uuid::Uuid;
 
 use polis_core::error::AppError;
 
-use crate::handlers::space_handler::SpaceHandler;
-
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     pub sub: String,
@@ -23,7 +21,7 @@ struct Claims {
 
 /// JWT 认证中间件
 pub async fn auth_middleware(
-    State(_handler): State<Arc<SpaceHandler>>,
+    _: State<Arc<crate::handlers::space_handler::SpaceHandler>>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {

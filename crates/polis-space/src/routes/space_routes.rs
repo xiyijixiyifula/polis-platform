@@ -27,27 +27,6 @@ use polis_core::models::{
 use crate::handlers::space_handler::SpaceHandler;
 use crate::middleware::auth::auth_middleware;
 
-/// 从路径中提取 namespace（支持多段，如 zhangsan/rust-lab）
-#[allow(dead_code)]
-fn extract_namespace(path: &str, prefix: &str) -> Option<String> {
-    let remaining = path.strip_prefix(prefix)?;
-    let actions = ["/posts", "/members", "/join", "/leave", "/featured", "/bookmarks"];
-    for action in &actions {
-        if let Some(idx) = remaining.find(action) {
-            let ns = &remaining[..idx];
-            if !ns.is_empty() {
-                return Some(ns.to_string());
-            }
-            return None;
-        }
-    }
-    if !remaining.is_empty() {
-        Some(remaining.to_string())
-    } else {
-        None
-    }
-}
-
 pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
     let public = Router::new()
         .route("/health", get(health_check))

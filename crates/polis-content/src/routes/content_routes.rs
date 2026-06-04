@@ -956,10 +956,6 @@ async fn create_comment_by_post_id(
 #[derive(Debug, SerdeDeserialize)]
 struct Claims {
     pub sub: String,
-    #[allow(dead_code)]
-    pub token_type: String,
-    #[allow(dead_code)]
-    pub exp: usize,
 }
 
 /// 通过帖子 ID 获取评论列表（公开接口）
@@ -1225,14 +1221,6 @@ async fn get_file_route(
 
 #[derive(serde::Deserialize)]
 struct TierNsPath { ns: String }
-
-#[derive(serde::Deserialize)]
-#[allow(dead_code)]
-struct UpdateTierBody { space_ns: Option<String>, name: Option<String>, price_cents: Option<i64>, description: Option<String>, benefits: Option<Vec<String>>, sort_order: Option<i32>, is_active: Option<bool> }
-
-#[derive(serde::Deserialize)]
-#[allow(dead_code)]
-struct DeleteTierBody { space_ns: Option<String> }
 
 #[derive(serde::Deserialize)]
 struct SubscribeBody { tier_id: Uuid }

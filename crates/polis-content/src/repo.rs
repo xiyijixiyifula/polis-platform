@@ -514,46 +514,6 @@ impl ContentRepo {
         Ok(result)
     }
 
-    #[allow(dead_code)]
-    async fn increment_like_count(&self, target_type: &str, target_id: Uuid) -> Result<(), AppError> {
-        match target_type {
-            "post" => {
-                sqlx::query("UPDATE posts SET like_count = like_count + 1 WHERE id = $1")
-                    .bind(target_id)
-                    .execute(&self.pool)
-                    .await?;
-            }
-            "comment" => {
-                sqlx::query("UPDATE comments SET like_count = like_count + 1 WHERE id = $1")
-                    .bind(target_id)
-                    .execute(&self.pool)
-                    .await?;
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
-    #[allow(dead_code)]
-    async fn decrement_like_count(&self, target_type: &str, target_id: Uuid) -> Result<(), AppError> {
-        match target_type {
-            "post" => {
-                sqlx::query("UPDATE posts SET like_count = GREATEST(like_count - 1, 0) WHERE id = $1")
-                    .bind(target_id)
-                    .execute(&self.pool)
-                    .await?;
-            }
-            "comment" => {
-                sqlx::query("UPDATE comments SET like_count = GREATEST(like_count - 1, 0) WHERE id = $1")
-                    .bind(target_id)
-                    .execute(&self.pool)
-                    .await?;
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
     pub async fn has_liked(
         &self,
         target_type: &str,

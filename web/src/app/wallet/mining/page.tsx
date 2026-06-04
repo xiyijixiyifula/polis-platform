@@ -92,12 +92,37 @@ export default function MiningPage() {
 
 	if (!address) {
 		return (
-			<div className="flex flex-col items-center justify-center py-16 text-center">
+			<div className="flex flex-col items-center justify-center py-16 text-center max-w-lg mx-auto">
 				<div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
 					<Wallet className="w-8 h-8 text-gray-400" />
 				</div>
 				<h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">请先连接钱包</h2>
-				<p className="text-gray-500 dark:text-gray-400 mb-6">需要钱包才能查看挖矿信息</p>
+				<p className="text-gray-500 dark:text-gray-400 mb-4">需要钱包才能查看挖矿信息</p>
+
+				<div className="grid gap-3 text-left mb-6 w-full">
+					<div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+						<Zap className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+						<div>
+							<p className="text-sm font-medium text-gray-800 dark:text-gray-200">什么是挖矿？</p>
+							<p className="text-xs text-gray-500 dark:text-gray-400">基于 XP 权重的抽奖竞赛，拥有 XP 即自动参与当前轮次</p>
+						</div>
+					</div>
+					<div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+						<Users className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+						<div>
+							<p className="text-sm font-medium text-gray-800 dark:text-gray-200">如何获取 XP？</p>
+							<p className="text-xs text-gray-500 dark:text-gray-400">参与社区活动：发帖、评论、投票、每日登录等均可获得 XP</p>
+						</div>
+					</div>
+					<div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+						<Coins className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+						<div>
+							<p className="text-sm font-medium text-gray-800 dark:text-gray-200">中奖机制</p>
+							<p className="text-xs text-gray-500 dark:text-gray-400">你的 XP / 总 XP 池 = 中奖权重，每轮前 3 名获得 $POL 奖励</p>
+						</div>
+					</div>
+				</div>
+
 				<Link href="/wallet/create" className="btn-primary">创建钱包</Link>
 			</div>
 		);

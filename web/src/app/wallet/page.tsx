@@ -78,15 +78,43 @@ export default function WalletPage() {
 				<h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
 					未连接钱包
 				</h2>
-				<p className="text-gray-500 dark:text-gray-400 mb-6">
-					创建或导入钱包以查看余额和 XP
+				<p className="text-gray-500 dark:text-gray-400 mb-4">
+					钱包是你在 Polis Chain 上的数字身份，用于管理资产、参与挖矿和奖池炼金
 				</p>
+
+				<div className="grid gap-3 text-left mb-6 w-full max-w-md">
+					<div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+						<Coins className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+						<div>
+							<p className="text-sm font-medium text-gray-800 dark:text-gray-200">管理 $POL 资产</p>
+							<p className="text-xs text-gray-500 dark:text-gray-400">查看余额、转账和管理你的链上代币</p>
+						</div>
+					</div>
+					<div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+						<Zap className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+						<div>
+							<p className="text-sm font-medium text-gray-800 dark:text-gray-200">参与挖矿抽奖</p>
+							<p className="text-xs text-gray-500 dark:text-gray-400">社区活跃获取 XP，XP 权重越高中奖概率越大</p>
+						</div>
+					</div>
+					<div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+						<Coins className="w-5 h-5 text-purple-500 shrink-0 mt-0.5" />
+						<div>
+							<p className="text-sm font-medium text-gray-800 dark:text-gray-200">投入奖池炼金</p>
+							<p className="text-xs text-gray-500 dark:text-gray-400">存入 $POL 累积奖池，满 10 万自动炼金铸造稀有币</p>
+						</div>
+					</div>
+				</div>
+
 				<Link
 					href="/wallet/create"
 					className="btn-primary inline-flex items-center gap-2"
 				>
 					创建钱包 <ArrowRight className="w-4 h-4" />
 				</Link>
+				<p className="mt-3 text-xs text-gray-400">
+					钱包保存在本地浏览器中，每个钱包对应唯一的区块链地址
+				</p>
 			</div>
 		);
 	}

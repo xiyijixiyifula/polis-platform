@@ -204,7 +204,7 @@ setIsStarred(data.data.is_starred ?? false);
  .catch(() => {});
  }
  }
- } catch (_) {}
+ } catch (e) { console.error('Failed to load space meta:', e); }
  }, [space?.owner_id, space?.id, cleanNamespace]);
 
  const togglePin = useCallback(async (postId: string, isPinned: boolean) => {

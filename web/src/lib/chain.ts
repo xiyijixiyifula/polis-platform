@@ -92,9 +92,15 @@ export interface DepositResult {
 
 async function chainGet<T>(path: string): Promise<ApiResponse<T>> {
 	const res = await fetch(`${CHAIN_API}${path}`);
-	const data = await res.json();
+	const text = await res.text();
+	let data: ApiResponse<T>;
+	try {
+		data = JSON.parse(text);
+	} catch {
+		throw new Error(`链节点未响应 (${res.status}): 区块链节点可能未部署或未启动`);
+	}
 	if (!res.ok) {
-		const err: any = new Error(data.message || `API error (${res.status})`);
+		const err: any = new Error(data.message || `链 API 错误 (${res.status})`);
 		err.status = res.status;
 		throw err;
 	}
@@ -107,9 +113,15 @@ async function chainPost<T>(path: string, body?: unknown): Promise<ApiResponse<T
 		headers: { 'Content-Type': 'application/json' },
 		body: body ? JSON.stringify(body) : undefined,
 	});
-	const data = await res.json();
+	const text = await res.text();
+	let data: ApiResponse<T>;
+	try {
+		data = JSON.parse(text);
+	} catch {
+		throw new Error(`链节点未响应 (${res.status}): 区块链节点可能未部署或未启动`);
+	}
 	if (!res.ok) {
-		const err: any = new Error(data.message || `API error (${res.status})`);
+		const err: any = new Error(data.message || `链 API 错误 (${res.status})`);
 		err.status = res.status;
 		throw err;
 	}

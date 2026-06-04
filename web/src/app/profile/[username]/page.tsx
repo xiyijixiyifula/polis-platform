@@ -33,7 +33,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         twitter: { card: 'summary', title, description: desc },
       };
     }
-  } catch {}
+  } catch (e) {
+    console.error('Failed to generate profile metadata:', e);
+  }
 
   return { title: '用户主页' };
 }

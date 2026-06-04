@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { wallet as chainWallet } from '@/lib/chain';
 import { saveWalletAddress, truncateAddress } from '@/lib/wallet-crypto';
 import type { CreateWalletResponse } from '@/lib/chain';
@@ -89,6 +90,19 @@ export default function CreateWalletPage() {
 					>
 						前往钱包总览 <ArrowRight className="w-4 h-4" />
 					</button>
+
+					<div className="mt-6 grid gap-2 text-left">
+						<p className="text-xs font-medium text-gray-700 dark:text-gray-300">下一步做什么：</p>
+						<Link href="/wallet/mining" className="text-xs text-primary-600 hover:underline flex items-center gap-1">
+							→ 前往挖矿中心，通过 XP 竞争 $POL 奖励
+						</Link>
+						<Link href="/wallet/pool" className="text-xs text-primary-600 hover:underline flex items-center gap-1">
+							→ 前往大奖池，存入 $POL 参与炼金
+						</Link>
+						<Link href="/wallet/bind" className="text-xs text-primary-600 hover:underline flex items-center gap-1">
+							→ 绑定钱包到平台账号，统一管理身份
+						</Link>
+					</div>
 				</div>
 			</div>
 		);
@@ -138,6 +152,15 @@ export default function CreateWalletPage() {
 				<p className="mt-4 text-xs text-gray-400 text-center">
 					创建钱包后将自动保存在本地浏览器中
 				</p>
+			</div>
+
+			<div className="mt-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+				<h3 className="text-sm font-medium text-amber-800 dark:text-amber-400 mb-2">安全提示</h3>
+				<ul className="text-xs text-amber-700 dark:text-amber-500 space-y-1 list-disc list-inside">
+					<li>钱包仅保存在本地浏览器中，清除缓存或更换设备后将无法恢复</li>
+					<li>当前版本不支持助记词恢复，请勿在创建后清除浏览器数据</li>
+					<li>密钥由链节点生成，私钥不会通过网络传输</li>
+				</ul>
 			</div>
 		</div>
 	);
