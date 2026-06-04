@@ -345,7 +345,7 @@ async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, heade
             }
 
             let hash_str = row.1.as_deref().unwrap_or("");
-            if let Ok(parsed) = PasswordHash::new(hash_str) {
+            if let Ok(_parsed) = PasswordHash::new(hash_str) {
                 let pwd2 = pwd.to_string();
                 let hash2 = hash_str.to_string();
                 let verified = tokio::task::spawn_blocking(move || {

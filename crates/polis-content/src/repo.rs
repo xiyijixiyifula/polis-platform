@@ -243,7 +243,7 @@ impl ContentRepo {
 
         if let Some(ref p) = post {
             if let Some(ref hash) = p.password_hash {
-                let parsed = PasswordHash::new(hash)
+                let _parsed = PasswordHash::new(hash)
                     .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
                 let pwd3 = password.to_string();
                 let hash3 = hash.to_string();
@@ -514,6 +514,7 @@ impl ContentRepo {
         Ok(result)
     }
 
+    #[allow(dead_code)]
     async fn increment_like_count(&self, target_type: &str, target_id: Uuid) -> Result<(), AppError> {
         match target_type {
             "post" => {
@@ -533,6 +534,7 @@ impl ContentRepo {
         Ok(())
     }
 
+    #[allow(dead_code)]
     async fn decrement_like_count(&self, target_type: &str, target_id: Uuid) -> Result<(), AppError> {
         match target_type {
             "post" => {

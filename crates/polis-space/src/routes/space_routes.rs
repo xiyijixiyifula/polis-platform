@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{
     extract::{Path, Query, Request, State},
     middleware,
-    routing::{delete, get, post},
+    routing::{get, post},
     Json, Router,
 };
 use jsonwebtoken::{decode, DecodingKey};

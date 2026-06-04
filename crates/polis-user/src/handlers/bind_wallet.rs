@@ -14,7 +14,7 @@ use crate::repo::UserRepo;
 #[derive(Clone)]
 pub struct BindWalletHandler {
     pub repo: UserRepo,
-    pub challenges: Arc<Mutex<HashMap<String, ChallengeEntry>>>,
+    pub(crate) challenges: Arc<Mutex<HashMap<String, ChallengeEntry>>>,
 }
 
 #[derive(Clone)]

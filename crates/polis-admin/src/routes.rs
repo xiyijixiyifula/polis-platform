@@ -14,7 +14,7 @@ use polis_core::error::AppError;
 use polis_core::models::{
     ApiResponse, Pagination, PaginationParams,
     ReviewQueueQuery, BatchReviewRequest, AgentAdminLoginRequest,
-    CreateReviewRuleRequest, AuditLogQuery, AgentReviewDecision, AgentReviewRequest,
+    CreateReviewRuleRequest, AuditLogQuery, AgentReviewRequest,
 };
 
 use crate::admin_handler::AdminHandler;
