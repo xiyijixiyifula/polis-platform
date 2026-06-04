@@ -33,8 +33,11 @@ pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
         .route("/api/search", get(search_spaces))
         .route("/api/spaces/trending", get(get_trending_spaces))
         .route("/api/spaces/most-starred", get(get_most_starred))
+        .route("/api/explore", get(get_trending_spaces))
+        .route("/api/hot", get(get_most_starred))
         .route("/api/spaces", get(list_spaces))
         .route("/api/spaces/{*path}", get(handle_public_path))
+        .route("/api/space/{*path}", get(handle_public_path))
         .route("/api/root/{slug}", get(get_root_space))
         .route("/api/root/{slug}/subspaces", get(get_sub_spaces));
 
@@ -42,6 +45,9 @@ pub fn space_routes(handler: Arc<SpaceHandler>) -> Router {
         .route("/api/spaces", post(create_space))
         .route("/api/spaces/starred", get(handle_starred_spaces))
         .route("/api/spaces/{*path}", post(handle_auth_path)
+            .put(handle_auth_path)
+            .delete(handle_auth_path))
+        .route("/api/space/{*path}", post(handle_auth_path)
             .put(handle_auth_path)
             .delete(handle_auth_path))
         .route_layer(middleware::from_fn_with_state(

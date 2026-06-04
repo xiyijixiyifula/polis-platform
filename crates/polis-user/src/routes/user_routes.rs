@@ -29,6 +29,7 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/auth/reset-password", post(reset_password))
         .route("/api/users/search", get(search_users))
         .route("/api/users/{username}", get(get_user_profile))
+        .route("/api/profile/{username}", get(get_user_profile))
         .route("/api/users/{username}/spaces", get(get_user_spaces))
         .route("/api/users/{username}/followers", get(get_followers))
         .route("/api/users/{username}/following", get(get_following))

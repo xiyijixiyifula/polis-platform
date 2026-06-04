@@ -209,6 +209,7 @@ pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
         .route("/api/chat/spaces/{*ns}", post(post_chat_message))
         .route("/api/spaces/{*path}", post(handle_auth_content).put(handle_auth_content).delete(handle_auth_content))
         .route("/api/bookmarks", get(list_bookmarks))
+        .route("/api/saved", get(list_bookmarks))
         .route("/api/liked-posts", get(list_liked_posts_route))
         // 投票（赞同/反对）
         .route("/api/vote", post(handle_vote))
