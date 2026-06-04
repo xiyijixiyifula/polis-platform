@@ -1,108 +1,331 @@
-# 🚀 Polis 部署方案
+# Polis 部署指南
+
+> 本文档面向任何从 GitHub 克隆代码并部署到自己服务器的人。
+> 当前生产环境 (www.mzgw.com) 的配置可作为参考。
+
+---
+
+## 前置条件
+
+### 本地开发机
+
+| 工具 | 用途 | 安装 |
+|------|------|------|
+| Rust 1.70+ | 后端编译 | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
+| Node.js 18+ | 前端构建 | `brew install node` 或 [nvm](https://github.com/nvm-sh/nvm) |
+| zig | 交叉编译 linker | `brew install zig` |
+| gh (GitHub CLI) | 上传 Release | `brew install gh && gh auth login` |
+| git | 版本控制 | `brew install git` |
+
+> **注意**: 如果服务器本身就是 x86_64 Linux，可以跳过 zig，直接 `cargo build --release`。
+
+### 服务器
+
+| 组件 | 用途 |
+|------|------|
+| PostgreSQL 15+ | 数据库 |
+| Nginx | 反向代理 + HTTPS |
+| systemd | 服务管理 (Linux) |
+| certbot | Let's Encrypt SSL 证书 |
+
+---
+
+## 快速开始
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/xiyijixiyifula/polis-platform.git
+cd polis-platform
+
+# 2. 配置服务器连接 (修改 deploy.sh 中的 SERVER_HOST)
+#    编辑 deploy.sh 顶部:
+#      SERVER_HOST="你的服务器IP或域名"
+#      SERVER_USER="root"
+
+# 3. 一键部署
+./deploy.sh
+```
+
+`deploy.sh` 自动执行：前置检查 → Rust 交叉编译 → 前端构建 → 打包 → GitHub Release → 服务器下载部署 → 重启服务 → 验证。
+
+### 部分部署
+
+```bash
+./deploy.sh --backend     # 仅部署后端
+./deploy.sh --frontend    # 仅部署前端
+./deploy.sh --check       # 仅检查服务器状态
+./deploy.sh --dry-run     # 仅本地构建打包，不上传不部署
+./deploy.sh --version v2.0.0  # 指定版本号
+```
+
+---
+
+## 手动部署 (不使用 deploy.sh)
+
+### 1. 交叉编译 Rust 后端
+
+```bash
+# macOS arm64 → Linux x86_64 (需要 zig)
+export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER="$(pwd)/deploy/zig-cc-linker.sh"
+cargo build --release --target x86_64-unknown-linux-gnu
+
+# 如果服务器是 x86_64 Linux，直接:
+cargo build --release
+```
+
+### 2. 构建前端
+
+```bash
+cd web
+npm install
+npm run build
+cd ..
+```
+
+### 3. 打包
+
+```bash
+VERSION="v0.1.0"
+RELEASE_DIR="polis-release-${VERSION}"
+mkdir -p "${RELEASE_DIR}/rust" "${RELEASE_DIR}/frontend"
+
+# 后端二进制
+for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate; do
+  cp target/x86_64-unknown-linux-gnu/release/$svc "${RELEASE_DIR}/rust/"
+done
+
+# 前端
+cp -r web/.next "${RELEASE_DIR}/frontend/.next"
+cp -r web/public "${RELEASE_DIR}/frontend/public"
+
+# 打包 (macOS 必须 COPYFILE_DISABLE=1)
+COPYFILE_DISABLE=1 tar -czf "polis-release-${VERSION}.tar.gz" -C "${RELEASE_DIR}" .
+```
+
+### 4. 上传 GitHub Release
+
+```bash
+gh release create "$VERSION" "polis-release-${VERSION}.tar.gz" \
+  --repo xiyijixiyifula/polis-platform \
+  --title "$VERSION" \
+  --notes "发行说明"
+```
+
+### 5. 服务器部署
+
+```bash
+# SSH 到服务器执行:
+VERSION="v0.1.0"
+DOWNLOAD_URL="https://github.com/xiyijixiyifula/polis-platform/releases/download/${VERSION}/polis-release-${VERSION}.tar.gz"
+
+cd /tmp
+curl -fsSL "$DOWNLOAD_URL" -o polis-release.tar.gz
+mkdir -p /tmp/polis-deploy
+tar -xzf polis-release.tar.gz -C /tmp/polis-deploy/
+
+# 部署后端
+cp /tmp/polis-deploy/rust/* /usr/local/bin/
+chmod +x /usr/local/bin/polis-*
+
+# 部署前端
+rm -rf /root/polis/web/.next /root/polis/web/public
+cp -r /tmp/polis-deploy/frontend/.next /root/polis/web/.next
+cp -r /tmp/polis-deploy/frontend/public /root/polis/web/public
+
+# ⚠️ 关键: 复制 static 和 public 到 standalone 目录
+rm -rf /root/polis/web/.next/standalone/.next/static
+cp -r /root/polis/web/.next/static /root/polis/web/.next/standalone/.next/static
+cp -r /root/polis/web/public /root/polis/web/.next/standalone/public
+
+# 重启所有服务
+systemctl restart --no-block polis-gateway polis-user polis-space \
+  polis-content polis-admin polis-video polis-aggregate polis-web
+
+# 验证
+systemctl is-active polis-gateway polis-user polis-space \
+  polis-content polis-admin polis-video polis-aggregate polis-web
+```
+
+---
+
+## 服务器初始配置
+
+以下是对应 **全新服务器** 的一次性配置步骤。
+
+### 1. 安装依赖
+
+```bash
+# Ubuntu/Debian
+apt update && apt install -y postgresql nginx certbot python3-certbot-nginx curl wget
+
+# 启动 PostgreSQL
+systemctl enable --now postgresql
+```
+
+### 2. 创建数据库
+
+```bash
+sudo -u postgres psql <<SQL
+CREATE USER polis WITH PASSWORD '你的密码';
+CREATE DATABASE polis OWNER polis;
+GRANT ALL PRIVILEGES ON DATABASE polis TO polis;
+SQL
+
+# 运行迁移
+for f in migrations/*.sql; do
+  psql -h 127.0.0.1 -U polis -d polis -f "$f"
+done
+```
+
+### 3. 创建目录结构
+
+```bash
+# 后端
+mkdir -p /root/polis/target/release/backup
+mkdir -p /root/polis/uploads
+
+# 前端
+mkdir -p /root/polis/web/.next/standalone
+mkdir -p /root/polis/web/public
+
+# 环境变量
+cat > /root/polis/.env <<'EOF'
+DATABASE_URL=postgres://polis:你的密码@localhost:5432/polis
+REDIS_URL=redis://localhost:6379
+GATEWAY_PORT=8080
+USER_SERVICE_URL=http://localhost:3001
+SPACE_SERVICE_URL=http://localhost:3002
+CONTENT_SERVICE_URL=http://localhost:3003
+ADMIN_SERVICE_URL=http://localhost:3004
+VIDEO_SERVICE_URL=http://localhost:3005
+AGGREGATE_SERVICE_URL=http://localhost:3011
+JWT_SECRET=生成一个随机字符串
+EOF
+```
+
+### 4. 安装 systemd 服务
+
+将 `deploy/` 目录下所有 `.service` 文件复制到 `/etc/systemd/system/`：
+
+```bash
+cp deploy/*.service /etc/systemd/system/
+systemctl daemon-reload
+
+# 启用所有服务 (但不立即启动，等部署后再启动)
+systemctl enable polis-gateway polis-user polis-space \
+  polis-content polis-admin polis-video polis-aggregate polis-web
+```
+
+### 5. 配置 Nginx + HTTPS
+
+```bash
+# Nginx 配置 (示例)
+cat > /etc/nginx/sites-available/polis <<'NGINX'
+server {
+    listen 80;
+    server_name 你的域名;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /_next/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+    }
+
+    client_max_body_size 500M;
+}
+NGINX
+
+ln -s /etc/nginx/sites-available/polis /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+
+# SSL 证书
+certbot --nginx -d 你的域名
+```
+
+---
+
+## 服务端口参考
+
+| 服务 | 端口 | systemd 单元 |
+|------|------|-------------|
+| polis-gateway | 8080 | polis-gateway.service |
+| polis-user | 3001 | polis-user.service |
+| polis-space | 3002 | polis-space.service |
+| polis-content | 3003 | polis-content.service |
+| polis-admin | 3004 | polis-admin.service |
+| polis-video | 3005 | polis-video.service |
+| polis-aggregate | 3011 | polis-aggregate.service |
+| polis-web (Next.js) | 3000 | polis-web.service |
+
+---
 
 ## 当前生产环境
 
+> 仅供参考 — 每台服务器配置不同。
+
 | 项目 | 值 |
 |------|-----|
-| 服务器 | 47.253.123.3 (root@www.mzgw.com) |
-| 在线地址 | https://www.mzgw.com |
-| 部署方式 | 本地交叉编译 → GitHub Releases → 服务器下载 + systemd 管理 |
-| 反向代理 | Nginx (:80→443 重定向, :443 HTTPS → Gateway :8080 / Next.js :3000) |
-| SSL 证书 | Let's Encrypt (certbot, 自动续期) |
-| 数据库 | PostgreSQL 本地实例 |
+| 服务器 IP | 47.253.123.3 |
+| 域名 | www.mzgw.com |
+| 操作系统 | Ubuntu 22.04 |
+| 数据库 | PostgreSQL (本地实例) |
+| SSL | Let's Encrypt (certbot 自动续期) |
+| 前端路径 | /root/polis/web/ |
+| 后端路径 | /usr/local/bin/polis-* |
+| 环境变量 | /root/polis/.env |
+| Nginx 配置 | /etc/nginx/sites-available/polis |
+| 部署方式 | `./deploy.sh` (本地交叉编译 → GitHub Release → 服务器下载) |
 
-## 当前部署流程
+---
 
-```
-开发者本地（macOS arm64）
-    ├── git push (提交代码)
-    ├── cargo build --release --target x86_64-unknown-linux-gnu (交叉编译)
-    └── npm run build (前端构建)
-    ↓
-打包 tar.gz (rust/ + frontend/.next/)
-    ↓
-gh release create → upload to GitHub Releases
-    ↓
-服务器 (root@speedtest.mzgw.com)
-    ├── wget <release-url>
-    ├── tar -xzf + cp binaries to /root/polis/target/release/
-    ├── cp -r .next to /opt/polis-web/.next
-    └── systemctl restart 所有 6 个服务
-    ↓
-健康检查通过
+## 常见问题
+
+### Q: mac 打包后服务器上出现 ._ 前缀文件
+
+macOS 用 `tar` 打包会注入 AppleDouble 文件。解决：打包时加 `COPYFILE_DISABLE=1`：
+
+```bash
+COPYFILE_DISABLE=1 tar -czf archive.tar.gz files/
 ```
 
-> **交叉编译工具链**：macOS arm64 → Linux x86_64 通过 **zig cc** 实现。
-> 配置见 `.cargo/config.toml` + `deploy/zig-cc-linker.sh`。前置条件：`brew install zig`。
+### Q: 部署后页面白屏 / JS 404
 
-## 脚本说明
+没有把 `.next/static` 和 `public` 复制到 standalone 目录。解决：
 
-| 脚本 | 用途 |
-|------|------|
-| `auto-build.sh` | 拉取代码 → 构建所有服务 → .env 校验 |
-| `auto-dev.sh` | 完整开发循环: 构建 → 部署 → 测试 → 报告 |
-| `auto-research.sh` | 社区调研 + 报告生成 |
-| `auto-changelog.sh` | 自动更新日志 |
-
-## 服务架构
-
-```
-                    ┌──────────┐
-                    │  Nginx   │ :443 (HTTPS) + :80→443
-                    └────┬─────┘
-                         │
-              ┌──────────┼──────────┐
-              │                     │
-         ┌────▼─────┐        ┌─────▼────┐
-         │  Gateway │ :8080  │ Next.js  │ :3000
-         └────┬─────┘        └──────────┘
-    ┌─────────┼──────────┐
-    │         │          │
-┌───▼──┐ ┌───▼──┐ ┌─────▼────┐
-│ User │ │ Space│ │ Content  │
-│:3001 │ │:3002 │ │ :3003    │
-└──────┘ └──────┘ └──────────┘
-         │         │          │
-    ┌────▼─────────▼──────────▼─────┐
-    │    PostgreSQL      :5432      │
-    └───────────────────────────────┘
+```bash
+cp -r /root/polis/web/.next/static /root/polis/web/.next/standalone/.next/static
+cp -r /root/polis/web/public /root/polis/web/.next/standalone/public
+systemctl restart polis-web
 ```
 
-## 安全机制
+### Q: 交叉编译失败 (macOS → Linux)
 
-### 已实现
-- ✅ `.env` 自动校验（构建前检查 DATABASE_URL）
-- ✅ `.env` 自动备份（防止错误修改导致服务崩溃）
-- ✅ 构建失败自动回滚（从最新备份恢复旧二进制）
-- ✅ 旧备份自动清理（保留最近 5 个）
-- ✅ JWT token 认证
-- ✅ CORS 配置
-- ✅ HTTPS/TLS 1.2-1.3 (Let's Encrypt + certbot 自动续期)
-- ✅ HTTP→HTTPS 自动重定向
-- ✅ HSTS (max-age=63072000; includeSubDomains; preload)
-- ✅ 安全响应头 (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection)
+确保安装了 zig：`brew install zig`。确认 `.cargo/config.toml` 中有 `linker = "deploy/zig-cc-linker.sh"` 配置。
 
-### 已知限制（待改进）
-| 问题 | 严重度 | 状态 |
-|------|--------|------|
-| ~~服务器直接编译（CPU/内存压力）~~ | 🟢 已解决 | ✅ v0.3.81 — 本地交叉编译 + Releases 部署 |
-| ~~生产环境安装 Rust 工具链~~ | 🟢 已解决 | ✅ v0.3.81 — 服务器无需 Rust |
-| 无蓝绿/滚动部署（有短暂中断） | 🟡 中 | 待处理 |
-| 日志无自动轮转（可能撑满磁盘） | 🟡 中 | 待配置 logrotate |
+### Q: 不想用 zig，怎么部署？
 
-## 未来改进计划
+选项 1: 在 x86_64 Linux 服务器上直接 `cargo build --release`（不推荐，会占用大量内存）。
+选项 2: 使用 GitHub Actions 做自动交叉编译（见下方改进方向）。
 
-### Phase 1: 稳定性增强（短期）
-- [ ] 配置 logrotate 日志轮转
-- [ ] 添加 systemd 健康检查 (WatchdogSec)
+---
 
-### Phase 2: 部署优化（中期）
-- [x] ~~GitHub Actions CI/CD: 构建产物 → 服务器拉取~~ → 已实现：本地交叉编译 + GitHub Releases
-- [ ] CI/CD 自动化: GitHub Actions 自动交叉编译 + 发布 Release
-- [ ] 蓝绿部署: 构建到新目录 → 切换 symlink → 重载
-- [ ] 监控告警: Prometheus + Grafana
+## 未来改进
 
-### Phase 3: 容器化（长期）
-- [ ] Docker 化所有微服务
-- [ ] Docker Compose 一键部署
-- [ ] Kubernetes (可选)
+- [ ] GitHub Actions 自动 CI/CD：push → 自动构建 → Release
+- [ ] 蓝绿部署：零停机时间更新
+- [ ] Docker 部署方案（可选，当前方案已足够）

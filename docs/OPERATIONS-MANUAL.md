@@ -829,7 +829,22 @@ curl -s -o /dev/null -w "%{http_code}" https://www.mzgw.com/
 
 ## 6. Deployment Guide
 
-### 6.1 Deployment Rules (Must Follow)
+### 6.1 One-Click Deploy (Recommended)
+
+```bash
+./deploy.sh                     # Full deploy (auto version)
+./deploy.sh --backend           # Backend only
+./deploy.sh --frontend          # Frontend only
+./deploy.sh --check             # Check server status only
+./deploy.sh --version v2.0.0    # Specify version
+./deploy.sh --dry-run           # Build + package, skip upload/deploy
+```
+
+The script runs: preflight check → Rust cross-compile → frontend build → package → GitHub Release → server deploy → restart → verify.
+
+> See [DEPLOY.md](../../DEPLOY.md) for the complete third-party deployment guide with server setup instructions.
+
+### 6.2 Deployment Rules (Must Follow)
 
 > ⚠️ The following three rules must not be violated:
 
@@ -837,173 +852,24 @@ curl -s -o /dev/null -w "%{http_code}" https://www.mzgw.com/
 2. **No SCP**: Trans-Pacific SCP transmission of large files will drop packets or freeze.
 3. **Server has only 1.6GB RAM** — `npm run build` + `cargo build` will cause OOM.
 
-### 6.2 Full Deployment Pipeline
-
-#### Step 1: Local Compilation
-
-```bash
-cd /Users/wansichao/Projects/polis-platform
-
-# 1. Build all Rust backends (cross-compile for Linux x86_64)
-cargo build --release --target x86_64-unknown-linux-gnu
-
-# 2. Build frontend
-cd web
-npm run build
-cd ..
-
-# 3. Verify build success
-ls -la target/x86_64-unknown-linux-gnu/release/polis-gateway
-ls -la target/x86_64-unknown-linux-gnu/release/polis-user
-ls -la target/x86_64-unknown-linux-gnu/release/polis-space
-ls -la target/x86_64-unknown-linux-gnu/release/polis-content
-ls -la target/x86_64-unknown-linux-gnu/release/polis-admin
-ls -la target/x86_64-unknown-linux-gnu/release/polis-video
-ls -la web/.next/BUILD_ID
-```
-
-#### Step 2: Package
-
-```bash
-# Package backend binaries
-cd target/x86_64-unknown-linux-gnu/release/
-COPYFILE_DISABLE=1 tar -czf /tmp/release-binaries.tar.gz \
-  polis-gateway polis-user polis-space polis-content polis-admin polis-video
-cd /Users/wansichao/Projects/polis-platform
-
-# Package frontend (exclude cache)
-cd web
-COPYFILE_DISABLE=1 tar --exclude='.next/cache' --exclude='.next/types' \
-  -czf /tmp/release-web.tar.gz .next public
-cd ..
-```
-
-#### Step 3: Create GitHub Release
-
-```bash
-# Create release
-gh release create v1.x.0 \
-  --title "v1.x.0 — Release Notes" \
-  --notes "## Changes
-
-- Change 1
-- Change 2
-
-## Deployment Checklist
-- [x] Backend builds pass
-- [x] Frontend builds pass
-- [x] Tests pass" \
-  /tmp/release-binaries.tar.gz \
-  /tmp/release-web.tar.gz
-```
-
-#### Step 4: Server Deployment
-
-```bash
-# SSH to server
-ssh root@47.253.123.3
-
-# Download Release
-cd /tmp
-curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/latest/download/release-binaries.tar.gz" -o /tmp/release-binaries.tar.gz
-curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/latest/download/release-web.tar.gz" -o /tmp/release-web.tar.gz
-
-# === Deploy Backend ===
-
-# Stop services
-systemctl stop polis-gateway polis-user polis-space polis-content polis-admin polis-video
-
-# Backup old binaries
-cp /root/polis/target/release/polis-gateway /root/polis/target/release/polis-gateway.bak
-# ... (repeat for each service)
-
-# Extract new binaries
-tar -xzf /tmp/release-binaries.tar.gz -C /root/polis/target/release/
-chmod +x /root/polis/target/release/polis-*
-
-# Start services
-systemctl start polis-user polis-space polis-content polis-admin polis-video polis-gateway
-
-# Check status
-systemctl is-active polis-gateway polis-user polis-space polis-content polis-admin polis-video
-
-# === Deploy Frontend ===
-
-# Delete old build
-rm -rf /opt/polis-web/.next
-
-# Extract new build
-tar -xzf /tmp/release-web.tar.gz -C /opt/polis-web/
-
-# ⚠️ CRITICAL: Copy static to standalone
-cp -r /opt/polis-web/.next/static /opt/polis-web/.next/standalone/.next/static
-
-# Restart frontend
-systemctl restart polis-web
-
-# Verify
-curl -s -o /dev/null -w "%{http_code}" https://www.mzgw.com/
-
-# Cleanup
-rm /tmp/release-binaries.tar.gz /tmp/release-web.tar.gz
-```
-
-#### Step 5: Post-Deployment Verification
+### 6.3 Post-Deployment Verification
 
 ```bash
 # 1. Check all services
-ssh root@47.253.123.3 "systemctl is-active polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-web"
+ssh root@47.253.123.3 "systemctl is-active polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-web"
 
-# 2. Check API health
-curl -s https://www.mzgw.com/api/health | python3 -m json.tool
+# 2. Check homepage
+curl -s -o /dev/null -w "HTTP %{http_code}\n" https://www.mzgw.com/
 
-# 3. Check homepage HTTP status
-curl -s -o /dev/null -w "%{http_code}" https://www.mzgw.com/
+# 3. Check API
+curl -s -o /dev/null -w "HTTP %{http_code}\n" https://www.mzgw.com/api/spaces/trending
 
 # 4. Check static assets
-curl -s -o /dev/null -w "%{http_code}" https://www.mzgw.com/_next/static/chunks/webpack.js
+curl -s -o /dev/null -w "HTTP %{http_code}\n" https://www.mzgw.com/_next/static/chunks/webpack.js
 
 # 5. Browser verification
 open https://www.mzgw.com
 ```
-
-### 6.3 Quick Deploy (Frontend Only)
-
-```bash
-# Local
-cd web && npm run build && cd ..
-cd web && COPYFILE_DISABLE=1 tar --exclude='.next/cache' --exclude='.next/types' -czf /tmp/release-web.tar.gz .next public && cd ..
-gh release upload v1.x.0 /tmp/release-web.tar.gz --clobber
-
-# Server
-ssh root@47.253.123.3 "
-  cd /tmp && \
-  curl -fsSL 'https://github.com/xiyijixiyifula/polis-platform/releases/latest/download/release-web.tar.gz' -o /tmp/release-web.tar.gz && \
-  rm -rf /opt/polis-web/.next && \
-  tar -xzf /tmp/release-web.tar.gz -C /opt/polis-web/ && \
-  cp -r /opt/polis-web/.next/static /opt/polis-web/.next/standalone/.next/static && \
-  systemctl restart polis-web && \
-  curl -s -o /dev/null -w '%{http_code}' https://www.mzgw.com/
-"
-```
-
-### 6.4 Quick Deploy (Single Backend Service)
-
-```bash
-# Example: polis-content only
-cargo build -p polis-content --release --target x86_64-unknown-linux-gnu
-COPYFILE_DISABLE=1 tar -czf /tmp/polis-content.tar.gz -C target/x86_64-unknown-linux-gnu/release/ polis-content
-gh release upload v1.x.0 /tmp/polis-content.tar.gz --clobber
-
-ssh root@47.253.123.3 "
-  cd /tmp && \
-  curl -fsSL 'https://github.com/xiyijixiyifula/polis-platform/releases/latest/download/polis-content.tar.gz' -o /tmp/polis-content.tar.gz && \
-  cp /root/polis/target/release/polis-content /root/polis/target/release/polis-content.bak && \
-  systemctl stop polis-content && \
-  tar -xzf /tmp/polis-content.tar.gz -C /root/polis/target/release/ && \
-  chmod +x /root/polis/target/release/polis-content && \
-  systemctl start polis-content && \
-  systemctl is-active polis-content
 "
 ```
 

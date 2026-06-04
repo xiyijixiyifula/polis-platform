@@ -73,6 +73,8 @@ polis-platform/
 
 ## 部署
 
-本地编译 → GitHub Releases → 服务器下载部署。详见 [AUTO-DEV.md](AUTO-DEV.md) 和根目录 [DEPLOY.md](../DEPLOY.md)。
+一键部署: `./deploy.sh`（交叉编译→打包→GitHub Release→服务器部署→验证）。
+
+详情参考 [DEPLOY.md](../DEPLOY.md)（第三方部署指南）和 [AUTO-DEV.md](AUTO-DEV.md)（AI 开发循环）。
 
 **严禁在服务器上编译** — 服务器仅 1.6GB 内存，编译会导致 OOM。
