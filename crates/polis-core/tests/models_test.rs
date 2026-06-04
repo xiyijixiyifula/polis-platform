@@ -46,6 +46,12 @@ fn test_user_public_from_user() {
         bio: "A test user".to_string(),
         verified: true,
         verified_type: Some("personal".to_string()),
+        notification_prefs: serde_json::json!({}),
+        banned: false,
+        banned_at: None,
+        ban_reason: None,
+        chain_address: None,
+        chain_bound_at: None,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
     };
@@ -178,10 +184,13 @@ fn test_post_serialize() {
         is_pinned: false,
         is_featured: true,
         is_deleted: false,
+        hidden_by_owner: false,
         view_count: 100,
         like_count: 10,
         comment_count: 5,
         metadata: serde_json::json!({}),
+        password_hash: None,
+        hidden_until: None,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
     };
@@ -214,7 +223,7 @@ fn test_module_type_serde() {
 fn test_create_register_request() {
     let req = RegisterRequest {
         username: "newuser".to_string(),
-        display_name: "New User".to_string(),
+        display_name: Some("New User".to_string()),
         email: "new@example.com".to_string(),
         password: "securepassword".to_string(),
     };
@@ -230,12 +239,9 @@ fn test_create_space_request_defaults() {
         title: "测试社区".to_string(),
         description: Some("描述".to_string()),
         visibility: None,
-        enabled_modules: Some(vec!["forum".to_string(), "article".to_string()]),
     };
     assert_eq!(req.slug, "test-community");
-    assert!(req.enabled_modules.is_some());
-    let modules = req.enabled_modules.unwrap();
-    assert_eq!(modules.len(), 2);
+    assert!(req.visibility.is_none());
 }
 
 #[test]
