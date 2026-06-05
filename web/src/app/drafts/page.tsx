@@ -1,3 +1,4 @@
+import { getToken } from '@/lib/api';
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,7 +10,7 @@ export default function DraftsPage() {
   const [drafts, setDrafts] = useState<any[]>([]);
 
   useEffect(() => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     fetch('/api/drafts', { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((d) => { if (d.code === 0) setDrafts(d.data || []); })

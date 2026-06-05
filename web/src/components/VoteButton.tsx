@@ -28,7 +28,7 @@ export function VoteButton({ targetType, targetId }: VoteButtonProps) {
   const score = upvotes - downvotes;
 
   const handleVote = async (value: number) => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) return;
 
     const newValue = myVote === value ? 0 : value;

@@ -44,7 +44,7 @@ export default function CreateCenterPage() {
   const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) { setIsLoggedIn(false); setLoading(false); return; }
     setIsLoggedIn(true);
     loadContents();
@@ -53,7 +53,7 @@ export default function CreateCenterPage() {
   const loadContents = async (page = 1) => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const res = await fetch(`/api/my/contents?page=${page}&page_size=50`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -67,7 +67,7 @@ export default function CreateCenterPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token || !confirm('确认删除这篇内容？')) return;
     setDeleteId(id);
     try {

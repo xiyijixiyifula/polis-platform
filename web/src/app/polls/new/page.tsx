@@ -28,7 +28,7 @@ function NewPollForm() {
 
   // Fetch user's spaces
   useEffect(() => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) return;
     setLoading(true);
     // Get user info first
@@ -89,7 +89,7 @@ function NewPollForm() {
     e.preventDefault();
     setError('');
     if (!selectedSpace) { setError('请选择社区'); return; }
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     const validOpts = options.filter(Boolean);
     if (validOpts.length < 2) { setError('至少需要 2 个选项'); return; }
     try {

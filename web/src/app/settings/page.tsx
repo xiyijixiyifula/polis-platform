@@ -1,3 +1,4 @@
+import { getToken } from '@/lib/api';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,7 +25,6 @@ export default function SettingsPage() {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
 
-  const getToken = () => localStorage.getItem('polis_access_token');
 
   // Load user profile on mount
   useEffect(() => {

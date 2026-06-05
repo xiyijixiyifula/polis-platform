@@ -68,7 +68,7 @@ export default function ConversationPage() {
         }
         try {
           const searchRes = await fetch(`/api/users/search?q=${encodeURIComponent(userId)}&limit=1`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` }
+            headers: { Authorization: `Bearer ${getToken()}` }
           });
           const data = await searchRes.json();
           if (data.code === 0 && Array.isArray(data.data) && data.data.length > 0) {
@@ -143,7 +143,7 @@ export default function ConversationPage() {
     try {
       const res = await fetch(`/api/messages/${msgId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('polis_access_token')}` },
+        headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (res.ok) {
         setMsgs(prev => prev.filter(m => m.id !== msgId));

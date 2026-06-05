@@ -1,3 +1,4 @@
+import { getToken } from '@/lib/api';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -29,7 +30,7 @@ export function PollCard({ poll }: PollProps) {
 
   // On mount, check if current user already voted (refresh persistence)
   useEffect(() => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token) {
       setCheckingVote(false);
       return;
@@ -61,7 +62,7 @@ export function PollCard({ poll }: PollProps) {
   }, [poll.id]);
 
   const handleVote = async (optionId: string) => {
-    const token = localStorage.getItem('polis_access_token');
+    const token = getToken();
     if (!token || voted || submitting) return;
 
     setSubmitting(true);

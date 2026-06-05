@@ -1,3 +1,4 @@
+import { getToken } from '@/lib/api';
 'use client';
 
 import { useState } from 'react';
@@ -22,7 +23,7 @@ export function FileShare({ spaceId }: { spaceId: string }) {
 
   const handleShare = async (fileId: string) => {
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const res = await fetch('/api/files/share', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

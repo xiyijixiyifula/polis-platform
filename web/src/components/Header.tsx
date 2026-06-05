@@ -1,3 +1,4 @@
+import { getToken } from '@/lib/api';
 'use client';
 
 import Link from 'next/link';
@@ -62,14 +63,14 @@ export function Header() {
   };
 
   useEffect(() => {
-    const loggedIn = !!localStorage.getItem('polis_access_token');
+    const loggedIn = !!getToken();
     setIsLoggedIn(loggedIn);
     if (loggedIn) { fetchUnread(); fetchUnreadDm(); }
   }, []);
 
   const fetchUnread = async () => {
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const res = await fetch('/api/notifications/unread-count', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -80,7 +81,7 @@ export function Header() {
 
   const fetchUnreadDm = async () => {
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const res = await fetch('/api/messages/unread-count', {
         headers: { Authorization: `Bearer ${token}` },
       });

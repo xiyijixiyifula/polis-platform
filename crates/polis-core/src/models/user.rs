@@ -208,6 +208,7 @@ pub struct DailyLoginResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct OnboardingQuest {
+    #[sqlx(default)]
     pub id: Uuid,
     pub quest_key: String,
     pub title: String,
@@ -257,6 +258,7 @@ pub struct UserBadge {
     pub badge_name: String,
     pub badge_icon: String,
     pub badge_description: String,
+    #[sqlx(rename = "awarded_at")]
     pub earned_at: DateTime<Utc>,
 }
 

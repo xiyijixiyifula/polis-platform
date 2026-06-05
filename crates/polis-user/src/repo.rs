@@ -320,7 +320,7 @@ impl UserRepo {
 
     pub async fn get_user_badges(&self, user_id: Uuid) -> Result<Vec<UserBadge>, AppError> {
         sqlx::query_as::<_, UserBadge>(
-            "SELECT * FROM user_badges WHERE user_id = $1 ORDER BY earned_at DESC"
+            "SELECT * FROM user_badges WHERE user_id = $1 ORDER BY awarded_at DESC"
         )
         .bind(user_id).fetch_all(&self.pool).await
         .map_err(AppError::from)

@@ -1,3 +1,4 @@
+import { getToken } from '@/lib/api';
 'use client';
 
 import React, {
@@ -84,7 +85,7 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
           if (!base64) return;
 
           try {
-            const token = localStorage.getItem('polis_access_token');
+            const token = getToken();
             const headers: Record<string, string> = {
               'Content-Type': 'application/json',
             };

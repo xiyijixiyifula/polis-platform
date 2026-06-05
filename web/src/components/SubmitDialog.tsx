@@ -41,7 +41,7 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
   const fetchSpaces = async () => {
     try {
       setFetching(true);
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const res = await fetch('/api/spaces?mine=true&page_size=100', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -75,7 +75,7 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
     if (!selectedSpace || !selectedModule) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const res = await fetch(`/api/creations/${creationId}/submit`, {
         method: 'POST',
         headers: {

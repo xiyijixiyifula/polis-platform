@@ -1,3 +1,4 @@
+import { getToken } from '@/lib/api';
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -21,7 +22,7 @@ export function SpaceChat({ namespace }: { namespace: string }) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
-  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('polis_access_token');
+  const isLoggedIn = typeof window !== 'undefined' && !!getToken();
 
   const fetchMessages = async () => {
     try {
@@ -51,7 +52,7 @@ export function SpaceChat({ namespace }: { namespace: string }) {
     setSending(true);
     setError('');
     try {
-      const token = localStorage.getItem('polis_access_token');
+      const token = getToken();
       const res = await fetch(`/api/chat/spaces/${namespace}`, {
         method: 'POST',
         headers: {
