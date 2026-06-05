@@ -1,5 +1,5 @@
+'use client'
 import { getToken } from '@/lib/api';
-'use client';
 
 import React, {
   useEffect,

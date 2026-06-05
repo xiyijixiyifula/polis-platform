@@ -1,5 +1,5 @@
-import { getToken } from '@/lib/api';
 'use client';
+import { getToken } from '@/lib/api';
 
 import { useState } from 'react';
 import { File, Folder, Download, Link2, Copy, Lock, Clock } from 'lucide-react';

@@ -1,5 +1,5 @@
-import { getToken } from '@/lib/api';
 'use client';
+import { getToken } from '@/lib/api';
 
 import { useState, useEffect } from 'react';
 import { Bell, BellOff } from 'lucide-react';

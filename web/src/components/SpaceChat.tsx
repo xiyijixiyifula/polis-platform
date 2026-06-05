@@ -1,5 +1,5 @@
+'use client'
 import { getToken } from '@/lib/api';
-'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
 import { Send, Loader2 } from 'lucide-react';

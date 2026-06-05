@@ -1,5 +1,6 @@
 'use client';
 
+import { getToken } from '@/lib/api';
 import React, { useState, useEffect } from 'react';
 import { X, Search, Check } from 'lucide-react';
 import { getModuleLabel } from '@/lib/module-config';

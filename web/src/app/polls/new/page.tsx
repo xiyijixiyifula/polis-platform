@@ -1,5 +1,6 @@
 'use client';
 
+import { getToken } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, X, BarChart3, Globe, ChevronDown } from 'lucide-react';

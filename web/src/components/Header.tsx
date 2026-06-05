@@ -1,5 +1,5 @@
-import { getToken } from '@/lib/api';
 'use client';
+import { getToken } from '@/lib/api';
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';

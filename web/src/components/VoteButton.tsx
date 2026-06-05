@@ -1,5 +1,6 @@
 'use client';
 
+import { getToken } from '@/lib/api';
 import { useState, useEffect } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { vote } from '@/lib/api';
