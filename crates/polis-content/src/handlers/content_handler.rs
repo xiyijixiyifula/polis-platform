@@ -124,8 +124,12 @@ impl ContentHandler {
         // Process #hashtags
         let hashtags = hashtag::parse_hashtags(&req.body);
         for (raw_tag, normalized) in &hashtags {
-            let _ = self.repo.upsert_hashtag(raw_tag, normalized).await;
-            let _ = self.repo.create_hashtag_mapping(normalized, "post", post.id).await;
+            if let Err(e) = self.repo.upsert_hashtag(raw_tag, normalized).await {
+                tracing::warn!("Failed to upsert hashtag '{}/{}': {}", raw_tag, normalized, e);
+            }
+            if let Err(e) = self.repo.create_hashtag_mapping(normalized, "post", post.id).await {
+                tracing::warn!("Failed to create hashtag mapping '{}' for post {}: {}", normalized, post.id, e);
+            }
         }
 
         Ok(post)
@@ -1299,7 +1303,9 @@ impl ContentHandler {
                 payload,
             };
             if let Ok(data) = serde_json::to_vec(&event) {
-                let _ = nats.publish(subject.to_string(), data.into()).await;
+                if let Err(e) = nats.publish(subject.to_string(), data.into()).await {
+                    tracing::warn!("Failed to publish event {}: {}", subject, e);
+                }
             }
         }
     }
@@ -1414,13 +1420,17 @@ impl ContentHandler {
                 }
             }
             processed.push_str(remaining);
-            let _ = tokio::fs::remove_dir_all(&tmp_dir).await;
+            if let Err(e) = tokio::fs::remove_dir_all(&tmp_dir).await {
+                tracing::warn!("Failed to clean up temp dir {}: {}", tmp_dir, e);
+            }
             Ok(processed)
         } else {
             // Direct .md file
             let content = String::from_utf8(data.to_vec())
                 .map_err(|_| AppError::Validation("Invalid UTF-8 in markdown file".to_string()))?;
-            let _ = tokio::fs::remove_dir_all(&tmp_dir).await;
+            if let Err(e) = tokio::fs::remove_dir_all(&tmp_dir).await {
+                tracing::warn!("Failed to clean up temp dir {}: {}", tmp_dir, e);
+            }
             Ok(content)
         }
     }

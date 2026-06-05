@@ -449,14 +449,17 @@ impl CreationHandler {
             .map_err(|e| AppError::Internal(e.to_string()))?;
 
         // 同步软删除对应的 posts 记录
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "UPDATE posts SET is_deleted = TRUE WHERE creation_id = $1 AND space_id = $2 AND module_type = $3",
         )
         .bind(creation_id)
         .bind(space_id)
         .bind(&module_type)
-        .execute(&self.pool)
-        .await;
+        .execute(&self.repo.pool)
+        .await
+        {
+            tracing::warn!("Failed to soft-delete posts for creation {}: {}", creation_id, e);
+        }
 
         Ok(())
     }

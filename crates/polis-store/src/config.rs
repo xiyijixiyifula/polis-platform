@@ -14,9 +14,15 @@ impl StoreServiceConfig {
             port: env::var("STORE_PORT")
                 .unwrap_or_else(|_| "3009".to_string())
                 .parse()
-                .expect("STORE_PORT must be a number"),
+                .unwrap_or_else(|e| {
+                    tracing::warn!("STORE_PORT parse failed: {e}, using default 3009");
+                    3009
+                }),
             database_url: env::var("DATABASE_URL")
-                .expect("DATABASE_URL must be set"),
+                .unwrap_or_else(|_| {
+                    tracing::warn!("DATABASE_URL not set — using empty string, downstream connection will fail");
+                    String::new()
+                }),
         }
     }
 }

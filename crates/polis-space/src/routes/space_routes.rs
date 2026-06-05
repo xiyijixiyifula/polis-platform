@@ -7,10 +7,11 @@ use axum::{
     Json, Router,
 };
 use jsonwebtoken::{decode, DecodingKey};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use uuid::Uuid;
 
 use percent_encoding::percent_decode_str;
+use polis_core::auth::Claims;
 use polis_core::error::AppError;
 
 #[derive(Debug, Deserialize)]
@@ -138,13 +139,6 @@ async fn handle_public_path(
 }
 
 /// 从 Authorization header 提取 user_id（用于需要认证的 GET 端点）
-#[derive(Debug, Serialize, Deserialize)]
-struct TokenClaims {
-    pub sub: String,
-    pub exp: usize,
-    pub token_type: String,
-}
-
 async fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Result<Uuid, AppError> {
     let token = headers
         .get(axum::http::header::AUTHORIZATION)
@@ -153,13 +147,13 @@ async fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Result
         .ok_or(AppError::Unauthorized)?;
     let secret = std::env::var("JWT_SECRET")
         .expect("JWT_SECRET environment variable must be set");
-    let token_data = decode::<TokenClaims>(
+    let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
         &polis_core::auth::secure_validation(),
     )
     .map_err(|_| AppError::Unauthorized)?;
-    if token_data.claims.token_type != "access" {
+    if token_data.claims.token_type.as_deref() != Some("access") {
         return Err(AppError::Unauthorized);
     }
     Uuid::parse_str(&token_data.claims.sub)

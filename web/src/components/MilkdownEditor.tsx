@@ -41,7 +41,8 @@ function sanitizeHtml(html: string): string {
       });
     });
     return doc.body.innerHTML;
-  } catch {
+  } catch (e) {
+    console.error('[MilkdownEditor] sanitizeHtml error:', e);
     return html;
   }
 }
@@ -51,7 +52,8 @@ function mdToHtml(md: string): string {
   try {
     const raw = marked.parse(md) as string;
     return sanitizeHtml(raw);
-  } catch {
+  } catch (e) {
+    console.error('[MilkdownEditor] mdToHtml error:', e);
     return md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 }
@@ -60,7 +62,8 @@ function htmlToMd(html: string): string {
   try {
     const td = getTurndown();
     return td.turndown(html);
-  } catch {
+  } catch (e) {
+    console.error('[MilkdownEditor] htmlToMd error:', e);
     // 降级：返回纯文本
     return html.replace(/<[^>]*>/g, '');
   }
@@ -98,8 +101,10 @@ export function MilkdownEditor({
   useEffect(() => {
     try {
       getTurndown(); // 测试初始化
-    } catch {
+    } catch (e) {
+      console.error('[MilkdownEditor] turndown init error:', e);
       setTurndownError(true);
+      setError((e as Error).message || '富文本引擎加载失败');
     }
   }, []);
 
@@ -185,8 +190,9 @@ export function MilkdownEditor({
       const text = await file.text();
       const newContent = value ? value + '\n\n' + text : text;
       onChange(newContent);
-    } catch {
-      setError('文件读取失败');
+    } catch (e) {
+      console.error('[MilkdownEditor] file upload error:', e);
+      setError((e as Error).message || '文件读取失败');
       setTimeout(() => setError(''), 3000);
     } finally {
       setUploading(false);

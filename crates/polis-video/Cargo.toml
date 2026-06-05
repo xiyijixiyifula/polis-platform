@@ -6,7 +6,7 @@ description = "Video service - upload, transcoding, streaming"
 
 [dependencies]
 polis-core = { path = "../polis-core" }
-tokio = { workspace = true, features = ["process"] }
+tokio = { workspace = true, features = ["process", "time"] }
 axum = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true, features = ["fs"] }

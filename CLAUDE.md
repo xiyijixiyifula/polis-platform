@@ -152,7 +152,7 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 | `./scripts/diagnose.sh "<症状>"` | 症状自动诊断 → 匹配已知 Pattern |
 | `./scripts/bug-record.sh` | 修复后一键更新所有追踪文件 |
 | `./scripts/gen-stats.sh` | 生成趋势/排名统计报告 |
-| `./scripts/pre-deploy-check.sh` | 部署前 14 类风险自动化检查 |
+| `./scripts/pre-deploy-check.sh` | 部署前 19 类风险自动化检查 |
 | `./scripts/pre-deploy-check.sh --strict` | 严格模式（CI/Pre-push hook） |
 | `./scripts/pre-deploy-check.sh --quick` | 快速模式（仅高风险检查） |
 | `./scripts/install-hooks.sh` | 安装 git pre-push hook |
@@ -171,4 +171,4 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 | [docs/bugs/fix-points.md](docs/bugs/fix-points.md) | 修复点位反向索引 (代码→修复历史) |
 | [docs/bugs/fix-recipes/INDEX.md](docs/bugs/fix-recipes/INDEX.md) | 修复配方库（复发直接套用） |
 | [docs/progress/MASTER.md](docs/progress/MASTER.md) | 当前任务进度 |
-| [scripts/pre-deploy-check.sh](scripts/pre-deploy-check.sh) | 部署前自动化预防检查 (12类风险) |
+| [scripts/pre-deploy-check.sh](scripts/pre-deploy-check.sh) | 部署前自动化预防检查 (19类风险) |

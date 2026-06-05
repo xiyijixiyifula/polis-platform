@@ -113,27 +113,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_wallet_create_sign_verify() {
+    fn test_wallet_create_sign_verify() -> Result<(), Box<dyn std::error::Error>> {
         let wallet = WalletKeys::generate();
         let msg = b"test message";
         let sig = wallet.sign(msg);
 
         use ed25519_dalek::Verifier;
-        let signature = ed25519_dalek::Signature::from_slice(&sig).unwrap();
-        wallet.verifying_key.verify(msg, &signature).unwrap();
+        let signature = ed25519_dalek::Signature::from_slice(&sig)?;
+        wallet.verifying_key.verify(msg, &signature)?;
+        Ok(())
     }
 
     #[test]
-    fn test_wallet_encrypted_save_load() {
+    fn test_wallet_encrypted_save_load() -> Result<(), Box<dyn std::error::Error>> {
         let tmp = std::env::temp_dir().join("polis-chain-test-wallet.key");
         let wallet = WalletKeys::generate();
         let addr = wallet.address.clone();
 
-        wallet.save_encrypted(&tmp, "test123").unwrap();
-        let loaded = WalletKeys::load_encrypted(&tmp, "test123").unwrap();
+        wallet.save_encrypted(&tmp, "test123")?;
+        let loaded = WalletKeys::load_encrypted(&tmp, "test123")?;
         assert_eq!(addr, loaded.address);
 
         // 清理
         let _ = std::fs::remove_file(&tmp);
+        Ok(())
     }
 }

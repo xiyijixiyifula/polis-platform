@@ -90,13 +90,15 @@ impl SpaceHandler {
             .await?;
 
         // 创建默认"交流"模块
-        let _ = self.repo.create_module(space.id, &CreateModuleRequest {
+        if let Err(e) = self.repo.create_module(space.id, &CreateModuleRequest {
             name: "交流".to_string(),
             module_key: Some("forum".to_string()),
             mode: Some("free".to_string()),
             allowed_content_types: Some(vec!["article".to_string(), "video".to_string()]),
             icon: Some("💬".to_string()),
-        }).await;
+        }).await {
+            tracing::warn!("Failed to create default module for space {}: {}", space.id, e);
+        }
 
         // 将创建者添加为 Owner
         self.repo
@@ -457,7 +459,9 @@ impl SpaceHandler {
                 payload,
             };
             if let Ok(data) = serde_json::to_vec(&event) {
-                let _ = nats.publish(subject.to_string(), data.into()).await;
+                if let Err(e) = nats.publish(subject.to_string(), data.into()).await {
+                    tracing::warn!("Failed to publish event {}: {}", subject, e);
+                }
             }
         }
     }
@@ -496,14 +500,16 @@ impl SpaceHandler {
             _ => format!("社区事件：{}", event_type),
         };
 
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "INSERT INTO notifications (user_id, type, actor_id, target_type, target_id, content) VALUES ($1, $2, $3, $4, $5, $6)"
         )
         .bind(user_id).bind(&typ).bind(actor_id)
         .bind("space").bind(space_ns)
         .bind(&content)
         .execute(&self.repo.pool)
-        .await;
+        .await {
+            tracing::warn!("Failed to create space notification for user {} type {}: {}", user_id, typ, e);
+        }
     }
 
     /// 关注社区

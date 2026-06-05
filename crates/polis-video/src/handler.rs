@@ -52,17 +52,32 @@ impl VideoHandler {
         let duration = self.get_video_duration(&filepath).await;
         let vis = match visibility { "private" => "private", "unlisted" => "unlisted", _ => "public" };
         let video = self.repo.create(uploader_id, title, description, filepath.to_str().unwrap_or(""), data.len() as i64, duration, vis).await?;
-        if vis == "unlisted" { let _ = self.repo.generate_share_code(video.id).await; }
+        if vis == "unlisted" {
+            if let Err(e) = self.repo.generate_share_code(video.id).await {
+                tracing::warn!("Failed to generate share code for video {}: {}", video.id, e);
+            }
+        }
         // 立即生成缩略图
         let thumb_dir = PathBuf::from(&self.config.hls_output_path).join(file_id.to_string());
         tokio::fs::create_dir_all(&thumb_dir).await.ok();
         let thumbnail_path = thumb_dir.join("thumbnail.jpg");
-        let _ = tokio::process::Command::new("ffmpeg")
+        let thumb_result = tokio::process::Command::new("ffmpeg")
             .args(["-y", "-i", filepath.to_str().unwrap_or(""), "-ss", "00:00:03", "-vframes", "1", thumbnail_path.to_str().unwrap_or("")])
             .output().await;
+        match thumb_result {
+            Ok(ref out) if !out.status.success() => {
+                tracing::warn!("Thumbnail generation failed for video {}: {}", video.id, String::from_utf8_lossy(&out.stderr));
+            }
+            Err(ref e) => {
+                tracing::warn!("Failed to start ffmpeg for thumbnail generation video {}: {}", video.id, e);
+            }
+            _ => {}
+        }
         if thumbnail_path.exists() {
             let thumb_url = format!("/hls/{}/thumbnail.jpg", file_id);
-            let _ = self.repo.update_transcode_status(video.id, "", Some(&thumb_url), &serde_json::json!([]), "processing").await;
+            if let Err(e) = self.repo.update_transcode_status(video.id, "", Some(&thumb_url), &serde_json::json!([]), "processing").await {
+                tracing::warn!("Failed to update transcode status to processing for video {}: {}", video.id, e);
+            }
         }
         // 后台转码
         let hls_output = PathBuf::from(&self.config.hls_output_path).join(file_id.to_string());
@@ -77,7 +92,9 @@ impl VideoHandler {
                 }
                 Err(e) => {
                     tracing::error!("转码失败: {}", e);
-                    let _ = repo.update_transcode_status(video.id, "", None, &serde_json::json!([]), "failed").await;
+                    if let Err(e2) = repo.update_transcode_status(video.id, "", None, &serde_json::json!([]), "failed").await {
+                        tracing::warn!("Failed to mark video {} as failed after transcode error: {}", video.id, e2);
+                    }
                 }
             }
         });
@@ -120,7 +137,9 @@ impl VideoHandler {
     pub async fn get_video(&self, video_id: Uuid, user_id: Option<Uuid>) -> Result<VideoPublic, AppError> {
         let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::NotFound("视频不存在".to_string()))?;
         self.check_access(&video, user_id, None)?;
-        let _ = self.repo.increment_view(video_id).await;
+        if let Err(e) = self.repo.increment_view(video_id).await {
+            tracing::warn!("Failed to increment view count for video {}: {}", video_id, e);
+        }
         let liked = match user_id {
             Some(uid) => self.repo.has_liked(video_id, uid).await.unwrap_or(false),
             None => false,
@@ -138,7 +157,9 @@ impl VideoHandler {
         self.check_access(&video, user_id, None)?;
         let sid = resolve_space_id(&self.repo.pool, ns).await?;
         let review = self.repo.find_space_review(sid, video_id).await?;
-        let _ = self.repo.increment_view(video_id).await;
+        if let Err(e) = self.repo.increment_view(video_id).await {
+            tracing::warn!("Failed to increment view count for video {}: {}", video_id, e);
+        }
         let liked = match user_id {
             Some(uid) => self.repo.has_liked(video_id, uid).await.unwrap_or(false),
             None => false,
@@ -216,9 +237,15 @@ impl VideoHandler {
     pub async fn delete_video(&self, video_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
         let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::NotFound("视频不存在".to_string()))?;
         if video.uploader_id != user_id { return Err(AppError::Forbidden("只能删除自己的视频".to_string())); }
-        let _ = tokio::fs::remove_file(&video.original_url).await;
+        if let Err(e) = tokio::fs::remove_file(&video.original_url).await {
+            tracing::warn!("Failed to delete video file {}: {}", video.original_url, e);
+        }
         if let Some(hls) = &video.hls_url {
-            if let Some(parent) = PathBuf::from(hls).parent() { let _ = tokio::fs::remove_dir_all(parent).await; }
+            if let Some(parent) = PathBuf::from(hls).parent() {
+                if let Err(e) = tokio::fs::remove_dir_all(parent).await {
+                    tracing::warn!("Failed to delete HLS directory {}: {}", parent.display(), e);
+                }
+            }
         }
         self.repo.delete(video_id).await
     }
@@ -326,9 +353,18 @@ async fn transcode_video(input: &PathBuf, output_dir: &PathBuf, _config: &VideoS
 
     // 生成缩略图（取第5秒）
     let thumbnail_path = output_dir.join("thumbnail.jpg");
-    let _ = tokio::process::Command::new("ffmpeg")
+    let thumb_result = tokio::process::Command::new("ffmpeg")
         .args(["-y", "-i", input.to_str().unwrap_or(""), "-ss", "00:00:05", "-vframes", "1", thumbnail_path.to_str().unwrap_or("")])
         .output().await;
+    match thumb_result {
+        Ok(ref out) if !out.status.success() => {
+            tracing::warn!("Transcode thumbnail generation failed for {}: {}", file_id, String::from_utf8_lossy(&out.stderr));
+        }
+        Err(ref e) => {
+            tracing::warn!("Failed to start ffmpeg for transcode thumbnail {}: {}", file_id, e);
+        }
+        _ => {}
+    }
 
     let hls_url = format!("/hls/{}/index.m3u8", file_id);
     let thumbnail_url = if thumbnail_path.exists() { Some(format!("/hls/{}/thumbnail.jpg", file_id)) } else { None };

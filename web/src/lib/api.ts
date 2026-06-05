@@ -150,12 +150,12 @@ let accessToken: string | null = null;
 export function setToken(token: string | null) {
   accessToken = token;
   if (token) {
-    localStorage.setItem('polis_access_token', token);
+    // NOTE: JWT stored only in-memory + cookie (not localStorage) to reduce XSS attack surface.
+    // localStorage access is trivial for any script on the same origin.
     if (typeof document !== 'undefined') {
       document.cookie = `polis_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax; Secure`;
     }
   } else {
-    localStorage.removeItem('polis_access_token');
     if (typeof document !== 'undefined') {
       document.cookie = 'polis_token=; path=/; max-age=0; SameSite=Lax';
     }
@@ -163,17 +163,9 @@ export function setToken(token: string | null) {
 }
 
 export function getToken(): string | null {
-  if (!accessToken) {
-    accessToken = localStorage.getItem('polis_access_token');
-  }
-  // fallback: read from cookie (set by setToken) in case localStorage was cleared
   if (!accessToken && typeof document !== 'undefined') {
     const match = document.cookie.match(/(?:^|;\s*)polis_token=([^;]*)/);
-    if (match) {
-      accessToken = match[1];
-      // restore to localStorage so future reads are fast
-      if (accessToken) localStorage.setItem('polis_access_token', accessToken);
-    }
+    if (match) accessToken = match[1];
   }
   return accessToken;
 }

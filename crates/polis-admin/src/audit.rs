@@ -27,7 +27,7 @@ impl AuditLogger {
             "actor_type": actor_type,
             "timestamp": chrono::Utc::now().to_rfc3339(),
         });
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "INSERT INTO audit_logs (actor_id, actor_type, target_type, target_id, action, old_state, new_state, reason, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
         )
         .bind(actor_id)
@@ -40,7 +40,9 @@ impl AuditLogger {
         .bind(reason)
         .bind(&metadata)
         .execute(&self.pool)
-        .await;
+        .await {
+            tracing::warn!("Failed to write audit log {} {} {}: {}", actor_type, action, target_id, e);
+        }
     }
 
     /// 查询审计日志

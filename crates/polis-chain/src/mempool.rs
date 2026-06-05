@@ -124,58 +124,65 @@ mod tests {
     }
 
     #[test]
-    fn test_add_and_retrieve() {
+    fn test_add_and_retrieve() -> ChainResult<()> {
         let mut pool = Mempool::new(1000);
         let tx = make_tx(0, "alice");
         let hash = tx.hash;
 
-        assert!(pool.add(tx).unwrap());
+        assert!(pool.add(tx)?);
         assert_eq!(pool.len(), 1);
         assert!(!pool.is_empty());
 
         let batch = pool.get_batch(10);
         assert_eq!(batch.len(), 1);
         assert_eq!(batch[0].hash, hash);
+
+        Ok(())
     }
 
     #[test]
-    fn test_dedup() {
+    fn test_dedup() -> ChainResult<()> {
         let mut pool = Mempool::new(1000);
         let tx = make_tx(0, "alice");
-        assert!(pool.add(tx.clone()).unwrap());
-        assert!(!pool.add(tx).unwrap()); // 重复
+        assert!(pool.add(tx.clone())?);
+        assert!(!pool.add(tx)?); // 重复
         assert_eq!(pool.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_remove_batch() {
+    fn test_remove_batch() -> ChainResult<()> {
         let mut pool = Mempool::new(1000);
         let tx1 = make_tx(0, "alice");
         let tx2 = make_tx(1, "alice");
         let h1 = tx1.hash;
 
-        pool.add(tx1).unwrap();
-        pool.add(tx2).unwrap();
+        pool.add(tx1)?;
+        pool.add(tx2)?;
         assert_eq!(pool.len(), 2);
 
         pool.remove_batch(&[h1]);
         assert_eq!(pool.len(), 1);
+
+        Ok(())
     }
 
     #[test]
-    fn test_nonce_ordering() {
+    fn test_nonce_ordering() -> ChainResult<()> {
         let mut pool = Mempool::new(1000);
         // 先提交 nonce=1 再 nonce=0 — nonce=0 应该被拒绝
-        assert!(pool.add(make_tx(1, "alice")).unwrap());
-        assert!(!pool.add(make_tx(0, "alice")).unwrap()); // 过时 nonce
+        assert!(pool.add(make_tx(1, "alice"))?);
+        assert!(!pool.add(make_tx(0, "alice"))?); // 过时 nonce
+        Ok(())
     }
 
     #[test]
-    fn test_max_capacity() {
+    fn test_max_capacity() -> ChainResult<()> {
         let mut pool = Mempool::new(2);
-        assert!(pool.add(make_tx(0, "a")).unwrap());
-        assert!(pool.add(make_tx(0, "b")).unwrap());
-        assert!(!pool.add(make_tx(0, "c")).unwrap()); // 满了
+        assert!(pool.add(make_tx(0, "a"))?);
+        assert!(pool.add(make_tx(0, "b"))?);
+        assert!(!pool.add(make_tx(0, "c"))?); // 满了
         assert_eq!(pool.len(), 2);
+        Ok(())
     }
 }

@@ -125,10 +125,12 @@ impl AgentHandler {
         }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
         // 更新最后活跃时间
-        let _ = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")
+        if let Err(e) = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")
             .bind(agent.id)
             .execute(&self.pool)
-            .await;
+            .await {
+            tracing::warn!("Failed to update agent {} last_active_at: {}", agent.id, e);
+        }
 
         // 生成 JWT
         let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");

@@ -28,6 +28,7 @@ pub fn get_or_create_current_round(
     min_xp: u64,
     prev_block_hash: &[u8; 32],
 ) -> ChainResult<MiningRound> {
+    // SAFETY: 系统时间不可能早于 UNIX_EPOCH (1970)，此调用在所有现代系统上均为 infallible
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
@@ -193,28 +194,28 @@ mod tests {
     use super::*;
     use crate::state::AccountState;
 
-    fn setup_storage() -> Storage {
+    fn setup_storage() -> ChainResult<Storage> {
         let dir = std::env::temp_dir().join(format!("polis-test-round-{}", uuid::Uuid::new_v4()));
-        std::fs::create_dir_all(&dir).unwrap();
-        Storage::open(&dir.to_string_lossy()).unwrap()
+        std::fs::create_dir_all(&dir)?;
+        Storage::open(&dir.to_string_lossy())
     }
 
-    fn create_account(storage: &Storage, address: &str, balance: u64, xp: u64) {
+    fn create_account(storage: &Storage, address: &str, balance: u64, xp: u64) -> ChainResult<()> {
         let mut state = AccountState::new(address.to_string(), 1);
         state.balance = balance;
         state.available_xp = xp;
         state.total_xp = xp;
-        storage.put_account_state(address, &state).unwrap();
+        storage.put_account_state(address, &state)
     }
 
     #[test]
-    fn test_settle_round_xp_cleared() {
-        let storage = setup_storage();
+    fn test_settle_round_xp_cleared() -> ChainResult<()> {
+        let storage = setup_storage()?;
         let prev_hash = [0xABu8; 32];
 
-        create_account(&storage, "user_a", 0, 100);
-        create_account(&storage, "user_b", 0, 50);
-        create_account(&storage, "user_c", 0, 30);
+        create_account(&storage, "user_a", 0, 100)?;
+        create_account(&storage, "user_b", 0, 50)?;
+        create_account(&storage, "user_c", 0, 30)?;
 
         let mut round = create_round(0, 0, 3600, 40);
         let reward_dist = vec![20, 12, 8]; // 50%, 30%, 20%
@@ -226,8 +227,7 @@ mod tests {
             10, // 10% winner_percentage — 3 participants -> max(1, 3*10/100) = 1 winner
             1,  // min_xp
             &reward_dist,
-        )
-        .unwrap();
+        )?;
 
         // 验证轮次状态
         assert_eq!(round.status, RoundStatus::Completed);
@@ -236,7 +236,9 @@ mod tests {
 
         // 验证所有参与者 available_xp 已清空，total_xp 保留（累计）
         for (addr, orig_xp) in &[("user_a", 100u64), ("user_b", 50u64), ("user_c", 30u64)] {
-            let acc = storage.get_account_state(addr).unwrap().unwrap();
+            let acc = storage
+                .get_account_state(addr)?
+                .ok_or_else(|| ChainError::Validation(format!("{addr} 不存在")))?;
             assert_eq!(acc.available_xp, 0, "{} available_xp 未归零", addr);
             assert_eq!(acc.total_xp, *orig_xp, "{} total_xp 应保留累计值", addr);
         }
@@ -245,28 +247,32 @@ mod tests {
         assert!(!round.winners.is_empty());
         // 验证中奖者获得了 $POL
         for w in &round.winners {
-            let acc = storage.get_account_state(&w.address).unwrap().unwrap();
+            let acc = storage
+                .get_account_state(&w.address)?
+                .ok_or_else(|| ChainError::Validation(format!("{} 不存在", w.address)))?;
             assert!(acc.balance > 0, "中奖者 {} 余额应为正", w.address);
         }
+        Ok(())
     }
 
     #[test]
-    fn test_settle_round_no_participants() {
-        let storage = setup_storage();
+    fn test_settle_round_no_participants() -> ChainResult<()> {
+        let storage = setup_storage()?;
         let prev_hash = [0u8; 32];
         let mut round = create_round(1, 3600, 7200, 40);
         let reward_dist = vec![20, 12, 8];
 
-        settle_round(&storage, &mut round, &prev_hash, 10, 1, &reward_dist).unwrap();
+        settle_round(&storage, &mut round, &prev_hash, 10, 1, &reward_dist)?;
 
         assert_eq!(round.status, RoundStatus::Completed);
         assert_eq!(round.participant_count, 0);
         assert!(round.winners.is_empty());
+        Ok(())
     }
 
     #[test]
-    fn test_settle_round_already_completed() {
-        let storage = setup_storage();
+    fn test_settle_round_already_completed() -> ChainResult<()> {
+        let storage = setup_storage()?;
         let prev_hash = [0u8; 32];
         let mut round = create_round(2, 7200, 10800, 40);
         round.status = RoundStatus::Completed;
@@ -274,65 +280,76 @@ mod tests {
 
         let result = settle_round(&storage, &mut round, &prev_hash, 10, 1, &reward_dist);
         assert!(result.is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_settle_round_min_xp_filter() {
-        let storage = setup_storage();
+    fn test_settle_round_min_xp_filter() -> ChainResult<()> {
+        let storage = setup_storage()?;
         let prev_hash = [0xFFu8; 32];
 
-        create_account(&storage, "low_xp", 0, 5);   // 低于门槛
-        create_account(&storage, "high_xp", 0, 100); // 高于门槛
+        create_account(&storage, "low_xp", 0, 5)?;   // 低于门槛
+        create_account(&storage, "high_xp", 0, 100)?; // 高于门槛
 
         let mut round = create_round(3, 10800, 14400, 40);
         let reward_dist = vec![40]; // 100% for single winner
 
-        settle_round(&storage, &mut round, &prev_hash, 50, 10, &reward_dist).unwrap();
+        settle_round(&storage, &mut round, &prev_hash, 50, 10, &reward_dist)?;
 
         // 只有 high_xp 参与（XP >= 10）
         assert_eq!(round.participant_count, 1);
 
         // low_xp 不受影响（未参与）
-        let low = storage.get_account_state("low_xp").unwrap().unwrap();
+        let low = storage
+            .get_account_state("low_xp")?
+            .ok_or_else(|| ChainError::Validation("low_xp 不存在".into()))?;
         assert_eq!(low.available_xp, 5);
 
         // high_xp 已归零
-        let high = storage.get_account_state("high_xp").unwrap().unwrap();
+        let high = storage
+            .get_account_state("high_xp")?
+            .ok_or_else(|| ChainError::Validation("high_xp 不存在".into()))?;
         assert_eq!(high.available_xp, 0);
+        Ok(())
     }
 
     #[test]
-    fn test_weighted_lottery_higher_xp_wins() {
+    fn test_weighted_lottery_higher_xp_wins() -> ChainResult<()> {
         // 验证高 XP 用户中奖概率更高（多次运行确认趋势）
-        let storage = setup_storage();
+        let storage = setup_storage()?;
         let reward_dist = vec![40];
         let mut whale_wins = 0u32;
 
         for seed_byte in 0..50u8 {
             let hash = [seed_byte; 32];
-            create_account(&storage, "whale", 0, 900);
-            create_account(&storage, "shrimp", 0, 100);
+            create_account(&storage, "whale", 0, 900)?;
+            create_account(&storage, "shrimp", 0, 100)?;
 
             let mut round = create_round(100 + seed_byte as u64, 0, 3600, 40);
-            settle_round(&storage, &mut round, &hash, 10, 1, &reward_dist).unwrap();
+            settle_round(&storage, &mut round, &hash, 10, 1, &reward_dist)?;
 
             if !round.winners.is_empty() && round.winners[0].address == "whale" {
                 whale_wins += 1;
             }
 
             // 清理账户状态以便下次迭代
-            let mut w = storage.get_account_state("whale").unwrap().unwrap();
+            let mut w = storage
+                .get_account_state("whale")?
+                .ok_or_else(|| ChainError::Validation("whale 不存在".into()))?;
             w.available_xp = 0;
             w.total_xp = 0;
-            storage.put_account_state("whale", &w).unwrap();
-            let mut s = storage.get_account_state("shrimp").unwrap().unwrap();
+            storage.put_account_state("whale", &w)?;
+            let mut s = storage
+                .get_account_state("shrimp")?
+                .ok_or_else(|| ChainError::Validation("shrimp 不存在".into()))?;
             s.available_xp = 0;
             s.total_xp = 0;
-            storage.put_account_state("shrimp", &s).unwrap();
+            storage.put_account_state("shrimp", &s)?;
         }
 
         // whale (900 XP) 应该比 shrimp (100 XP) 赢更多次
         let rate = whale_wins as f64 / 50.0;
         assert!(rate > 0.5, "whale 中奖率应为 >50%: 实际 {:.0}%", rate * 100.0);
+        Ok(())
     }
 }

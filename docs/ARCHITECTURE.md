@@ -11,7 +11,7 @@
 | **search** | 3004 | `polis-search` | 全文搜索 |
 | **admin** | 3050 | `polis-admin` | 管理后台 — 用户/空间/内容管理 |
 | **video** | 3005 | `polis-video` | 视频上传、FFmpeg 转码、HLS 流 |
-| **aggregate** | — | `polis-aggregate` | 内容聚合器 — 跨社区精选/热榜 (未部署) |
+| **aggregate** | — | `polis-aggregate` | 内容聚合器 — 跨社区精选/热榜 |
 | **notify** | — | `polis-notify` | 通知系统 |
 | **chat** | — | `polis-chat` | 社区实时聊天 |
 | **code** | — | `polis-code` | 代码仓库模块 |
@@ -20,7 +20,7 @@
 | **export** | — | `polis-export` | 数据导出 |
 | **plugin-engine** | — | `polis-plugin-engine` | 插件引擎 |
 
-> 已部署 7 个服务: gateway, user, space, content, admin, video, web (Next.js :3000)
+> 已部署 8 个服务: gateway, user, space, content, aggregate, admin, video, web (Next.js :3000)
 > 其余 crate 为骨架代码或未部署
 
 ## 请求流

@@ -75,7 +75,9 @@ pub async fn init(config: &Config, client: &HttpClient) -> Result<(), anyhow::Er
 
             // Auto-join the community
             let join_url = format!("/api/spaces/{}/join", urlencoding::encode(ns));
-            let _ = client.post(&join_url, Some(&token), &json!({})).await;
+            if let Err(e) = client.post(&join_url, Some(&token), &json!({})).await {
+                eprintln!("Warning: Failed to auto-join PolisAi community {}: {}", ns, e);
+            }
         }
         Err(e) => {
             // Check if conflict (space already exists)

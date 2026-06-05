@@ -8,12 +8,31 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::error::AppError;
 
-/// JWT Claims 标准结构
+/// JWT Claims 标准结构 — 所有服务的单一来源。
+///
+/// 包含所有可能的 JWT claim 字段。未使用的字段在反序列化时自动忽略，
+/// 在序列化时（如果为 `None`）自动跳过。
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
+    /// 用户 ID (UUID 字符串)
     pub sub: String,
+    /// 用户名
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub username: Option<String>,
+    /// 显示名称
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub display_name: Option<String>,
+    /// 过期时间 (Unix timestamp)
     pub exp: Option<usize>,
+    /// 签发时间 (Unix timestamp)
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub iat: Option<usize>,
+    /// Token 类型: "access" 或 "refresh"
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub token_type: Option<String>,
+    /// JWT ID (jti) — 唯一标识每个 token，用于黑名单撤销
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub jti: Option<String>,
 }
 
 /// 创建安全 JWT 验证配置（显式启用 exp 校验 + token_type 默认校验）

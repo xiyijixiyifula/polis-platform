@@ -140,10 +140,12 @@ impl ThreadHandler {
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
         // 更新 thread 的 updated_at
-        let _ = sqlx::query("UPDATE threads SET updated_at = NOW() WHERE id = $1")
+        if let Err(e) = sqlx::query("UPDATE threads SET updated_at = NOW() WHERE id = $1")
             .bind(thread_id)
             .execute(&self.pool)
-            .await;
+            .await {
+            tracing::warn!("Failed to update thread {} updated_at: {}", thread_id, e);
+        }
 
         Ok(msg)
     }
@@ -201,13 +203,15 @@ impl ThreadHandler {
         .map_err(|e| AppError::Internal(e.to_string()))?;
 
         // 更新 thread 状态
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "UPDATE threads SET status = 'published', creation_id = $1, updated_at = NOW() WHERE id = $2",
         )
         .bind(creation.0)
         .bind(thread_id)
         .execute(&self.pool)
-        .await;
+        .await {
+            tracing::warn!("Failed to update thread {} status to published: {}", thread_id, e);
+        }
 
         // 如果有社区列表，自动投稿
         let submitted_spaces = if let Some(spaces) = req.spaces {
@@ -239,7 +243,7 @@ impl ThreadHandler {
 
                     if ref_result.map(|r| r.rows_affected()).unwrap_or(0) > 0 {
                         // 同步创建 posts
-                        let _ = sqlx::query(
+                        if let Err(e) = sqlx::query(
                             r#"INSERT INTO posts (space_id, module_type, author_id, title, body, content_type, tags, visibility, creation_id)
                                SELECT $1, $2, $3, $4, $5, 'text', $6, $7, $8
                                WHERE NOT EXISTS (SELECT 1 FROM posts WHERE creation_id = $8 AND space_id = $1 AND module_type = $2)"#,
@@ -253,12 +257,16 @@ impl ThreadHandler {
                         .bind(&visibility)
                         .bind(creation.0)
                         .execute(&self.pool)
-                        .await;
+                        .await {
+                            tracing::warn!("Failed to sync post for creation {} in space {}: {}", creation.0, sid, e);
+                        }
                         // 更新社区帖子计数
-                        let _ = sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
+                        if let Err(e) = sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
                             .bind(sid)
                             .execute(&self.pool)
-                            .await;
+                            .await {
+                            tracing::warn!("Failed to update post_count for space {}: {}", sid, e);
+                        }
                         results.push(ns.clone());
                     }
                 }

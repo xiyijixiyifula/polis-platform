@@ -13,7 +13,7 @@
 - ~~JWT 多服务校验不一致 (Validation::default() 行为不确定)~~ → v1.0.13 统一使用 polis_core::auth::secure_validation()
 - GitHub Release 下载链接不可用（gh CLI 未认证服务器），仅支持源码编译安装
 - `GET /api/spaces/search` 无独立搜索端点
-- `polis-aggregate` 有完整代码但未部署，跨社区精选/热榜功能缺失
+- `polis-aggregate` 已部署，跨社区精选/热榜功能已可用
 - 无蓝绿/滚动部署（重启时有短暂中断）
 - 日志无自动轮转（可能撑满磁盘）
 - systemd 服务 ExecStart 使用 `/root/polis/target/release/` 路径，与部署目标 `/usr/local/bin/` 不一致 → v1.0.27 记录为 [deploy-path-mismatch](bugs/patterns/deploy-path-mismatch.md) Pattern

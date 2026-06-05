@@ -1,6 +1,10 @@
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 use ed25519_dalek::Signer;
 use uuid::Uuid;
+
+const XP_RETRY_MAX: u32 = 3;
+const XP_RETRY_BASE_MS: u64 = 200;
 
 /// XP Bridge: 在内容操作时通过 HTTP 调用 user 服务发放经验值，
 /// 同时向本地 Polis Chain 节点提交 ActivityProof 链上存证。
@@ -50,7 +54,7 @@ impl XpBridge {
         Ok(self)
     }
 
-    /// 通过内部 API 发放 XP（非阻塞，忽略错误）
+    /// 通过内部 API 发放 XP（带重试，非阻塞 — 失败仅记录警告日志）
     pub async fn award_xp(
         &self,
         user_id: Uuid,
@@ -59,7 +63,7 @@ impl XpBridge {
         target_type: Option<&str>,
         target_id: Option<Uuid>,
     ) {
-        // 1. 发 XP 到 user 服务
+        // 1. 发 XP 到 user 服务 (3 次重试，指数退避)
         let url = format!("{}/api/internal/xp/award", self.user_service_url);
         let body = serde_json::json!({
             "user_id": user_id.to_string(),
@@ -68,13 +72,37 @@ impl XpBridge {
             "target_type": target_type,
             "target_id": target_id.map(|id| id.to_string()),
         });
-        let _ = self.client.post(&url).json(&body).send().await;
 
-        // 2. 提交 ActivityProof 到链节点 (链上存证)
+        let mut last_err = None;
+        for attempt in 0..XP_RETRY_MAX {
+            match self.client.post(&url).json(&body).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    last_err = None;
+                    break;
+                }
+                Ok(resp) => {
+                    last_err = Some(format!("HTTP {}", resp.status()));
+                }
+                Err(e) => {
+                    last_err = Some(e.to_string());
+                }
+            }
+            if attempt < XP_RETRY_MAX - 1 {
+                tokio::time::sleep(Duration::from_millis(XP_RETRY_BASE_MS * 2u64.pow(attempt))).await;
+            }
+        }
+        if let Some(err) = last_err {
+            tracing::warn!(
+                "XP bridge: failed to award {} XP (action={}) for user {} after {} retries: {}",
+                xp_for_action(action_type), action_type, user_id, XP_RETRY_MAX, err
+            );
+        }
+
+        // 2. 提交 ActivityProof 到链节点 (链上存证，非阻塞)
         self.submit_to_chain(user_id, action_type, description).await;
     }
 
-    /// 提交 ActivityProof 到本地链节点 (带 Ed25519 签名)
+    /// 提交 ActivityProof 到本地链节点 (带 Ed25519 签名 + 重试)
     async fn submit_to_chain(&self, user_id: Uuid, action_type: &str, content_hint: &str) {
         let (Some(chain_url), Some(site_id)) = (&self.chain_api_url, &self.site_id) else {
             return;
@@ -104,8 +132,8 @@ impl XpBridge {
             "xp_value": xp_value,
             "timestamp": std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
+                .map(|d| d.as_secs())
+                .unwrap_or(0),
             "nonce": nonce,
         });
 
@@ -120,7 +148,30 @@ impl XpBridge {
         }
 
         let url = format!("{}/api/v1/activities", chain_url);
-        let _ = self.client.post(&url).json(&body).send().await;
+        let mut last_err = None;
+        for attempt in 0..XP_RETRY_MAX {
+            match self.client.post(&url).json(&body).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    last_err = None;
+                    break;
+                }
+                Ok(resp) => {
+                    last_err = Some(format!("HTTP {}", resp.status()));
+                }
+                Err(e) => {
+                    last_err = Some(e.to_string());
+                }
+            }
+            if attempt < XP_RETRY_MAX - 1 {
+                tokio::time::sleep(Duration::from_millis(XP_RETRY_BASE_MS * 2u64.pow(attempt))).await;
+            }
+        }
+        if let Some(err) = last_err {
+            tracing::warn!(
+                "XP bridge: failed to submit activity proof to chain (user={}, action={}) after {} retries: {}",
+                user_id, action_type, XP_RETRY_MAX, err
+            );
+        }
     }
 
     /// 发帖 XP

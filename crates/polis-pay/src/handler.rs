@@ -149,7 +149,9 @@ impl PayHandler {
                 payload,
             };
             if let Ok(data) = serde_json::to_vec(&event) {
-                let _ = nats.publish(subject.to_string(), data.into()).await;
+                if let Err(e) = nats.publish(subject.to_string(), data.into()).await {
+                    tracing::warn!("Failed to publish event {}: {}", subject, e);
+                }
             }
         }
     }

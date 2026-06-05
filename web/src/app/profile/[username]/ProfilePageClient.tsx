@@ -84,7 +84,7 @@ export default function UserProfilePage({ username }: { username: string }) {
       const res = await videos.delete(videoId);
       if (res.code === 0) setMyVideos(prev => prev.filter(v => v.id !== videoId));
       else alert(res.message || '删除失败');
-    } catch { alert('删除失败'); }
+    } catch (e) { console.error('[component] error:', e); alert('删除失败'); }
   };
 
   const handleUpdateVideoVis = async (videoId: string, visibility: string) => {
@@ -92,7 +92,7 @@ export default function UserProfilePage({ username }: { username: string }) {
       const res = await videos.update(videoId, { visibility });
       if (res.code === 0) setMyVideos(prev => prev.map(v => v.id === videoId ? { ...v, visibility } : v));
       else alert(res.message || '更新失败');
-    } catch { alert('更新失败'); }
+    } catch (e) { console.error('[component] error:', e); alert('更新失败'); }
     setShowVideoEdit(null);
   };
 
@@ -106,7 +106,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         setEditPwd('');
         setShowVideoEdit(null);
       } else alert(res.message || '设置失败');
-    } catch { alert('设置失败'); }
+    } catch (e) { console.error('[component] error:', e); alert('设置失败'); }
     setEditPublishing(false);
   };
 
@@ -153,13 +153,14 @@ export default function UserProfilePage({ username }: { username: string }) {
             try {
               const me = JSON.parse(stored);
               setIsSelf(me.username === username || me.id === res.data.id);
-            } catch {}
+            } catch (e) { console.error('[component] error:', e); }
           }
         } else {
           setError('用户不存在');
         }
-      } catch {
-        setError('加载失败');
+      } catch (e) {
+        console.error('[component] error:', e);
+        setError((e as Error).message || '加载失败');
       }
 
       try {
@@ -256,7 +257,7 @@ export default function UserProfilePage({ username }: { username: string }) {
     setCreationsLoading(true);
     (async () => {
       try {
-        const safeUsername = (() => { try { return decodeURIComponent(username); } catch { return username; } })();
+        const safeUsername = (() => { try { return decodeURIComponent(username); } catch (e) { console.error('[component] error:', e); return username; } })();
         const res = await fetch(`/api/creations?creator_username=${encodeURIComponent(safeUsername)}&page_size=50`);
         const data = await res.json();
         if (data.code === 0 && data.data) {
@@ -283,7 +284,8 @@ export default function UserProfilePage({ username }: { username: string }) {
       } else {
         alert(data.message || '删除失败');
       }
-    } catch {
+    } catch (e) {
+      console.error('[component] error:', e);
       alert('删除失败');
     }
   };
@@ -355,8 +357,9 @@ export default function UserProfilePage({ username }: { username: string }) {
       } else {
         setRefError(data.message || '投稿失败');
       }
-    } catch {
-      setRefError('网络错误');
+    } catch (e) {
+      console.error('[component] error:', e);
+      setRefError((e as Error).message || '网络错误');
     }
     setRefSubmitting(false);
   };

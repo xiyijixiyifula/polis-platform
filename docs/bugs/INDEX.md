@@ -245,7 +245,7 @@ nats-event-loss         ██ 1
 |--------|------|----------|------|-------------|----------|
 | BUG-001 | 视频发布不创建 ModuleRef (video→module_refs) | v1.0.44 | 🆕 已发现 | — | 需要后端 PublishRequest 增加 module_type + 写入 module_refs 表 |
 | BUG-002 | 服务器 admin_code 文件与 env var 不一致 | v1.0.25 | ⏸️ 暂缓 | deploy-path-mismatch | 低优先级 — 仅影响管理码修改同步 |
-| BUG-003 | polis-aggregate 未部署 (跨社区精选/热榜功能缺失) | v0.2.x | ⏸️ 暂缓 | — | 需要服务器资源评估 |
+| BUG-003 | polis-aggregate 已部署 | v0.2.x | ✅ 已修复 | — | 已纳入 deploy.sh RUST_BINARIES |
 
 ### 最近关闭 Bug
 
@@ -296,7 +296,7 @@ nats-event-loss         ██ 1
 | 机制 | 触发时机 | 覆盖范围 |
 |------|----------|----------|
 | `pre-modify-check.sh <file>` | 修改代码前 | 13 个脆弱文件的风险评估 + 修复配方 |
-| `pre-deploy-check.sh` | 部署前 | 14 类风险自动化检查 |
+| `pre-deploy-check.sh` | 部署前 | 19 类风险自动化检查 |
 | `diagnose.sh "<症状>"` | Bug 报告时 | 12 个已知 Pattern 自动匹配 |
 | `bug-record.sh` | 修复完成后 | 一键更新所有追踪文件 |
 | `install-hooks.sh` | 一次性设置 | Git pre-push hook 自动检查 |

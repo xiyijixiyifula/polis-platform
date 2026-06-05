@@ -114,7 +114,7 @@ impl WebhookDispatcher {
         };
 
         // 记录推送日志
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "INSERT INTO webhook_deliveries (webhook_id, event_type, payload, status_code, response_body, error_message, duration_ms) VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind(wh.id)
@@ -125,16 +125,20 @@ impl WebhookDispatcher {
         .bind(error_message.as_deref())
         .bind(duration_ms)
         .execute(pool)
-        .await;
+        .await {
+            tracing::warn!("Failed to log webhook delivery for webhook {}: {}", wh.id, e);
+        }
 
         // 更新 webhook 状态
-        let _ = sqlx::query(
+        if let Err(e) = sqlx::query(
             "UPDATE webhooks SET last_delivery_at = NOW(), last_delivery_status = $1, delivery_count = delivery_count + 1, updated_at = NOW() WHERE id = $2",
         )
         .bind(status_code)
         .bind(wh.id)
         .execute(pool)
-        .await;
+        .await {
+            tracing::warn!("Failed to update webhook {} delivery status: {}", wh.id, e);
+        }
     }
 }
 

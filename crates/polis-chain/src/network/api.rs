@@ -99,6 +99,7 @@ async fn get_status(State(state): State<AppState>) -> impl IntoResponse {
     let latest = state.storage.latest_block_number().unwrap_or(0);
     let elapsed = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
+        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
         .unwrap()
         .as_secs()
         - state.start_time;
@@ -328,7 +329,11 @@ async fn submit_activity(
                 return err(401, "该站点需要 Ed25519 签名: 请提供 signature 字段");
             }
 
-            let vk = match crypto::verifying_key_from_bytes(&pubkey[..32].try_into().unwrap()) {
+            let key_bytes: [u8; 32] = match pubkey.as_slice().try_into() {
+                Ok(k) => k,
+                Err(_) => return err(400, "站点公钥格式无效"),
+            };
+            let vk = match crypto::verifying_key_from_bytes(&key_bytes) {
                 Ok(vk) => vk,
                 Err(_) => return err(400, "站点公钥无效"),
             };
@@ -448,6 +453,7 @@ async fn get_user_xp(
 ) -> impl IntoResponse {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
+        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
         .unwrap()
         .as_secs();
 
@@ -469,6 +475,7 @@ async fn get_user_xp(
 async fn get_current_round(State(state): State<AppState>) -> impl IntoResponse {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
+        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
         .unwrap()
         .as_secs();
 
@@ -616,6 +623,7 @@ async fn create_wallet(State(state): State<AppState>) -> impl IntoResponse {
 
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
+        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
         .unwrap()
         .as_secs();
     let account = crate::state::AccountState::new(wallet.address.clone(), now);
@@ -740,6 +748,7 @@ async fn get_peers(State(state): State<AppState>) -> impl IntoResponse {
 async fn get_round_participants(State(state): State<AppState>) -> impl IntoResponse {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
+        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
         .unwrap()
         .as_secs();
     let round_id = now / 3600;
@@ -800,7 +809,11 @@ async fn pool_deposit(
         Ok(b) if b.len() == 32 => b,
         _ => return err(400, "无效的公钥格式 (需要 32 字节 hex)"),
     };
-    let vk = match crypto::verifying_key_from_bytes(&pubkey_bytes[..32].try_into().unwrap()) {
+    let key_arr: [u8; 32] = match pubkey_bytes.try_into() {
+        Ok(arr) => arr,
+        Err(_) => return err(400, "无效的公钥格式 (需要 32 字节 hex)"),
+    };
+    let vk = match crypto::verifying_key_from_bytes(&key_arr) {
         Ok(vk) => vk,
         Err(_) => return err(400, "无效的 Ed25519 公钥"),
     };

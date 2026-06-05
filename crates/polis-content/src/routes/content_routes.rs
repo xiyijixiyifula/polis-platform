@@ -19,6 +19,8 @@ use argon2::{Argon2, PasswordHash, PasswordVerifier};
 
 /// Helper to wrap a value in Json response
 fn json_ok<T: serde::Serialize>(value: T) -> Json<serde_json::Value> {
+    // SAFETY: serde_json::to_value only fails for maps with non-string keys;
+    // all types serialized here use string keys, so this is infallible.
     Json(serde_json::to_value(value).expect("json_ok: serialization should not fail for known types"))
 }
 
@@ -33,7 +35,7 @@ fn maybe_extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> 
         None => return Ok(None),
     };
     let secret = std::env::var("JWT_SECRET")
-        .expect("JWT_SECRET environment variable must be set");
+        .map_err(|_| AppError::Internal("JWT_SECRET environment variable must be set".into()))?;
     match decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation()) {
         Ok(data) => {
             match Uuid::parse_str(&data.claims.sub) {
@@ -946,7 +948,7 @@ async fn create_comment_by_post_id(
         .strip_prefix("Bearer ")
         .ok_or(AppError::Unauthorized)?;
     let secret = std::env::var("JWT_SECRET")
-        .expect("JWT_SECRET environment variable must be set");
+        .map_err(|_| AppError::Internal("JWT_SECRET environment variable must be set".into()))?;
     let token_data = decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation())
         .map_err(|_| AppError::Unauthorized)?;
     let uid = Uuid::parse_str(&token_data.claims.sub)
@@ -1214,6 +1216,8 @@ async fn get_file_route(
     let (data, _filename, mime_type) = h.get_file(id).await?;
     let content_type = mime_type.parse::<axum::http::HeaderValue>()
         .unwrap_or_else(|_| axum::http::HeaderValue::from_static("application/octet-stream"));
+    // SAFETY: Response::builder() with a valid CONTENT_TYPE header and body
+    // will never fail — the header name is statically known-valid.
     Ok(Response::builder()
         .header(axum::http::header::CONTENT_TYPE, content_type)
         .body(axum::body::Body::from(data))

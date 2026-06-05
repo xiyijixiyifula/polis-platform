@@ -51,7 +51,7 @@ export default function CommentsSection() {
       const items = Array.isArray(data.data) ? data.data
         : Array.isArray(data.data?.items) ? data.data.items : [];
       setCommentPosts(items);
-    } catch {} finally { setCommentPostsLoading(false); }
+    } catch (e) { console.error('[CommentsSection] loadCommentPosts error:', e); } finally { setCommentPostsLoading(false); }
   };
 
   const loadComments = async (reset = false) => {
@@ -73,7 +73,7 @@ export default function CommentsSection() {
         setComments(prev => [...prev, ...list]);
       }
       setCommentsTotal(data.total ?? data.data?.total ?? 0);
-    } catch {} finally { setCommentsLoading(false); }
+    } catch (e) { console.error('[CommentsSection] loadComments error:', e); } finally { setCommentsLoading(false); }
   };
 
   const handleDeleteComment = async (commentId: string) => {
@@ -85,7 +85,7 @@ export default function CommentsSection() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       setComments(prev => prev.filter(c => c.id !== commentId));
-    } catch {}
+    } catch (e) { console.error('[CommentsSection] handleDeleteComment error:', e); }
   };
 
   const handleTogglePin = async (comment: Comment) => {
@@ -100,7 +100,7 @@ export default function CommentsSection() {
       if (data.code === 0) {
         setComments(prev => prev.map(c => c.id === comment.id ? { ...c, is_pinned: !c.is_pinned } : c));
       }
-    } catch {}
+    } catch (e) { console.error('[CommentsSection] handleTogglePin error:', e); }
   };
 
   const selectCommentPost = (post: any) => {

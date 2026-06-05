@@ -13,6 +13,7 @@ use crate::auth;
 use crate::config::UserServiceConfig;
 use crate::repo::UserRepo;
 use crate::handlers::bind_wallet::BindWalletHandler;
+use crate::token_blacklist::TokenBlacklist;
 
 /// 用户业务逻辑处理器
 pub struct UserHandler {
@@ -20,6 +21,7 @@ pub struct UserHandler {
     pub config: UserServiceConfig,
     pub nats: Option<NatsClient>,
     pub bind_wallet: BindWalletHandler,
+    pub token_blacklist: TokenBlacklist,
 }
 
 impl UserHandler {
@@ -35,6 +37,7 @@ impl UserHandler {
             config,
             nats,
             bind_wallet,
+            token_blacklist: TokenBlacklist::new(),
         }
     }
 
@@ -279,7 +282,9 @@ impl UserHandler {
                 payload,
             };
             if let Ok(data) = serde_json::to_vec(&event) {
-                let _ = nats.publish(subject.to_string(), data.into()).await;
+                if let Err(e) = nats.publish(subject.to_string(), data.into()).await {
+                    tracing::warn!("Failed to publish event {}: {}", subject, e);
+                }
             }
         }
     }
@@ -371,7 +376,7 @@ impl UserHandler {
                 .execute(&self.repo.pool).await?;
             // 发布关注事件 + 直接创建通知（NATS 可能未部署）
             if followee_type == "user" {
-                let _ = self.publish_event(subjects::USER_FOLLOWED, serde_json::json!({
+                self.publish_event(subjects::USER_FOLLOWED, serde_json::json!({
                     "follower_id": follower_id.to_string(),
                     "followed_id": followee_id.to_string(),
                 })).await;
@@ -380,11 +385,13 @@ impl UserHandler {
                     "SELECT display_name FROM users WHERE id = $1"
                 ).bind(follower_id).fetch_optional(&self.repo.pool).await.ok().flatten().unwrap_or_else(|| "有人".to_string());
                 let content = format!("{} 关注了你", follower_name);
-                let _ = sqlx::query(
+                if let Err(e) = sqlx::query(
                     "INSERT INTO notifications (user_id, type, actor_id, target_type, target_id, content) VALUES ($1, $2, $3, $4, $5, $6)"
                 )
                 .bind(followee_id).bind("follow").bind(follower_id).bind("user").bind(follower_id).bind(&content)
-                .execute(&self.repo.pool).await;
+                .execute(&self.repo.pool).await {
+                    tracing::warn!("Failed to create follow notification for user {}: {}", followee_id, e);
+                }
             }
             Ok(true)
         }
@@ -612,5 +619,66 @@ impl UserHandler {
 
     pub async fn unsubscribe_push(&self, user_id: Uuid, endpoint: &str) -> Result<(), AppError> {
         self.repo.delete_push_subscription(user_id, endpoint).await
+    }
+
+    /// 用 refresh token 换取新的 access + refresh token 对 (token rotation)
+    pub async fn refresh_token(&self, refresh_token: &str) -> Result<LoginResponse, AppError> {
+        let claims = auth::verify_token(refresh_token, &self.config.jwt_secret)
+            .map_err(|_| AppError::Unauthorized)?;
+
+        if claims.token_type.as_deref() != Some("refresh") {
+            return Err(AppError::Unauthorized);
+        }
+
+        // 检查 refresh token 是否被撤销
+        if let Some(ref jti) = claims.jti {
+            if self.token_blacklist.is_blacklisted(jti).await {
+                return Err(AppError::Unauthorized);
+            }
+            // 撤销旧 refresh token
+            self.token_blacklist.blacklist(jti).await;
+        }
+
+        let user_id = Uuid::parse_str(&claims.sub)
+            .map_err(|_| AppError::Unauthorized)?;
+
+        let user = self.repo.find_by_id(user_id).await?
+            .ok_or(AppError::Unauthorized)?;
+
+        let access_expiry = self.config.jwt_access_expiry;
+        let refresh_expiry = self.config.jwt_refresh_expiry;
+
+        let access_token = auth::generate_access_token(
+            user_id, &user.username, &user.display_name,
+            &self.config.jwt_secret, access_expiry,
+        ).map_err(|e| AppError::Internal(e.to_string()))?;
+
+        let new_refresh_token = auth::generate_refresh_token(
+            user_id, &user.username, &user.display_name,
+            &self.config.jwt_secret, refresh_expiry,
+        ).map_err(|e| AppError::Internal(e.to_string()))?;
+
+        Ok(LoginResponse {
+            access_token,
+            refresh_token: new_refresh_token,
+            user: user.into(),
+        })
+    }
+
+    /// 登出 — 撤销 access token（和可选的 refresh token）
+    pub async fn logout(&self, jti: &str, refresh_token: Option<&str>) -> Result<(), AppError> {
+        // 撤销 access token
+        self.token_blacklist.blacklist(jti).await;
+
+        // 如果提供了 refresh token，也撤销它
+        if let Some(rt) = refresh_token {
+            if let Ok(claims) = auth::verify_token(rt, &self.config.jwt_secret) {
+                if let Some(ref rt_jti) = claims.jti {
+                    self.token_blacklist.blacklist(rt_jti).await;
+                }
+            }
+        }
+
+        Ok(())
     }
 }

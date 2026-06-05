@@ -109,7 +109,7 @@ function EditCreationPageInner() {
         }
       };
       reader.readAsDataURL(file);
-    } catch {}
+    } catch (e) { console.error('[component] attachment upload error:', e); setError('附件上传失败'); }
   };
 
   const handleImportMd = async (file: File) => {
@@ -132,7 +132,7 @@ function EditCreationPageInner() {
         const text = await file.text();
         setBody(prev => prev ? prev + '\n\n' + text : text);
       }
-    } catch {}
+    } catch (e) { console.error('[component] markdown import error:', e); setError('导入失败'); }
   };
 
   // ── ESC handler ──

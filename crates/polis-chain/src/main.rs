@@ -96,9 +96,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn blocking_run<F: std::future::Future>(f: F) -> F::Output {
     match tokio::runtime::Handle::try_current() {
         Ok(handle) => tokio::task::block_in_place(|| handle.block_on(f)),
-        Err(_) => tokio::runtime::Runtime::new()
-            .unwrap()
-            .block_on(f),
+        Err(_) => {
+            // SAFETY: Runtime::new() only fails on extreme resource exhaustion (OOM);
+            // if we cannot create a Tokio runtime, the program cannot function anyway.
+            tokio::runtime::Runtime::new()
+                .unwrap()
+                .block_on(f)
+        }
     }
 }
 
@@ -155,7 +159,10 @@ async fn run_node() -> Result<(), Box<dyn std::error::Error>> {
     let latest = storage.latest_block_number()?;
     tracing::info!("存储初始化完成，最新区块: {}", latest);
 
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| format!("System clock is set before UNIX epoch: {e}"))?
+        .as_secs();
 
     // 初始化 mempool
     let mempool = Arc::new(tokio::sync::Mutex::new(
@@ -336,7 +343,10 @@ fn init_chain(config: &NodeConfig, storage: &Storage) -> Result<(), ChainError> 
 
 /// 创建创世区块
 fn create_genesis_block(config: &NodeConfig, storage: &Storage) -> Result<(), ChainError> {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| ChainError::Config(format!("System clock error: {e}")))?
+        .as_secs();
 
     // 链配置 (存到 config CF)
     let chain_config = OnChainConfig::default();

@@ -20,7 +20,7 @@ function getCurrentUserId(): string | null {
     const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     const decoded = JSON.parse(atob(b64));
     return decoded.sub || null;
-  } catch { return null; }
+  } catch (e) { console.error('[component] error:', e); return null; }
 }
 
 /** 将 Creation 数据适配为 Post 格式，用于降级显示无投稿的创作 */
@@ -70,7 +70,7 @@ async function tryLoadAsCreation(
       setters.setBookmarked(c.is_bookmarked || false);
       return true;
     }
-  } catch {}
+  } catch (e) { console.error('[component] error:', e); }
   return false;
 }
 
@@ -150,7 +150,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
               if (commentsData.data) {
                 setComments(commentsData.data);
               }
-            } catch {}
+            } catch (e) { console.error('[component] error:', e); }
             setLoading(false);
             return;
           }
@@ -176,14 +176,15 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
             if (commentsData.data) {
               setComments(commentsData.data);
             }
-          } catch {}
+          } catch (e) { console.error('[component] error:', e); }
         } else {
           // 降级查询：帖子/空间不存在时尝试作为创作（creation）显示
           const loaded = await tryLoadAsCreation(postId, { setPost, setLikeCount, setLiked, setBookmarked });
           if (loaded) { setLoading(false); return; }
           setError(res.message || '帖子不存在或已被删除');
         }
-      } catch {
+      } catch (e) {
+        console.error('[component] error:', e);
         setError('网络错误，请刷新重试');
       }
       setLoading(false);
@@ -201,7 +202,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
         if (res.data) {
           setPost((prev) => prev ? { ...prev, view_count: res.data!.view_count } : prev);
         }
-      } catch {}
+      } catch (e) { console.error('[component] error:', e); }
     })();
   }, [post?.id]);
 
@@ -214,7 +215,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
         if (Array.isArray(refs)) {
           setCreationRefs(refs);
         }
-      } catch {}
+      } catch (e) { console.error('[component] error:', e); }
     })();
   }, [postId]);
 
@@ -228,7 +229,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
           const related = res.data.filter((p: any) => p.id !== post.id).slice(0, 3);
           setRelatedPosts(related);
         }
-      } catch {}
+      } catch (e) { console.error('[component] error:', e); }
       setRelatedLoading(false);
     })();
   }, [post, currentNs]);
@@ -258,7 +259,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
           setIsFollowingAuthor(d.data.some((u: any) => u.id === currentUserId));
         }
       })
-      .catch(() => {});
+      .catch((e) => { console.error('[api] error:', e); });
   }, [post, isAuthor]);
 
   // Handle follow/unfollow author
@@ -277,7 +278,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
       if (data.code === 0) {
         setIsFollowingAuthor(data.data ?? true);
       }
-    } catch {}
+    } catch (e) { console.error('[component] error:', e); }
     setAuthorFollowLoading(false);
   };
 
@@ -288,7 +289,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
       if (res.code === 0 && Array.isArray(res.data)) {
         setSpaceSeries(res.data);
       }
-    }).catch(() => {});
+    }).catch((e) => { console.error('[api] error:', e); });
   }, [isAuthor, spaceNs]);
 
   // Handle adding post to series
@@ -337,7 +338,8 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
         setPost(res.data);
         setIsEditing(false);
       }
-    } catch {
+    } catch (e) {
+      console.error('[component] error:', e);
       alert('编辑失败，请重试');
     }
   };
@@ -370,7 +372,8 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
       } else {
         router.push('/');
       }
-    } catch {
+    } catch (e) {
+      console.error('[component] error:', e);
       alert('删除失败，请重试');
     }
   };
@@ -389,7 +392,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
           setLikeCount((prev) => (liked ? prev + 1 : Math.max(0, prev - 1)));
         }
       }
-    } catch {}
+    } catch (e) { console.error('[component] error:', e); }
   };
 
   const handleBookmark = async () => {
@@ -400,7 +403,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
         const data = res.data as any;
         setBookmarked(typeof data === 'boolean' ? data : (data.bookmarked ?? false));
       }
-    } catch {}
+    } catch (e) { console.error('[component] error:', e); }
   };
 
   const handleReport = async () => {
@@ -410,7 +413,8 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
       setShowReport(false);
       setReportReason('');
       alert('举报已提交，我们会尽快处理。');
-    } catch {
+    } catch (e) {
+      console.error('[component] error:', e);
       alert('举报失败，请重试');
     }
   };
@@ -430,7 +434,8 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
           setCommentText('');
         }
       }
-    } catch {
+    } catch (e) {
+      console.error('[component] error:', e);
       alert('评论失败，请重试');
     }
   };
@@ -450,7 +455,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
           )
         );
       }
-    } catch {}
+    } catch (e) { console.error('[component] error:', e); }
   };
 
   if (loading) {

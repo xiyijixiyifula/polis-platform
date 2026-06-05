@@ -187,12 +187,12 @@ function NewCreationPageInner() {
                   moduleLabel = mod.name;
                 }
               }
-            } catch {}
+            } catch (e) { console.error('[component] error:', e); }
 
             // 使用原始 module_key 投稿，保留实际模块键名
             setSubmissions([{ spaceId: s.id, spaceNs: s.namespace, spaceTitle: s.title, moduleType: prefillModule, moduleLabel }]);
           }
-        } catch {}
+        } catch (e) { console.error('[component] error:', e); }
       })();
     }
   }, [prefillSpaceNs, prefillModule]);
@@ -203,7 +203,7 @@ function NewCreationPageInner() {
     setSeriesLoading(true);
     seriesApi.list(prefillSpaceNs).then(res => {
       if (res.code === 0 && res.data) setSeriesList(res.data.filter((s: Series) => s.is_published));
-    }).catch(() => {}).finally(() => setSeriesLoading(false));
+    }).catch((e) => { console.error('[api] error:', e); }).finally(() => setSeriesLoading(false));
   }, [prefillSpaceNs, moduleType]);
 
   // 草稿恢复（仅 markdown 编辑器，非编辑模式）
@@ -276,7 +276,7 @@ function NewCreationPageInner() {
         const text = await file.text();
         setBody(prev => prev ? prev + '\n\n' + text : text);
       }
-    } catch {}
+    } catch (e) { console.error('[component] error:', e); setError(e instanceof Error ? e.message : '导入失败'); }
   };
 
   const handleAttachmentUpload = async (file: File) => {
@@ -300,7 +300,7 @@ function NewCreationPageInner() {
         }
       };
       reader.readAsDataURL(file);
-    } catch {}
+    } catch (e) { console.error('[component] error:', e); setError(e instanceof Error ? e.message : '上传附件失败'); }
   };
 
   // ── 视频上传 ──
@@ -386,7 +386,7 @@ function NewCreationPageInner() {
           setSpaceResults(data.data);
           setShowSpaceDropdown(true);
         }
-      } catch {}
+      } catch (e) { console.error('[component] error:', e); setError(e instanceof Error ? e.message : '搜索失败'); }
       setSpaceLoading(false);
     }, 300);
   };
@@ -408,7 +408,7 @@ function NewCreationPageInner() {
           foundModule = true;
         }
       }
-    } catch {}
+    } catch (e) { console.error('[component] error:', e); }
 
     if (!foundModule) {
       setError(`社区「${space.title || space.namespace}」未开启${currentModule.label}模块，无法投稿`);
@@ -452,14 +452,14 @@ function NewCreationPageInner() {
       if (data.code === 0 && data.data) {
         const creationId = isEditMode ? editId : data.data.id;
         if (selectedSeriesId) {
-          try { await seriesApi.addPost(selectedSeriesId, creationId); } catch {}
+          try { await seriesApi.addPost(selectedSeriesId, creationId); } catch (e) { console.error('[component] error:', e); }
         }
         if (submissions.length > 0) {
           await Promise.all(submissions.map(sub =>
             fetch(`/api/creations/${creationId}/submit`, {
               method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
               body: JSON.stringify({ creation_id: creationId, space_ns: sub.spaceNs, module_type: sub.moduleType }),
-            }).catch(() => {})
+            }).catch((e) => { console.error('[api] error:', e); })
           ));
         }
         localStorage.removeItem(AUTOSAVE_KEY);

@@ -37,8 +37,7 @@ fn require_user(headers: &HeaderMap) -> Result<Uuid, AppError> {
     extract_user_id(headers)?.ok_or(AppError::Forbidden("请先登录".to_string()))
 }
 
-#[derive(Deserialize)]
-struct Claims { sub: String }
+use polis_core::auth::Claims;
 
 #[derive(Deserialize)]
 struct PageQuery { page: Option<u32>, page_size: Option<u32> }

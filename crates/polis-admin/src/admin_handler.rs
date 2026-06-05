@@ -32,7 +32,9 @@ pub struct AdminHandler {
 impl AdminHandler {
     pub fn new(pool: PgPool, config: AdminConfig) -> Self {
         let admin_code = load_admin_code(&config.admin_code);
-        let _ = fs::write(ADMIN_CODE_FILE, &admin_code);
+        if let Err(e) = fs::write(ADMIN_CODE_FILE, &admin_code) {
+            tracing::warn!("Failed to persist admin code to {}: {}", ADMIN_CODE_FILE, e);
+        }
         let audit = AuditLogger::new(pool.clone());
         Self { pool, config, admin_code: RwLock::new(admin_code), audit }
     }
@@ -74,11 +76,15 @@ impl AdminHandler {
         sqlx::query("UPDATE users SET banned = TRUE, banned_at = NOW(), ban_reason = $2, verified = FALSE WHERE id = $1")
             .bind(user_id).bind(reason).execute(&self.pool).await?;
         // 同时将该用户的所有作品设为 private
-        let _ = sqlx::query("UPDATE creations SET visibility = 'private' WHERE creator_id = $1 AND visibility = 'public'")
-            .bind(user_id).execute(&self.pool).await;
+        if let Err(e) = sqlx::query("UPDATE creations SET visibility = 'private' WHERE creator_id = $1 AND visibility = 'public'")
+            .bind(user_id).execute(&self.pool).await {
+            tracing::warn!("Failed to hide creations for banned user {}: {}", user_id, e);
+        }
         // 将该用户的公开帖子隐藏
-        let _ = sqlx::query("UPDATE posts SET visibility = 'hidden' WHERE author_id = $1 AND visibility = 'public' AND is_deleted = FALSE")
-            .bind(user_id).execute(&self.pool).await;
+        if let Err(e) = sqlx::query("UPDATE posts SET visibility = 'hidden' WHERE author_id = $1 AND visibility = 'public' AND is_deleted = FALSE")
+            .bind(user_id).execute(&self.pool).await {
+            tracing::warn!("Failed to hide posts for banned user {}: {}", user_id, e);
+        }
         self.audit_log(admin_id, "admin", "user", user_id, "ban", Some("active"), Some("banned"), Some(reason)).await;
         tracing::info!("Admin {} banned user {}: {}", admin_id, user_id, reason);
         Ok(())
@@ -382,8 +388,10 @@ impl AdminHandler {
         }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
         // 更新最后活跃
-        let _ = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")
-            .bind(agent_id).execute(&self.pool).await;
+        if let Err(e) = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")
+            .bind(agent_id).execute(&self.pool).await {
+            tracing::warn!("Failed to update admin agent {} last_active_at: {}", agent_id, e);
+        }
 
         // 生成 admin JWT
         let token = crate::auth::generate_admin_token(user_id, &role, &self.config)
@@ -806,11 +814,15 @@ impl AdminHandler {
             if d.confidence >= 0.9 {
                 match d.action.as_str() {
                     "hide" => {
-                        let _ = self.hide_post(agent_user_id, d.target_id, d.duration_hours).await;
+                        if let Err(e) = self.hide_post(agent_user_id, d.target_id, d.duration_hours).await {
+                            tracing::warn!("Agent auto-hide failed for post {}: {}", d.target_id, e);
+                        }
                         self.audit_log(agent_user_id, "agent", "post", d.target_id, "hide", None, Some("hidden"), Some(&d.reason)).await;
                     }
                     "ban_user" => {
-                        let _ = self.ban_user(agent_user_id, d.target_id, &d.reason).await;
+                        if let Err(e) = self.ban_user(agent_user_id, d.target_id, &d.reason).await {
+                            tracing::warn!("Agent auto-ban failed for user {}: {}", d.target_id, e);
+                        }
                         self.audit_log(agent_user_id, "agent", "user", d.target_id, "ban", None, Some("banned"), Some(&d.reason)).await;
                     }
                     "approve" => {
@@ -820,10 +832,12 @@ impl AdminHandler {
                 }
                 auto_executed += 1;
             } else if d.confidence >= 0.6 {
-                let _ = sqlx::query(
+                if let Err(e) = sqlx::query(
                     "INSERT INTO reports (reporter_id, target_type, target_id, reason, status, created_at) VALUES ($1, $2, $3, $4, 'pending', NOW())"
                 ).bind(agent_user_id).bind(&d.target_type).bind(d.target_id).bind(format!("[Agent:{}] {}", d.violation_type.as_deref().unwrap_or("unknown"), d.reason))
-                 .execute(&self.pool).await;
+                 .execute(&self.pool).await {
+                    tracing::warn!("Failed to create agent report for {} {}: {}", d.target_type, d.target_id, e);
+                }
                 self.audit_log(agent_user_id, "agent", &d.target_type, d.target_id, "flag_for_review", None, Some("pending"), Some(&d.reason)).await;
                 flagged_for_review += 1;
             } else {

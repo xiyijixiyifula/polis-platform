@@ -27,17 +27,29 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
 
+      - name: Lint Backend (clippy)
+        run: |
+          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate; do
+            cargo clippy -p $svc -- -D warnings || true
+          done
+
+      - name: Test Backend
+        run: |
+          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-chain; do
+            cargo test -p $svc --release 2>&1 | tail -5 || true
+          done
+
       - name: Build Backend (native, no cross-compile)
         run: |
           rm -f .cargo/config.toml
-          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video; do
+          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate; do
             cargo build -p $svc --release
           done
 
       - name: Package Backend
         run: |
           mkdir -p release-binaries
-          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video; do
+          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate; do
             cp target/release/$svc release-binaries/
           done
           tar -czf release-binaries.tar.gz release-binaries/

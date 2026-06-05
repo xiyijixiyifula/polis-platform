@@ -5,7 +5,6 @@ use axum::{
     routing::{get, patch, post},
     Json, Router,
 };
-use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
 use polis_core::models::{
@@ -21,8 +20,7 @@ fn ok(d: serde_json::Value) -> Json<JVal> {
 }
 fn ok_str(s: &str) -> Json<JVal> { ok(serde_json::Value::String(s.to_string())) }
 
-#[derive(Deserialize)]
-struct Claims { sub: String }
+use polis_core::auth::Claims;
 
 fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
     let auth = match headers.get("Authorization").and_then(|v| v.to_str().ok()) {

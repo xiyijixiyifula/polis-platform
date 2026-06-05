@@ -51,7 +51,7 @@ export default function MessagesPage() {
       if (res.code === 0 && Array.isArray(res.data)) {
         setContactList(res.data);
       }
-    } catch {}
+    } catch (e: any) { console.error('[messages] loadContacts error:', e); setError(e.message || '加载联系人失败'); }
     setContactsLoading(false);
   };
 
@@ -81,7 +81,7 @@ export default function MessagesPage() {
         setConversations(prev => prev.filter(c => !selectedIds.has(c.other_user.id)));
         setSelectedIds(new Set());
       }
-    } catch {}
+    } catch (e: any) { console.error('[messages] handleBatchDelete error:', e); setError(e.message || '批量删除失败'); }
     setBatchDeleting(false);
   };
 
@@ -91,15 +91,14 @@ export default function MessagesPage() {
     try {
       const res = await messages.deleteConversation(userId);
       if (res.code === 0) setConversations(prev => prev.filter(c => c.other_user.id !== userId));
-    } catch {}
+    } catch (e: any) { console.error('[messages] handleDelete error:', e); setError(e.message || '删除失败'); }
   };
-
   const handleMute = async (userId: string, e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     try {
       await messages.muteConversation(userId);
       loadConversations();
-    } catch {}
+    } catch (e: any) { console.error('[messages] handleMute error:', e); setError(e.message || '免打扰设置失败'); }
   };
 
   const handleSearch = async () => {
@@ -108,7 +107,7 @@ export default function MessagesPage() {
     try {
       const res = await messages.search(searchQuery.trim());
       if (res.code === 0 && Array.isArray(res.data)) setSearchResults(res.data);
-    } catch {}
+    } catch (e: any) { console.error('[messages] handleSearch error:', e); setError(e.message || '搜索失败'); }
     setSearching(false);
   };
 
@@ -353,5 +352,5 @@ function formatTime(iso: string): string {
     if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
     if (diff < 604800000) return `${Math.floor(diff / 86400000)}天前`;
     return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
-  } catch { return ''; }
+  } catch (e: any) { console.error('[messages] formatTime error:', e); return ''; }
 }

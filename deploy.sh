@@ -239,6 +239,11 @@ deploy() {
         local dl_url="https://github.com/${GITHUB_REPO}/releases/download/${VERSION}/polis-binaries-${VERSION}.tar.gz"
 
         deploy_cmds+="
+# === 停止后端服务 (避免 Text file busy) ===
+for svc in ${RUST_BINARIES[*]}; do
+  systemctl stop \$svc 2>/dev/null || true
+done
+
 # === 备份 ===
 BACKUP_DIR=\"/root/polis/target/release/backup-\$(date +%Y%m%d-%H%M%S)\"
 mkdir -p \"\$BACKUP_DIR\"
@@ -268,32 +273,51 @@ echo '后端部署完成'
         local web_dl_url="https://github.com/${GITHUB_REPO}/releases/download/${VERSION}/polis-web-${VERSION}.tar.gz"
 
         deploy_cmds+="
-# === 下载前端 ===
+# === 下载前端到暂存区 ===
 cd /tmp
-curl -fsSL '${web_dl_url}' -o polis-web.tar.gz
-mkdir -p /tmp/polis-web-deploy
-tar -xzf polis-web.tar.gz -C /tmp/polis-web-deploy/
+rm -rf /tmp/polis-web-staging /tmp/polis-web.tar.gz
+curl -fsSL '${web_dl_url}' -o polis-web.tar.gz || { echo 'ERROR: 前端下载失败，保留旧版本'; exit 1; }
+mkdir -p /tmp/polis-web-staging
+tar -xzf polis-web.tar.gz -C /tmp/polis-web-staging/ || { echo 'ERROR: 前端解压失败，保留旧版本'; exit 1; }
 
-# === 清空旧前端 ===
-rm -rf ${SERVER_WEB_DIR}/.next ${SERVER_WEB_DIR}/public
+# === 验证暂存区完整性 ===
+if [ ! -f /tmp/polis-web-staging/frontend/.next/standalone/server.js ]; then
+  echo 'ERROR: 前端暂存区缺少 server.js，部署中止 (旧版本保留)'
+  rm -rf /tmp/polis-web-staging /tmp/polis-web.tar.gz
+  exit 1
+fi
 
-# === 安装新前端 ===
-cp -r /tmp/polis-web-deploy/frontend/.next ${SERVER_WEB_DIR}/.next
-cp -r /tmp/polis-web-deploy/frontend/public ${SERVER_WEB_DIR}/public
+# === 原子替换: 旧版本备份 → 新版本替换 ===
+STAGING_TIMESTAMP=\$(date +%Y%m%d-%H%M%S)
+if [ -d ${SERVER_WEB_DIR}/.next ]; then
+  mkdir -p ${SERVER_WEB_DIR}/.next-backups
+  mv ${SERVER_WEB_DIR}/.next ${SERVER_WEB_DIR}/.next-backups/backup-\$STAGING_TIMESTAMP
+  echo '旧版本已备份到 .next-backups/backup-'\"\$STAGING_TIMESTAMP\"
+fi
+# 旧 public 也备份
+if [ -d ${SERVER_WEB_DIR}/public ] && [ ! -L ${SERVER_WEB_DIR}/public ]; then
+  mkdir -p ${SERVER_WEB_DIR}/.next-backups
+  mv ${SERVER_WEB_DIR}/public ${SERVER_WEB_DIR}/.next-backups/public-\$STAGING_TIMESTAMP 2>/dev/null || true
+fi
+
+# === 安装新版本 ===
+cp -r /tmp/polis-web-staging/frontend/.next ${SERVER_WEB_DIR}/.next
+cp -r /tmp/polis-web-staging/frontend/public ${SERVER_WEB_DIR}/public
 
 # === 清理 macOS 污染 ===
 find ${SERVER_WEB_DIR}/.next -name '._*' -delete 2>/dev/null || true
 rm -rf ${SERVER_WEB_DIR}/.next/cache
 
 # === 关键: 复制 static 和 public 到 standalone 目录 ===
-# Next.js standalone server 从 .next/standalone/.next/static 提供 JS/CSS
-# 不执行 → /_next/static/* 全部 404 → 页面白屏
 rm -rf ${SERVER_WEB_DIR}/.next/standalone/.next/static
 cp -r ${SERVER_WEB_DIR}/.next/static ${SERVER_WEB_DIR}/.next/standalone/.next/static
 cp -r ${SERVER_WEB_DIR}/public ${SERVER_WEB_DIR}/.next/standalone/public
 
-# === 清理 ===
-rm -rf /tmp/polis-web.tar.gz /tmp/polis-web-deploy
+# === 部署成功: 清理暂存区和旧备份 ===
+rm -rf /tmp/polis-web.tar.gz /tmp/polis-web-staging
+# 保留最近 3 个备份
+ls -1dt ${SERVER_WEB_DIR}/.next-backups/backup-* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
+ls -1dt ${SERVER_WEB_DIR}/.next-backups/public-* 2>/dev/null | tail -n +4 | xargs rm -rf 2>/dev/null || true
 
 echo '前端部署完成'
 "

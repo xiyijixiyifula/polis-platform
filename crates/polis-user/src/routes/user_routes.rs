@@ -3,9 +3,9 @@ use axum::{extract::{Path, State}, middleware, routing::{get, post, put}, Json, 
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
-use polis_core::models::{ApiResponse, LoginRequest, LoginResponse, RegisterRequest, UpdateUserRequest, UserPublic, PushSubscribeRequest, RedeemInviteRequest, CompleteQuestRequest};
+use polis_core::models::{ApiResponse, LoginRequest, LoginResponse, LogoutRequest, RefreshTokenRequest, RegisterRequest, UpdateUserRequest, UserPublic, PushSubscribeRequest, RedeemInviteRequest, CompleteQuestRequest};
 use crate::handlers::user_handler::UserHandler;
-use crate::middleware::auth::auth_middleware;
+use crate::middleware::auth::{auth_middleware, Jti};
 
 #[derive(Deserialize)]
 pub struct ChangePasswordRequest { pub old_password: String, pub new_password: String }
@@ -27,6 +27,7 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/auth/login", post(login))
         .route("/api/auth/forgot-password", post(forgot_password))
         .route("/api/auth/reset-password", post(reset_password))
+        .route("/api/auth/refresh", post(refresh_token))
         .route("/api/users/search", get(search_users))
         .route("/api/users/{username}", get(get_user_profile))
         .route("/api/profile/{username}", get(get_user_profile))
@@ -164,9 +165,21 @@ async fn unfollow_by_username(
     Ok(Json(ApiResponse::success(followed)))
 }
 
-/// POST /api/auth/logout — 登出
-async fn logout() -> Json<ApiResponse<String>> {
-    Json(ApiResponse::success("logged_out".to_string()))
+/// POST /api/auth/refresh — 用 refresh token 换取新的 access + refresh token 对
+async fn refresh_token(State(h): State<Arc<UserHandler>>, Json(r): Json<RefreshTokenRequest>) -> Result<Json<ApiResponse<LoginResponse>>, AppError> {
+    Ok(Json(ApiResponse::success(h.refresh_token(&r.refresh_token).await?)))
+}
+
+/// POST /api/auth/logout — 登出（撤销 access token，可选撤销 refresh token）
+async fn logout(
+    State(h): State<Arc<UserHandler>>,
+    axum::Extension(uid): axum::Extension<Uuid>,
+    axum::Extension(jti): axum::Extension<Jti>,
+    Json(r): Json<LogoutRequest>,
+) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let _ = uid; // user_id is available if needed for audit logging
+    h.logout(&jti.0, r.refresh_token.as_deref()).await?;
+    Ok(Json(ApiResponse::success(serde_json::json!({"message": "logged_out"}))))
 }
 
 /// GET /api/contacts/mutual — 互相关注的联系人（微信式通讯录）

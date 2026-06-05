@@ -34,7 +34,7 @@ export default function ConversationPage() {
         const u = JSON.parse(userData);
         setCurrentUserId(u.id || '');
       }
-    } catch {}
+    } catch (e) { console.error('[component] error:', e); }
 
     loadData();
   }, [userId]);
@@ -76,10 +76,11 @@ export default function ConversationPage() {
           } else {
             setOtherUser({ id: userId, username: '未知用户', display_name: '未知用户', avatar_url: null, bio: '', verified: false, created_at: '' });
           }
-        } catch {
+        } catch (e) {
+          console.error('[component] error:', e);
           setOtherUser({ id: userId, username: '未知用户', display_name: '未知用户', avatar_url: null, bio: '', verified: false, created_at: '' });
         }
-      } catch {}
+      } catch (e) { console.error('[component] error:', e); }
     };
     loadUser();
   }, [userId, isLoggedIn]);
@@ -95,7 +96,7 @@ export default function ConversationPage() {
         if (res.code === 0 && Array.isArray(res.data)) {
           setMsgs(res.data);
         }
-      }).catch(() => {});
+      }).catch((e) => { console.error('[api] error:', e); });
     }, 5000);
     return () => clearInterval(interval);
   }, [userId, isLoggedIn]);
@@ -125,7 +126,7 @@ export default function ConversationPage() {
       if (res.code === 0) {
         setMsgs([]);
       }
-    } catch {}
+    } catch (e) { console.error('[api] error:', e); }
   };
 
   const handleTogglePin = async (msgId: string) => {
@@ -134,7 +135,7 @@ export default function ConversationPage() {
       if (res.code === 0) {
         loadData();
       }
-    } catch {}
+    } catch (e) { console.error('[api] error:', e); }
   };
 
   const handleDelete = async (msgId: string) => {
@@ -147,7 +148,7 @@ export default function ConversationPage() {
       if (res.ok) {
         setMsgs(prev => prev.filter(m => m.id !== msgId));
       }
-    } catch {}
+    } catch (e) { console.error('[api] error:', e); }
   };
 
   const handleSearch = async () => {
@@ -157,7 +158,7 @@ export default function ConversationPage() {
       if (res.code === 0 && Array.isArray(res.data)) {
         setSearchResults(res.data);
       }
-    } catch {}
+    } catch (e) { console.error('[api] error:', e); }
   };
 
   // Separate pinned from regular messages
@@ -332,5 +333,5 @@ function formatMsgTime(iso: string): string {
     }
     return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) + ' ' +
       d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-  } catch { return ''; }
+  } catch (e) { console.error('[component] error:', e); return ''; }
 }

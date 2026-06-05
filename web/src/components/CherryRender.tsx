@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import DOMPurify from 'dompurify';
 
 // ── Simple fallback renderer (used while Cherry loads or on error) ──
 function fallbackRender(md: string): string {
@@ -140,7 +141,7 @@ export function CherryRender({ markdown, className = '' }: CherryRenderProps) {
   return (
     <div
       className={'cherry cherry-markdown cherry-render-root ' + className}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
     />
   );
 }

@@ -107,7 +107,7 @@ polis-platform/
 │   ├── polis-store/                # Shop (skeleton)
 │   ├── polis-pay/                  # Payments (skeleton)
 │   ├── polis-search/               # Search Service (skeleton)
-│   ├── polis-aggregate/            # Aggregator (skeleton)
+│   ├── polis-aggregate/            # Aggregator (deployed)
 │   ├── polis-notify/               # Notifications (skeleton)
 │   ├── polis-export/               # Data Export (skeleton)
 │   └── polis-plugin-engine/        # Plugin Engine (skeleton)

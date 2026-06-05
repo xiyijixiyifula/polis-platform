@@ -62,7 +62,7 @@ export default function MyCreationsPage() {
         }
         setHasMore(items.length === 20);
       }
-    } catch { /* */ } finally { setLoading(false); }
+    } catch (e) { console.error('[component] loadCreations error:', e); } finally { setLoading(false); }
   };
 
   const loadInteractions = useCallback(async () => {
@@ -78,7 +78,7 @@ export default function MyCreationsPage() {
         const res = await follow.following(me.username);
         if (res.code === 0 && res.data) setFollowingList(Array.isArray(res.data) ? res.data : []);
       }
-    } catch {}
+    } catch (e) { console.error('[component] loadInteractions error:', e); }
     setInteractionLoading(false);
   }, [interactionTab]);
 
@@ -90,7 +90,7 @@ export default function MyCreationsPage() {
     try {
       const res = await follow.toggle('user', userId);
       if (res.code === 0) loadInteractions();
-    } catch {}
+    } catch (e) { console.error('[component] handleFollowToggle error:', e); }
   };
 
   const handleEdit = (id: string) => {
@@ -111,7 +111,7 @@ export default function MyCreationsPage() {
       } else {
         alert(data.message || '删除失败');
       }
-    } catch { alert('网络错误'); }
+    } catch (e) { console.error('[component] handleDelete error:', e); alert('网络错误'); }
   };
 
   const handleSubmit = (id: string) => {
@@ -137,7 +137,7 @@ export default function MyCreationsPage() {
       } else {
         alert(data.message || '撤稿失败');
       }
-    } catch { alert('网络错误'); }
+    } catch (e) { console.error('[component] handleWithdraw error:', e); alert('网络错误'); }
   };
 
   const handleLike = async (id: string) => {
@@ -147,7 +147,7 @@ export default function MyCreationsPage() {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-    } catch { /* */ }
+    } catch (e) { console.error('[component] handleLike error:', e); }
   };
 
   const handleBookmark = async (id: string) => {
@@ -157,7 +157,7 @@ export default function MyCreationsPage() {
         method: 'POST',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-    } catch { /* */ }
+    } catch (e) { console.error('[component] handleBookmark error:', e); }
   };
 
   const handleVisibilityChange = async (id: string, newVis: string) => {
@@ -177,7 +177,7 @@ export default function MyCreationsPage() {
           Array.isArray(prev) ? prev.map((c) => (c.id === id ? { ...c, visibility: newVis } : c)) : prev
         );
       }
-    } catch { /* */ }
+    } catch (e) { console.error('[component] handleVisibilityChange error:', e); }
   };
 
   const sidebarItems: { key: SidebarSection; label: string; icon: React.ReactNode; href?: string }[] = [

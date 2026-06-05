@@ -3,20 +3,8 @@ use argon2::{
     Argon2,
 };
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
-use polis_core::error::AppError;
-use serde::{Deserialize, Serialize};
+use polis_core::{auth::Claims, error::AppError};
 use uuid::Uuid;
-
-/// JWT 声明
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    pub sub: String,        // 用户 ID
-    pub username: String,   // 用户名
-    pub display_name: String, // 显示名称
-    pub exp: usize,         // 过期时间
-    pub iat: usize,         // 签发时间
-    pub token_type: String, // "access" | "refresh"
-}
 
 /// 密码哈希
 pub fn hash_password(password: &str) -> Result<String, argon2::password_hash::Error> {
@@ -68,13 +56,15 @@ pub fn generate_access_token(
     expiry_seconds: i64,
 ) -> Result<String, jsonwebtoken::errors::Error> {
     let now = chrono::Utc::now().timestamp() as usize;
+    let jti = Uuid::new_v4().to_string();
     let claims = Claims {
         sub: user_id.to_string(),
-        username: username.to_string(),
-        display_name: display_name.to_string(),
-        exp: now + expiry_seconds as usize,
-        iat: now,
-        token_type: "access".to_string(),
+        username: Some(username.to_string()),
+        display_name: Some(display_name.to_string()),
+        exp: Some(now + expiry_seconds as usize),
+        iat: Some(now),
+        token_type: Some("access".to_string()),
+        jti: Some(jti),
     };
     encode(
         &Header::default(),
@@ -92,13 +82,15 @@ pub fn generate_refresh_token(
     expiry_seconds: i64,
 ) -> Result<String, jsonwebtoken::errors::Error> {
     let now = chrono::Utc::now().timestamp() as usize;
+    let jti = Uuid::new_v4().to_string();
     let claims = Claims {
         sub: user_id.to_string(),
-        username: username.to_string(),
-        display_name: display_name.to_string(),
-        exp: now + expiry_seconds as usize,
-        iat: now,
-        token_type: "refresh".to_string(),
+        username: Some(username.to_string()),
+        display_name: Some(display_name.to_string()),
+        exp: Some(now + expiry_seconds as usize),
+        iat: Some(now),
+        token_type: Some("refresh".to_string()),
+        jti: Some(jti),
     };
     encode(
         &Header::default(),

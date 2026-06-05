@@ -221,6 +221,7 @@ mod tests {
             ],
         };
         // Active: a(0), b(1), d(2)
+        // SAFETY: test setup guarantees 3 active validators (a, b, d), so get_proposer always returns Some
         assert_eq!(set.get_proposer(0, 0).unwrap().address, "a");
         assert_eq!(set.get_proposer(1, 0).unwrap().address, "b");
         assert_eq!(set.get_proposer(2, 0).unwrap().address, "d");

@@ -6,17 +6,9 @@ use axum::{
     response::Response,
 };
 use jsonwebtoken::{decode, DecodingKey};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use polis_core::error::AppError;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    pub sub: String,
-    pub token_type: String,
-    pub exp: usize,
-}
+use polis_core::{auth::Claims, error::AppError};
 
 /// JWT 认证中间件
 pub async fn auth_middleware(
@@ -44,7 +36,7 @@ pub async fn auth_middleware(
     )
     .map_err(|_| AppError::Unauthorized)?;
 
-    if token_data.claims.token_type != "access" {
+    if token_data.claims.token_type.as_deref() != Some("access") {
         return Err(AppError::Unauthorized);
     }
 

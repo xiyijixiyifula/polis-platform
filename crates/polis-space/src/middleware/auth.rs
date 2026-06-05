@@ -6,18 +6,9 @@ use axum::{
     response::Response,
 };
 use jsonwebtoken::{decode, DecodingKey};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use polis_core::error::AppError;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    pub sub: String,
-    pub username: String,
-    pub exp: usize,
-    pub token_type: String,
-}
+use polis_core::{auth::Claims, error::AppError};
 
 /// JWT 认证中间件
 pub async fn auth_middleware(
@@ -38,8 +29,6 @@ pub async fn auth_middleware(
     let token_data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(
-            // We need a shared JWT secret across services
-            // In production, use a config/env var shared across services
             std::env::var("JWT_SECRET")
                 .expect("JWT_SECRET environment variable must be set")
                 .as_bytes(),
@@ -50,7 +39,7 @@ pub async fn auth_middleware(
 
     let claims = token_data.claims;
 
-    if claims.token_type != "access" {
+    if claims.token_type.as_deref() != Some("access") {
         return Err(AppError::Unauthorized);
     }
 
@@ -58,7 +47,9 @@ pub async fn auth_middleware(
         .map_err(|_| AppError::Unauthorized)?;
 
     req.extensions_mut().insert(user_id);
-    req.extensions_mut().insert(claims.username);
+    if let Some(username) = claims.username {
+        req.extensions_mut().insert(username);
+    }
 
     Ok(next.run(req).await)
 }

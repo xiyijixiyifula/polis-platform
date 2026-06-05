@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { Bold, Italic, Heading1, Heading2, Code, List, Link as LinkIcon, Image, Eye, Edit3 } from 'lucide-react';
 
 interface MarkdownEditorProps {
@@ -110,7 +111,7 @@ export function MarkdownEditor({ value, onChange, placeholder = '写下你的想
       {/* Editor / Preview */}
       {preview ? (
         <div className="p-4 overflow-auto prose prose-sm max-w-none" style={{ minHeight }}
-          dangerouslySetInnerHTML={{ __html: value ? renderMarkdown(value) : '<p class="text-gray-400 italic">暂无内容</p>' }} />
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value ? renderMarkdown(value) : '<p class="text-gray-400 italic">暂无内容</p>') }} />
       ) : (
         <textarea
           ref={textareaRef}

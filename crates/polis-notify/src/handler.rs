@@ -54,11 +54,13 @@ impl NotifyHandler {
                         if let Ok(members) = self.find_space_members(space_id).await {
                             for member_id in members {
                                 if member_id != author_id {
-                                    let _ = self.create_notification(
+                                    if let Err(e) = self.create_notification(
                                         member_id, "post_created",
                                         Some(author_id), Some("post"), None,
                                         &content,
-                                    ).await;
+                                    ).await {
+                                        tracing::warn!("Failed to create post notification for member {}: {}", member_id, e);
+                                    }
                                 }
                             }
                         }

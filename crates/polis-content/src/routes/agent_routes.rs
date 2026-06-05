@@ -26,7 +26,8 @@ fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
     let token = match auth.strip_prefix("Bearer ") {
         Some(t) => t, None => return Ok(None),
     };
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
+    let secret = std::env::var("JWT_SECRET")
+        .map_err(|_| AppError::Internal("JWT_SECRET environment variable must be set".into()))?;
     match jsonwebtoken::decode::<Claims>(token, &jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation()) {
         Ok(data) => Uuid::parse_str(&data.claims.sub).map(Some).map_err(|_| AppError::Forbidden("Invalid token".to_string())),
         Err(_) => Ok(None),
@@ -90,7 +91,8 @@ async fn agent_login(
             .map_err(|_| AppError::Forbidden("密码错误".to_string()))
     }).await.map_err(|e| AppError::Internal(e.to_string()))??;
 
-    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
+    let secret = std::env::var("JWT_SECRET")
+        .map_err(|_| AppError::Internal("JWT_SECRET environment variable must be set".into()))?;
     let claims = serde_json::json!({
         "sub": user_id.to_string(),
         "user_type": "agent",
