@@ -299,6 +299,34 @@ echo '前端部署完成'
 "
     fi
 
+    # --- 同步 systemd 服务文件 (防止路径不一致) ---
+    deploy_cmds+="
+# === 同步 polis-web systemd 服务文件 ===
+cat > /etc/systemd/system/polis-web.service << 'SVC_EOF'
+[Unit]
+Description=Polis Web Frontend (Next.js)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=${SERVER_WEB_DIR}/.next/standalone
+ExecStartPre=/bin/bash -c \"cp -rn ${SERVER_WEB_DIR}/.next/static ${SERVER_WEB_DIR}/.next/standalone/.next/static 2>/dev/null; cp -rn ${SERVER_WEB_DIR}/public ${SERVER_WEB_DIR}/.next/standalone/public 2>/dev/null; true\"
+ExecStart=/usr/bin/node ${SERVER_WEB_DIR}/.next/standalone/server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+StandardOutput=append:/root/polis/web.log
+StandardError=append:/root/polis/web.log
+
+[Install]
+WantedBy=multi-user.target
+SVC_EOF
+systemctl daemon-reload
+echo 'systemd 服务文件已同步'
+"
+
     # --- 重启服务 ---
     deploy_cmds+="
 # === 重启服务 ===
