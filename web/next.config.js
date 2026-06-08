@@ -38,11 +38,11 @@ const nextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV !== 'production';
 
-    // script-src: unsafe-inline removed always; unsafe-eval only in dev (Next.js Fast Refresh requires it).
-    // style-src: unsafe-inline kept for CSS-in-JS (technical debt — migrate to strict CSP when feasible).
+    // script-src: Next.js requires unsafe-inline for client-side hydration scripts.
+    // Long-term: migrate to nonce-based CSP via Next.js generateCsp or middleware.
     const scriptSrc = isDev
-      ? "'self' 'unsafe-eval'"
-      : "'self'";
+      ? "'self' 'unsafe-eval' 'unsafe-inline'"
+      : "'self' 'unsafe-inline'";
     const csp = [
       "default-src 'self'",
       `script-src ${scriptSrc}`,
