@@ -213,7 +213,7 @@ export default function TabRenderer(props: TabRendererProps) {
 							<div className="glass-card py-8 text-center text-gray-400 dark:text-gray-500">
 								<PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
 								<p className="text-sm">还没有内容</p>
-								<Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
+								<Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
 									发布第一篇帖子
 								</Link>
 							</div>

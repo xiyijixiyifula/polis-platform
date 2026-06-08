@@ -166,36 +166,46 @@ function NewCreationPageInner() {
 
  // 从社区链接来的预填充
   useEffect(() => {
-    if (prefillSpaceNs && prefillModule) {
-      (async () => {
-        try {
-          const ns = encodeURIComponent(prefillSpaceNs.replace(/\//g, '~'));
-          const res = await fetch(`/api/spaces/${ns}`);
-          const data = await res.json();
-          if (data.code === 0 && data.data) {
-            const s = data.data;
+    if (!prefillSpaceNs) return;
+    (async () => {
+      try {
+        const ns = encodeURIComponent(prefillSpaceNs.replace(/\//g, '~'));
+        const res = await fetch(`/api/spaces/${ns}`);
+        const data = await res.json();
+        if (data.code === 0 && data.data) {
+          const s = data.data;
 
-            // 获取该模块配置（允许的内容类型 + 模块名称显示）
-            let moduleLabel: string | undefined;
-            try {
-              const modRes = await spacesApi.listModules(s.namespace);
-              if (modRes.code === 0 && modRes.data) {
-                const mod = modRes.data.find((m: any) => m.module_key === prefillModule);
+          // Determine module: use prefillModule if provided, otherwise fetch default module
+          let effectiveModule = prefillModule;
+          let moduleLabel: string | undefined;
+          try {
+            const modRes = await spacesApi.listModules(s.namespace);
+            if (modRes.code === 0 && modRes.data) {
+              // If no specific module was requested, use the first active module (usually "交流"/forum)
+              if (!effectiveModule && modRes.data.length > 0) {
+                const defaultMod = modRes.data[0];
+                effectiveModule = defaultMod.module_key;
+                if (defaultMod.name) moduleLabel = defaultMod.name;
+                if (defaultMod.allowed_content_types) {
+                  setModuleAllowedTypes(defaultMod.allowed_content_types);
+                }
+              } else if (effectiveModule) {
+                const mod = modRes.data.find((m: any) => m.module_key === effectiveModule);
                 if (mod?.allowed_content_types) {
                   setModuleAllowedTypes(mod.allowed_content_types);
                 }
-                if (mod?.name) {
-                  moduleLabel = mod.name;
-                }
+                if (mod?.name) moduleLabel = mod.name;
               }
-            } catch (e) { console.error('[component] error:', e); }
+            }
+          } catch (e) { console.error('[component] error:', e); }
 
+          if (effectiveModule) {
             // 使用原始 module_key 投稿，保留实际模块键名
-            setSubmissions([{ spaceId: s.id, spaceNs: s.namespace, spaceTitle: s.title, moduleType: prefillModule, moduleLabel }]);
+            setSubmissions([{ spaceId: s.id, spaceNs: s.namespace, spaceTitle: s.title, moduleType: effectiveModule, moduleLabel }]);
           }
-        } catch (e) { console.error('[component] error:', e); }
-      })();
-    }
+        }
+      } catch (e) { console.error('[component] error:', e); }
+    })();
   }, [prefillSpaceNs, prefillModule]);
 
   // 加载系列
@@ -460,7 +470,9 @@ function NewCreationPageInner() {
             fetch(`/api/creations/${creationId}/submit`, {
               method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
               body: JSON.stringify({ creation_id: creationId, space_ns: sub.spaceNs, module_type: sub.moduleType }),
-            }).catch((e) => { console.error('[api] error:', e); })
+            }).then(r => r.json()).then(d => {
+              if (d.code !== 0) toastError('投稿失败: ' + (d.message || '未知错误'));
+            }).catch((e) => { console.error('[api] error:', e); toastError('投稿失败: 网络错误'); })
           ));
         }
         localStorage.removeItem(AUTOSAVE_KEY);
