@@ -6,10 +6,10 @@
 
 | 指标 | 数值 |
 |------|------|
-| 涉及文件数 | 63 |
-| 总修复点位 | 190 |
-| 高危文件 (修复 3+ 次) | 18 |
-| 最近更新 | 2026-06-02 (v1.0.63) |
+| 涉及文件数 | 75 |
+| 总修复点位 | 210 |
+| 高危文件 (修复 3+ 次) | 20 |
+| 最近更新 | 2026-06-08 (v0.3.x 三大修复) |
 
 ## 高危文件 ⚠️
 
@@ -315,6 +315,27 @@
 | module-tab-key-mismatch | [配方](fix-recipes/module-tab-key-mismatch.md) | tab id 使用 `MODULE_CONFIG[key]?.route \|\| key` |
 | module-breadcrumb-hardcoded | [配方](fix-recipes/module-breadcrumb-hardcoded.md) | 替换所有 `'forum'/'交流'` 硬编码为 `getModuleLabel()` + 后端返回 `module_name` |
 | enum-serialization-data-loss | [配方](fix-recipes/enum-serialization-data-loss.md) | `#[serde(untagged)]` 或保留原始字符串 |
+
+### 2026-06-08 — 三大修复
+
+| 文件 | 修复内容 | Pattern | 风险 |
+|------|---------|---------|------|
+| `web/src/app/creations/new/page.tsx` | 预填逻辑：无 module 时自动检测默认模块 + 投稿错误 toast | creation-submit-no-module | ⚠️ |
+| `web/src/app/space/[...namespace]/components/TabRenderer.tsx` | "发布第一篇帖子"链接补充 module=forum | creation-submit-no-module | — |
+| `web/src/components/Header.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/components/SpaceChat.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/components/CherryEditor.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/components/SubmitDialog.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/components/PollCard.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/components/VoteButton.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/components/FileShare.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/app/settings/page.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/app/drafts/page.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/app/create-center/page.tsx` | localStorage.getItem → getToken() | localstorage-residual | ⚠️ |
+| `web/src/app/polls/new/page.tsx` | localStorage.getItem → getToken() + import | localstorage-residual | ⚠️ |
+| `web/src/app/messages/[userId]/page.tsx` | localStorage.getItem → getToken() | localstorage-residual | ⚠️ |
+| `crates/polis-core/src/models/user.rs` | OnboardingQuest.id sqlx(default) + UserBadge.earned_at sqlx(rename) | sqlx-column-mismatch | ⚠️ |
+| `crates/polis-user/src/repo.rs` | ORDER BY earned_at → awarded_at | sqlx-column-mismatch | ⚠️ |
 
 ## 脆弱文件修改前检查清单
 
