@@ -28,7 +28,7 @@ SERVER_HOST="speedtest.mzgw.com"    # ← 改成你的服务器 IP/域名
 SERVER_USER="root"                  # ← 改成你的 SSH 用户
 GITHUB_REPO="xiyijixiyifula/polis-platform"  # ← 改成你的 GitHub 仓库
 # ═══════════════════════════════════════════
-RUST_BINARIES=(polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate)
+RUST_BINARIES=(polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-chain)
 RUST_TARGET="x86_64-unknown-linux-gnu"
 WEB_DIR="web"
 SERVER_BIN_DIR="/usr/local/bin"

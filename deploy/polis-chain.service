@@ -1,0 +1,17 @@
+[Unit]
+Description=Polis Chain Service (Blockchain)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/polis
+ExecStart=/usr/local/bin/polis-chain
+Restart=on-failure
+RestartSec=10
+LimitNOFILE=65536
+Environment=RUST_LOG=info
+EnvironmentFile=/root/polis/.env
+
+[Install]
+WantedBy=multi-user.target
