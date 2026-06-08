@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { series as seriesApi, getToken, spaces as spacesApi, type Series } from '@/lib/api';
 import { getModuleLabel } from '@/lib/module-config';
+import { toastError, toastWarning } from '@/stores/toastStore';
 
 const AUTOSAVE_KEY = 'polis_creation_draft';
 
@@ -269,7 +270,7 @@ function NewCreationPageInner() {
           const data = await res.json();
           if (data.code === 0 && data.data?.content) {
             setBody(prev => prev ? prev + '\n\n' + data.data.content : data.data.content);
-          } else { alert('导入失败：' + (data.message || '未知错误')); }
+          } else { toastError('导入失败：' + (data.message || '未知错误')); }
         };
         reader.readAsDataURL(file);
       } else {
@@ -280,7 +281,7 @@ function NewCreationPageInner() {
   };
 
   const handleAttachmentUpload = async (file: File) => {
-    if (file.size > 8 * 1024 * 1024) { alert('文件大小不能超过 8MB'); return; }
+    if (file.size > 8 * 1024 * 1024) { toastWarning('文件大小不能超过 8MB'); return; }
     try {
       const token = getToken() || '';
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };

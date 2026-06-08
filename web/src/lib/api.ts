@@ -170,6 +170,30 @@ export function getToken(): string | null {
   return accessToken;
 }
 
+let adminAccessToken: string | null = null;
+
+export function setAdminToken(token: string | null) {
+  adminAccessToken = token;
+  if (token) {
+    // NOTE: Admin JWT stored only in-memory + cookie (not localStorage) to reduce XSS attack surface.
+    if (typeof document !== 'undefined') {
+      document.cookie = `polis_admin_token=${token}; path=/; max-age=${7 * 24 * 60 * 60}; SameSite=Lax; Secure`;
+    }
+  } else {
+    if (typeof document !== 'undefined') {
+      document.cookie = 'polis_admin_token=; path=/; max-age=0; SameSite=Lax';
+    }
+  }
+}
+
+export function getAdminToken(): string | null {
+  if (!adminAccessToken && typeof document !== 'undefined') {
+    const match = document.cookie.match(/(?:^|;\s*)polis_admin_token=([^;]*)/);
+    if (match) adminAccessToken = match[1];
+  }
+  return adminAccessToken;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}

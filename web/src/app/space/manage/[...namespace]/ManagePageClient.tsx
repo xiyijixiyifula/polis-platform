@@ -8,6 +8,7 @@ import SpaceModulesManager from '@/components/SpaceSettings';
 import { JoinRequestsPanel } from '@/components/JoinRequestsPanel';
 import { SpaceAnalytics } from '@/components/SpaceAnalytics';
 import { MemberActions } from '@/components/MemberActions';
+import { toastSuccess, toastError } from '@/stores/toastStore';
 import type { SpaceMember } from '@/lib/api';
 import { spaces as apiSpaces, getToken, type Space } from '@/lib/api';
 
@@ -113,12 +114,12 @@ export default function ManagePageClient({ rawNamespace }: { rawNamespace: strin
 
       if (res.code === 0 && res.data) {
         setSpace(res.data);
-        alert('保存成功');
+        toastSuccess('保存成功');
       } else {
-        alert('保存失败');
+        toastError('保存失败');
       }
     } catch (e: any) {
-      alert(e?.message || '保存失败');
+      toastError(e?.message || '保存失败');
     }
     setSaving(false);
   };

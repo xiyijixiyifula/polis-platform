@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use polis_core::error::AppError;
 use polis_core::events::{subjects, Event};
 use polis_core::models::{
     CreateSpaceRequest, SpacePublic, UpdateSpaceRequest,
     SpaceModulePublic, CreateModuleRequest, UpdateModuleRequest,
 };
+use polis_core::token_blacklist::TokenBlacklist;
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -15,6 +18,7 @@ pub struct SpaceHandler {
     pub repo: SpaceRepo,
     pub config: SpaceServiceConfig,
     pub nats: Option<NatsClient>,
+    pub token_blacklist: Arc<TokenBlacklist>,
 }
 
 impl SpaceHandler {
@@ -23,6 +27,7 @@ impl SpaceHandler {
             repo: SpaceRepo::new(pool),
             config,
             nats,
+            token_blacklist: Arc::new(TokenBlacklist::new()),
         }
     }
 

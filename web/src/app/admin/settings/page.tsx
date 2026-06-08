@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Settings, Shield, Key, Save, AlertCircle, CheckCircle, Upload } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 
 export default function AdminSettingsPage() {
   const [currentCode, setCurrentCode] = useState('');
@@ -18,7 +19,7 @@ export default function AdminSettingsPage() {
   const [platformMsg, setPlatformMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     fetch('/api/admin/settings/platform', {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -60,7 +61,7 @@ export default function AdminSettingsPage() {
 
     setPlatformSaving(true);
     try {
-      const token = localStorage.getItem('polis_admin_token');
+      const token = getAdminToken();
       const res = await fetch('/api/admin/settings/platform', {
         method: 'PUT',
         headers: {
@@ -100,7 +101,7 @@ export default function AdminSettingsPage() {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('polis_admin_token');
+      const token = getAdminToken();
       const res = await fetch('/api/admin/settings/code', {
         method: 'PUT',
         headers: {

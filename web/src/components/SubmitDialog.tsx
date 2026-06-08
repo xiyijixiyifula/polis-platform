@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Check } from 'lucide-react';
 import { getModuleLabel } from '@/lib/module-config';
 import type { SpaceModule } from '@/lib/api';
+import { toastError, toastWarning } from '@/stores/toastStore';
 
 interface Space {
   id: string;
@@ -93,11 +94,11 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
         onSubmit(selectedSpace.namespace, selectedModule);
         onClose();
       } else if (res.status === 409) {
-        alert('该内容已经投稿到这个社区的此模块了');
+        toastWarning('该内容已经投稿到这个社区的此模块了');
       } else {
-        alert(data.message || '投稿失败');
+        toastError(data.message || '投稿失败');
       }
-    } catch { alert('网络错误'); } finally { setLoading(false); }
+    } catch { toastError('网络错误'); } finally { setLoading(false); }
   };
 
   return (

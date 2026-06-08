@@ -1,8 +1,10 @@
 use std::sync::Arc;
 
+use futures_util::StreamExt;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
 
+use polis_core::events::subjects;
 use polis_content::config::ContentServiceConfig;
 use polis_content::handlers::content_handler::ContentHandler;
 use polis_content::routes::content_routes;
@@ -37,6 +39,34 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let handler = Arc::new(ContentHandler::new(pool, config.clone(), nats));
+
+    // 订阅 NATS token 黑名单事件，同步拉黑其他服务撤销的 token
+    // 生产环境应使用 Redis 替代内存黑名单 + NATS 同步
+    let sub_blacklist = handler.token_blacklist.clone();
+    let sub_nats_url = config.nats_url.clone();
+    tokio::spawn(async move {
+        match async_nats::connect(&sub_nats_url).await {
+            Ok(nc) => {
+                tracing::info!("Content service subscribed to token blacklist events");
+                let mut sub = match nc.subscribe(subjects::TOKEN_BLACKLISTED.to_string()).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::warn!("Failed to subscribe to token.blacklisted: {}", e);
+                        return;
+                    }
+                };
+                while let Some(msg) = sub.next().await {
+                    let jti = String::from_utf8_lossy(&msg.payload).to_string();
+                    tracing::debug!("Blacklisting token jti={} from NATS", jti);
+                    sub_blacklist.blacklist(&jti).await;
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Content service failed to connect to NATS for blacklist sync: {}", e);
+            }
+        }
+    });
+
     let app = content_routes(handler);
 
     let addr = format!("{}:{}", config.host, config.port);

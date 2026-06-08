@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { DollarSign, TrendingUp, Receipt, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { getAdminToken } from '@/lib/api';
 
 interface Transaction {
   id: string;
@@ -43,7 +44,7 @@ export default function AdminTransactionsPage() {
   useEffect(() => { fetchTransactions(); }, [page]);
 
   const fetchTransactions = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/transactions?page=${page}&page_size=20`, {

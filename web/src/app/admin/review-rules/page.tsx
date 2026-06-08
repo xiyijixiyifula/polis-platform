@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Shield, ToggleLeft, ToggleRight, Edit3, X } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { toastError } from '@/stores/toastStore';
 
 interface ReviewRule {
   id: string;
@@ -115,7 +116,7 @@ export default function AdminReviewRulesPage() {
       });
       const data = await res.json();
       if (data.code === 0) fetchRules();
-      else alert('操作失败: ' + data.message);
+      else toastError('操作失败: ' + data.message);
     } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Toggle Rule]', e); }
   };
 
@@ -126,7 +127,7 @@ export default function AdminReviewRulesPage() {
       const res = await fetch(`/api/admin/review-rules/${ruleId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.code === 0) fetchRules();
-      else alert('删除失败: ' + data.message);
+      else toastError('删除失败: ' + data.message);
     } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Delete Rule]', e); }
   };
 

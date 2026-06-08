@@ -13,6 +13,7 @@ import CreationCard, { type CreationPublic } from '@/components/CreationCard';
 import SubmitDialog from '@/components/SubmitDialog';
 import CommentsSection from './components/CommentsSection';
 import { follow, getToken, type FollowUser } from '@/lib/api';
+import { toastError } from '@/stores/toastStore';
 
 type SidebarSection = 'dashboard' | 'publish' | 'content' | 'interactions' | 'comments';
 
@@ -109,9 +110,9 @@ export default function MyCreationsPage() {
       if (data.code === 0) {
         setCreations((prev) => prev.filter((c) => c.id !== id));
       } else {
-        alert(data.message || '删除失败');
+        toastError(data.message || '删除失败');
       }
-    } catch (e) { console.error('[component] handleDelete error:', e); alert('网络错误'); }
+    } catch (e) { console.error('[component] handleDelete error:', e); toastError('网络错误'); }
   };
 
   const handleSubmit = (id: string) => {
@@ -135,9 +136,9 @@ export default function MyCreationsPage() {
       if (data.code === 0) {
         loadCreations(true);
       } else {
-        alert(data.message || '撤稿失败');
+        toastError(data.message || '撤稿失败');
       }
-    } catch (e) { console.error('[component] handleWithdraw error:', e); alert('网络错误'); }
+    } catch (e) { console.error('[component] handleWithdraw error:', e); toastError('网络错误'); }
   };
 
   const handleLike = async (id: string) => {

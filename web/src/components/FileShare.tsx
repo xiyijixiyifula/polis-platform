@@ -1,5 +1,6 @@
 'use client';
 import { getToken } from '@/lib/api';
+import { toastError } from '@/stores/toastStore';
 
 import { useState } from 'react';
 import { File, Folder, Download, Link2, Copy, Lock, Clock } from 'lucide-react';
@@ -30,7 +31,7 @@ export function FileShare({ spaceId }: { spaceId: string }) {
         body: JSON.stringify({ file_id: fileId, expires_hours: 168 }),
       });
       if (!res.ok) {
-        alert('服务器错误，请稍后重试');
+        toastError('服务器错误，请稍后重试');
         return;
       }
       const data = await res.json();
@@ -38,10 +39,10 @@ export function FileShare({ spaceId }: { spaceId: string }) {
         setShareResult(data.data);
         setShowShareModal(true);
       } else {
-        alert(data.message || '生成分享链接失败');
+        toastError(data.message || '生成分享链接失败');
       }
     } catch {
-      alert('网络错误，请稍后重试');
+      toastError('网络错误，请稍后重试');
     }
   };
 

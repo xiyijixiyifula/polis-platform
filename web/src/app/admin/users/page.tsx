@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Search, Shield, Ban, CheckCircle, XCircle, EyeOff, Building2, UserCheck } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { toastError } from '@/stores/toastStore';
 
 interface User {
   id: string; username: string; display_name: string;
@@ -59,7 +60,7 @@ export default function AdminUsersPage() {
       });
       const data = await res.json();
       if (data.code === 0) { fetchUsers(); setShowConfirm(null); setShowDuration(null); }
-      else alert('操作失败: ' + (data.message || '未知错误'));
+      else toastError('操作失败: ' + (data.message || '未知错误'));
     } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Users]', e); }
   };
 

@@ -17,7 +17,9 @@ fn ok_str(s: &str) -> Json<JVal> { ok(serde_json::Value::String(s.to_string())) 
 
 use polis_core::auth::Claims;
 
-fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
+/// 从请求头中提取用户 ID，并检查 token 是否已被撤销（黑名单）
+/// 返回 Ok(None) 表示未登录，Ok(Some(id)) 表示有效登录
+async fn extract_user_id(handler: &VideoHandler, headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
     let auth = match headers.get("Authorization").and_then(|v| v.to_str().ok()) {
         Some(h) => h, None => return Ok(None),
     };
@@ -26,13 +28,21 @@ fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
     };
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
     match jsonwebtoken::decode::<Claims>(token, &jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation()) {
-        Ok(data) => Uuid::parse_str(&data.claims.sub).map(Some).map_err(|_| AppError::Forbidden("Invalid token".to_string())),
+        Ok(data) => {
+            // 检查 token 是否在黑名单中（已登出）
+            if let Some(ref jti) = data.claims.jti {
+                if handler.token_blacklist.is_blacklisted(jti).await {
+                    return Ok(None); // 已撤销的 token 视为未登录
+                }
+            }
+            Uuid::parse_str(&data.claims.sub).map(Some).map_err(|_| AppError::Forbidden("Invalid token".to_string()))
+        }
         Err(_) => Ok(None),
     }
 }
 
-fn require_user(headers: &HeaderMap) -> Result<Uuid, AppError> {
-    extract_user_id(headers)?.ok_or(AppError::Forbidden("请先登录".to_string()))
+async fn require_user(handler: &VideoHandler, headers: &HeaderMap) -> Result<Uuid, AppError> {
+    extract_user_id(handler, headers).await?.ok_or(AppError::Forbidden("请先登录".to_string()))
 }
 
 // ===== Query params =====
@@ -104,7 +114,7 @@ pub fn video_routes(handler: Arc<VideoHandler>) -> Router {
 
 /// POST /api/videos — 上传视频 (multipart/form-data)
 async fn upload_video(State(h): State<Arc<VideoHandler>>, headers: HeaderMap, mut multipart: Multipart) -> Result<Json<JVal>, AppError> {
-    let uid = match require_user(&headers) {
+    let uid = match require_user(&h, &headers).await {
         Ok(uid) => uid,
         Err(e) => {
             // 必须先消耗 body 再返回错误, 避免客户端在发送 body 时连接被关闭
@@ -148,7 +158,7 @@ async fn upload_video(State(h): State<Arc<VideoHandler>>, headers: HeaderMap, mu
 
 /// GET /api/videos — 我的视频列表（创作中心）
 async fn list_my_videos(State(h): State<Arc<VideoHandler>>, headers: HeaderMap, Query(q): Query<PageQuery>) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = require_user(&h, &headers).await?;
     let (page, psize) = page_params(q);
     let videos = h.list_my_videos(uid, page, psize).await?;
     Ok(ok(serde_json::to_value(videos).unwrap_or_default()))
@@ -156,21 +166,21 @@ async fn list_my_videos(State(h): State<Arc<VideoHandler>>, headers: HeaderMap, 
 
 /// GET /api/videos/{id} — 视频详情
 async fn get_video(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, headers: HeaderMap) -> Result<Json<JVal>, AppError> {
-    let uid = extract_user_id(&headers)?;
+    let uid = extract_user_id(&h, &headers).await?;
     let v = h.get_video(id, uid).await?;
     Ok(ok(serde_json::to_value(v).unwrap_or_default()))
 }
 
 /// PUT /api/videos/{id} — 编辑视频
 async fn update_video(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, headers: HeaderMap, Json(data): Json<UpdateVideoRequest>) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = require_user(&h, &headers).await?;
     h.update_video(id, uid, data).await?;
     Ok(ok_str("视频已更新"))
 }
 
 /// DELETE /api/videos/{id} — 删除视频
 async fn delete_video(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, headers: HeaderMap) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = require_user(&h, &headers).await?;
     h.delete_video(id, uid).await?;
     Ok(ok_str("视频已删除"))
 }
@@ -181,14 +191,14 @@ async fn delete_video(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, 
 
 /// POST /api/videos/{id}/publish — 发布到社区
 async fn publish_to_spaces(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, headers: HeaderMap, Json(data): Json<PublishRequest>) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = require_user(&h, &headers).await?;
     h.publish_to_spaces(id, uid, data).await?;
     Ok(ok_str("已提交到社区"))
 }
 
 /// POST /api/videos/{id}/password — 设置分享密码
 async fn set_password(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, headers: HeaderMap, Json(data): Json<SetPasswordRequest>) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = require_user(&h, &headers).await?;
     h.set_share_password(id, uid, data).await?;
     Ok(ok_str("密码已设置"))
 }
@@ -199,14 +209,14 @@ async fn set_password(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, 
 
 /// POST /api/videos/{id}/like — 切换点赞
 async fn toggle_like(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, headers: HeaderMap) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = require_user(&h, &headers).await?;
     let liked = h.toggle_like(id, uid).await?;
     Ok(ok(serde_json::json!({"liked": liked})))
 }
 
 /// POST /api/videos/{id}/bookmark — 切换收藏
 async fn toggle_bookmark(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, headers: HeaderMap) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = require_user(&h, &headers).await?;
     let bookmarked = h.toggle_bookmark(id, uid).await?;
     Ok(ok(serde_json::json!({"bookmarked": bookmarked})))
 }
@@ -219,7 +229,7 @@ async fn get_comments(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>) 
 
 /// POST /api/videos/{id}/comments — 创建评论
 async fn create_comment(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>, headers: HeaderMap, Json(data): Json<CreateVideoCommentRequest>) -> Result<Json<JVal>, AppError> {
-    let uid = require_user(&headers)?;
+    let uid = require_user(&h, &headers).await?;
     let comment = h.create_comment(id, uid, data).await?;
     Ok(ok(serde_json::to_value(comment).unwrap_or_default()))
 }
@@ -230,7 +240,7 @@ async fn create_comment(State(h): State<Arc<VideoHandler>>, Path(id): Path<Uuid>
 
 /// GET /api/videos/share/{code}?password=xxx — 通过分享码查看视频
 async fn get_by_share(State(h): State<Arc<VideoHandler>>, Path(code): Path<String>, headers: HeaderMap, Query(q): Query<ShareQuery>) -> Result<Json<JVal>, AppError> {
-    let uid = extract_user_id(&headers)?;
+    let uid = extract_user_id(&h, &headers).await?;
     let v = h.get_video_by_share_code(&code, uid, q.password.as_deref()).await?;
     Ok(ok(serde_json::to_value(v).unwrap_or_default()))
 }
@@ -246,12 +256,12 @@ async fn space_get(State(h): State<Arc<VideoHandler>>, Path(path): Path<String>,
     match action {
         SpaceAction::List => {
             let (page, psize) = page_params(q);
-            let uid = extract_user_id(&headers)?;
+            let uid = extract_user_id(&h, &headers).await?;
             let videos = h.list_space_videos(&ns, uid, page, psize).await?;
             Ok(ok(serde_json::to_value(videos).unwrap_or_default()))
         }
         SpaceAction::GetVideo(vid) => {
-            let uid = extract_user_id(&headers)?;
+            let uid = extract_user_id(&h, &headers).await?;
             let v = h.get_video_in_space(vid, &ns, uid).await?;
             Ok(ok(serde_json::to_value(v).unwrap_or_default()))
         }
@@ -265,7 +275,7 @@ async fn space_post(State(h): State<Arc<VideoHandler>>, Path(path): Path<String>
     let (ns, action) = parse_space_path(&full_path)?;
     match action {
         SpaceAction::Review(vid) => {
-            let uid = require_user(&headers)?;
+            let uid = require_user(&h, &headers).await?;
             h.review_in_space(&ns, vid, uid, data).await?;
             Ok(ok_str("审核完成"))
         }

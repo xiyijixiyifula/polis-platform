@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Eye, Edit3, Upload, FileText, Loader2, Moon, Sun, Code2, Type } from 'lucide-react';
 import { marked } from 'marked';
 import TurndownService from 'turndown';
+import DOMPurify from 'dompurify';
 
 // ===== marked 配置 =====
 marked.setOptions({
@@ -27,31 +28,11 @@ function getTurndown(): TurndownService {
 }
 
 // ===== 工具函数 =====
-function sanitizeHtml(html: string): string {
-  if (typeof document === 'undefined') return html;
-  try {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    doc.querySelectorAll('script, style, iframe, object, embed').forEach((el) => el.remove());
-    doc.querySelectorAll('*').forEach((el) => {
-      Array.from(el.attributes).forEach((attr) => {
-        if (attr.name.startsWith('on')) el.removeAttribute(attr.name);
-        if ((attr.name === 'href' || attr.name === 'src') && /^\s*javascript:/i.test(attr.value)) {
-          el.removeAttribute(attr.name);
-        }
-      });
-    });
-    return doc.body.innerHTML;
-  } catch (e) {
-    console.error('[MilkdownEditor] sanitizeHtml error:', e);
-    return html;
-  }
-}
-
 function mdToHtml(md: string): string {
   if (!md) return '';
   try {
     const raw = marked.parse(md) as string;
-    return sanitizeHtml(raw);
+    return DOMPurify.sanitize(raw);
   } catch (e) {
     console.error('[MilkdownEditor] mdToHtml error:', e);
     return md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

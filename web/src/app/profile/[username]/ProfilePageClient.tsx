@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Calendar, UserPlus, Users, UserCheck, MessageSquare, Heart, Bookmark, LogOut, PenLine, Trash2, Eye, MessageCircle, Video, Globe, Lock, Key, ThumbsUp } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { users, follow, videos, getToken, type User, type FollowUser, type VideoItem } from '@/lib/api';
+import { toastError, toastSuccess, toastWarning } from '@/stores/toastStore';
 import { SpaceCard } from '@/components/SpaceCard';
 import { FeedItem } from '@/components/FeedItem';
 import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
@@ -83,21 +84,21 @@ export default function UserProfilePage({ username }: { username: string }) {
     try {
       const res = await videos.delete(videoId);
       if (res.code === 0) setMyVideos(prev => prev.filter(v => v.id !== videoId));
-      else alert(res.message || '删除失败');
-    } catch (e) { console.error('[component] error:', e); alert('删除失败'); }
+      else toastError(res.message || '删除失败');
+    } catch (e) { console.error('[component] error:', e); toastError('删除失败'); }
   };
 
   const handleUpdateVideoVis = async (videoId: string, visibility: string) => {
     try {
       const res = await videos.update(videoId, { visibility });
       if (res.code === 0) setMyVideos(prev => prev.map(v => v.id === videoId ? { ...v, visibility } : v));
-      else alert(res.message || '更新失败');
-    } catch (e) { console.error('[component] error:', e); alert('更新失败'); }
+      else toastError(res.message || '更新失败');
+    } catch (e) { console.error('[component] error:', e); toastError('更新失败'); }
     setShowVideoEdit(null);
   };
 
   const handleSetPassword = async (videoId: string) => {
-    if (!editPwd.trim()) { alert('请输入密码'); return; }
+    if (!editPwd.trim()) { toastWarning('请输入密码'); return; }
     setEditPublishing(true);
     try {
       const res = await videos.setPassword(videoId, editPwd.trim());
@@ -105,8 +106,8 @@ export default function UserProfilePage({ username }: { username: string }) {
         setMyVideos(prev => prev.map(v => v.id === videoId ? { ...v, has_password: true } : v));
         setEditPwd('');
         setShowVideoEdit(null);
-      } else alert(res.message || '设置失败');
-    } catch (e) { console.error('[component] error:', e); alert('设置失败'); }
+      } else toastError(res.message || '设置失败');
+    } catch (e) { console.error('[component] error:', e); toastError('设置失败'); }
     setEditPublishing(false);
   };
 
@@ -282,11 +283,11 @@ export default function UserProfilePage({ username }: { username: string }) {
       if (data.code === 0) {
         setMyContents(prev => prev.filter((p: any) => p.id !== postId));
       } else {
-        alert(data.message || '删除失败');
+        toastError(data.message || '删除失败');
       }
     } catch (e) {
       console.error('[component] error:', e);
-      alert('删除失败');
+      toastError('删除失败');
     }
   };
 
@@ -434,10 +435,10 @@ export default function UserProfilePage({ username }: { username: string }) {
       if (data.code === 0) {
         setUserSpaces(prev => prev.filter((s: any) => s.namespace !== namespace));
       } else {
-        alert(data.message || '操作失败');
+        toastError(data.message || '操作失败');
       }
     } catch (e: any) {
-      alert(e?.message || '操作失败');
+      toastError(e?.message || '操作失败');
     }
   };
 

@@ -6,6 +6,7 @@ use polis_core::models::{CreateTierRequest, UpdateTierRequest, SpaceTier, Subscr
 };
 use polis_core::mention;
 use polis_core::hashtag;
+use polis_core::token_blacklist::TokenBlacklist;
 use async_nats::Client as NatsClient;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -22,6 +23,7 @@ pub struct ContentHandler {
     pub nats: Option<NatsClient>,
     pub webhook: Arc<WebhookDispatcher>,
     pub xp: XpBridge,
+    pub token_blacklist: Arc<TokenBlacklist>,
 }
 
 impl ContentHandler {
@@ -38,6 +40,7 @@ impl ContentHandler {
             nats,
             webhook,
             xp,
+            token_blacklist: Arc::new(TokenBlacklist::new()),
         }
     }
 

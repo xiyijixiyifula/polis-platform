@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, User, Send, Pin, Trash2, Search, X, Eraser } from 'lucide-react';
 import { messages, users, getToken, type DirectMessage } from '@/lib/api';
+import { toastError } from '@/stores/toastStore';
 
 export default function ConversationPage() {
   const params = useParams();
@@ -113,7 +114,7 @@ export default function ConversationPage() {
       setNewMsg('');
       inputRef.current?.focus();
     } catch (e: any) {
-      alert(e.message || '发送失败');
+      toastError(e.message || '发送失败');
     } finally {
       setSending(false);
     }

@@ -1,6 +1,9 @@
 use std::path::PathBuf;
+use std::sync::Arc;
+
 use polis_core::error::AppError;
 use polis_core::resolver::resolve::resolve_space_id;
+use polis_core::token_blacklist::TokenBlacklist;
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
 use crate::config::VideoServiceConfig;
@@ -10,10 +13,17 @@ use crate::repo::VideoRepo;
 pub struct VideoHandler {
     pub repo: VideoRepo,
     pub config: VideoServiceConfig,
+    pub token_blacklist: Arc<TokenBlacklist>,
 }
 
 impl VideoHandler {
-    pub fn new(repo: VideoRepo, config: VideoServiceConfig) -> Self { Self { repo, config } }
+    pub fn new(repo: VideoRepo, config: VideoServiceConfig) -> Self {
+        Self {
+            repo,
+            config,
+            token_blacklist: Arc::new(TokenBlacklist::new()),
+        }
+    }
 
     async fn get_max_video_size_mb(&self) -> u64 {
         let result: Option<(serde_json::Value,)> = sqlx::query_as(

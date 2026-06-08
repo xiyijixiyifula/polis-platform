@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Ban, Shield, Clock, X } from 'lucide-react';
 import { spaces } from '@/lib/api';
+import { toastError } from '@/stores/toastStore';
 
 interface Props {
   namespace: string;
@@ -39,7 +40,7 @@ export function MemberActions({ namespace, userId, username, currentRole, onActi
       setShowBan(false);
       onAction();
     } catch (e: any) {
-      alert(e?.message || '操作失败');
+      toastError(e?.message || '操作失败');
     } finally {
       setLoading(false);
     }
@@ -52,7 +53,7 @@ export function MemberActions({ namespace, userId, username, currentRole, onActi
       await spaces.unbanMember(namespace, userId);
       onAction();
     } catch (e: any) {
-      alert(e?.message || '操作失败');
+      toastError(e?.message || '操作失败');
     } finally {
       setLoading(false);
     }
@@ -65,7 +66,7 @@ export function MemberActions({ namespace, userId, username, currentRole, onActi
       setShowRoles(false);
       onAction();
     } catch (e: any) {
-      alert(e?.message || '操作失败');
+      toastError(e?.message || '操作失败');
     } finally {
       setLoading(false);
     }

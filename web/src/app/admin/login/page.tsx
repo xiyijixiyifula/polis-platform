@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield } from 'lucide-react';
+import { setAdminToken } from '@/lib/api';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function AdminLoginPage() {
       if (!res.ok || data.code !== 0) {
         setError(data.message || '登录失败');
       } else {
-        localStorage.setItem('polis_admin_token', data.data.access_token);
+        setAdminToken(data.data.access_token);
         router.push('/admin');
       }
     } catch {

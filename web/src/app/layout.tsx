@@ -5,6 +5,7 @@ import './globals.css';
 import { Header } from '@/components/Header';
 import { ClientLayoutWrapper } from '@/components/ClientLayoutWrapper';
 import { IntlClientProvider } from '@/components/IntlClientProvider';
+import { ToastProvider } from '@/components/ToastProvider';
 
 export const metadata: Metadata = {
   title: { default: 'Polis - 未来社区平台', template: '%s | Polis' },
@@ -137,6 +138,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </ClientLayoutWrapper>
           </IntlClientProvider>
         </div>
+        <ToastProvider />
       </body>
     </html>
   );

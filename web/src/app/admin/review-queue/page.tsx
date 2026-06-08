@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, EyeOff, Ban, Clock, AlertTriangle, Filter, ChevronDown } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { toastError } from '@/stores/toastStore';
 
 interface QueueItem {
   target_type: string;
@@ -92,7 +93,7 @@ export default function AdminReviewQueuePage() {
       });
       const data = await res.json();
       if (data.code === 0) { fetchQueue(); setShowHideModal(null); }
-      else alert('操作失败: ' + (data.message || '未知错误'));
+      else toastError('操作失败: ' + (data.message || '未知错误'));
     } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Review Queue Action]', e); }
   };
 
@@ -109,7 +110,7 @@ export default function AdminReviewQueuePage() {
       });
       const data = await res.json();
       if (data.code === 0) { fetchQueue(); setSelected(new Set()); setBatchAction(''); }
-      else alert('批量操作失败: ' + (data.message || '未知错误'));
+      else toastError('批量操作失败: ' + (data.message || '未知错误'));
     } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Batch Review]', e); }
   };
 

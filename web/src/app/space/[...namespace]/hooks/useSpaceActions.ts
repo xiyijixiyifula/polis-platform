@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { spaces as apiSpaces, tiers, subscribe, getToken } from '@/lib/api';
 import type { Space, Post, Series, SpaceTier, Subscription } from '@/lib/api';
 import type { Member, SpaceDataState } from './useSpaceData';
+import { toastSuccess, toastError, toastWarning } from '@/stores/toastStore';
 
 interface UseSpaceActionsInput {
 	cleanNamespace: string;
@@ -75,7 +76,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 	const togglePin = useCallback(async (postId: string, isPinned: boolean) => {
 		try {
 			const token = getToken();
-			if (!token) { alert('请先登录'); return; }
+			if (!token) { window.location.href = '/login'; return; }
 			const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/pin`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
 			const data = await res.json();
 			if (data.code === 0) {
@@ -90,7 +91,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 		if (!confirm('确定要隐藏这篇帖子吗？隐藏后将从空间索引中移除，但内容不会删除。')) return;
 		try {
 			const token = getToken();
-			if (!token) { alert('请先登录'); return; }
+			if (!token) { window.location.href = '/login'; return; }
 			const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/hide`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
 			const data = await res.json();
 			if (data.code === 0) {
@@ -103,7 +104,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 	const toggleUnhide = useCallback(async (postId: string) => {
 		try {
 			const token = getToken();
-			if (!token) { alert('请先登录'); return; }
+			if (!token) { window.location.href = '/login'; return; }
 			const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/unhide`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
 			const data = await res.json();
 			if (data.code === 0) {
@@ -116,7 +117,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 	const toggleFeature = useCallback(async (postId: string, isFeatured: boolean) => {
 		try {
 			const token = getToken();
-			if (!token) { alert('请先登录'); return; }
+			if (!token) { window.location.href = '/login'; return; }
 			const res = await fetch(`/api/spaces/${cleanNamespace}/posts/${postId}/featured`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
 			const data = await res.json();
 			if (data.code === 0) {
@@ -162,7 +163,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 	const handleJoinSpace = useCallback(async () => {
 		if (isOwner || isMember || joinStatus === 'pending') return;
 		const token = getToken();
-		if (!token) { alert('请先登录'); return; }
+		if (!token) { window.location.href = '/login'; return; }
 		setJoining(true);
 		try {
 			const res = await apiSpaces.join(
@@ -175,18 +176,18 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 					setShowJoinInput(false);
 				} else if (res.data.status === 'pending') {
 					setShowJoinInput(false);
-					alert('已提交加入申请，等待社区管理员审批');
+					toastSuccess('已提交加入申请，等待社区管理员审批');
 				}
 			}
 		} catch (e: any) {
-			alert(e?.message || '操作失败');
+			toastError(e?.message || '操作失败');
 		}
 		setJoining(false);
 	}, [isOwner, isMember, joinStatus, cleanNamespace, showJoinInput, joinMessage, setIsMember, setShowJoinInput]);
 
 	const handleFollowSpace = useCallback(async () => {
 		const token = getToken();
-		if (!token) { alert('请先登录'); return; }
+		if (!token) { window.location.href = '/login'; return; }
 		setFollowLoading(true);
 		try {
 			if (isFollowing) {
@@ -199,14 +200,14 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 				setSpace(space ? { ...space, follower_count: (space.follower_count || 0) + 1 } : null);
 			}
 		} catch (e: any) {
-			alert(e?.message || '操作失败');
+			toastError(e?.message || '操作失败');
 		}
 		setFollowLoading(false);
 	}, [isFollowing, cleanNamespace, setIsFollowing, setSpace]);
 
 	const handleStarSpace = useCallback(async () => {
 		const token = getToken();
-		if (!token) { alert('请先登录'); return; }
+		if (!token) { window.location.href = '/login'; return; }
 		setStarLoading(true);
 		try {
 			if (isStarred) {
@@ -219,7 +220,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 				setSpace(space ? { ...space, star_count: (space.star_count || 0) + 1 } : null);
 			}
 		} catch (e: any) {
-			alert(e?.message || '操作失败');
+			toastError(e?.message || '操作失败');
 		}
 		setStarLoading(false);
 	}, [isStarred, cleanNamespace, setIsStarred, setSpace]);
@@ -227,8 +228,8 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 	// --- Series actions ---
 	const handleCreateSeries = useCallback(async () => {
 		const token = getToken();
-		if (!token) { alert('请先登录'); return; }
-		if (!newSeriesTitle.trim()) { alert('请输入系列标题'); return; }
+		if (!token) { window.location.href = '/login'; return; }
+		if (!newSeriesTitle.trim()) { toastWarning('请输入系列标题'); return; }
 		setSeriesCreating(true);
 		try {
 			const res = await fetch(`/api/series/space/${cleanNamespace}`, {
@@ -245,10 +246,10 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 				const listData = await listRes.json();
 				if (listData.code === 0) setSeriesList(listData.data || []);
 			} else {
-				alert(data.message || '创建失败');
+				toastError(data.message || '创建失败');
 			}
 		} catch (e) {
-			alert('网络错误');
+			toastError('网络错误');
 		} finally {
 			setSeriesCreating(false);
 		}
@@ -256,7 +257,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 
 	// --- Tier management ---
 	const handleSaveTier = useCallback(async () => {
-		if (!tierForm.name.trim()) { alert('请输入名称'); return; }
+		if (!tierForm.name.trim()) { toastWarning('请输入名称'); return; }
 		const benefits = tierForm.benefits ? tierForm.benefits.split(/[,，]/).map((s: string) => s.trim()).filter(Boolean) : [];
 		setTierSaving(true);
 		try {
@@ -278,7 +279,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 			setShowTierForm(false); setEditingTier(null);
 			const tRes = await tiers.list(cleanNamespace);
 			if (tRes.code === 0) setSpaceTiers(tRes.data || []);
-		} catch (e: any) { alert(e?.message || '保存失败'); }
+		} catch (e: any) { toastError(e?.message || '保存失败'); }
 		finally { setTierSaving(false); }
 	}, [cleanNamespace, tierForm, editingTier, setSpaceTiers]);
 
@@ -288,23 +289,23 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 			await tiers.delete(cleanNamespace, tierId);
 			const tRes = await tiers.list(cleanNamespace);
 			if (tRes.code === 0) setSpaceTiers(tRes.data || []);
-		} catch (e: any) { alert(e?.message || '删除失败'); }
+		} catch (e: any) { toastError(e?.message || '删除失败'); }
 	}, [cleanNamespace, setSpaceTiers]);
 
 	const handleSubscribe = useCallback(async (tierId: string, isMyTier: boolean) => {
 		const token = getToken();
-		if (!token) { alert('请先登录'); return; }
+		if (!token) { window.location.href = '/login'; return; }
 		if (isMyTier) {
 			if (!confirm('确定要取消订阅吗？')) return;
 			setSubscribing(tierId);
-			try { await subscribe.cancel(cleanNamespace); setMySubscription(null); } catch (e: any) { alert(e?.message || '取消失败'); } finally { setSubscribing(null); }
+			try { await subscribe.cancel(cleanNamespace); setMySubscription(null); } catch (e: any) { toastError(e?.message || '取消失败'); } finally { setSubscribing(null); }
 		} else {
 			setSubscribing(tierId);
 			try {
 				const res = await subscribe.join(cleanNamespace, tierId);
 				if (res.code === 0) { const sRes = await subscribe.get(cleanNamespace); if (sRes.code === 0 && sRes.data) setMySubscription(sRes.data); }
-				else { alert(res.message || '订阅失败'); }
-			} catch (e: any) { alert(e?.message || '订阅失败'); } finally { setSubscribing(null); }
+				else { toastError(res.message || '订阅失败'); }
+			} catch (e: any) { toastError(e?.message || '订阅失败'); } finally { setSubscribing(null); }
 		}
 	}, [cleanNamespace, setMySubscription]);
 
@@ -320,7 +321,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 			});
 			setSpace(space ? { ...space, title: editForm.title, description: editForm.description, icon_url: editForm.icon_url, banner_url: editForm.banner_url } : null);
 			setShowEditDialog(false);
-		} catch (e: any) { alert(e?.message || '保存失败'); }
+		} catch (e: any) { toastError(e?.message || '保存失败'); }
 		setEditSaving(false);
 	}, [cleanNamespace, editForm, setSpace]);
 
@@ -329,12 +330,12 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 		try {
 			await apiSpaces.archive(cleanNamespace);
 			window.location.href = '/';
-		} catch (e: any) { alert(e?.message || '删除失败'); }
+		} catch (e: any) { toastError(e?.message || '删除失败'); }
 	}, [cleanNamespace]);
 
 	// --- File upload ---
 	const handleUploadIcon = useCallback(async (file: File) => {
-		if (file.size > 2 * 1024 * 1024) { alert('图标不能超过 2MB'); return; }
+		if (file.size > 2 * 1024 * 1024) { toastWarning('图标不能超过 2MB'); return; }
 		setUploadingIcon(true);
 		try {
 			const dataBase64 = await new Promise<string>((resolve, reject) => {
@@ -345,12 +346,12 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 			});
 			const result = await apiSpaces.uploadFile(cleanNamespace, file.name, dataBase64, file.type);
 			if (result.data) { const url = `/api/files/${result.data.id}`; setEditForm(prev => ({ ...prev, icon_url: url })); }
-		} catch (e: any) { alert(e?.message || '上传失败'); }
+		} catch (e: any) { toastError(e?.message || '上传失败'); }
 		setUploadingIcon(false);
 	}, [cleanNamespace]);
 
 	const handleUploadBanner = useCallback(async (file: File) => {
-		if (file.size > 5 * 1024 * 1024) { alert('封面不能超过 5MB'); return; }
+		if (file.size > 5 * 1024 * 1024) { toastWarning('封面不能超过 5MB'); return; }
 		setUploadingBanner(true);
 		try {
 			const dataBase64 = await new Promise<string>((resolve, reject) => {
@@ -361,7 +362,7 @@ export function useSpaceActions(input: UseSpaceActionsInput) {
 			});
 			const result = await apiSpaces.uploadFile(cleanNamespace, file.name, dataBase64, file.type);
 			if (result.data) { const url = `/api/files/${result.data.id}`; setEditForm(prev => ({ ...prev, banner_url: url })); }
-		} catch (e: any) { alert(e?.message || '上传失败'); }
+		} catch (e: any) { toastError(e?.message || '上传失败'); }
 		setUploadingBanner(false);
 	}, [cleanNamespace]);
 

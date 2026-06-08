@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { History, Filter, Search } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { getAdminToken } from '@/lib/api';
 
 interface AuditLog {
   id: string;
@@ -57,7 +58,7 @@ export default function AdminAuditLogsPage() {
   useEffect(() => { fetchLogs(); }, [page, actorTypeFilter, actionFilter, targetTypeFilter]);
 
   const fetchLogs = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     setLoading(true);
     try {
       const params = new URLSearchParams();

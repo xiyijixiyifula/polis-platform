@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Search, Star, StarOff, Trash2, EyeOff, Eye, Clock } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
+import { toastError, toastSuccess } from '@/stores/toastStore';
 
 interface Post {
   id: string; space_id: string; module_type: string;
@@ -58,7 +59,7 @@ export default function AdminPostsPage() {
       });
       const data = await res.json();
       if (data.code === 0) { fetchPosts(); setShowHidePicker(null); }
-      else alert('操作失败: ' + (data.message || '未知错误'));
+      else toastError('操作失败: ' + (data.message || '未知错误'));
     } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Posts]', e); }
   };
 
@@ -77,7 +78,7 @@ export default function AdminPostsPage() {
       } catch (e) { /* continue */ }
     }
     fetchPosts(); setSelected(new Set());
-    alert(`已隐藏 ${count} 篇帖子`);
+    toastSuccess(`已隐藏 ${count} 篇帖子`);
   };
 
   const toggleSelect = (id: string) => {

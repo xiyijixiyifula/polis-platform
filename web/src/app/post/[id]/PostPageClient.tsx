@@ -11,6 +11,7 @@ import { VoteButton } from '@/components/VoteButton';
 import { CherryRender } from '@/components/CherryRender';
 import { StructuredDataRender } from '@/components/StructuredDataRender';
 import TipButton from '@/components/TipButton';
+import { toastSuccess, toastError } from '@/stores/toastStore';
 
 /** Decode JWT payload to extract user ID */
 function getCurrentUserId(): string | null {
@@ -299,9 +300,9 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
     try {
       await series.addPost(seriesId, postId);
       setSeriesDropdownOpen(false);
-      alert('已添加到系列');
+      toastSuccess('已添加到系列');
     } catch (e: any) {
-      alert(e?.message || '添加失败');
+      toastError(e?.message || '添加失败');
     } finally {
       setSeriesAdding(false);
     }
@@ -340,7 +341,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
       }
     } catch (e) {
       console.error('[component] error:', e);
-      alert('编辑失败，请重试');
+      toastError('编辑失败，请重试');
     }
   };
 
@@ -356,7 +357,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
         setUnlockPassword('');
       }
     } catch (err: any) {
-      alert(err.message || '密码错误，请重试');
+      setError(err.message || '密码错误，请重试');
     }
     setUnlocking(false);
   };
@@ -374,7 +375,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
       }
     } catch (e) {
       console.error('[component] error:', e);
-      alert('删除失败，请重试');
+      toastError('删除失败，请重试');
     }
   };
 
@@ -412,10 +413,10 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
       await posts.reportById(post.id, reportReason || '违规内容');
       setShowReport(false);
       setReportReason('');
-      alert('举报已提交，我们会尽快处理。');
+      toastSuccess('举报已提交，我们会尽快处理。');
     } catch (e) {
       console.error('[component] error:', e);
-      alert('举报失败，请重试');
+      toastError('举报失败，请重试');
     }
   };
 
@@ -436,7 +437,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
       }
     } catch (e) {
       console.error('[component] error:', e);
-      alert('评论失败，请重试');
+      toastError('评论失败，请重试');
     }
   };
 
@@ -699,7 +700,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
             title="下载 Markdown">
             <Download className="h-5 w-5" />
           </a>
-          <button onClick={() => { const url = window.location.href; navigator.clipboard.writeText(url).then(() => alert('链接已复制')); }}
+          <button onClick={() => { const url = window.location.href; navigator.clipboard.writeText(url).then(() => toastSuccess('链接已复制')); }}
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors">
             <Share2 className="h-5 w-5" />
           </button>

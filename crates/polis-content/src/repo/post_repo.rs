@@ -1181,30 +1181,68 @@ impl PostRepo {
 
     // ===== Leaderboard 排行榜 =====
 
+    /// Get the creator leaderboard filtered by time period.
+    ///
+    /// # SQL injection safety
+    /// The date-filter expression is selected via `match` on `period` so only
+    /// hard-coded SQL snippets reach the query string. No user-supplied text
+    /// is ever interpolated into SQL identifiers or expressions.
     pub async fn get_leaderboard(
         &self,
         period: &str,
         limit: i64,
     ) -> Result<Vec<(Uuid, i64, i32, i32)>, AppError> {
-        let since = match period {
-            "weekly" => "NOW() - INTERVAL '7 days'",
-            "monthly" => "NOW() - INTERVAL '30 days'",
-            _ => "'1970-01-01'",
+        // Use match to produce fully static SQL — no format! expression interpolation.
+        let rows: Vec<(Uuid, i64, i32, i32)> = match period {
+            "weekly" => {
+                sqlx::query_as(
+                    "SELECT u.id, \
+                     (COALESCE(COUNT(c.id), 0) * 10 + COALESCE(SUM(c.like_count), 0)::int8 * 5 + COALESCE(SUM(c.comment_count), 0)::int8 * 2)::int8 AS score, \
+                     COALESCE(SUM(c.view_count), 0)::int4 AS total_views, \
+                     COALESCE(COUNT(c.id), 0)::int4 AS post_count \
+                     FROM users u \
+                     LEFT JOIN creations c ON c.creator_id = u.id AND c.created_at >= NOW() - INTERVAL '7 days' \
+                     GROUP BY u.id \
+                     ORDER BY score DESC \
+                     LIMIT $1",
+                )
+                .bind(limit)
+                .fetch_all(&*self.pool)
+                .await?
+            }
+            "monthly" => {
+                sqlx::query_as(
+                    "SELECT u.id, \
+                     (COALESCE(COUNT(c.id), 0) * 10 + COALESCE(SUM(c.like_count), 0)::int8 * 5 + COALESCE(SUM(c.comment_count), 0)::int8 * 2)::int8 AS score, \
+                     COALESCE(SUM(c.view_count), 0)::int4 AS total_views, \
+                     COALESCE(COUNT(c.id), 0)::int4 AS post_count \
+                     FROM users u \
+                     LEFT JOIN creations c ON c.creator_id = u.id AND c.created_at >= NOW() - INTERVAL '30 days' \
+                     GROUP BY u.id \
+                     ORDER BY score DESC \
+                     LIMIT $1",
+                )
+                .bind(limit)
+                .fetch_all(&*self.pool)
+                .await?
+            }
+            _ => {
+                sqlx::query_as(
+                    "SELECT u.id, \
+                     (COALESCE(COUNT(c.id), 0) * 10 + COALESCE(SUM(c.like_count), 0)::int8 * 5 + COALESCE(SUM(c.comment_count), 0)::int8 * 2)::int8 AS score, \
+                     COALESCE(SUM(c.view_count), 0)::int4 AS total_views, \
+                     COALESCE(COUNT(c.id), 0)::int4 AS post_count \
+                     FROM users u \
+                     LEFT JOIN creations c ON c.creator_id = u.id AND c.created_at >= '1970-01-01' \
+                     GROUP BY u.id \
+                     ORDER BY score DESC \
+                     LIMIT $1",
+                )
+                .bind(limit)
+                .fetch_all(&*self.pool)
+                .await?
+            }
         };
-        let query = format!(
-            "SELECT u.id, \
-             (COALESCE(COUNT(c.id), 0) * 10 + COALESCE(SUM(c.like_count), 0)::int8 * 5 + COALESCE(SUM(c.comment_count), 0)::int8 * 2)::int8 AS score, \
-             COALESCE(SUM(c.view_count), 0)::int4 AS total_views, \
-             COALESCE(COUNT(c.id), 0)::int4 AS post_count \
-             FROM users u \
-             LEFT JOIN creations c ON c.creator_id = u.id AND c.created_at >= {} \
-             GROUP BY u.id \
-             ORDER BY score DESC \
-             LIMIT $1",
-            since
-        );
-        let rows: Vec<(Uuid, i64, i32, i32)> =
-            sqlx::query_as(&query).bind(limit).fetch_all(&*self.pool).await?;
         Ok(rows)
     }
 

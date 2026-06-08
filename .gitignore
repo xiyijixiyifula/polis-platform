@@ -46,3 +46,4 @@ deploy/polis-video
 # Screenshots in project root
 /*.png
 test-video.mp4
+.claude/worktrees/

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle, XCircle, Clock, Filter, EyeOff, Ban } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { toastError } from '@/stores/toastStore';
 
 interface Report {
   id: string;
@@ -72,7 +73,7 @@ export default function AdminReportsPage() {
       });
       const data = await res.json();
       if (data.code === 0) fetchReports();
-      else alert('操作失败: ' + data.message);
+      else toastError('操作失败: ' + data.message);
     } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Reports]', e); }
   };
 

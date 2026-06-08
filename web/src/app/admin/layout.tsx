@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, Building2, FileText, Settings, LogOut, Shield, AlertTriangle, MessageSquare, DollarSign, TrendingUp, ClipboardCheck, History } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { getAdminToken, setAdminToken } from '@/lib/api';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -12,12 +13,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     setMounted(true);
     // Validate admin token — stale/invalid tokens cause empty data with 401
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     if (token) {
       fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } })
         .then(res => {
           if (res.status === 401) {
-            localStorage.removeItem('polis_admin_token');
+            setAdminToken(null);
             window.location.href = '/admin/login';
           }
         })
@@ -36,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // Synchronous token check - evaluates on every client-side render
-  const isAdmin = !!localStorage.getItem('polis_admin_token');
+  const isAdmin = !!getAdminToken();
 
   if (!isAdmin) {
     if (typeof window !== 'undefined') {
@@ -61,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('polis_admin_token');
+    setAdminToken(null);
     window.location.href = '/admin/login';
   };
 

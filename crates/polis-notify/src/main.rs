@@ -54,6 +54,26 @@ async fn main() -> anyhow::Result<()> {
                         }
                     });
                 }
+
+                // 订阅 token 黑名单事件，同步更新本地黑名单
+                // 生产环境应使用 Redis 替代内存黑名单 + NATS 同步
+                let bl_handler = nats_handler.clone();
+                match nats_client.subscribe(subjects::TOKEN_BLACKLISTED.to_string()).await {
+                    Ok(mut sub) => {
+                        tracing::info!("Notify service subscribed to token blacklist events");
+                        tokio::spawn(async move {
+                            while let Some(msg) = sub.next().await {
+                                let jti = String::from_utf8_lossy(&msg.payload).to_string();
+                                tracing::debug!("Blacklisting token jti={} from NATS", jti);
+                                bl_handler.token_blacklist.blacklist(&jti).await;
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to subscribe to token.blacklisted: {}", e);
+                    }
+                }
+
                 tracing::info!("NATS subscriptions active");
             }
             Err(e) => {

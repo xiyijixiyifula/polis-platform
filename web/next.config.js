@@ -36,6 +36,22 @@ const nextConfig = {
     formats: ['image/webp', 'image/avif'],
   },
   async headers() {
+    const isDev = process.env.NODE_ENV !== 'production';
+
+    // script-src: unsafe-inline removed always; unsafe-eval only in dev (Next.js Fast Refresh requires it).
+    // style-src: unsafe-inline kept for CSS-in-JS (technical debt — migrate to strict CSP when feasible).
+    const scriptSrc = isDev
+      ? "'self' 'unsafe-eval'"
+      : "'self'";
+    const csp = [
+      "default-src 'self'",
+      `script-src ${scriptSrc}`,
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "connect-src 'self' https:",
+      "font-src 'self'",
+    ].join('; ');
+
     return [
       {
         source: '/(.*)',
@@ -45,10 +61,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
           { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
-          {
-            key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self';",
-          },
+          { key: 'Content-Security-Policy', value: csp },
         ],
       },
     ];

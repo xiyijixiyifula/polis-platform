@@ -1,15 +1,22 @@
+use std::sync::Arc;
+
 use polis_core::error::AppError;
+use polis_core::token_blacklist::TokenBlacklist;
 use sqlx::PgPool;
 use uuid::Uuid;
 use tracing;
 
 pub struct NotifyHandler {
     pool: PgPool,
+    pub token_blacklist: Arc<TokenBlacklist>,
 }
 
 impl NotifyHandler {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self {
+            pool,
+            token_blacklist: Arc::new(TokenBlacklist::new()),
+        }
     }
 
     pub fn pool(&self) -> &PgPool {

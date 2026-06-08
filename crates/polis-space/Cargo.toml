@@ -23,5 +23,6 @@ dotenvy = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 async-nats = { workspace = true }
+futures-util = { workspace = true }
 jsonwebtoken = { workspace = true }
 argon2.workspace = true

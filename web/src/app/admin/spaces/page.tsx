@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Search, Archive, Eye } from 'lucide-react';
 import { formatDate, formatCount } from '@/lib/utils';
+import { getAdminToken } from '@/lib/api';
 
 interface Space {
   id: string; namespace: string; title: string;
@@ -20,7 +21,7 @@ export default function AdminSpacesPage() {
   useEffect(() => { fetchSpaces(); }, []);
 
   const fetchSpaces = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const res = await fetch('/api/admin/spaces?page=1&page_size=50', {
         headers: { Authorization: `Bearer ${token}` },
@@ -32,7 +33,7 @@ export default function AdminSpacesPage() {
   };
 
   const archiveSpace = async (spaceId: string) => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     await fetch(`/api/admin/spaces/${spaceId}/archive`, {
       method: 'POST', headers: { Authorization: `Bearer ${token}` },
     });

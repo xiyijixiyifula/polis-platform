@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { getToken } from '@/lib/api';
+import { toastError, toastWarning } from '@/stores/toastStore';
 
 const VISIBILITY_OPTIONS = [
   { value: 'public', label: '公开', icon: Globe, desc: '所有人可见' },
@@ -87,12 +88,12 @@ function EditCreationPageInner() {
       const res = await fetch(`/api/creations/${id}`, { method: 'DELETE', headers: token ? { Authorization: `Bearer ${token}` } : {} });
       const data = await res.json();
       if (data.code === 0) window.location.href = '/creations';
-      else alert(data.message || '删除失败');
-    } catch { alert('网络错误'); }
+      else toastError(data.message || '删除失败');
+    } catch { toastError('网络错误'); }
   };
 
   const handleAttachmentUpload = async (file: File) => {
-    if (file.size > 8 * 1024 * 1024) { alert('文件大小不能超过 8MB'); return; }
+    if (file.size > 8 * 1024 * 1024) { toastWarning('文件大小不能超过 8MB'); return; }
     try {
       const token = getToken() || '';
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -125,7 +126,7 @@ function EditCreationPageInner() {
           const res = await fetch('/api/import/markdown', { method: 'POST', headers, body: JSON.stringify({ filename: file.name, data_base64: base64, mime_type: file.type || 'application/octet-stream' }) });
           const data = await res.json();
           if (data.code === 0 && data.data?.content) setBody(prev => prev ? prev + '\n\n' + data.data.content : data.data.content);
-          else alert('导入失败：' + (data.message || '未知错误'));
+          else toastError('导入失败：' + (data.message || '未知错误'));
         };
         reader.readAsDataURL(file);
       } else {

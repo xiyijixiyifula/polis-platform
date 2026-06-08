@@ -13,7 +13,7 @@ use crate::auth;
 use crate::config::UserServiceConfig;
 use crate::repo::UserRepo;
 use crate::handlers::bind_wallet::BindWalletHandler;
-use crate::token_blacklist::TokenBlacklist;
+use polis_core::token_blacklist::TokenBlacklist;
 
 /// 用户业务逻辑处理器
 pub struct UserHandler {
@@ -285,6 +285,21 @@ impl UserHandler {
                 if let Err(e) = nats.publish(subject.to_string(), data.into()).await {
                     tracing::warn!("Failed to publish event {}: {}", subject, e);
                 }
+            }
+        }
+    }
+
+    /// 通过 NATS 广播 token 撤销事件，让其他服务同步更新本地黑名单
+    async fn nats_publish_blacklisted(&self, jti: &str) {
+        if let Some(ref nats) = self.nats {
+            let jti_str = jti.to_string();
+            if let Err(e) = nats.publish(
+                subjects::TOKEN_BLACKLISTED.to_string(),
+                jti_str.into_bytes().into(),
+            ).await {
+                tracing::warn!("Failed to publish token blacklist event for jti={}: {}", jti, e);
+            } else {
+                tracing::debug!("Published token blacklist event for jti={}", jti);
             }
         }
     }
@@ -635,8 +650,9 @@ impl UserHandler {
             if self.token_blacklist.is_blacklisted(jti).await {
                 return Err(AppError::Unauthorized);
             }
-            // 撤销旧 refresh token
+            // 撤销旧 refresh token，并通知其他服务
             self.token_blacklist.blacklist(jti).await;
+            self.nats_publish_blacklisted(jti).await;
         }
 
         let user_id = Uuid::parse_str(&claims.sub)
@@ -669,12 +685,14 @@ impl UserHandler {
     pub async fn logout(&self, jti: &str, refresh_token: Option<&str>) -> Result<(), AppError> {
         // 撤销 access token
         self.token_blacklist.blacklist(jti).await;
+        self.nats_publish_blacklisted(jti).await;
 
         // 如果提供了 refresh token，也撤销它
         if let Some(rt) = refresh_token {
             if let Ok(claims) = auth::verify_token(rt, &self.config.jwt_secret) {
                 if let Some(ref rt_jti) = claims.jti {
                     self.token_blacklist.blacklist(rt_jti).await;
+                    self.nats_publish_blacklisted(rt_jti).await;
                 }
             }
         }

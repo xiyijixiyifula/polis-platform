@@ -28,6 +28,9 @@ pub mod subjects {
 
     // 支付事件
     pub const PAYMENT_COMPLETED: &str = "payment.completed";
+
+    // 令牌撤销事件
+    pub const TOKEN_BLACKLISTED: &str = "token.blacklisted";
 }
 
 /// 基础事件结构

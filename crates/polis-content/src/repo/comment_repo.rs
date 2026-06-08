@@ -93,7 +93,11 @@ impl CommentRepo {
         Ok(c)
     }
 
-    /// List all non-deleted comments on posts authored by `author_id`, ordered by newest
+    /// List all non-deleted comments on posts authored by `author_id`, ordered by newest.
+    ///
+    /// # SQL injection safety
+    /// Column names in this query are static strings — no user input is interpolated
+    /// into SQL identifiers. All values are passed via parameterized `$N` binds.
     pub async fn find_comments_by_post_author(
         &self,
         author_id: Uuid,
@@ -101,31 +105,50 @@ impl CommentRepo {
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Comment>, i64), AppError> {
-        let mut conditions =
-            vec!["c.is_deleted = FALSE".to_string(), "p.author_id = $1".to_string()];
         if let Some(pid) = post_id {
-            conditions.push(format!("c.post_id = '{}'::uuid", pid));
+            let count: (i64,) = sqlx::query_as(
+                "SELECT COUNT(*) FROM comments c JOIN posts p ON c.post_id = p.id \
+                 WHERE c.is_deleted = FALSE AND p.author_id = $1 AND c.post_id = $2",
+            )
+            .bind(author_id)
+            .bind(pid)
+            .fetch_one(&*self.pool)
+            .await?;
+
+            let comments = sqlx::query_as::<_, Comment>(
+                "SELECT c.* FROM comments c JOIN posts p ON c.post_id = p.id \
+                 WHERE c.is_deleted = FALSE AND p.author_id = $1 AND c.post_id = $2 \
+                 ORDER BY c.is_pinned DESC, c.created_at DESC LIMIT $3 OFFSET $4",
+            )
+            .bind(author_id)
+            .bind(pid)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&*self.pool)
+            .await?;
+
+            Ok((comments, count.0))
+        } else {
+            let count: (i64,) = sqlx::query_as(
+                "SELECT COUNT(*) FROM comments c JOIN posts p ON c.post_id = p.id \
+                 WHERE c.is_deleted = FALSE AND p.author_id = $1",
+            )
+            .bind(author_id)
+            .fetch_one(&*self.pool)
+            .await?;
+
+            let comments = sqlx::query_as::<_, Comment>(
+                "SELECT c.* FROM comments c JOIN posts p ON c.post_id = p.id \
+                 WHERE c.is_deleted = FALSE AND p.author_id = $1 \
+                 ORDER BY c.is_pinned DESC, c.created_at DESC LIMIT $2 OFFSET $3",
+            )
+            .bind(author_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all(&*self.pool)
+            .await?;
+
+            Ok((comments, count.0))
         }
-        let where_clause = conditions.join(" AND ");
-
-        let count: (i64,) = sqlx::query_as(&format!(
-            "SELECT COUNT(*) FROM comments c JOIN posts p ON c.post_id = p.id WHERE {}",
-            where_clause
-        ))
-        .bind(author_id)
-        .fetch_one(&*self.pool)
-        .await?;
-
-        let comments = sqlx::query_as::<_, Comment>(&format!(
-            "SELECT c.* FROM comments c JOIN posts p ON c.post_id = p.id WHERE {} ORDER BY c.is_pinned DESC, c.created_at DESC LIMIT $2 OFFSET $3",
-            where_clause
-        ))
-        .bind(author_id)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&*self.pool)
-        .await?;
-
-        Ok((comments, count.0))
     }
 }

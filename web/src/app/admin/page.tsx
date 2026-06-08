@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Users, Building2, FileText, Activity, TrendingUp, DollarSign, MessageSquare, AlertTriangle, Server, CheckCircle, XCircle, UserPlus, FilePlus } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 
 interface Stats {
   total_users: number; total_spaces: number; total_posts: number;
@@ -48,7 +49,7 @@ export default function AdminDashboard() {
   }, []);
 
   const fetchStats = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const res = await fetch('/api/admin/stats', {
         headers: { Authorization: `Bearer ${token}` },
@@ -68,7 +69,7 @@ export default function AdminDashboard() {
   };
 
   const fetchGrowth = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const [usersRes, postsRes] = await Promise.all([
         fetch('/api/admin/analytics/users?days=7', { headers: { Authorization: `Bearer ${token}` } }),
@@ -109,7 +110,7 @@ export default function AdminDashboard() {
   };
 
   const fetchRecent = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const [usersRes, spacesRes] = await Promise.all([
         fetch('/api/admin/users?page=1&page_size=5', { headers: { Authorization: `Bearer ${token}` } }),

@@ -56,22 +56,47 @@ impl TipRepo {
         .map_err(AppError::from)
     }
 
+    /// Get leaderboard entries filtered by time period.
+    ///
+    /// # SQL injection safety
+    /// Column names are selected via `match` on the `period` parameter so that only
+    /// hard-coded, whitelisted identifiers reach the query string. No user-supplied
+    /// text is ever interpolated into SQL identifiers or expressions.
     pub async fn get_tip_leaderboard(
         &self,
         period: &str,
         limit: i64,
     ) -> Result<Vec<(Uuid, i64, i32)>, AppError> {
-        let col = match period {
-            "weekly" => "weekly_amount",
-            "monthly" => "monthly_amount",
-            _ => "all_time_amount",
+        // Use match to produce fully static SQL — no format! column interpolation.
+        let rows: Vec<(Uuid, i64, i32)> = match period {
+            "weekly" => {
+                sqlx::query_as(
+                    "SELECT user_id, weekly_amount as amount, weekly_amount \
+                     FROM tip_leaderboard ORDER BY weekly_amount DESC LIMIT $1",
+                )
+                .bind(limit)
+                .fetch_all(&*self.pool)
+                .await?
+            }
+            "monthly" => {
+                sqlx::query_as(
+                    "SELECT user_id, monthly_amount as amount, monthly_amount \
+                     FROM tip_leaderboard ORDER BY monthly_amount DESC LIMIT $1",
+                )
+                .bind(limit)
+                .fetch_all(&*self.pool)
+                .await?
+            }
+            _ => {
+                sqlx::query_as(
+                    "SELECT user_id, all_time_amount as amount, all_time_amount \
+                     FROM tip_leaderboard ORDER BY all_time_amount DESC LIMIT $1",
+                )
+                .bind(limit)
+                .fetch_all(&*self.pool)
+                .await?
+            }
         };
-        let query = format!(
-            "SELECT user_id, {} as amount, {} FROM tip_leaderboard ORDER BY {} DESC LIMIT $1",
-            col, col, col
-        );
-        let rows: Vec<(Uuid, i64, i32)> =
-            sqlx::query_as(&query).bind(limit).fetch_all(&*self.pool).await?;
         Ok(rows)
     }
 }

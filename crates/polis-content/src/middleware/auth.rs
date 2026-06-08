@@ -12,7 +12,7 @@ use polis_core::{auth::Claims, error::AppError};
 
 /// JWT 认证中间件
 pub async fn auth_middleware(
-    _: State<Arc<crate::handlers::content_handler::ContentHandler>>,
+    State(handler): State<Arc<crate::handlers::content_handler::ContentHandler>>,
     mut req: Request,
     next: Next,
 ) -> Result<Response, AppError> {
@@ -38,6 +38,13 @@ pub async fn auth_middleware(
 
     if token_data.claims.token_type.as_deref() != Some("access") {
         return Err(AppError::Unauthorized);
+    }
+
+    // 检查 token 是否在黑名单中（已登出）
+    if let Some(ref jti) = token_data.claims.jti {
+        if handler.token_blacklist.is_blacklisted(jti).await {
+            return Err(AppError::Unauthorized);
+        }
     }
 
     let user_id = Uuid::parse_str(&token_data.claims.sub)

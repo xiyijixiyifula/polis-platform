@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { TrendingUp, Users, FileText, Calendar } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 
 interface DailyCount {
   date: string;
@@ -17,7 +18,7 @@ export default function AdminAnalyticsPage() {
   useEffect(() => { fetchData(); }, [days]);
 
   const fetchData = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     setLoading(true);
     try {
       const [userRes, postRes] = await Promise.all([

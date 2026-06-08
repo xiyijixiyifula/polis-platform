@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { MessageSquare, Trash2, Heart, AlertTriangle, Search, Eye } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { toastError } from '@/stores/toastStore';
 
 interface Comment {
   id: string;
@@ -53,7 +54,7 @@ export default function AdminCommentsPage() {
       });
       const data = await res.json();
       if (data.code === 0) fetchComments();
-      else alert('删除失败: ' + data.message);
+      else toastError('删除失败: ' + data.message);
     } catch (e) { if (process.env.NODE_ENV === 'development') console.error('[Admin Comments]', e); }
   };
 

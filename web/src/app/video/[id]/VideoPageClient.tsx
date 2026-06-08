@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Heart, MessageCircle, Eye, Share2, ArrowLeft, Bookmark, Globe, Lock, Link2 } from 'lucide-react';
 import { videos, type VideoItem, type VideoComment } from '@/lib/api';
 import { formatCount, formatDate } from '@/lib/utils';
+import { toastSuccess } from '@/stores/toastStore';
 
 /** 视频详情页 — HLS 播放 + 互动 + 收藏 */
 export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; spaceNs?: string }) {
@@ -110,7 +111,7 @@ export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; 
     const url = video.share_code
       ? `${location.origin}/share/${video.share_code}`
       : `${location.origin}/video/${video.id}`;
-    navigator.clipboard.writeText(url).then(() => alert('链接已复制到剪贴板'));
+    navigator.clipboard.writeText(url).then(() => toastSuccess('链接已复制到剪贴板'));
   };
 
   if (loading) return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-400">加载中...</div>;
