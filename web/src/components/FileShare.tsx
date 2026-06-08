@@ -56,7 +56,7 @@ export function FileShare({ spaceId }: { spaceId: string }) {
       {files.length === 0 ? (
         <div className="card py-12 text-center">
           <Folder className="h-10 w-10 mx-auto text-gray-300 mb-2" />
-          <p className="text-gray-500 text-sm">暂无文件</p>
+          <p className="text-gray-500 text-sm">📁 暂无文件</p>
           <p className="text-xs text-gray-400 mt-1">上传文件后可生成分享链接，支持密码保护和过期时间</p>
         </div>
       ) : (

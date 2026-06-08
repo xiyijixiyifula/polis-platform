@@ -175,8 +175,8 @@ export default function SeriesDetailPage({ seriesId }: { seriesId: string }) {
         ) : (
           <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
             <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-            <p>暂无文章</p>
-            <p className="text-sm mt-1">此系列还没有收录文章</p>
+            <p>📚 暂无文章</p>
+            <p className="text-sm mt-1">📚 此系列还没有收录文章</p>
           </div>
         )}
       </div>

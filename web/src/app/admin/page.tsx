@@ -83,7 +83,7 @@ export default function AdminDashboard() {
   };
 
   const Sparkline = ({ data, color, height = 40 }: { data: GrowthItem[]; color: string; height?: number }) => {
-    if (!data || data.length === 0) return <div className="h-10 flex items-center text-xs text-gray-400">暂无数据</div>;
+    if (!data || data.length === 0) return <div className="h-10 flex items-center text-xs text-gray-400">📊 暂无数据</div>;
     const maxVal = Math.max(...data.map(d => d.count), 1);
     const width = 150;
     const pad = 4;
@@ -154,7 +154,7 @@ export default function AdminDashboard() {
     { icon: DollarSign, label: '交易笔数', value: stats.total_transactions, color: 'bg-yellow-500' },
   ] : [];
 
-  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">加载中...</div>;
+  if (loading) return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
 
   return (
     <div>
@@ -248,7 +248,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           )) : (
-            <div className="col-span-full text-sm text-gray-400 dark:text-gray-500 py-2">加载中...</div>
+            <div className="col-span-full text-sm text-gray-400 dark:text-gray-500 py-2"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
           )}
         </div>
       </div>
@@ -314,7 +314,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-400 dark:text-gray-500 py-2">暂无数据</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 py-2">📊 暂无数据</p>
               )}
             </div>
             <div>
@@ -334,7 +334,7 @@ export default function AdminDashboard() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-400 dark:text-gray-500 py-2">暂无数据</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 py-2">📊 暂无数据</p>
               )}
             </div>
           </div>

@@ -280,7 +280,7 @@ export default function SpaceCodeRepo({ namespace }: { namespace: string }) {
       ) : (
         <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500 rounded-2xl">
           <Code className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="text-base font-medium text-gray-500 dark:text-gray-400">暂无代码仓库</p>
+          <p className="text-base font-medium text-gray-500 dark:text-gray-400">📦 暂无代码仓库</p>
           <p className="text-sm mt-1">创建第一个 Git 仓库，开始协作编程</p>
           <button onClick={() => setShowCreate(true)}
             className="btn-primary inline-flex items-center gap-1.5 mt-4 px-5 py-2 text-sm">

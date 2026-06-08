@@ -90,7 +90,7 @@ export default function NovelCard({ novel }: { novel: NovelData }) {
   const status = STATUS_MAP[novel.novel_status || 'serializing'] || STATUS_MAP.serializing;
   const wordCount = novel.word_count || estimateWordCount(novel.body);
   const gradient = COVER_GRADIENTS[novel.title.charCodeAt(0) % COVER_GRADIENTS.length];
-  const synopsis = novel.synopsis || (novel.body ? stripMarkdown(novel.body).slice(0, 80) + '...' : '暂无简介');
+  const synopsis = novel.synopsis || (novel.body ? stripMarkdown(novel.body).slice(0, 80) + '...' : '📝 暂无简介');
 
   const novelHref = novel.space_ns
     ? `/post/${novel.id}?space=${encodeURIComponent(novel.space_ns)}`

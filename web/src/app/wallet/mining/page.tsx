@@ -263,7 +263,7 @@ export default function MiningPage() {
 					) : (
 						<div className="text-center py-8 text-gray-400 text-sm">
 							<Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-							暂无参与者。通过社区活动获取 XP 即可自动参与！
+							👥 暂无参与者。通过社区活动获取 XP 即可自动参与！
 						</div>
 					)}
 				</div>
@@ -312,7 +312,7 @@ export default function MiningPage() {
 						</div>
 					) : (
 						<div className="text-center py-8 text-gray-400 text-sm">
-							暂无完成的轮次
+							✅ 暂无完成的轮次
 						</div>
 					)}
 				</div>

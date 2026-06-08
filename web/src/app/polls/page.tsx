@@ -112,8 +112,8 @@ export default function PollsPage() {
       ) : (
         <div className="card py-16 text-center">
           <BarChart3 className="h-16 w-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">暂无投票</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">还没有人发起投票，成为第一个吧！</p>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">📊 暂无投票</h2>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">📊 还没有人发起投票，成为第一个吧！</p>
           <Link href="/polls/new" className="btn-primary px-6 py-2.5 inline-flex items-center gap-2">
             <BarChart3 className="h-4 w-4" /> 发起投票
           </Link>

@@ -9,6 +9,28 @@ interface Props {
 
 const API_BASE = process.env.POLIS_API_URL || 'http://localhost:8080';
 
+/** 去除 Markdown 和 HTML，提取纯文本摘要（最多 maxLen 字符） */
+function plainText(md: string, maxLen = 160): string {
+  if (!md) return '';
+  return md
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/(\*{1,3}|_{1,3}|~~)(.*?)\1/g, '$2')
+    .replace(/^[\s]*[-*+]\s+/gm, '')
+    .replace(/^[\s]*\d+\.\s+/gm, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/^\|?\s*[-:]{3,}\s*(\|[-:\s]+)*$/gm, '')
+    .replace(/^\|(.+)\|$/gm, (_, row: string) => row.replace(/\|/g, ' '))
+    .replace(/\n{2,}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLen);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const token = cookies().get('polis_token')?.value;
@@ -21,16 +43,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     if (data) {
       const title = data.title || '帖子详情';
-      const desc = data.body?.replace(/<[^>]+>/g, '').slice(0, 200) || '';
+      const desc = plainText(data.body || '');
+      const coverUrl = data.cover_url || (data.media_urls?.[0]) || null;
+      const ogImages = coverUrl
+        ? [{ url: coverUrl, width: 1200, height: 630, alt: title }]
+        : [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Polis' }];
+
       return {
         title,
         description: desc,
         openGraph: {
-          title: data.title || '帖子详情',
+          title,
           description: desc,
           type: 'article',
+          images: ogImages,
+          publishedTime: data.created_at || undefined,
+          modifiedTime: data.updated_at || undefined,
+          authors: data.author?.display_name ? [data.author.display_name] : undefined,
+          tags: data.tags || undefined,
         },
-        twitter: { card: 'summary', title: data.title || '帖子详情', description: desc },
+        twitter: {
+          card: 'summary_large_image',
+          title,
+          description: desc,
+          images: coverUrl ? [coverUrl] : ['/og-image.png'],
+        },
       };
     }
   } catch (e) { console.error('[PostPage] generateMetadata:', e); }

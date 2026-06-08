@@ -135,7 +135,7 @@ export function CherryRender({ markdown, className = '' }: CherryRenderProps) {
   }
 
   if (!html) {
-    return <div className={'text-gray-400 italic text-sm py-4 ' + className}>暂无内容</div>;
+    return <div className={'text-gray-400 italic text-sm py-4 ' + className}>📄 暂无内容</div>;
   }
 
   return (

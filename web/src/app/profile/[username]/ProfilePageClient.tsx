@@ -17,7 +17,7 @@ function FollowList({ users: list, loading, emptyText }: {
   loading: boolean;
   emptyText: string;
 }) {
-  if (loading) return <div className="text-center py-8 text-gray-500 dark:text-gray-400">加载中...</div>;
+  if (loading) return <div className="text-center py-8 text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
   if (list.length === 0) return <div className="text-center py-8 text-gray-500 dark:text-gray-400">{emptyText}</div>;
   return (
     <div className="space-y-2">
@@ -578,7 +578,7 @@ export default function UserProfilePage({ username }: { username: string }) {
             </h3>
             <button onClick={() => setShowFollowers(false)} className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">关闭</button>
           </div>
-          <FollowList users={followers} loading={listLoading} emptyText="暂无粉丝" />
+          <FollowList users={followers} loading={listLoading} emptyText="👥 暂无粉丝" />
         </div>
       )}
 
@@ -590,7 +590,7 @@ export default function UserProfilePage({ username }: { username: string }) {
             </h3>
             <button onClick={() => setShowFollowing(false)} className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">关闭</button>
           </div>
-          <FollowList users={followingList} loading={listLoading} emptyText="还没有关注任何人" />
+          <FollowList users={followingList} loading={listLoading} emptyText="👤 👤 还没有关注任何人" />
         </div>
       )}
 
@@ -626,7 +626,7 @@ export default function UserProfilePage({ username }: { username: string }) {
       {/* isSelf: 收藏 Tab */}
       {isSelf && activeTab === 'bookmarks' && (
         bookmarksLoading ? (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
         ) : bookmarks.length > 0 ? (
           <div className="glass-card p-0 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
             {bookmarks.map((item: any) => (
@@ -636,7 +636,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         ) : (
           <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
             <Bookmark className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">还没有收藏过帖子</p>
+            <p className="text-sm">⭐ 还没有收藏过帖子</p>
           </div>
         )
       )}
@@ -644,7 +644,7 @@ export default function UserProfilePage({ username }: { username: string }) {
       {/* isSelf: 点赞 Tab */}
       {isSelf && activeTab === 'likes' && (
         likedLoading ? (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
         ) : likedPosts.length > 0 ? (
           <div className="glass-card p-0 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
             {likedPosts.map((item: any) => (
@@ -654,7 +654,7 @@ export default function UserProfilePage({ username }: { username: string }) {
         ) : (
           <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
             <Heart className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            <p className="text-sm">还没有点赞过帖子</p>
+            <p className="text-sm">❤️ 还没有点赞过帖子</p>
           </div>
         )
       )}
@@ -687,7 +687,7 @@ export default function UserProfilePage({ username }: { username: string }) {
           })()}
 
           {creationsLoading ? (
-            <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+            <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
           ) : (() => {
             const filtered = myCreations.filter((c: any) => {
               if (worksSubTab === 'overview') return true;
@@ -697,7 +697,7 @@ export default function UserProfilePage({ username }: { username: string }) {
             if (filtered.length === 0) return (
               <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
                 <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">{worksSubTab === 'video' ? '还没有视频作品' : worksSubTab === 'article' ? '还没有文章作品' : '该分类还没有作品'}</p>
+                <p className="text-sm">{worksSubTab === 'video' ? '🎬 还没有视频作品' : worksSubTab === 'article' ? '📝 还没有文章作品' : '📄 该分类还没有作品'}</p>
               </div>
             );
             return (
@@ -717,7 +717,7 @@ export default function UserProfilePage({ username }: { username: string }) {
           {myCreations.length === 0 && !creationsLoading && (
             <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">
               <PenLine className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              <p className="text-sm">{isSelf ? '还没有发布过作品' : '暂无公开作品'}</p>
+              <p className="text-sm">{isSelf ? '✨ 还没有发布过作品' : '📄 暂无公开作品'}</p>
               {isSelf && (
                 <Link href="/creations/new" className="text-sm text-primary-600 hover:underline mt-1 inline-block">去创作第一篇</Link>
               )}
@@ -729,7 +729,7 @@ export default function UserProfilePage({ username }: { username: string }) {
       {/* isSelf: 私密作品 Tab */}
       {isSelf && activeTab === 'private' && (
         creationsLoading ? (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400">加载中...</div>
+          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
         ) : (() => {
           const privateWorks = myCreations.filter((c: any) => c.visibility === 'private');
           if (privateWorks.length === 0) return (
@@ -833,13 +833,13 @@ export default function UserProfilePage({ username }: { username: string }) {
               {isSelf ? (
                 <>
                   <div className="text-3xl mb-2">🏛️</div>
-                  <p className="text-sm">还没有加入任何社区</p>
+                  <p className="text-sm">🏘️ 还没有加入任何社区</p>
                   <Link href="/create" className="mt-2 inline-block text-sm text-primary-600 dark:text-primary-400 hover:underline">
                     创建你的第一个社区 →
                   </Link>
                 </>
               ) : (
-                <p className="text-sm">该用户还没有加入任何社区</p>
+                <p className="text-sm">该用户🏘️ 还没有加入任何社区</p>
               )}
             </div>
           )}
@@ -907,7 +907,7 @@ export default function UserProfilePage({ username }: { username: string }) {
                 ) : refSelectedUser && refUserSpaces.length === 0 ? (
                   <div className="px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      {refSelectedUser.username} 暂无「
+                      {refSelectedUser.username} 📭 暂无「
                       {getModuleLabel(refPostModuleType)}
                       」模块的社区
                     </p>

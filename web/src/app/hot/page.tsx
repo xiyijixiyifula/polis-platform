@@ -23,7 +23,7 @@ export default function HotPage() {
   const sorted = [...spaces].sort((a, b) => b.member_count - a.member_count); // 热榜按成员数排
 
   if (loading) {
-    return <div className="mx-auto max-w-7xl px-4 py-12 text-center text-gray-400 dark:text-gray-500 animate-pulse">加载中...</div>;
+    return <div className="mx-auto max-w-7xl px-4 py-12 text-center text-gray-400 dark:text-gray-500 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
   }
 
   return (
@@ -67,7 +67,7 @@ export default function HotPage() {
       ) : (
         <div className="card flex flex-col items-center justify-center py-16 text-center">
           <Sparkles className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-          <p className="text-gray-500 dark:text-gray-400">暂无社区</p>
+          <p className="text-gray-500 dark:text-gray-400">🏘️ 暂无社区</p>
         </div>
       )}
     </div>

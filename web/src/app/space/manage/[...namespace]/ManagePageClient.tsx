@@ -137,7 +137,7 @@ export default function ManagePageClient({ rawNamespace }: { rawNamespace: strin
   };
 
   if (loading) {
-    return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-400">加载中...</div>;
+    return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
   }
 
   if (!space) return null;
@@ -270,7 +270,7 @@ export default function ManagePageClient({ rawNamespace }: { rawNamespace: strin
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">成员管理</h2>
             {membersLoading ? (
-              <div className="py-8 text-center text-gray-400">加载中...</div>
+              <div className="py-8 text-center text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
             ) : members.length > 0 ? (
               <div className="space-y-2">
                 {members.map((m) => (
@@ -311,7 +311,7 @@ export default function ManagePageClient({ rawNamespace }: { rawNamespace: strin
                 ))}
               </div>
             ) : (
-              <div className="py-8 text-center text-gray-400">暂无成员</div>
+              <div className="py-8 text-center text-gray-400">👥 暂无成员</div>
             )}
           </div>
         )}

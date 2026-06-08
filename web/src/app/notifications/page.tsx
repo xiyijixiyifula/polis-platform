@@ -186,7 +186,7 @@ export default function NotificationsPage() {
       {notifs.length === 0 ? (
         <div className="glass-card p-6 py-16 text-center">
           <Bell className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400 font-medium">暂无通知</p>
+          <p className="text-gray-500 dark:text-gray-400 font-medium">🔔 暂无通知</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
             关注社区或与他人互动后，相关通知会显示在这里
           </p>

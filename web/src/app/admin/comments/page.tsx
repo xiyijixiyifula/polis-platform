@@ -68,7 +68,7 @@ export default function AdminCommentsPage() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   if (loading && comments.length === 0) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">加载中...</div>;
+    return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
   }
 
   return (
@@ -123,7 +123,7 @@ export default function AdminCommentsPage() {
               <tr>
                 <td colSpan={6} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  {search ? '未找到匹配的评论' : '暂无评论数据'}
+                  {search ? '🔍 未找到匹配的评论' : '💬 暂无评论数据'}
                 </td>
               </tr>
             ) : (

@@ -198,13 +198,13 @@ export default function MessagesPage() {
       {tab === 'chats' && (
         <>
           {loading ? (
-            <div className="text-center py-12 text-gray-400">加载中...</div>
+            <div className="text-center py-12 text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
           ) : error ? (
             <div className="text-center py-12 text-red-500">{error}</div>
           ) : conversations.length === 0 ? (
             <div className="text-center py-16">
               <MessageSquare className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">暂无私信会话</p>
+              <p className="text-gray-500 dark:text-gray-400">💬 💬 暂无私信会话</p>
               <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">访问其他用户的个人主页，点击"发送私信"开始对话</p>
               <Link href="/explore" className="btn-primary text-sm mt-4 inline-flex items-center gap-1.5 px-5 py-2 rounded-full">
                 <Compass className="h-3.5 w-3.5" /> 探索社区
@@ -274,7 +274,7 @@ export default function MessagesPage() {
                         <span className="text-xs text-gray-400">{formatTime(conv.last_message_at)}</span>
                       </div>
                       <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                        {conv.last_message || '暂无消息'}
+                        {conv.last_message || '💬 暂无消息'}
                       </p>
                     </div>
                   </Link>
@@ -299,11 +299,11 @@ export default function MessagesPage() {
       {tab === 'contacts' && (
         <>
           {contactsLoading ? (
-            <div className="text-center py-12 text-gray-400">加载中...</div>
+            <div className="text-center py-12 text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
           ) : contactList.length === 0 ? (
             <div className="glass-card p-6 py-16 text-center">
               <Users className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400">暂无联系人</p>
+              <p className="text-gray-500 dark:text-gray-400">👤 👤 暂无联系人</p>
               <p className="mt-2 text-sm text-gray-400 dark:text-gray-500">
                 互相关注的用户会自动成为联系人
               </p>

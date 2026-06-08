@@ -60,7 +60,7 @@ export default function SharePage() {
             {error && <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-lg">{error}</div>}
 
             <button onClick={handleAccess} disabled={loading} className="btn-primary w-full py-2.5 gap-2">
-              {loading ? '加载中...' : <><Download className="h-4 w-4" /> 查看文件</>}
+              {loading ? <span className="inline-flex items-center gap-1"><span className="inline-block h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>加载中...</span> : <><Download className="h-4 w-4" /> 查看文件</>}
             </button>
           </div>
         ) : (

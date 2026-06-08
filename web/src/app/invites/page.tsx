@@ -56,7 +56,7 @@ export default function InvitesPage() {
       {!info ? (
         <div className="glass-card p-8 text-center">
           <Gift className="h-16 w-16 text-pink-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">还没有邀请码</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">🎁 还没有邀请码</h2>
           <p className="text-gray-500 mb-6">生成邀请码，邀请好友加入 Polis，双方各得 100 XP</p>
           <button
             onClick={handleCreate}

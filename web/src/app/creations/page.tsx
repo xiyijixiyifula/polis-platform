@@ -475,7 +475,7 @@ export default function MyCreationsPage() {
             {creations.length === 0 && !loading && (
               <div className="glass-card py-16 text-center text-gray-400 dark:text-gray-500">
                 <Plus className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p className="text-lg mb-2">还没有创作内容</p>
+                <p className="text-lg mb-2">✨ 还没有创作内容</p>
                 <p className="text-sm mb-6">创建你的第一篇内容，可以投稿到任意社区</p>
                 <Link href="/creations/new"
                   className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
@@ -569,13 +569,13 @@ export default function MyCreationsPage() {
             {interactionLoading ? (
               <div className="glass-card p-12 text-center text-gray-500">
                 <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                加载中...
+                <span className="text-sm text-gray-400">加载中...</span>
               </div>
             ) : !Array.isArray(interactionTab === 'followers' ? followers : followingList) || (interactionTab === 'followers' ? followers : followingList).length === 0 ? (
               <div className="glass-card p-12 text-center">
                 <Users size={40} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
                 <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">
-                  {interactionTab === 'followers' ? '暂无粉丝' : '暂无关注'}
+                  {interactionTab === 'followers' ? '👥 暂无粉丝' : '👤 暂无关注'}
                 </h3>
                 <p className="text-sm text-gray-500">
                   {interactionTab === 'followers' ? '开始创作来吸引粉丝吧' : '去发现有趣的创作者'}

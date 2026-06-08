@@ -170,7 +170,7 @@ export default function TabRenderer(props: TabRendererProps) {
 							<h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">社区动态</h3>
 						</div>
 						{postLoading ? (
-							<div className="glass-card py-6 text-center text-gray-400 animate-pulse">加载中...</div>
+							<div className="glass-card py-6 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
 						) : posts.length > 0 ? (
 							<div className="space-y-1">
 								{posts.slice(0, 20).map((post) => {
@@ -212,7 +212,7 @@ export default function TabRenderer(props: TabRendererProps) {
 						) : (
 							<div className="glass-card py-8 text-center text-gray-400 dark:text-gray-500">
 								<PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
-								<p className="text-sm">还没有内容</p>
+								<p className="text-sm">📝 还没有内容</p>
 								<Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=forum`} className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
 									发布第一篇帖子
 								</Link>
@@ -323,7 +323,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
 							<BookOpen className="h-10 w-10 mx-auto mb-3 opacity-30" />
-							<p>暂无系列</p>
+							<p>📚 暂无系列</p>
 							<p className="text-sm mt-1">创建系列来组织你的文章合集</p>
 						</div>
 					)}
@@ -430,7 +430,7 @@ export default function TabRenderer(props: TabRendererProps) {
 							) : (
 								<div className="text-center py-8 text-gray-400 dark:text-gray-500">
 									<Crown className="h-10 w-10 mx-auto mb-3 opacity-30" />
-									<p>暂无会员等级</p>
+									<p>👑 暂无会员等级</p>
 									<p className="text-sm mt-1">社区尚未设置付费会员等级</p>
 								</div>
 							)}
@@ -457,7 +457,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					</Link>
 
 					{postLoading ? (
-						<div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+						<div className="glass-card py-8 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
 					) : posts.filter(p => p.module_type === 'wiki').length > 0 ? (
 						<div className="space-y-3">
 							{posts.filter(p => p.module_type === 'wiki').map((post) => (
@@ -473,7 +473,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
 							<Library className="h-10 w-10 mx-auto mb-3 opacity-30" />
-							<p>暂无知识库页面</p>
+							<p>📖 暂无知识库页面</p>
 							<p className="text-sm mt-1">创建第一篇知识库文档吧！</p>
 						</div>
 					)}
@@ -521,7 +521,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
 							<Share2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-							<p>暂无分享内容</p>
+							<p>🔗 暂无分享内容</p>
 							{isOwner && <p className="text-sm mt-1">发布你的第一篇分享吧！</p>}
 						</div>
 					)}
@@ -554,7 +554,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
 							<BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-							<p>暂无投票</p>
+							<p>📊 暂无投票</p>
 							<p className="text-sm mt-1">发起第一个投票吧！</p>
 						</div>
 					)}
@@ -591,7 +591,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
 							<Megaphone className="h-10 w-10 mx-auto mb-3 opacity-30" />
-							<p>暂无公告</p>
+							<p>📢 暂无公告</p>
 						</div>
 					)}
 				</div>
@@ -603,7 +603,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					{isOwner && <JoinRequestsPanel namespace={cleanNamespace} />}
 
 					{membersLoading ? (
-						<div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+						<div className="glass-card py-8 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
 					) : members.length > 0 ? (
 						<div className="space-y-2">
 							{members.map((m) => (
@@ -653,7 +653,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
 							<UserCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
-							<p>暂无成员</p>
+							<p>👥 暂无成员</p>
 							<p className="text-sm mt-1">成为第一个加入的成员吧！</p>
 						</div>
 					)}
@@ -747,7 +747,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500 rounded-2xl">
 							<HelpCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
-							<p className="text-base font-medium text-gray-500 dark:text-gray-400">暂无问答</p>
+							<p className="text-base font-medium text-gray-500 dark:text-gray-400">❓ 暂无问答</p>
 							<p className="text-sm mt-1">提出第一个问题，开启社区讨论</p>
 							<Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=qa`}
 								className="btn-primary inline-flex items-center gap-1.5 mt-4 px-5 py-2 text-sm">
@@ -811,7 +811,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500 rounded-2xl">
 							<BookText className="h-12 w-12 mx-auto mb-3 opacity-30" />
-							<p className="text-base font-medium text-gray-500 dark:text-gray-400">暂无小说内容</p>
+							<p className="text-base font-medium text-gray-500 dark:text-gray-400">📖 暂无小说内容</p>
 							<p className="text-sm mt-1">发布你的第一篇作品，开启创作之旅</p>
 							<Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=novel`}
 								className="btn-primary inline-flex items-center gap-1.5 mt-4 px-5 py-2 text-sm">
@@ -840,7 +840,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					</Link>
 
 					{postLoading ? (
-						<div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+						<div className="glass-card py-8 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
 					) : posts.filter(p => p.module_type === 'game').length > 0 ? (
 						<div className="space-y-3">
 							{posts.filter(p => p.module_type === 'game').map((post) => (
@@ -855,7 +855,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
 							<Gamepad2 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-							<p>暂无游戏内容</p>
+							<p>🎮 暂无游戏内容</p>
 							<p className="text-sm mt-1">发布你的第一篇游戏攻略吧！</p>
 						</div>
 					)}
@@ -880,7 +880,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					</Link>
 
 					{postLoading ? (
-						<div className="glass-card py-8 text-center text-gray-400 animate-pulse">加载中...</div>
+						<div className="glass-card py-8 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
 					) : posts.filter(p => p.module_type === 'mini_app').length > 0 ? (
 						<div className="space-y-3">
 							{posts.filter(p => p.module_type === 'mini_app').map((post) => (
@@ -896,7 +896,7 @@ export default function TabRenderer(props: TabRendererProps) {
 					) : (
 						<div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
 							<AppWindow className="h-10 w-10 mx-auto mb-3 opacity-30" />
-							<p>暂无小程序内容</p>
+							<p>📱 暂无小程序内容</p>
 							<p className="text-sm mt-1">发布你的第一个小程序吧！</p>
 						</div>
 					)}
@@ -983,7 +983,7 @@ export default function TabRenderer(props: TabRendererProps) {
 						)}
 
 						{postLoading ? (
-							<div className="glass-card py-8 text-center text-gray-400">加载中...</div>
+							<div className="glass-card py-8 text-center text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
 						) : filteredPosts.length > 0 ? (
 							<div className="space-y-2">
 								{filteredPosts.map((p: any) => (
@@ -1000,7 +1000,7 @@ export default function TabRenderer(props: TabRendererProps) {
 						) : (
 							<div className="glass-card py-8 text-center text-gray-400 dark:text-gray-500">
 								<PenLine className="h-8 w-8 mx-auto mb-2 opacity-30" />
-								<p className="text-sm">还没有内容</p>
+								<p className="text-sm">📝 还没有内容</p>
 								<Link href={`/creations/new?space=${encodeURIComponent(cleanNamespace)}&module=${encodeURIComponent(currentMod.module_key)}`}
 									className="text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1 inline-block">
 									发布第一篇帖子

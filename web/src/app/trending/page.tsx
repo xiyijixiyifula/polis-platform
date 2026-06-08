@@ -40,7 +40,7 @@ export default function TrendingPage() {
 
       {loading ? (
         <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
-          <div className="animate-pulse">加载中...</div>
+          <div className="animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
         </div>
       ) : sorted.length > 0 ? (
         <>
@@ -114,7 +114,7 @@ export default function TrendingPage() {
       ) : (
         <div className="card flex flex-col items-center justify-center py-16 text-center">
           <Sparkles className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">暂无社区</h3>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">🏘️ 暂无社区</h3>
           <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">成为第一个创建社区的人吧！</p>
           <Link href="/create" className="btn-primary mt-4 px-6 py-2">创建社区</Link>
         </div>

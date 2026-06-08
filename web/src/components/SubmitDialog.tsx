@@ -127,10 +127,10 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
         {/* 社区列表 */}
         <div className="flex-1 overflow-y-auto px-4">
           {fetching ? (
-            <div className="text-center py-8 text-gray-400 text-sm">加载中...</div>
+            <div className="text-center py-8 text-gray-400 text-sm"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-8 text-gray-400 text-sm">
-              {search ? '没有找到匹配的社区' : '暂无社区'}
+              {search ? '🔍 没有找到匹配的社区' : '🏘️ 暂无社区'}
             </div>
           ) : (
             <div className="space-y-1 py-2">
@@ -164,7 +164,7 @@ export default function SubmitDialog({ creationId, onClose, onSubmit }: SubmitDi
               {modulesLoading ? (
                 <span className="text-xs text-gray-400">加载模块...</span>
               ) : spaceModules.length === 0 ? (
-                <span className="text-xs text-gray-400">该社区暂无可用模块</span>
+                <span className="text-xs text-gray-400">📦 该社区暂无可用模块</span>
               ) : (
                 spaceModules.map((mod) => (
                   <button key={mod.module_key} onClick={() => setSelectedModule(mod.module_key)}

@@ -174,7 +174,7 @@ export default function AdminSettingsPage() {
         </p>
 
         {platformLoading ? (
-          <div className="text-sm text-gray-400">加载中...</div>
+          <div className="text-sm text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
         ) : (
           <>
             {platformMsg && (

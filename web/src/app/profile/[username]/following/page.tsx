@@ -64,8 +64,8 @@ export default function FollowingPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400 dark:text-gray-500 animate-pulse">
-          加载中...
+        <div className="text-center py-12 text-gray-400 dark:text-gray-500">
+          <span className="inline-block h-5 w-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...
         </div>
       ) : following.length > 0 ? (
         <div className="space-y-2">
@@ -76,8 +76,8 @@ export default function FollowingPage() {
       ) : (
         <div className="card py-12 text-center text-gray-400 dark:text-gray-500">
           <UserCheck className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p>暂无关注</p>
-          <p className="text-sm mt-1">@{username} 还没有关注任何人</p>
+          <p>👤 暂无关注</p>
+          <p className="text-sm mt-1">@{username} 👤 还没有关注任何人</p>
         </div>
       )}
     </div>

@@ -121,3 +121,35 @@ export function estimateReadTime(body: string): string {
   const minutes = Math.max(1, Math.ceil(chineseChars / 300 + englishWords / 200));
   return `${minutes} 分钟`;
 }
+
+// --- Recently Viewed Spaces ---
+
+const RECENT_SPACES_KEY = 'polis_recent_spaces';
+const MAX_RECENT_SPACES = 10;
+
+export interface RecentSpace {
+  namespace: string;
+  title: string;
+  icon_url: string | null;
+  viewed_at: number;
+}
+
+/** Record a space view. Call from space pages. */
+export function recordSpaceView(space: { namespace: string; title: string; icon_url?: string | null }) {
+  try {
+    const raw = localStorage.getItem(RECENT_SPACES_KEY);
+    let list: RecentSpace[] = raw ? JSON.parse(raw) : [];
+    // Remove existing entry for same namespace
+    list = list.filter(s => s.namespace !== space.namespace);
+    // Prepend new entry
+    list.unshift({
+      namespace: space.namespace,
+      title: space.title,
+      icon_url: space.icon_url || null,
+      viewed_at: Date.now(),
+    });
+    // Trim to max
+    if (list.length > MAX_RECENT_SPACES) list = list.slice(0, MAX_RECENT_SPACES);
+    localStorage.setItem(RECENT_SPACES_KEY, JSON.stringify(list));
+  } catch {}
+}

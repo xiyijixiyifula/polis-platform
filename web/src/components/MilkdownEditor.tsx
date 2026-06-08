@@ -414,7 +414,7 @@ export function MilkdownEditor({
           className="p-4 overflow-auto preview-content"
           style={{ minHeight }}
           dangerouslySetInnerHTML={{
-            __html: value ? mdToHtml(value) : '<p class="text-gray-400 dark:text-gray-500 italic">暂无内容</p>',
+            __html: value ? mdToHtml(value) : '<p class="text-gray-400 dark:text-gray-500 italic">📄 暂无内容</p>',
           }}
         />
       )}

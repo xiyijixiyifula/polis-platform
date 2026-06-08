@@ -179,7 +179,7 @@ export default function CreateCenterPage() {
       ) : activeContents.length === 0 ? (
         <div className="card py-16 text-center">
           <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-          <p className="text-gray-500 dark:text-gray-400">还没有创作任何内容</p>
+          <p className="text-gray-500 dark:text-gray-400">✨ 还没有创作任何内容</p>
           <Link href="/creations/new" className="text-sm text-primary-600 hover:underline mt-2 inline-block">
             去写第一篇文章 →
           </Link>

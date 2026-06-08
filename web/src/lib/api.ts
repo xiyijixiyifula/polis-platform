@@ -78,6 +78,7 @@ export interface Post {
   body: string;
   content_type: string;
   tags: string[];
+  cover_url?: string;
   media_urls?: string[];
   visibility?: string;
   is_pinned: boolean;
@@ -107,6 +108,7 @@ export interface PostCardData {
   view_count: number;
   created_at: string;
   tags?: string[];
+  cover_url?: string;
   is_pinned?: boolean;
 }
 

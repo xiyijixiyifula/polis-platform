@@ -114,7 +114,7 @@ export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; 
     navigator.clipboard.writeText(url).then(() => toastSuccess('链接已复制到剪贴板'));
   };
 
-  if (loading) return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-400">加载中...</div>;
+  if (loading) return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
   if (!video) return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-500">视频不存在或已被删除</div>;
 
   return (
@@ -157,7 +157,7 @@ export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; 
           </span>
           <span className="text-xs text-gray-400">{formatDate(video.created_at)}</span>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{video.description || '暂无描述'}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{video.description || '📝 暂无描述'}</p>
 
         {/* 互动按钮 */}
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex-wrap gap-3">
@@ -228,7 +228,7 @@ export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; 
               </div>
             </div>
           ))}
-          {comments.length === 0 && <p className="text-sm text-gray-400 text-center py-4">暂无评论，来说两句吧</p>}
+          {comments.length === 0 && <p className="text-sm text-gray-400 text-center py-4">💬 暂无评论，来说两句吧</p>}
         </div>
       </div>
     </div>

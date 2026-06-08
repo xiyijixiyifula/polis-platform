@@ -926,7 +926,7 @@ function NewCreationPageInner() {
 
 export default function NewCreationPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-6xl px-4 py-10 text-center text-gray-500">加载中...</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-6xl px-4 py-10 text-center text-gray-500"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>}>
       <NewCreationPageInner />
     </Suspense>
   );

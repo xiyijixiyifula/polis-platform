@@ -180,7 +180,7 @@ export function SpaceAnalytics({ namespace, spaceTitle }: SpaceAnalyticsProps) {
       {data.total_posts === 0 && (
         <div className="glass-card py-6 text-center text-gray-400 dark:text-gray-500">
           <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">暂无数据</p>
+          <p className="text-sm">📊 暂无数据</p>
           <p className="text-xs mt-1">发布内容后开始显示数据统计</p>
         </div>
       )}

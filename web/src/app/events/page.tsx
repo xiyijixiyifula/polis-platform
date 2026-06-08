@@ -43,7 +43,7 @@ export default function EventsPage() {
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-gray-400 text-lg">暂无进行中的活动</p>
+          <p className="text-gray-400 text-lg">🎪 暂无进行中的活动</p>
           <p className="text-sm text-gray-400 mt-1">敬请期待即将到来的社区活动</p>
         </div>
       )}

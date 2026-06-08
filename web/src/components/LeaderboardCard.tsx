@@ -77,7 +77,7 @@ export default function LeaderboardCard({ type = 'creators' }: { type?: 'creator
           ))}
         </div>
       ) : (
-        <p className="text-center text-sm text-gray-400 py-4">暂无数据</p>
+        <p className="text-center text-sm text-gray-400 py-4">📊 暂无数据</p>
       )}
 
       <Link

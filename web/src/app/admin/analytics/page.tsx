@@ -61,7 +61,7 @@ export default function AdminAnalyticsPage() {
   );
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">加载中...</div>;
+    return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
   }
 
   return (

@@ -731,7 +731,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
                     <div className="p-2">
                       <p className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1">添加到系列</p>
                       {spaceSeries.length === 0 ? (
-                        <p className="text-xs text-gray-400 px-2 py-2">此空间暂无系列</p>
+                        <p className="text-xs text-gray-400 px-2 py-2">📚 此空间暂无系列</p>
                       ) : (
                         spaceSeries.map((s) => (
                           <button
@@ -798,7 +798,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
         </button>
 
         {comments.length === 0 ? (
-          <p className="text-center text-gray-400 text-sm mt-6">暂无评论，来发表第一条评论吧</p>
+          <p className="text-center text-gray-400 text-sm mt-6">💬 暂无评论，来发表第一条评论吧</p>
         ) : (
           (() => {
             // Build comment tree from flat list

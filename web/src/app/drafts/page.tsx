@@ -26,7 +26,7 @@ export default function DraftsPage() {
       {drafts.length === 0 ? (
         <div className="card py-16 text-center">
           <FileText className="h-10 w-10 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">暂无草稿</p>
+          <p className="text-gray-500">📝 暂无草稿</p>
           <p className="text-sm text-gray-400 mt-1">在发帖时点击"保存草稿"即可保存</p>
         </div>
       ) : (

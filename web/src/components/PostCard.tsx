@@ -29,6 +29,7 @@ interface PostCardProps {
     is_bookmarked?: boolean;
     module_type?: string;
     module_label?: string;
+    cover_url?: string;
   };
   canPin?: boolean;
   onTogglePin?: () => void;
@@ -49,6 +50,8 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
     space: { namespace: post.space_ns, title: post.space_name },
     author: post.author || {},
     module_type: post.module_type || '',
+    thumbnail_url: post.cover_url || '',
+    cover_url: post.cover_url || '',
   });
 
   const postLink = buildPostLink(post.id, post.space_ns);

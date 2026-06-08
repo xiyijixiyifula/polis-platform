@@ -322,6 +322,16 @@ export default function ContentCard({
         </span>
       </div>
 
+      {/* ===== Article Cover Image ===== */}
+      {!isVideo && coverUrl && (
+        <div className="mt-2 mb-2 pl-5">
+          <div className="relative rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800" style={{ aspectRatio: '16/9', maxHeight: '320px' }}>
+            <Image src={coverUrl || '/placeholder.png'} alt={title} fill sizes="(max-width: 768px) 100vw, 600px"
+              className="object-cover" unoptimized />
+          </div>
+        </div>
+      )}
+
       {/* ===== Video Thumbnail ===== */}
       {isVideo && hasThumbnail && (
         <div className="mt-2 mb-2 pl-5">
@@ -645,6 +655,7 @@ export function adaptFeedItem(item: any): ContentCardProps {
     followerCount: author.follower_count || 0,
     isFollowing: item.is_following_author || author.is_following || false,
     tags: item.tags || [],
+    coverUrl: item.cover_url || '',
     thumbnailUrl: item.thumbnail_url || '',
     durationSeconds: item.duration_seconds || 0,
     visibility: item.visibility || '',

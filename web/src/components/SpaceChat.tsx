@@ -91,7 +91,7 @@ export function SpaceChat({ namespace }: { namespace: string }) {
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-sm text-gray-400">
-            暂无消息，来发送第一条吧
+            💬 暂无消息，来发送第一条吧
           </div>
         ) : (
           messages.map((msg) => (

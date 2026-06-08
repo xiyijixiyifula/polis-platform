@@ -145,11 +145,11 @@ export default function CommentsSection() {
             {commentPostsLoading ? (
               <div className="text-center py-8">
                 <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <span className="text-xs text-gray-400">加载中...</span>
+                <span className="text-xs text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</span>
               </div>
             ) : filteredCommentPosts.length === 0 ? (
               <div className="text-center py-8">
-                <p className="text-xs text-gray-400">暂无作品</p>
+                <p className="text-xs text-gray-400">📝 暂无作品</p>
               </div>
             ) : (
               <div className="space-y-1 max-h-[60vh] overflow-y-auto">
@@ -190,8 +190,8 @@ export default function CommentsSection() {
           ) : comments.length === 0 ? (
             <div className="glass-card p-12 text-center">
               <MessageCircle size={40} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">暂无评论</h3>
-              <p className="text-sm text-gray-500">这件作品还没有收到评论</p>
+              <h3 className="text-base font-medium text-gray-900 dark:text-white mb-1">💬 暂无评论</h3>
+              <p className="text-sm text-gray-500">💬 这件作品还没有收到评论，来说两句吧</p>
             </div>
           ) : (
             <div className="glass-card overflow-hidden rounded-xl">

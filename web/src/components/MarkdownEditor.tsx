@@ -111,7 +111,7 @@ export function MarkdownEditor({ value, onChange, placeholder = '写下你的想
       {/* Editor / Preview */}
       {preview ? (
         <div className="p-4 overflow-auto prose prose-sm max-w-none" style={{ minHeight }}
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value ? renderMarkdown(value) : '<p class="text-gray-400 italic">暂无内容</p>') }} />
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value ? renderMarkdown(value) : '<p class="text-gray-400 italic">📄 暂无内容</p>') }} />
       ) : (
         <textarea
           ref={textareaRef}

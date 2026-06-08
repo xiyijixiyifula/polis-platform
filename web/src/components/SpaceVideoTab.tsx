@@ -84,7 +84,7 @@ export function SpaceVideoTab({ namespace, spaceId, isOwner }: SpaceVideoTabProp
       ) : (
         <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500">
           <Upload className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p>暂无视频</p>
+          <p>🎬 暂无视频</p>
           {isOwner && (
             <Link href={`/creations/new?type=video&space=${encodeURIComponent(namespace)}&module=forum`}
               className="text-sm text-primary-600 hover:underline mt-1 inline-block">

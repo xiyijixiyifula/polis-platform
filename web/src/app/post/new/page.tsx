@@ -29,7 +29,7 @@ function RedirectInner() {
 
 export default function NewPostPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-gray-500">加载中...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-gray-500"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>}>
       <RedirectInner />
     </Suspense>
   );

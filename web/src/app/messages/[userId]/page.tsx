@@ -260,11 +260,11 @@ export default function ConversationPage() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4">
         {loading ? (
-          <div className="text-center py-12 text-gray-400">加载中...</div>
+          <div className="text-center py-12 text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
         ) : displayMsgs.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-400 dark:text-gray-500 text-sm">
-              {searchResults !== null ? '未找到匹配的消息' : '暂无消息，发送第一条私信吧'}
+              {searchResults !== null ? '🔍 未找到匹配的消息' : '💬 暂无消息，发送第一条私信吧'}
             </p>
           </div>
         ) : (

@@ -75,7 +75,7 @@ export default function AdminTransactionsPage() {
   const totalPages = Math.max(1, Math.ceil(total / 20));
 
   if (loading && transactions.length === 0) {
-    return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500">加载中...</div>;
+    return <div className="flex items-center justify-center h-64 text-gray-400 dark:text-gray-500"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
   }
 
   return (
@@ -131,7 +131,7 @@ export default function AdminTransactionsPage() {
               <tr>
                 <td colSpan={7} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">
                   <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  暂无交易记录
+                  💳 暂无交易记录
                 </td>
               </tr>
             ) : (

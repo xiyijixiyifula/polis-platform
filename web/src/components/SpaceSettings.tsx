@@ -113,14 +113,14 @@ export default function SpaceModulesManager({ namespace, onClose }: Props) {
     </span>
   );
 
-  if (loading) return <div className="py-8 text-center text-gray-400">加载中...</div>;
+  if (loading) return <div className="py-8 text-center text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
 
   return (
     <div className="space-y-4">
       {/* Current modules */}
       {modules.length === 0 ? (
         <div className="py-8 text-center text-gray-400">
-          <p className="mb-2">还没有自定义模块</p>
+          <p className="mb-2">🔧 还没有自定义模块</p>
           <button onClick={() => setShowAdd(true)}
             className="text-blue-600 hover:text-blue-700 text-sm font-medium"
           >添加第一个模块</button>

@@ -112,7 +112,7 @@ export default function SavedPage() {
       {bookmarks.length === 0 && starredSpaces.length === 0 ? (
         <div className="glass-card p-6 py-16 text-center">
           <BookOpen className="h-10 w-10 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">还没有收藏任何内容</p>
+          <p className="text-gray-500 dark:text-gray-400">⭐ 还没有收藏任何内容</p>
           <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">收藏社区或帖子即可在此查看</p>
           <Link href="/" className="text-sm text-primary-600 dark:text-primary-400 hover:underline mt-3 inline-block">去发现内容 →</Link>
         </div>

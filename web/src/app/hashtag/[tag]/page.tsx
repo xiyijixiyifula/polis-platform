@@ -51,7 +51,7 @@ export default function HashtagPage({ params }: { params: { tag: string } }) {
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-gray-400 text-lg">暂无此话题的内容</p>
+          <p className="text-gray-400 text-lg">🏷️ 暂无此话题的内容</p>
           <p className="text-sm text-gray-400 mt-1">快来发布第一个使用 #{decodedTag} 的内容吧</p>
         </div>
       )}

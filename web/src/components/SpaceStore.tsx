@@ -228,7 +228,7 @@ export default function SpaceStore({ namespace, isOwner }: { namespace: string; 
         ) : (
           <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500 rounded-2xl">
             <ShoppingBag className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="text-base font-medium text-gray-500 dark:text-gray-400">暂无商品</p>
+            <p className="text-base font-medium text-gray-500 dark:text-gray-400">🛍️ 暂无商品</p>
             <p className="text-sm mt-1">商家尚未上架任何商品</p>
           </div>
         )
@@ -264,8 +264,8 @@ export default function SpaceStore({ namespace, isOwner }: { namespace: string; 
         ) : (
           <div className="glass-card py-12 text-center text-gray-400 dark:text-gray-500 rounded-2xl">
             <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="text-base font-medium text-gray-500 dark:text-gray-400">暂无订单</p>
-            <p className="text-sm mt-1">还没有人购买商品</p>
+            <p className="text-base font-medium text-gray-500 dark:text-gray-400">📦 暂无订单</p>
+            <p className="text-sm mt-1">🛒 还没有人购买商品</p>
           </div>
         )
       )}

@@ -52,7 +52,7 @@ export default function ExplorePage() {
 
       {loading ? (
         <div className="card py-12 text-center text-gray-400">
-          <div className="animate-pulse">加载中...</div>
+          <div className="animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
         </div>
       ) : filtered.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -73,7 +73,7 @@ export default function ExplorePage() {
         <div className="card flex flex-col items-center justify-center py-16 text-center">
           <Sparkles className="h-12 w-12 text-gray-300 mb-4" />
           <h3 className="text-lg font-semibold text-gray-700">
-            {search ? '没有找到匹配的社区' : '暂无社区'}
+            {search ? '🔍 没有找到匹配的社区' : '🏘️ 暂无社区'}
           </h3>
           <p className="mt-2 text-sm text-gray-500">
             {search ? '试试其他关键词' : '成为第一个创建社区的人吧！'}

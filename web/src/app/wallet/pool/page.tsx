@@ -253,7 +253,7 @@ export default function PoolPage() {
 						</div>
 					) : (
 						<div className="text-center py-8 text-gray-400 text-sm">
-							暂无存款记录。成为第一个存款者！
+							💰 暂无存款记录。成为第一个存款者！
 						</div>
 					)}
 				</div>

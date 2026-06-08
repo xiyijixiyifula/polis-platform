@@ -93,7 +93,7 @@ export default function ResearchPage() {
       if (line.includes('当前版本')) currentVer = line.replace('**当前版本**: ', '').trim();
     }
   } catch (e) {
-    reportContent = '# 暂无研究报告\n\n研究报告将在每小时整点自动生成。';
+    reportContent = '# 📊 暂无研究报告\n\n研究报告将在每小时整点自动生成。';
   }
 
   const sections = reportContent.split('## ').filter((s: string) => s.trim());

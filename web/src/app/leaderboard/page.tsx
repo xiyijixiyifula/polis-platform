@@ -117,7 +117,7 @@ export default function LeaderboardPage() {
         </div>
       ) : (
         <div className="text-center py-12 text-gray-400">
-          暂无排行数据
+          🏆 暂无排行数据
         </div>
       )}
     </div>
