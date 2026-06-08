@@ -15,8 +15,39 @@ interface Version {
 export default function ChangelogPage() {
   const versions: Version[] = [
     {
-      ver: '1.0.9', date: '2026-05-26', title: '🔧 首页 Feed 算法修复 — 关注Tab + 热榜排序',
+      ver: '0.3.1626', date: '2026-06-08', title: '🎨 UX全面升级 — 图片上传/封面/分享/SEO/分析/引导',
       isLatest: true,
+      items: [
+        '🖼️ **图片上传**: 编辑器支持粘贴/拖拽上传图片，自动提取首图作为帖子封面',
+        '📤 **分享功能**: 帖子详情页新增分享按钮（复制链接/X/微信三合一）',
+        '📊 **创作者分析**: 7天阅读量/点赞趋势图 + Top作品排行 + 内容分布（纯CSS图表）',
+        '🚀 **新用户引导**: 3步向导（选择兴趣/完善资料/发布首帖），支持跳过',
+        '🔍 **SEO优化**: Open Graph meta标签 + robots.txt + sitemap.xml 自动生成',
+        '💬 **空状态情感化**: 56个页面空状态替换为 emoji+CTA 按钮',
+        '🎯 **首页优化**: 冷启动引导 + 探索页内容类型筛选 + "为你推荐"模块',
+        '🔧 **头部认证修复**: 路由变化时重新检测登录态，修复 cookie 存在但显示"登录"',
+        '🛡️ **CSP修复**: 恢复 script-src unsafe-inline 兼容 Next.js hydration',
+      ],
+    },
+    {
+      ver: '0.3.1500', date: '2026-06-05–08', title: '🛡️ 全量安全审计修复 — 141项发现 → A级评分',
+      isLatest: false,
+      items: [
+        '🔐 **安全加固 (8 Critical)**: 密码重置 token 日志移除、JWT localStorage→cookie-only、DOMPurify XSS防御、CSP headers、钱包 XOR→AES-256-GCM、Refresh token + JTI + 黑名单 + logout 撤销',
+        '🛡️ **跨服务黑名单**: TokenBlacklist 移至 polis-core，space/content/notify/video 中间件全部检查',
+        '🔑 **Admin安全**: admin token localStorage→cookie（14文件），@ts-ignore 全部消除',
+        '⚡ **稳定性 (15 High)**: 106 unwrap→? 操作符、127 空catch→错误处理、43 let_=→错误日志、xp_bridge 3次重试',
+        '🏗️ **架构重构**: content_handler 1698→99行、content_repo 1980行→11子模块、SpacePageClient 1974→181行、models.rs 1855行→11子模块',
+        '📐 **去重**: Claims 11处→1处、Config 10+统一、Auth中间件统一',
+        '🧪 **CI增强**: cargo test + clippy + polis-aggregate 构建',
+        '🗄️ **DB优化**: 索引迁移(037) + sqlx列名修复（onboarding/badges）',
+        '🐛 **投稿修复**: 社区模块→创作者中心默认检测模块 + 投稿错误toast提示',
+        '📝 **Bug追踪**: 3个新Pattern + 17个总Pattern + 修复点位地图更新',
+      ],
+    },
+    {
+      ver: '1.0.9', date: '2026-05-26', title: '🔧 首页 Feed 算法修复 — 关注Tab + 热榜排序',
+      isLatest: false,
       items: [
         '🐛 **关注Tab key 匹配修复**: 前端 tab key `\'follow\'` → `\'following\'`，与 `getSortParam` 检查逻辑统一，修复关注Tab所有帖子使用默认排序的问题',
         '🔥 **热榜排序覆盖修复**: `get_feed` 仅在非 hot 模式才按 `created_at DESC` 排序，确保热门Tab按互动热度评分正确展示',
@@ -149,7 +180,7 @@ export default function ChangelogPage() {
     },
     {
       ver: '0.3.77', date: '2026-05-11', title: '🔄 维护确认 — E2E 18/18 满分 + 系统健康巡检',
-      isLatest: true,
+      isLatest: false,
       items: [
         '🧪 **E2E 18/18 满分**: 认证(6) + 空间(5) + 内容(4) + 社交(3) + 搜索(2) + 档案(2) + 健康(1) + Trending(1) + 通知(1) — 全链路API测试',
         '🛡️ **系统健康**: 6服务全活 (active×6), uptime 1天19小时+, load 0.08/0.04/1.99',
