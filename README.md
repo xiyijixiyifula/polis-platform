@@ -28,7 +28,7 @@
 7. [Data Model Reference](#7-data-model-reference)
 8. [Security Model](#8-security-model)
 9. [Development Guide](#9-development-guide)
-10. [Deployment Guide](#10-deployment-guide)
+10. [Deployment Guide](#10-deployment-guide) — incl. [AI Agent Deploy](#105-ai-agent-deployment-claude-code--cursor--copilot)
 11. [API Complete Reference](#11-api-complete-reference)
 12. [Configuration Reference](#12-configuration-reference)
 13. [FAQ & Troubleshooting](#13-faq--troubleshooting)
@@ -1801,6 +1801,42 @@ systemctl start polis-gateway polis-user polis-space polis-content polis-admin p
 echo "Rollback complete"
 ROLLBACK
 ```
+
+### 10.5 AI Agent Deployment (Claude Code / Cursor / Copilot)
+
+> AI agent 可直接读取 `CLAUDE.md` 中的 [🤖 AI Agent 部署 SOP](CLAUDE.md#-ai-agent-部署-sop) 自动完成部署。
+
+**为什么 AI agent 可以部署这个项目？**
+
+| 原因 | 说明 |
+|------|------|
+| `CLAUDE.md` 含完整 SOP | 变量表 + 6步脚本 + 检查清单 |
+| GitHub Actions CI | 不需要本地编译环境 |
+| `deploy.sh` 一键脚本 | 3 个变量即可适配任何服务器 |
+| 严禁 SCP / 服务器编译 | 强制安全的 CI 路线 |
+
+**AI agent 部署只需一句话：**
+
+```
+"帮我部署到服务器"
+```
+
+或更具体的：
+
+```
+"修改了前端代码，部署到 47.253.123.3，域名 www.mzgw.com"
+```
+
+AI agent 会自动执行：
+1. 验证编译 → `cargo check` + `npm run build`
+2. 提交推送 → `git commit` + `git push`
+3. 打 tag 触发 CI → `git tag v0.3.xxx`
+4. 等待 CI 完成
+5. 下载 artifacts + 创建 Release
+6. SSH 到服务器 → curl 下载 → systemd 重启
+7. 验证 8 个服务 + HTTP 冒烟测试
+
+> 💡 **第三方部署**: fork 仓库后只需修改 `CLAUDE.md` 顶部的 `SERVER`/`DOMAIN`/`REPO` 三个变量即可让 AI agent 为你自动部署。
 
 ---
 
