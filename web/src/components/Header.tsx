@@ -138,7 +138,7 @@ export function Header() {
               更新
             </Link>
             <Link href="/research" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
-              AI 研究
+              AI Agent
             </Link>
             <Link href="/cli" className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-gray-700">
               CLI
@@ -308,7 +308,7 @@ export function Header() {
               更新日志
             </Link>
             <Link href="/research" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
-              AI 研究
+              AI Agent
             </Link>
             <Link href="/cli" className="rounded-lg px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
               CLI
