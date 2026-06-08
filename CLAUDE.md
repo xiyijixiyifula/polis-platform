@@ -172,3 +172,169 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 | [docs/bugs/fix-recipes/INDEX.md](docs/bugs/fix-recipes/INDEX.md) | 修复配方库（复发直接套用） |
 | [docs/progress/MASTER.md](docs/progress/MASTER.md) | 当前任务进度 |
 | [scripts/pre-deploy-check.sh](scripts/pre-deploy-check.sh) | 部署前自动化预防检查 (19类风险) |
+
+---
+
+## 🤖 AI Agent 部署 SOP
+
+> AI agent 专属部署流程。按顺序执行，每步验证。
+
+### 部署架构
+
+```
+本地代码 → git push + tag → GitHub Actions CI (Linux) 
+  → Release 自动生成 → 服务器 curl 下载 → systemd 重启
+```
+
+**铁律**: 禁止 SCP · 禁止服务器编译 · 部署前验证编译
+
+### 变量速查
+
+| 变量 | 值 | 用途 |
+|------|-----|------|
+| `SERVER` | `root@47.253.123.3` | SSH 连接 |
+| `DOMAIN` | `www.mzgw.com` | 网站地址 |
+| `REPO` | `xiyijixiyifula/polis-platform` | GitHub 仓库 |
+| `WEB_DIR` | `/root/polis/web` | 前端目录 |
+| `BIN_DIR` | `/usr/local/bin` | 后端二进制目录 |
+| `ENV_FILE` | `/root/polis/.env` | 环境变量 |
+
+### 完整部署流程
+
+```bash
+# ── Step 1: 验证编译 ──
+cargo check 2>&1 | grep "^error" && echo "FIX ERRORS FIRST" && exit 1
+cd web && npm run build 2>&1 | grep "Error:" && exit 1 || true && cd ..
+
+# ── Step 2: 提交推送 ──
+git add -A && git commit -m "描述你的改动" && git push origin main
+
+# ── Step 3: 打 Tag 触发 CI ──
+VERSION="v0.3.$(date +%Y%m%d-%H%M)"
+git tag -a "$VERSION" -m "描述" && git push origin "$VERSION"
+
+# ── Step 4: 等待 CI 完成 ──
+# 轮询直到 completed:
+while true; do
+  STATUS=$(gh run list --branch main --limit 1 --repo $REPO --json status,conclusion -q '.[0]')
+  echo "$(date +%H:%M:%S) $STATUS"
+  echo "$STATUS" | grep -q '"status":"completed"' && break
+  sleep 30
+done
+# 确认成功:
+gh run list --branch main --limit 1 --repo $REPO --json conclusion | grep "success" || { echo "CI FAILED"; exit 1; }
+
+# ── Step 5: 下载 Artifacts + 创建 Release ──
+RUN_ID=$(gh run list --branch main --limit 1 --repo $REPO --json databaseId -q '.[0].databaseId')
+rm -rf /tmp/artifacts
+gh run download $RUN_ID --dir /tmp/artifacts --repo $REPO
+gh release create "$VERSION" \
+  /tmp/artifacts/backend-linux/release-binaries.tar.gz \
+  /tmp/artifacts/frontend/release-web.tar.gz \
+  --repo $REPO --title "$VERSION" --notes "自动发布"
+
+# ── Step 6: 服务器部署 ──
+ssh $SERVER '
+VERSION="'"$VERSION"'"
+DL_URL="https://github.com/'"$REPO"'/releases/download/${VERSION}"
+
+# 停止后端
+for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate; do
+  systemctl stop $svc
+done
+
+# 后端
+curl -fsSL "${DL_URL}/release-binaries.tar.gz" -o /tmp/pb.tar.gz
+mkdir -p /tmp/pb && tar -xzf /tmp/pb.tar.gz -C /tmp/pb/
+find /tmp/pb -type f -executable -name "polis-*" | while read f; do cp "$f" /usr/local/bin/; done
+chmod +x /usr/local/bin/polis-*
+
+# 前端 (原子替换)
+curl -fsSL "${DL_URL}/release-web.tar.gz" -o /tmp/pw.tar.gz
+mkdir -p /tmp/pw && tar -xzf /tmp/pw.tar.gz -C /tmp/pw/
+[ -f /tmp/pw/.next/standalone/server.js ] || { echo "ERROR: 前端不完整"; exit 1; }
+STAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p /root/polis/web/.next-backups
+[ -d /root/polis/web/.next ] && mv /root/polis/web/.next /root/polis/web/.next-backups/backup-$STAMP
+cp -r /tmp/pw/.next /root/polis/web/.next
+[ -d /tmp/pw/public ] && cp -r /tmp/pw/public /root/polis/web/public
+rm -rf /root/polis/web/.next/standalone/.next/static /root/polis/web/.next/standalone/public
+cp -r /root/polis/web/.next/static /root/polis/web/.next/standalone/.next/static
+[ -d /root/polis/web/public ] && cp -r /root/polis/web/public /root/polis/web/.next/standalone/public
+
+# 清理
+rm -rf /tmp/pb.tar.gz /tmp/pb /tmp/pw.tar.gz /tmp/pw
+
+# 重启 + 验证
+for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-web; do
+  systemctl restart --no-block $svc
+done
+sleep 2
+echo "=== 服务状态 ==="
+for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-web; do
+  echo "$svc: $(systemctl is-active $svc)"
+done
+echo "=== 冒烟测试 ==="
+curl -sk -o /dev/null -w "HTTP %{http_code}\n" https://'"$DOMAIN"'/
+'
+```
+
+### 仅前端部署
+
+当只改了前端代码时：
+
+```bash
+# Step 1-5 同上，但 Step 6 只更新前端:
+ssh $SERVER '
+DL_URL="https://github.com/'"$REPO"'/releases/download/'"$VERSION"'"
+curl -fsSL "${DL_URL}/release-web.tar.gz" -o /tmp/pw.tar.gz
+mkdir -p /tmp/pw && tar -xzf /tmp/pw.tar.gz -C /tmp/pw/
+[ -f /tmp/pw/.next/standalone/server.js ] || { echo "ERROR"; exit 1; }
+STAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p /root/polis/web/.next-backups
+[ -d /root/polis/web/.next ] && mv /root/polis/web/.next /root/polis/web/.next-backups/backup-$STAMP
+cp -r /tmp/pw/.next /root/polis/web/.next
+[ -d /tmp/pw/public ] && cp -r /tmp/pw/public /root/polis/web/public
+rm -rf /root/polis/web/.next/standalone/.next/static /root/polis/web/.next/standalone/public
+cp -r /root/polis/web/.next/static /root/polis/web/.next/standalone/.next/static
+[ -d /root/polis/web/public ] && cp -r /root/polis/web/public /root/polis/web/.next/standalone/public
+rm -rf /tmp/pw.tar.gz /tmp/pw
+systemctl restart polis-web
+sleep 1 && curl -sk -o /dev/null -w "HTTP %{http_code}\n" https://'"$DOMAIN"'/
+'
+```
+
+### 仅后端部署
+
+```bash
+ssh $SERVER '
+DL_URL="https://github.com/'"$REPO"'/releases/download/'"$VERSION"'"
+for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate; do
+  systemctl stop $svc
+done
+curl -fsSL "${DL_URL}/release-binaries.tar.gz" -o /tmp/pb.tar.gz
+mkdir -p /tmp/pb && tar -xzf /tmp/pb.tar.gz -C /tmp/pb/
+find /tmp/pb -type f -executable -name "polis-*" | while read f; do cp "$f" /usr/local/bin/; done
+chmod +x /usr/local/bin/polis-*
+rm -rf /tmp/pb.tar.gz /tmp/pb
+for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-web; do
+  systemctl restart --no-block $svc
+done
+sleep 2
+for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-web; do
+  echo "$svc: $(systemctl is-active $svc)"
+done
+'
+```
+
+### 部署前检查清单
+
+AI agent 在部署前必须逐项确认：
+
+- [ ] `cargo check` 无错误
+- [ ] `npm run build` 前端无 Error
+- [ ] 所有改动已 commit + push
+- [ ] 无遗漏文件 (`git status --porcelain` 为空)
+- [ ] 新迁移文件已测试 (`migrations/`) 
+- [ ] CI 构建成功 (Step 4)
+- [ ] 8 个服务全部 active (Step 6 输出)
