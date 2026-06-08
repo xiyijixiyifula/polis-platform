@@ -2,6 +2,7 @@
 import { getToken } from '@/lib/api';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { Search, Bell, User, Plus, Menu, X, Info, FileText, MessageSquare, Globe, PenLine, Shield as ShieldIcon, Wallet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -67,6 +68,14 @@ export function Header() {
     setIsLoggedIn(loggedIn);
     if (loggedIn) { fetchUnread(); fetchUnreadDm(); }
   }, []);
+
+	  // Re-check login state on every route change (cookie may have been set after mount)
+	  const pathname = usePathname();
+	  useEffect(() => {
+	    const loggedIn = !!getToken();
+	    setIsLoggedIn(prev => prev !== loggedIn ? loggedIn : prev);
+	    if (loggedIn) { fetchUnread(); fetchUnreadDm(); }
+	  }, [pathname]);
 
   const fetchUnread = async () => {
     try {
