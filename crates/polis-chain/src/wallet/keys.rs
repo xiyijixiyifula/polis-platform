@@ -1,5 +1,8 @@
 use ed25519_dalek::{SigningKey, VerifyingKey, SECRET_KEY_LENGTH};
 use std::path::Path;
+use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
+use aes_gcm::aead::Aead;
+use rand::Rng;
 
 use crate::crypto::{generate_keypair, derive_address};
 use crate::error::{ChainError, ChainResult};
@@ -59,25 +62,39 @@ impl WalletKeys {
             .hash_password_into(password.as_bytes(), salt.as_bytes().as_slice(), &mut derived_key)
             .map_err(|e| ChainError::Crypto(format!("密钥派生失败: {}", e)))?;
 
-        // XOR 加密 (简化方案，生产环境用 AES-GCM)
-        let encrypted: Vec<u8> = key_bytes
-            .iter()
-            .zip(derived_key.iter().cycle())
-            .map(|(k, d)| k ^ d)
-            .collect();
+        // AES-256-GCM 加密: 随机12字节 nonce + 密文(含16字节认证标签)
+        let cipher = Aes256Gcm::new_from_slice(&derived_key)
+            .map_err(|e| ChainError::Crypto(format!("AES 初始化失败: {}", e)))?;
+        let mut nonce_bytes = [0u8; 12];
+        rand::thread_rng().fill(&mut nonce_bytes);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        let ciphertext = cipher
+            .encrypt(nonce, key_bytes.as_ref())
+            .map_err(|e| ChainError::Crypto(format!("加密失败: {}", e)))?;
+
+        // 格式: [nonce (12 bytes)] [ciphertext (32 + 16 tag)]
+        let mut output = nonce_bytes.to_vec();
+        output.extend_from_slice(&ciphertext);
 
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(path, hex::encode(&encrypted))?;
+        std::fs::write(path, hex::encode(&output))?;
         Ok(())
     }
 
     /// 从加密文件加载钱包
     pub fn load_encrypted(path: &Path, password: &str) -> ChainResult<Self> {
         let hex_data = std::fs::read_to_string(path)?;
-        let encrypted = hex::decode(hex_data.trim())
+        let data = hex::decode(hex_data.trim())
             .map_err(|e| ChainError::Crypto(format!("解码失败: {}", e)))?;
+
+        if data.len() < 12 + SECRET_KEY_LENGTH + 16 {
+            return Err(ChainError::Crypto("密码错误或钱包文件损坏".into()));
+        }
+
+        // 提取 nonce  (前12字节) 和密文
+        let (nonce_bytes, ciphertext) = data.split_at(12);
 
         let salt = blake3::hash(b"polis-chain-wallet-salt");
         let mut derived_key = [0u8; 32];
@@ -87,11 +104,12 @@ impl WalletKeys {
             .hash_password_into(password.as_bytes(), salt.as_bytes().as_slice(), &mut derived_key)
             .map_err(|e| ChainError::Crypto(format!("密钥派生失败: {}", e)))?;
 
-        let decrypted: Vec<u8> = encrypted
-            .iter()
-            .zip(derived_key.iter().cycle())
-            .map(|(e, d)| e ^ d)
-            .collect();
+        let cipher = Aes256Gcm::new_from_slice(&derived_key)
+            .map_err(|e| ChainError::Crypto(format!("AES 初始化失败: {}", e)))?;
+        let nonce = Nonce::from_slice(nonce_bytes);
+        let decrypted = cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|_| ChainError::Crypto("密码错误或钱包文件损坏".into()))?;
 
         if decrypted.len() != SECRET_KEY_LENGTH {
             return Err(ChainError::Crypto("密码错误或钱包文件损坏".into()));
