@@ -50,7 +50,7 @@ export function SpaceVideoTab({ namespace, spaceId, isOwner }: SpaceVideoTabProp
       {/* top bar: upload link + filters */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {isOwner && (
-          <Link href={`/creations/new?type=video&space=${encodeURIComponent(namespace)}`}
+          <Link href={`/creations/new?type=video&space=${encodeURIComponent(namespace)}&module=forum`}
             className="card flex items-center gap-3 hover:border-primary-400 transition-colors group py-3 px-4">
             <div className="h-10 w-10 shrink-0 rounded-full bg-gradient-to-br from-red-400 to-pink-600 flex items-center justify-center text-white group-hover:scale-105 transition-transform">
               <Film className="h-5 w-5" />
@@ -86,7 +86,7 @@ export function SpaceVideoTab({ namespace, spaceId, isOwner }: SpaceVideoTabProp
           <Upload className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p>暂无视频</p>
           {isOwner && (
-            <Link href={`/creations/new?type=video&space=${encodeURIComponent(namespace)}`}
+            <Link href={`/creations/new?type=video&space=${encodeURIComponent(namespace)}&module=forum`}
               className="text-sm text-primary-600 hover:underline mt-1 inline-block">
               去创作中心上传第一个视频 →
             </Link>
