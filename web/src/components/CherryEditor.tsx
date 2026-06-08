@@ -236,7 +236,10 @@ const CherryEditorInner = forwardRef<CherryEditorRef, CherryEditorProps>(
                 { className: 'violet', label: '紫罗兰' },
                 { className: 'blue', label: '海洋蓝' },
               ],
-            } as any,
+              mainTheme: 'light',
+              codeBlockTheme: 'default',
+              inlineCodeTheme: 'red' as const,
+            },
           });
 
           cherryRef.current = instance;

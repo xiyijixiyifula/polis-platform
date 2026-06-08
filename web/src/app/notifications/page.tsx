@@ -50,7 +50,7 @@ export default function NotificationsPage() {
       });
       setNotifs((prev) => Array.isArray(prev) ? prev.map((n) => (n.id === notifId ? { ...n, is_read: true } : n)) : prev);
       fetchUnread();
-    } catch {}
+    } catch (e) { console.error('[Notifications] markOneRead:', e); }
     finally {
       setMarkingIds((prev) => {
         const next = new Set(prev);
@@ -92,7 +92,7 @@ export default function NotificationsPage() {
       setNotifs((prev) => prev.filter((n) => !selectedIds.has(n.id)));
       setSelectedIds(new Set());
       fetchUnread();
-    } catch {}
+    } catch (e) { console.error('[Notifications] deleteSelected:', e); }
     finally { setDeleting(false); }
   };
 
@@ -108,7 +108,7 @@ export default function NotificationsPage() {
       setNotifs((prev) => prev.filter((n) => n.id !== id));
       setSelectedIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
       fetchUnread();
-    } catch {}
+    } catch (e) { console.error('[Notifications] deleteOne:', e); }
     finally { setDeleting(false); }
   };
 

@@ -31,9 +31,9 @@ export default function TrendingHashtags() {
           >
             <Hash className="h-3 w-3" />
             {t.tag}
-            {typeof (t as any).post_count === 'number' && (
+            {typeof t.post_count === 'number' && (
               <span className="text-xs text-gray-400 ml-0.5">
-                {(t as any).post_count}
+                {t.post_count}
               </span>
             )}
           </Link>

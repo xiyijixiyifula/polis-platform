@@ -21,7 +21,7 @@ export default function SavedPage() {
     try {
       const res = await apiSpaces.getStarred();
       if (res.code === 0 && res.data) setStarredSpaces(res.data);
-    } catch {}
+    } catch (e) { console.error('[Saved] fetchStarredSpaces:', e); }
   };
 
   const fetchBookmarks = () => {
@@ -53,7 +53,7 @@ export default function SavedPage() {
           if (data.code === 0) {
             setBookmarks((prev) => prev.filter((b) => b.id !== itemId));
           }
-        } catch {} finally {
+        } catch (e) { console.error('[Saved] removeBookmark video:', e); } finally {
           setRemovingId(null);
         }
         return;
@@ -75,7 +75,7 @@ export default function SavedPage() {
       if (data.code === 0) {
         setBookmarks((prev) => prev.filter((b) => (b.post_id || b.id) !== itemId));
       }
-    } catch {}
+    } catch (e) { console.error('[Saved] removeBookmark post:', e); }
     finally {
       setRemovingId(null);
     }

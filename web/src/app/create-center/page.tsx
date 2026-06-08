@@ -62,7 +62,7 @@ export default function CreateCenterPage() {
         setContents(data.data.items || []);
         setPagination(data.data.pagination || {});
       }
-    } catch {}
+    } catch (e) { console.error('[CreateCenter] loadContents:', e); }
     setLoading(false);
   };
 
@@ -81,7 +81,7 @@ export default function CreateCenterPage() {
       if (data.code === 0) {
         setContents(prev => prev.map(c => c.id === id ? { ...c, is_deleted: true } : c));
       }
-    } catch {}
+    } catch (e) { console.error('[CreateCenter] handleDelete:', e); }
     setDeleteId(null);
   };
 
@@ -98,7 +98,7 @@ export default function CreateCenterPage() {
         const res = await fetch(`/api/search?q=${encodeURIComponent(q.trim())}&page_size=8`);
         const data = await res.json();
         if (data.code === 0 && Array.isArray(data.data)) setSubmitResults(data.data);
-      } catch {}
+      } catch (e) { console.error('[CreateCenter] handleSubmitSearch:', e); }
       setSubmitLoading(false);
     }, 300);
   };

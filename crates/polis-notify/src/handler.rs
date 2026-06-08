@@ -150,9 +150,11 @@ impl NotifyHandler {
         let offset = ((page - 1) * page_size) as i64;
         let limit = page_size as i64;
 
-        let filter = if unread_only { "AND n.is_read = FALSE" } else { "" };
-        let query_str = format!(
-            r#"SELECT json_build_object(
+        // SAFETY: two fully static SQL strings — no user input in query text.
+        // unread_only controls which static query is used, not what SQL is built.
+        let rows = if unread_only {
+            sqlx::query_as::<_, (serde_json::Value,)>(
+                r#"SELECT json_build_object(
                 'id', n.id, 'type', n.type, 'content', n.content,
                 'is_read', n.is_read, 'created_at', n.created_at,
                 'actor', CASE WHEN n.actor_id IS NOT NULL THEN
@@ -161,12 +163,26 @@ impl NotifyHandler {
                 ELSE NULL END,
                 'target_type', n.target_type, 'target_id', n.target_id
             ) FROM notifications n
-            WHERE n.user_id = $1 {} ORDER BY n.created_at DESC LIMIT $2 OFFSET $3"#,
-            filter
-        );
-        let rows = sqlx::query_as::<_, (serde_json::Value,)>(&query_str)
+            WHERE n.user_id = $1 AND n.is_read = FALSE ORDER BY n.created_at DESC LIMIT $2 OFFSET $3"#
+            )
             .bind(user_id).bind(limit).bind(offset)
-            .fetch_all(&self.pool).await?;
+            .fetch_all(&self.pool).await?
+        } else {
+            sqlx::query_as::<_, (serde_json::Value,)>(
+                r#"SELECT json_build_object(
+                'id', n.id, 'type', n.type, 'content', n.content,
+                'is_read', n.is_read, 'created_at', n.created_at,
+                'actor', CASE WHEN n.actor_id IS NOT NULL THEN
+                    (SELECT json_build_object('id', u.id, 'username', u.username, 'display_name', u.display_name, 'avatar_url', u.avatar_url)
+                     FROM users u WHERE u.id = n.actor_id)
+                ELSE NULL END,
+                'target_type', n.target_type, 'target_id', n.target_id
+            ) FROM notifications n
+            WHERE n.user_id = $1 ORDER BY n.created_at DESC LIMIT $2 OFFSET $3"#
+            )
+            .bind(user_id).bind(limit).bind(offset)
+            .fetch_all(&self.pool).await?
+        };
         Ok(rows.into_iter().map(|r| r.0).collect())
     }
 

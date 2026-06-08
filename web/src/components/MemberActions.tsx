@@ -19,7 +19,7 @@ const BAN_DURATIONS = [
   { label: '3d', hours: 72 },
   { label: '7d', hours: 168 },
   { label: '30d', hours: 720 },
-  { label: '永久', hours: null as any },
+  { label: '永久', hours: null as number | null },
 ];
 
 const ROLE_OPTIONS = [

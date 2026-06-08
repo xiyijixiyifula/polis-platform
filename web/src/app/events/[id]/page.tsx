@@ -30,7 +30,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     try {
       const res = await events.join(id);
       if (res.code === 0) setJoined(true);
-    } catch {} finally {
+    } catch (e) { console.error('[EventDetail] handleJoin:', e); } finally {
       setJoining(false);
     }
   };

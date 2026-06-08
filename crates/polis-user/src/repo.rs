@@ -106,6 +106,8 @@ impl UserRepo {
 
     /// 搜索用户 (模糊匹配 username 和 display_name)
     pub async fn search_users(&self, query: &str, limit: u32) -> Result<Vec<User>, AppError> {
+        // SAFETY: pattern is bound as a sqlx parameter — query text is escaped by the driver.
+        // The % wildcards are prepended/appended around the parameterized value, not injected into SQL text.
         let pattern = format!("%{}%", query);
         let users = sqlx::query_as::<_, User>(
             "SELECT * FROM users WHERE username ILIKE $1 OR display_name ILIKE $1 OR id::text = $2 ORDER BY created_at DESC LIMIT $3",

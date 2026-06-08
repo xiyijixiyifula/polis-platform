@@ -27,7 +27,7 @@ export default function ViewCreationPage() {
           return ref;
         }
       }
-    } catch {}
+    } catch (e) { console.error('[ViewCreation] returnUrl parse:', e); }
     return '/creations';
   }, []);
 

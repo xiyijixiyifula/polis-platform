@@ -42,7 +42,7 @@ function SearchContent() {
         if (userRes.code === 0 && userRes.data) {
           setFilteredUsers(userRes.data);
         }
-      } catch {}
+      } catch (e) { console.error('[Search] fetchResults:', e); }
       setLoading(false);
     };
     fetchResults();

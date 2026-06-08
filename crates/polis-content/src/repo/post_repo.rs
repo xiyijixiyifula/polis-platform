@@ -365,6 +365,8 @@ impl PostRepo {
             return Ok(posts);
         }
         let q = query.unwrap_or("");
+        // SAFETY: pattern is bound as a sqlx parameter — query text is escaped by the driver.
+        // The % wildcards are prepended/appended around the parameterized value, not injected into SQL text.
         let pattern = format!("%{}%", q);
         let posts = sqlx::query_as::<_, Post>(
             "SELECT * FROM posts WHERE is_deleted = FALSE AND visibility = 'public' AND (title ILIKE $1 OR body ILIKE $1) ORDER BY created_at DESC LIMIT $2",

@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         twitter: { card: 'summary', title: data.title || '内容系列', description: desc },
       };
     }
-  } catch {}
+  } catch (e) { console.error('[SeriesPage] generateMetadata:', e); }
 
   return { title: '内容系列' };
 }

@@ -101,9 +101,9 @@ export default function LeaderboardPage() {
                 </p>
                 <p className="text-xs text-gray-500">@{entry.username}</p>
               </div>
-              {tab === 'creators' && typeof (entry as any).total_posts === 'number' && (
+              {tab === 'creators' && typeof entry.total_posts === 'number' && (
                 <div className="text-right text-xs text-gray-400 hidden sm:block">
-                  <p>{((entry as any).total_posts)} 作品</p>
+                  <p>{entry.total_posts} 作品</p>
                 </div>
               )}
               <div className="text-right">

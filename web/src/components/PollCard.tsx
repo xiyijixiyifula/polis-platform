@@ -117,7 +117,7 @@ export function PollCard({ poll }: PollProps) {
           })
           .catch(() => {});
       }
-    } catch {} finally {
+    } catch (e) { console.error('[PollCard] submitVote:', e); } finally {
       setSubmitting(false);
     }
   };

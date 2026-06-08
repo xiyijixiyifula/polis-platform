@@ -20,7 +20,7 @@ export default function TipButton({ targetId, targetType = 'post', onTipped }: {
         setTipped(true);
         onTipped?.();
       }
-    } catch {} finally {
+    } catch (e) { console.error('[TipButton] handleTip:', e); } finally {
       setLoading(false);
     }
   };

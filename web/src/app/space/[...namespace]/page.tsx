@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         twitter: { card: 'summary', title: data.title || ns, description: desc },
       };
     }
-  } catch {}
+  } catch (e) { console.error('[SpacePage] generateMetadata:', e); }
 
   return { title: '社区' };
 }

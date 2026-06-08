@@ -29,7 +29,7 @@ export function JoinRequestsPanel({ namespace }: Props) {
       if (res.code === 0 && Array.isArray(res.data)) {
         setRequests(res.data);
       }
-    } catch {} finally {
+    } catch (e) { console.error('[JoinRequestsPanel] fetchRequests:', e); } finally {
       setLoading(false);
     }
   }, [namespace]);
@@ -45,7 +45,7 @@ export function JoinRequestsPanel({ namespace }: Props) {
       if (res.code === 0) {
         setRequests(prev => prev.filter(r => r.user_id !== userId));
       }
-    } catch {} finally {
+    } catch (e) { console.error('[JoinRequestsPanel] handleReview:', e); } finally {
       setProcessing(null);
     }
   };

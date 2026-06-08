@@ -175,7 +175,7 @@ export function useSpaceData(rawNamespace: string | string[]): SpaceDataState {
 			tabs.push({
 				id: m.module_key,
 				label: m.name,
-				icon: (m as any).icon || '📄',
+				icon: m.icon || '📄',
 			});
 		});
 		tabs.push({ id: 'members', label: '成员', icon: '👥' });

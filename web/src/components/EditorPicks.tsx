@@ -44,8 +44,8 @@ export default function EditorPicks() {
         >
           {picks.map((pick) => {
             const href = pick.target_type === 'space'
-              ? `/space/${(pick as any).namespace || ''}`
-              : buildPostLink(pick.target_id, (pick as any).namespace || (pick as any).space_ns);
+              ? `/space/${pick.namespace || ''}`
+              : buildPostLink(pick.target_id, pick.namespace || pick.space_ns);
             return (
               <Link
                 key={pick.id}
@@ -54,7 +54,7 @@ export default function EditorPicks() {
                 style={{ scrollSnapAlign: 'start' }}
               >
                 <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2">
-                  {pick.title_override || (pick as any).title || '编辑精选'}
+                  {pick.title_override || pick.title || '编辑精选'}
                 </p>
                 {pick.description_override && (
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">

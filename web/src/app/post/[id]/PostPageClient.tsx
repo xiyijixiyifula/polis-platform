@@ -384,7 +384,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
     try {
       const res = await posts.likeById(post.id);
       if (res.data !== null) {
-        const data = res.data as any;
+        const data = res.data;
         const liked: boolean = typeof data === 'boolean' ? data : (data.liked ?? false);
         setLiked(liked);
         if (typeof data === 'object' && data.like_count !== undefined) {
@@ -401,7 +401,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
     try {
       const res = await posts.bookmarkById(post.id);
       if (res.data !== null) {
-        const data = res.data as any;
+        const data = res.data;
         setBookmarked(typeof data === 'boolean' ? data : (data.bookmarked ?? false));
       }
     } catch (e) { console.error('[component] error:', e); }
@@ -640,7 +640,7 @@ function PostDetailContent({ postId, spaceFromUrl = '' }: { postId: string; spac
             )}
 
             {/* 密码保护 — 非作者需解锁查看 */}
-            {(post as any).has_password && !(post as any).body && !isAuthor ? (
+            {post.has_password && !post.body && !isAuthor ? (
               <div className="my-8 p-6 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border border-amber-200/60 dark:border-amber-700/30">
                 <div className="text-center mb-4">
                   <span className="text-4xl">🔐</span>

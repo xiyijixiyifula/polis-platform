@@ -97,8 +97,14 @@ impl PluginEngine {
         function_name: &str,
         args: &[wasmtime::Val],
     ) -> Result<Vec<wasmtime::Val>, AppError> {
-        // TODO: Implement proper function calling via the wasmtime Instance
-        // This requires storing the wasmtime::Instance alongside the Store
+        // TODO(#plugin-fn-call): Implement proper function calling via wasmtime Instance
+        // This requires storing the wasmtime::Instance alongside the Store in PluginState.
+        // Steps to complete:
+        // 1. Store `wasmtime::Instance` in the plugin state map (keyed by plugin_id)
+        // 2. Retrieve the instance and call `instance.get_func(&mut store, function_name)`
+        // 3. Convert wasmtime::Val args/results to/from the host-side types
+        // 4. Handle WASM trap/error translation into AppError
+        // Tracked in: docs/progress/MASTER.md — Plugin Engine milestone
         let _ = plugin_id;
         let _ = function_name;
         let _ = args;

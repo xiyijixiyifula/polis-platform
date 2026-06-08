@@ -76,7 +76,7 @@ export function Header() {
       });
       const data = await res.json();
       if (data.code === 0) setUnreadCount(data.data);
-    } catch {}
+    } catch (e) { console.error('[Header] fetchUnread:', e); }
   };
 
   const fetchUnreadDm = async () => {
@@ -87,7 +87,7 @@ export function Header() {
       });
       const data = await res.json();
       if (data.code === 0) setUnreadDmCount(data.data);
-    } catch {}
+    } catch (e) { console.error('[Header] fetchUnreadDm:', e); }
   };
 
   useEffect(() => {

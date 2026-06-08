@@ -202,6 +202,8 @@ impl SpaceRepo {
 
     /// 搜索社区（按标题和描述模糊匹配）
     pub async fn search(&self, query: &str, limit: u32) -> Result<Vec<Space>, AppError> {
+        // SAFETY: pattern is bound as a sqlx parameter — query text is escaped by the driver.
+        // The % wildcards are prepended/appended around the parameterized value, not injected into SQL text.
         let pattern = format!("%{}%", query);
         let spaces = sqlx::query_as::<_, Space>(
             "SELECT * FROM spaces WHERE status = 'active' AND visibility = 'public' AND (title ILIKE $1 OR description ILIKE $1 OR namespace ILIKE $1) ORDER BY member_count DESC LIMIT $2",

@@ -106,7 +106,7 @@ export default function SettingsPage() {
           try {
             const { pushNotifications } = await import('@/lib/api');
             await pushNotifications.unsubscribe(sub.endpoint);
-          } catch {}
+          } catch (e) { console.error('[Settings] togglePush unsubscribe:', e); }
         }
       }
       setPushEnabled(false);

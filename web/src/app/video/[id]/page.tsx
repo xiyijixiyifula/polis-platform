@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         twitter: { card: 'summary', title: data.title || '视频', description: desc },
       };
     }
-  } catch {}
+  } catch (e) { console.error('[VideoPage] generateMetadata:', e); }
 
   return { title: '视频' };
 }

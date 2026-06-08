@@ -78,7 +78,7 @@ export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; 
       if (res.code === 0) {
         setVideo(prev => prev ? { ...prev, is_liked: !prev.is_liked, like_count: prev.is_liked ? prev.like_count - 1 : prev.like_count + 1 } : null);
       }
-    } catch {}
+    } catch (e) { console.error('[VideoPage] handleLike:', e); }
     setLiking(false);
   };
 
@@ -90,7 +90,7 @@ export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; 
       if (res.code === 0) {
         setIsBookmarked(res.data as unknown as boolean);
       }
-    } catch {}
+    } catch (e) { console.error('[VideoPage] handleBookmark:', e); }
     setBookmarking(false);
   };
 
@@ -103,7 +103,7 @@ export default function VideoPage({ videoId, spaceNs = '' }: { videoId: string; 
         setVideo(prev => prev ? { ...prev, comment_count: prev.comment_count + 1 } : null);
         setCommentBody('');
       }
-    } catch {}
+    } catch (e) { console.error('[VideoPage] handleComment:', e); }
   };
 
   const handleShare = () => {

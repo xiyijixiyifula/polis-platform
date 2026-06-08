@@ -39,7 +39,7 @@ export default function FeedLayout() {
   useEffect(() => {
     const stored = localStorage.getItem('polis_user');
     if (stored) {
-      try { setCurrentUser(JSON.parse(stored)); } catch {}
+      try { setCurrentUser(JSON.parse(stored)); } catch (e) { console.error('[FeedLayout] localStorage parse:', e); }
     }
     const token = getToken();
     if (token) {
@@ -57,7 +57,7 @@ export default function FeedLayout() {
       const res = await fetch('/api/spaces/trending');
       const data = await res.json();
       if (data.code === 0 && data.data) setTrendingSpaces(data.data.slice(0, 4));
-    } catch {}
+    } catch (e) { console.error('[FeedLayout] fetchTrending:', e); }
   }, []);
 
   useEffect(() => { fetchTrending(); }, [fetchTrending]);
@@ -67,7 +67,7 @@ export default function FeedLayout() {
       const res = await fetch('/api/feed?page=1&page_size=5&sort=hot');
       const data = await res.json();
       if (data.code === 0 && data.data) setTrendingPosts(data.data.slice(0, 5));
-    } catch {}
+    } catch (e) { console.error('[FeedLayout] fetchTrendingPosts:', e); }
   }, []);
 
   useEffect(() => { fetchTrendingPosts(); }, [fetchTrendingPosts]);

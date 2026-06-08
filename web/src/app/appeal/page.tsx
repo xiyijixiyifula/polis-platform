@@ -17,7 +17,7 @@ export default function AppealPage() {
         setBanInfo(data.data);
         setEmailChecked(true);
       }
-    } catch {}
+    } catch (e) { console.error('[Appeal] checkBanStatus:', e); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

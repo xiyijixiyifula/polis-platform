@@ -31,7 +31,7 @@ export function SpaceChat({ namespace }: { namespace: string }) {
       if (json.code === 0 && Array.isArray(json.data)) {
         setMessages(json.data);
       }
-    } catch {} 
+    } catch (e) { console.error('[SpaceChat] fetchMessages:', e); }
     finally { setLoading(false); }
   };
 

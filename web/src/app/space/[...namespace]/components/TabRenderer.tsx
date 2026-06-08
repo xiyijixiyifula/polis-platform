@@ -176,8 +176,8 @@ export default function TabRenderer(props: TabRendererProps) {
 								{posts.slice(0, 20).map((post) => {
 									const moduleIcon = getModuleEmoji(post.module_type);
 									const moduleLabel = spaceModules.find(m => m.module_key === post.module_type)?.name || post.module_type || '交流';
-									const author = (post.author || {}) as any;
-									const authorUsername = author.username || '';
+									const author = post.author;
+									const authorUsername = author?.username || '';
 									const bodyPreview = post.body?.replace(/<[^>]+>/g, '').slice(0, 120) || '';
 									return (
 										<Link key={post.id} href={`/post/${post.id}?space=${encodeURIComponent(cleanNamespace)}`}

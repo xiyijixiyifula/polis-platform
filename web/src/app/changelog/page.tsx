@@ -1,8 +1,19 @@
 import { Metadata } from 'next';
 export const metadata: Metadata = { title: '更新日志' };
 
+interface Version {
+  ver: string;
+  date: string;
+  title: string;
+  isLatest?: boolean;
+  isUpcoming?: boolean;
+  items: string[];
+  cli?: string;
+  cli_desc?: string;
+}
+
 export default function ChangelogPage() {
-  const versions = [
+  const versions: Version[] = [
     {
       ver: '1.0.9', date: '2026-05-26', title: '🔧 首页 Feed 算法修复 — 关注Tab + 热榜排序',
       isLatest: true,
@@ -2131,15 +2142,15 @@ export default function ChangelogPage() {
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">更新日志</h1>
       <div className="space-y-8">
         {versions.map((v) => (
-          <div key={v.ver} className={`relative pl-8 border-l-2 ${(v as any).isUpcoming ? 'border-dashed border-purple-300 dark:border-purple-700' : 'border-primary-200 dark:border-primary-800'}`}>
-            <div className={`absolute -left-2.5 top-0 h-5 w-5 rounded-full border-2 border-white dark:border-gray-900 ${(v as any).isUpcoming ? 'bg-purple-400' : 'bg-primary-600'}`} />
+          <div key={v.ver} className={`relative pl-8 border-l-2 ${v.isUpcoming ? 'border-dashed border-purple-300 dark:border-purple-700' : 'border-primary-200 dark:border-primary-800'}`}>
+            <div className={`absolute -left-2.5 top-0 h-5 w-5 rounded-full border-2 border-white dark:border-gray-900 ${v.isUpcoming ? 'bg-purple-400' : 'bg-primary-600'}`} />
             <div className="mb-1 flex items-center gap-3">
               <span className="text-lg font-bold text-gray-900 dark:text-white">v{v.ver}</span>
               <span className="text-sm text-gray-400 dark:text-gray-500">{v.date}</span>
-              {(v as any).isLatest && (
+              {v.isLatest && (
                 <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">当前版本</span>
               )}
-              {(v as any).isUpcoming && (
+              {v.isUpcoming && (
                 <span className="rounded-full bg-purple-100 dark:bg-purple-900/30 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-400">规划中</span>
               )}
             </div>

@@ -40,7 +40,7 @@ export default function CreateSpacePage() {
         const u = JSON.parse(raw);
         if (u?.username) setUsername(u.username);
       }
-    } catch {}
+    } catch (e) { console.error('[CreateSpace] localStorage parse:', e); }
   }, []);
 
   const slug = useMemo(() => deriveSlug(title), [title]);

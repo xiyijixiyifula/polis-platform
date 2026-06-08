@@ -612,14 +612,14 @@ export const posts = {
 
   /** 直接通过帖子ID点赞（无需namespace，v0.3.22 RESTful 别名） */
   likeById: (id: string) =>
-    request<{ liked: boolean; post_id: string }>(`/posts/${id}/like`, { method: 'POST' }),
+    request<{ liked: boolean; post_id: string; like_count?: number }>(`/posts/${id}/like`, { method: 'POST' }),
 
   bookmark: (namespace: string, id: string) =>
     request<boolean>(`/spaces/${encodeNs(namespace)}/posts/${id}/bookmark`, { method: 'POST' }),
 
   /** 直接通过帖子ID收藏（无需namespace，v0.3.22 RESTful 别名） */
   bookmarkById: (id: string) =>
-    request<{ bookmarked: boolean; post_id: string }>(`/posts/${id}/bookmark`, { method: 'POST' }),
+    request<{ bookmarked: boolean; post_id: string; bookmark_count?: number }>(`/posts/${id}/bookmark`, { method: 'POST' }),
 
   report: (namespace: string, id: string, reason: string) =>
     request<void>(`/spaces/${encodeNs(namespace)}/posts/${id}/report`, {
@@ -1203,6 +1203,9 @@ export interface EditorPick {
   description_override?: string;
   pick_type: string;
   sort_order: number;
+  namespace?: string;
+  space_ns?: string;
+  title?: string;
   post?: any;
 }
 
