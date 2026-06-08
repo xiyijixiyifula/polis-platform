@@ -47,3 +47,14 @@ deploy/polis-video
 /*.png
 test-video.mp4
 .claude/worktrees/
+
+# Debug files
+*.network-response
+*.png
+*.mp4
+
+# Backup files
+*.bak
+
+# Worktrees
+.claude/worktrees/
