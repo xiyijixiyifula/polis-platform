@@ -45,30 +45,30 @@ impl UserHandler {
     pub async fn register(&self, req: RegisterRequest) -> Result<LoginResponse, AppError> {
         // 验证输入
         if req.username.len() < 3 || req.username.len() > 39 {
-            return Err(AppError::Validation(
+            return Err(AppError::validation(
                 "Username must be between 3 and 39 characters".to_string(),
             ));
         }
         // 用户名不允许空白字符和路径危险字符
         if req.username.chars().any(|c| c.is_whitespace() || c == '/' || c == '\\' || c == '@') {
-            return Err(AppError::Validation(
+            return Err(AppError::validation(
                 "用户名不能包含空格、/、\\、@ 字符".to_string(),
             ));
         }
         if req.password.len() < 8 {
-            return Err(AppError::Validation(
+            return Err(AppError::validation(
                 "Password must be at least 8 characters".to_string(),
             ));
         }
 
         // 检查邮箱是否已注册
         if let Some(_) = self.repo.find_by_email(&req.email).await? {
-            return Err(AppError::Conflict("Email already registered".to_string()));
+            return Err(AppError::conflict("Email already registered".to_string()));
         }
 
         // 检查用户名是否已存在
         if let Some(_) = self.repo.find_by_username(&req.username).await? {
-            return Err(AppError::Conflict("Username already taken".to_string()));
+            return Err(AppError::conflict("Username already taken".to_string()));
         }
 
         // 哈希密码
@@ -89,7 +89,7 @@ impl UserHandler {
             &self.config.jwt_secret,
             self.config.jwt_access_expiry,
         )
-        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("JWT error: {}", e)))?;
 
         let refresh_token = auth::generate_refresh_token(
             user.id,
@@ -98,7 +98,7 @@ impl UserHandler {
             &self.config.jwt_secret,
             self.config.jwt_refresh_expiry,
         )
-        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("JWT error: {}", e)))?;
 
         // NATS: falls back to direct DB write when unavailable
         self.publish_event(subjects::USER_REGISTERED, serde_json::json!({
@@ -120,10 +120,10 @@ impl UserHandler {
             .repo
             .find_by_email(&req.email)
             .await?
-            .ok_or(AppError::Unauthorized)?;
+            .ok_or(AppError::unauthorized())?;
 
         if user.banned {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 user.ban_reason
                     .unwrap_or_else(|| "账号已被冻结，如有疑问请联系管理员".to_string()),
             ));
@@ -132,7 +132,7 @@ impl UserHandler {
         let valid = auth::verify_password_async(req.password.clone(), user.password_hash.clone()).await?;
 
         if !valid {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::unauthorized());
         }
 
         let access_expiry = if req.remember_me.unwrap_or(false) {
@@ -147,7 +147,7 @@ impl UserHandler {
             &self.config.jwt_secret,
             access_expiry,
         )
-        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("JWT error: {}", e)))?;
 
         let refresh_token = auth::generate_refresh_token(
             user.id,
@@ -156,7 +156,7 @@ impl UserHandler {
             &self.config.jwt_secret,
             self.config.jwt_refresh_expiry,
         )
-        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("JWT error: {}", e)))?;
 
         Ok(LoginResponse {
             access_token,
@@ -171,7 +171,7 @@ impl UserHandler {
             .repo
             .find_by_username(username)
             .await?
-            .ok_or(AppError::NotFound("User not found".to_string()))?;
+            .ok_or(AppError::not_found("User not found".to_string()))?;
 
         let user_id = user.id;
         let mut pub_user: UserPublic = user.into();
@@ -194,7 +194,7 @@ impl UserHandler {
             .repo
             .find_by_username(username)
             .await?
-            .ok_or(AppError::NotFound("User not found".to_string()))?;
+            .ok_or(AppError::not_found("User not found".to_string()))?;
 
         // 查询用户拥有的社区（owner）
         let owned = self.repo.find_spaces_by_owner(user.id).await?;
@@ -248,7 +248,7 @@ impl UserHandler {
     /// 获取当前用户资料（通过 JWT）
     pub async fn get_my_profile(&self, user_id: Uuid) -> Result<UserPublic, AppError> {
         let user = self.repo.find_by_id(user_id).await?
-            .ok_or(AppError::NotFound("User not found".to_string()))?;
+            .ok_or(AppError::not_found("User not found".to_string()))?;
         Ok(user.into())
     }
 
@@ -309,10 +309,10 @@ impl UserHandler {
     /// 修改密码
     pub async fn change_password(&self, user_id: Uuid, old_password: &str, new_password: &str) -> Result<(), AppError> {
         let user = self.repo.find_by_id(user_id).await?
-            .ok_or(AppError::NotFound("User not found".to_string()))?;
+            .ok_or(AppError::not_found("User not found".to_string()))?;
         let valid = crate::auth::verify_password_async(old_password.to_string(), user.password_hash.clone()).await?;
-        if !valid { return Err(AppError::Forbidden("Wrong password".to_string())); }
-        if new_password.len() < 8 { return Err(AppError::Validation("Password must be at least 8 characters".to_string())); }
+        if !valid { return Err(AppError::forbidden("Wrong password".to_string())); }
+        if new_password.len() < 8 { return Err(AppError::validation("Password must be at least 8 characters".to_string())); }
         let new_hash = crate::auth::hash_password_async(new_password.to_string()).await?;
         sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
             .bind(&new_hash).bind(user_id)
@@ -323,7 +323,7 @@ impl UserHandler {
     /// 生成密码重置令牌（随机令牌 + 数据库存储，不直接返回 JWT）
     pub async fn generate_reset_token(&self, email: &str) -> Result<String, AppError> {
         let user = self.repo.find_by_email(email).await?
-            .ok_or(AppError::NotFound("Email not found".to_string()))?;
+            .ok_or(AppError::not_found("Email not found".to_string()))?;
 
         // 使旧的未使用令牌失效
         sqlx::query("UPDATE password_reset_tokens SET used = TRUE WHERE user_id = $1 AND used = FALSE")
@@ -346,7 +346,7 @@ impl UserHandler {
     /// 使用重置令牌修改密码
     pub async fn reset_password(&self, token: &str, new_password: &str) -> Result<(), AppError> {
         if new_password.len() < 8 {
-            return Err(AppError::Validation("Password must be at least 8 characters".to_string()));
+            return Err(AppError::validation("Password must be at least 8 characters".to_string()));
         }
 
         let mut hasher = Sha256::new();
@@ -356,10 +356,10 @@ impl UserHandler {
         let record = sqlx::query_as::<_, (Uuid, Uuid, chrono::DateTime<chrono::Utc>, bool)>(
             "SELECT id, user_id, expires_at, used FROM password_reset_tokens WHERE token_hash = $1"
         ).bind(&token_hash).fetch_optional(&self.repo.pool).await?
-            .ok_or(AppError::Forbidden("无效或已过期的重置令牌".to_string()))?;
+            .ok_or(AppError::forbidden("无效或已过期的重置令牌".to_string()))?;
 
         if record.3 || record.2 < chrono::Utc::now() {
-            return Err(AppError::Forbidden("重置令牌已过期或已使用".to_string()));
+            return Err(AppError::forbidden("重置令牌已过期或已使用".to_string()));
         }
 
         let new_hash = crate::auth::hash_password_async(new_password.to_string()).await?;
@@ -435,7 +435,7 @@ impl UserHandler {
     /// 查询用户封禁状态
     pub async fn get_ban_status(&self, email: &str) -> Result<serde_json::Value, AppError> {
         let user = self.repo.find_by_email(email).await?
-            .ok_or(AppError::NotFound("User not found".to_string()))?;
+            .ok_or(AppError::not_found("User not found".to_string()))?;
         Ok(serde_json::json!({
             "banned": user.banned,
             "ban_reason": user.ban_reason,
@@ -446,12 +446,12 @@ impl UserHandler {
     /// 提交账号申诉 — 创建一条 target_type='appeal' 的举报记录
     pub async fn submit_appeal(&self, email: &str, reason: &str) -> Result<(), AppError> {
         let user = self.repo.find_by_email(email).await?
-            .ok_or(AppError::NotFound("该邮箱未注册".to_string()))?;
+            .ok_or(AppError::not_found("该邮箱未注册".to_string()))?;
         if !user.banned {
-            return Err(AppError::Validation("该账号未被封禁，无需申诉".to_string()));
+            return Err(AppError::validation("该账号未被封禁，无需申诉".to_string()));
         }
         if reason.trim().len() < 10 {
-            return Err(AppError::Validation("申诉理由至少需要10个字符".to_string()));
+            return Err(AppError::validation("申诉理由至少需要10个字符".to_string()));
         }
         sqlx::query(
             "INSERT INTO reports (reporter_id, target_type, target_id, reason, status) VALUES ($1, 'appeal', $2, $3, 'pending')"
@@ -500,7 +500,7 @@ impl UserHandler {
             daily_xp: xp.daily_xp,
             daily_xp_limit: 100,
         };
-        Ok(serde_json::to_value(public).map_err(|e| AppError::Internal(e.to_string()))?)
+        Ok(serde_json::to_value(public).map_err(|e| AppError::internal(e.to_string()))?)
     }
 
     pub async fn get_xp_logs(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
@@ -519,7 +519,7 @@ impl UserHandler {
         let (daily, date) = self.repo.get_daily_xp(user_id).await?;
         let today = chrono::Utc::now().date_naive();
         if date == Some(today) {
-            return Err(AppError::Validation("今日已签到".to_string()));
+            return Err(AppError::validation("今日已签到".to_string()));
         }
         let xp_gained = 5;
         let new_total = self.repo.award_xp(user_id, "daily_login", xp_gained, "每日签到", None, None).await?;
@@ -531,7 +531,7 @@ impl UserHandler {
             total_xp: new_total,
             current_level: xp.current_level,
         };
-        Ok(serde_json::to_value(resp).map_err(|e| AppError::Internal(e.to_string()))?)
+        Ok(serde_json::to_value(resp).map_err(|e| AppError::internal(e.to_string()))?)
     }
 
     pub async fn award_xp_bridge(&self, user_id: Uuid, action_type: &str, description: &str, target_type: Option<&str>, target_id: Option<Uuid>) -> Result<(), AppError> {
@@ -581,7 +581,7 @@ impl UserHandler {
                 self.repo.award_xp(user_id, "quest_completed", amount, &format!("完成任务: {}", quest_key), None, None).await?;
                 Ok(serde_json::json!({"claimed": true, "xp_gained": amount}))
             }
-            None => Err(AppError::Validation("任务未完成或已领取".to_string())),
+            None => Err(AppError::validation("任务未完成或已领取".to_string())),
         }
     }
 
@@ -616,9 +616,9 @@ impl UserHandler {
 
     pub async fn redeem_invite(&self, invitee_id: Uuid, code: &str) -> Result<serde_json::Value, AppError> {
         let inviter_id = self.repo.redeem_invite(code, invitee_id).await?
-            .ok_or(AppError::NotFound("邀请码无效或已被使用".to_string()))?;
+            .ok_or(AppError::not_found("邀请码无效或已被使用".to_string()))?;
         if inviter_id == invitee_id {
-            return Err(AppError::Validation("不能使用自己的邀请码".to_string()));
+            return Err(AppError::validation("不能使用自己的邀请码".to_string()));
         }
         self.repo.create_invite_reward(inviter_id, invitee_id, 100).await?;
         self.repo.award_xp(inviter_id, "invite_accepted", 100, "邀请好友加入", None, None).await?;
@@ -639,16 +639,16 @@ impl UserHandler {
     /// 用 refresh token 换取新的 access + refresh token 对 (token rotation)
     pub async fn refresh_token(&self, refresh_token: &str) -> Result<LoginResponse, AppError> {
         let claims = auth::verify_token(refresh_token, &self.config.jwt_secret)
-            .map_err(|_| AppError::Unauthorized)?;
+            .map_err(|_| AppError::unauthorized())?;
 
         if claims.token_type.as_deref() != Some("refresh") {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::unauthorized());
         }
 
         // 检查 refresh token 是否被撤销
         if let Some(ref jti) = claims.jti {
             if self.token_blacklist.is_blacklisted(jti).await {
-                return Err(AppError::Unauthorized);
+                return Err(AppError::unauthorized());
             }
             // 撤销旧 refresh token，并通知其他服务
             self.token_blacklist.blacklist(jti).await;
@@ -656,10 +656,10 @@ impl UserHandler {
         }
 
         let user_id = Uuid::parse_str(&claims.sub)
-            .map_err(|_| AppError::Unauthorized)?;
+            .map_err(|_| AppError::unauthorized())?;
 
         let user = self.repo.find_by_id(user_id).await?
-            .ok_or(AppError::Unauthorized)?;
+            .ok_or(AppError::unauthorized())?;
 
         let access_expiry = self.config.jwt_access_expiry;
         let refresh_expiry = self.config.jwt_refresh_expiry;
@@ -667,12 +667,12 @@ impl UserHandler {
         let access_token = auth::generate_access_token(
             user_id, &user.username, &user.display_name,
             &self.config.jwt_secret, access_expiry,
-        ).map_err(|e| AppError::Internal(e.to_string()))?;
+        ).map_err(|e| AppError::internal(e.to_string()))?;
 
         let new_refresh_token = auth::generate_refresh_token(
             user_id, &user.username, &user.display_name,
             &self.config.jwt_secret, refresh_expiry,
-        ).map_err(|e| AppError::Internal(e.to_string()))?;
+        ).map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(LoginResponse {
             access_token,

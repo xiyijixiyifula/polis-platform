@@ -276,7 +276,7 @@ impl ContentHandler {
             .repo
             .find_post_by_id(post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         self.repo.increment_view_count(post_id).await.ok();
         Ok(post)
@@ -470,7 +470,7 @@ impl ContentHandler {
     pub async fn add_post_to_series(&self, series_id: Uuid, post_id: Uuid, sort_order: i32, user_id: Uuid) -> Result<(), AppError> {
         let series = self.repo.get_series(series_id).await?;
         if series.author_id != user_id {
-            return Err(AppError::Forbidden("Not the series owner".to_string()));
+            return Err(AppError::forbidden("Not the series owner".to_string()));
         }
         self.repo.add_post_to_series(series_id, post_id, sort_order).await
     }
@@ -478,7 +478,7 @@ impl ContentHandler {
     pub async fn remove_post_from_series(&self, series_id: Uuid, post_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
         let series = self.repo.get_series(series_id).await?;
         if series.author_id != user_id {
-            return Err(AppError::Forbidden("Not the series owner".to_string()));
+            return Err(AppError::forbidden("Not the series owner".to_string()));
         }
         self.repo.remove_post_from_series(series_id, post_id).await
     }
@@ -491,7 +491,7 @@ impl ContentHandler {
             .repo
             .find_post_by_id(post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         // 检查隐藏时限是否到期，到期自动恢复
         let effective_visibility = if post.visibility == "hidden" && post.hidden_until.is_some() {
@@ -511,7 +511,7 @@ impl ContentHandler {
         if effective_visibility == "private" {
             match current_user_id {
                 Some(uid) if uid == post.author_id => {} // OK — author can view own private post
-                _ => return Err(AppError::Forbidden("This post is private".to_string())),
+                _ => return Err(AppError::forbidden("This post is private".to_string())),
             }
         }
 
@@ -595,10 +595,10 @@ impl ContentHandler {
             .repo
             .find_post_by_id(post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         if post.author_id != user_id {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "You can only edit your own posts".to_string(),
             ));
         }
@@ -643,7 +643,7 @@ impl ContentHandler {
     ) -> Result<PostPublic, AppError> {
         let post = self.repo.verify_post_password(post_id, &req.password)
             .await?
-            .ok_or(AppError::Forbidden("密码错误".to_string()))?;
+            .ok_or(AppError::forbidden("密码错误".to_string()))?;
 
         let author_ids = vec![post.author_id];
         let authors = self.repo.find_users_batch(&author_ids).await?;
@@ -703,10 +703,10 @@ impl ContentHandler {
             .repo
             .find_post_by_id(post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         if post.author_id != user_id {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "You can only delete your own posts".to_string(),
             ));
         }
@@ -724,7 +724,7 @@ impl ContentHandler {
             .repo
             .find_post_by_id(post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         // 检查权限：空间创建者或帖子作者
         let owner_id: Option<Uuid> = sqlx::query_scalar(
@@ -739,7 +739,7 @@ impl ContentHandler {
         let is_author = post.author_id == user_id;
 
         if !is_owner && !is_author {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "Only space owner or post author can pin posts".to_string(),
             ));
         }
@@ -765,7 +765,7 @@ impl ContentHandler {
             .repo
             .find_post_by_id(post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         let owner_id: Option<Uuid> = sqlx::query_scalar(
             "SELECT owner_id FROM spaces WHERE id = $1"
@@ -776,7 +776,7 @@ impl ContentHandler {
         .flatten();
 
         if owner_id != Some(user_id) {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "Only space owner can feature posts".to_string(),
             ));
         }
@@ -803,7 +803,7 @@ impl ContentHandler {
             .repo
             .find_post_by_id(post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         let owner_id: Option<Uuid> = sqlx::query_scalar(
             "SELECT owner_id FROM spaces WHERE id = $1"
@@ -814,7 +814,7 @@ impl ContentHandler {
         .flatten();
 
         if owner_id != Some(user_id) {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "Only space owner can hide posts from this space".to_string(),
             ));
         }
@@ -842,9 +842,9 @@ impl ContentHandler {
     ) -> Result<PostReference, AppError> {
         // 检查帖子存在且未删除
         let post = self.repo.find_post_by_id(post_id).await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
         if post.is_deleted {
-            return Err(AppError::Validation("Cannot reference a deleted post".to_string()));
+            return Err(AppError::validation("Cannot reference a deleted post".to_string()));
         }
 
         // 检查目标社区存在、可见性、模块开启
@@ -854,7 +854,7 @@ impl ContentHandler {
         .bind(space_id)
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(AppError::NotFound("Space not found".to_string()))?;
+        .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         let (visibility,) = space_info;
 
@@ -868,7 +868,7 @@ impl ContentHandler {
         .await?;
         let has_module = has_module.0;
         if !has_module {
-            return Err(AppError::Forbidden(format!("目标社区未开启「{}」模块", module_type)));
+            return Err(AppError::forbidden(format!("目标社区未开启「{}」模块", module_type)));
         }
 
         match visibility.as_str() {
@@ -882,18 +882,18 @@ impl ContentHandler {
                 .fetch_one(&self.pool)
                 .await?;
                 if !is_member {
-                    return Err(AppError::Forbidden("需要先加入私有社区才能投稿".to_string()));
+                    return Err(AppError::forbidden("需要先加入私有社区才能投稿".to_string()));
                 }
             }
             "unlisted" => {
-                return Err(AppError::Forbidden("不公开社区不支持投稿".to_string()));
+                return Err(AppError::forbidden("不公开社区不支持投稿".to_string()));
             }
             _ => {} // public
         }
 
         // 检查是否已存在引用（防重复）
         if let Some(existing) = self.repo.find_reference(post_id, space_id).await? {
-            return Err(AppError::Validation(
+            return Err(AppError::validation(
                 format!("已存在投稿引用（状态: {}）", existing.status)
             ));
         }
@@ -992,7 +992,7 @@ impl ContentHandler {
         self.repo
             .find_post_by_id(post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         if let Some(pid) = req.parent_id {
             let exists = sqlx::query_scalar::<_, Option<i32>>(
@@ -1002,7 +1002,7 @@ impl ContentHandler {
             .fetch_optional(&self.pool)
             .await?;
             if exists.is_none() {
-                return Err(AppError::NotFound("Parent comment not found".to_string()));
+                return Err(AppError::not_found("Parent comment not found".to_string()));
             }
         }
 
@@ -1087,7 +1087,7 @@ impl ContentHandler {
             .repo
             .find_comment_by_id(comment_id)
             .await?
-            .ok_or(AppError::NotFound("Comment not found".to_string()))?;
+            .ok_or(AppError::not_found("Comment not found".to_string()))?;
 
         // 评论作者或帖子作者可以删除
         if comment.author_id == user_id {
@@ -1100,14 +1100,14 @@ impl ContentHandler {
             .repo
             .find_post_by_id(comment.post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         if post.author_id == user_id {
             self.repo.delete_comment(comment_id).await?;
             return Ok(());
         }
 
-        Err(AppError::Forbidden("You can only delete your own comments".to_string()))
+        Err(AppError::forbidden("You can only delete your own comments".to_string()))
     }
 
     /// 置顶/取消置顶评论（仅帖子作者可操作）
@@ -1120,16 +1120,16 @@ impl ContentHandler {
             .repo
             .find_comment_by_id(comment_id)
             .await?
-            .ok_or(AppError::NotFound("Comment not found".to_string()))?;
+            .ok_or(AppError::not_found("Comment not found".to_string()))?;
 
         let post = self
             .repo
             .find_post_by_id(comment.post_id)
             .await?
-            .ok_or(AppError::NotFound("Post not found".to_string()))?;
+            .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         if post.author_id != user_id {
-            return Err(AppError::Forbidden("Only post author can pin comments".to_string()));
+            return Err(AppError::forbidden("Only post author can pin comments".to_string()));
         }
 
         let pinned = self.repo.toggle_comment_pin(comment_id).await?;
@@ -1353,33 +1353,33 @@ impl ContentHandler {
         use std::process::Command;
         let tmp_dir = format!("/tmp/polis_import_{}", Uuid::new_v4());
         let tmp_file = format!("{}/input.zip", tmp_dir);
-        tokio::fs::create_dir_all(&tmp_dir).await.map_err(|e| AppError::External(format!("Failed to create tmp dir: {}", e)))?;
-        tokio::fs::write(&tmp_file, data).await.map_err(|e| AppError::External(format!("Failed to write tmp file: {}", e)))?;
+        tokio::fs::create_dir_all(&tmp_dir).await.map_err(|e| AppError::external(format!("Failed to create tmp dir: {}", e)))?;
+        tokio::fs::write(&tmp_file, data).await.map_err(|e| AppError::external(format!("Failed to write tmp file: {}", e)))?;
 
         if filename.ends_with(".zip") {
             // Unzip first — safely into temp dir, strip paths with -j to prevent zip-slip
             let output = Command::new("unzip").arg("-o").arg("-j").arg(&tmp_file).arg("-d").arg(&tmp_dir).output()
-                .map_err(|e| AppError::External(format!("Failed to run unzip: {}", e)))?;
+                .map_err(|e| AppError::external(format!("Failed to run unzip: {}", e)))?;
             if !output.status.success() {
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 let stdout = String::from_utf8_lossy(&output.stdout);
-                return Err(AppError::External(format!("Unzip failed: stderr={} stdout={}", stderr, stdout)));
+                return Err(AppError::external(format!("Unzip failed: stderr={} stdout={}", stderr, stdout)));
             }
             // Find README.md (case-insensitive) — validate path stays within tmp_dir
             let find_output = Command::new("find").arg(&tmp_dir).arg("-iname").arg("readme.md").output()
-                .map_err(|e| AppError::External(format!("Failed to find README: {}", e)))?;
+                .map_err(|e| AppError::external(format!("Failed to find README: {}", e)))?;
             let readme_path = String::from_utf8_lossy(&find_output.stdout).trim().to_string();
             // Validate path is within tmp_dir (defense-in-depth against zip-slip)
             let _canonical_tmp = std::path::Path::new(&tmp_dir).canonicalize().unwrap_or_else(|_| std::path::PathBuf::from(&tmp_dir));
             if readme_path.is_empty() {
                 let ls_output = Command::new("ls").arg("-R").arg(&tmp_dir).output()
-                    .map_err(|e| AppError::External(format!("Failed to list files: {}", e)))?;
+                    .map_err(|e| AppError::external(format!("Failed to list files: {}", e)))?;
                 let ls = ls_output.stdout;
                 let listing = String::from_utf8_lossy(&ls);
-                return Err(AppError::NotFound(format!("No README.md found in zip. Files: {}", listing)));
+                return Err(AppError::not_found(format!("No README.md found in zip. Files: {}", listing)));
             }
             let content = tokio::fs::read_to_string(&readme_path).await
-                .map_err(|e| AppError::External(format!("Failed to read README: {}", e)))?;
+                .map_err(|e| AppError::external(format!("Failed to read README: {}", e)))?;
             // Find and upload referenced images (files are flat in tmp_dir due to -j flag)
             let base_dir = std::path::Path::new(&tmp_dir);
             let _processed = content.clone();
@@ -1433,7 +1433,7 @@ impl ContentHandler {
         } else {
             // Direct .md file
             let content = String::from_utf8(data.to_vec())
-                .map_err(|_| AppError::Validation("Invalid UTF-8 in markdown file".to_string()))?;
+                .map_err(|_| AppError::validation("Invalid UTF-8 in markdown file".to_string()))?;
             if let Err(e) = tokio::fs::remove_dir_all(&tmp_dir).await {
                 tracing::warn!("Failed to clean up temp dir {}: {}", tmp_dir, e);
             }
@@ -1460,18 +1460,18 @@ impl ContentHandler {
         let max_mb = self.get_max_upload_size_mb().await;
         let max_bytes = (max_mb * 1024 * 1024) as usize;
         if data.len() > max_bytes {
-            return Err(AppError::Validation(format!("文件大小超过 {}MB 限制", max_mb)));
+            return Err(AppError::validation(format!("文件大小超过 {}MB 限制", max_mb)));
         }
         let file_id = Uuid::new_v4();
         let storage_dir = "/root/polis/uploads/general";
-        tokio::fs::create_dir_all(storage_dir).await.map_err(|e| AppError::External(format!("Failed to create upload dir: {}", e)))?;
+        tokio::fs::create_dir_all(storage_dir).await.map_err(|e| AppError::external(format!("Failed to create upload dir: {}", e)))?;
         let storage_path = format!("{}/{}", storage_dir, file_id);
-        tokio::fs::write(&storage_path, data).await.map_err(|e| AppError::External(format!("Failed to write file: {}", e)))?;
+        tokio::fs::write(&storage_path, data).await.map_err(|e| AppError::external(format!("Failed to write file: {}", e)))?;
         let file_size = data.len() as i64;
         // Use an existing space_id for generic uploads (games space)
         let space_id = sqlx::query_scalar::<_, Uuid>("SELECT id FROM spaces ORDER BY created_at ASC LIMIT 1")
             .fetch_one(&self.pool).await
-            .map_err(|_| AppError::Internal("No space found for upload".to_string()))?;
+            .map_err(|_| AppError::internal("No space found for upload".to_string()))?;
         let id = self.repo.create_file_record(space_id, user_id, filename, file_size, mime_type, &storage_path).await?;
         Ok(serde_json::json!({ "id": id.to_string(), "filename": filename, "file_size": file_size, "mime_type": mime_type, "url": format!("/api/files/{}", id) }))
     }
@@ -1480,13 +1480,13 @@ impl ContentHandler {
         let max_mb = self.get_max_upload_size_mb().await;
         let max_bytes = (max_mb * 1024 * 1024) as usize;
         if data.len() > max_bytes {
-            return Err(AppError::Validation(format!("文件大小超过 {}MB 限制", max_mb)));
+            return Err(AppError::validation(format!("文件大小超过 {}MB 限制", max_mb)));
         }
         let file_id = Uuid::new_v4();
         let storage_dir = format!("/root/polis/uploads/{}", space_id);
-        tokio::fs::create_dir_all(&storage_dir).await.map_err(|e| AppError::External(format!("Failed to create upload dir: {}", e)))?;
+        tokio::fs::create_dir_all(&storage_dir).await.map_err(|e| AppError::external(format!("Failed to create upload dir: {}", e)))?;
         let storage_path = format!("{}/{}", storage_dir, file_id);
-        tokio::fs::write(&storage_path, data).await.map_err(|e| AppError::External(format!("Failed to write file: {}", e)))?;
+        tokio::fs::write(&storage_path, data).await.map_err(|e| AppError::external(format!("Failed to write file: {}", e)))?;
         let file_size = data.len() as i64;
         let id = self.repo.create_file_record(space_id, user_id, filename, file_size, mime_type, &storage_path).await?;
         Ok(serde_json::json!({ "id": id.to_string(), "filename": filename, "file_size": file_size, "mime_type": mime_type }))
@@ -1496,7 +1496,7 @@ impl ContentHandler {
     pub async fn get_file(&self, file_id: Uuid) -> Result<(Vec<u8>, String, String), AppError> {
         let (_fid, _filename, _file_size, mime_type, storage_path) = self.repo.get_file_by_id(file_id).await?;
         let data = tokio::fs::read(&storage_path).await
-            .map_err(|e| AppError::External(format!("Failed to read file: {}", e)))?;
+            .map_err(|e| AppError::external(format!("Failed to read file: {}", e)))?;
         Ok((data, _filename, mime_type))
     }
 
@@ -1528,9 +1528,9 @@ impl ContentHandler {
 
     pub async fn get_share_info(&self, code: &str) -> Result<serde_json::Value, AppError> {
         let (_link_id, file_id, password, expires_at, max_downloads, download_count, is_active) = self.repo.get_share_link_by_code(code).await?;
-        if !is_active { return Err(AppError::Validation("Share link has been deactivated".to_string())); }
-        if let Some(exp) = expires_at { if chrono::Utc::now() > exp { return Err(AppError::Validation("Share link has expired".to_string())); } }
-        if let Some(max) = max_downloads { if download_count >= max { return Err(AppError::Validation("Download limit reached".to_string())); } }
+        if !is_active { return Err(AppError::validation("Share link has been deactivated".to_string())); }
+        if let Some(exp) = expires_at { if chrono::Utc::now() > exp { return Err(AppError::validation("Share link has expired".to_string())); } }
+        if let Some(max) = max_downloads { if download_count >= max { return Err(AppError::validation("Download limit reached".to_string())); } }
         let (_fid, filename, file_size, mime_type, _sp) = self.repo.get_file_by_id(file_id).await?;
         Ok(serde_json::json!({
             "file_id": file_id.to_string(), "filename": filename, "file_size": file_size, "mime_type": mime_type,
@@ -1545,14 +1545,14 @@ impl ContentHandler {
 
     pub async fn download_shared_file(&self, code: &str, password: Option<&str>) -> Result<(Vec<u8>, String, String), AppError> {
         let (link_id, file_id, stored_password, expires_at, max_downloads, download_count, is_active) = self.repo.get_share_link_by_code(code).await?;
-        if !is_active { return Err(AppError::Validation("Share link has been deactivated".to_string())); }
-        if let Some(exp) = expires_at { if chrono::Utc::now() > exp { return Err(AppError::Validation("Share link has expired".to_string())); } }
-        if let Some(max) = max_downloads { if download_count >= max { return Err(AppError::Validation("Download limit reached".to_string())); } }
+        if !is_active { return Err(AppError::validation("Share link has been deactivated".to_string())); }
+        if let Some(exp) = expires_at { if chrono::Utc::now() > exp { return Err(AppError::validation("Share link has expired".to_string())); } }
+        if let Some(max) = max_downloads { if download_count >= max { return Err(AppError::validation("Download limit reached".to_string())); } }
         if let Some(ref pw) = stored_password {
-            if password != Some(pw.as_str()) { return Err(AppError::Forbidden("Invalid password".to_string())); }
+            if password != Some(pw.as_str()) { return Err(AppError::forbidden("Invalid password".to_string())); }
         }
         let (_fid, filename, _fs, mime_type, storage_path) = self.repo.get_file_by_id(file_id).await?;
-        let data = tokio::fs::read(&storage_path).await.map_err(|e| AppError::External(format!("Failed to read file: {}", e)))?;
+        let data = tokio::fs::read(&storage_path).await.map_err(|e| AppError::external(format!("Failed to read file: {}", e)))?;
         self.repo.increment_share_download(link_id, file_id).await?;
         Ok((data, filename, mime_type))
     }
@@ -1588,7 +1588,7 @@ impl ContentHandler {
 
     pub async fn create_tip(&self, sender_id: Uuid, receiver_id: Uuid, target_type: &str, target_id: Uuid, amount: i32, message: Option<&str>, is_anonymous: bool) -> Result<serde_json::Value, AppError> {
         if sender_id == receiver_id {
-            return Err(AppError::Validation("不能给自己打赏".to_string()));
+            return Err(AppError::validation("不能给自己打赏".to_string()));
         }
         let tip = self.repo.create_tip(sender_id, receiver_id, target_type, target_id, amount, message, is_anonymous).await?;
         // Notify receiver
@@ -1597,7 +1597,7 @@ impl ContentHandler {
         self.create_notification(receiver_id, "tip", Some(sender_id), Some(target_type), Some(target_id), &content).await;
         // XP: first tip
         self.xp.on_first_tip(sender_id).await;
-        Ok(serde_json::to_value(&tip).map_err(|e| AppError::Internal(e.to_string()))?)
+        Ok(serde_json::to_value(&tip).map_err(|e| AppError::internal(e.to_string()))?)
     }
 
     pub async fn get_tips_received(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
@@ -1667,7 +1667,7 @@ impl ContentHandler {
             req.event_type.as_deref().unwrap_or("challenge"), req.start_at, req.end_at,
             req.rules.unwrap_or(serde_json::json!({})), req.prizes.unwrap_or(serde_json::json!([])),
         ).await?;
-        Ok(serde_json::to_value(&event).map_err(|e| AppError::Internal(e.to_string()))?)
+        Ok(serde_json::to_value(&event).map_err(|e| AppError::internal(e.to_string()))?)
     }
 
     pub async fn join_event(&self, event_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
@@ -1686,7 +1686,7 @@ impl ContentHandler {
             &req.topic_key, &req.title, req.description.as_deref(), req.cover_url.as_deref(),
             req.topic_type.as_deref().unwrap_or("discussion"), req.end_at, created_by,
         ).await?;
-        Ok(serde_json::to_value(&topic).map_err(|e| AppError::Internal(e.to_string()))?)
+        Ok(serde_json::to_value(&topic).map_err(|e| AppError::internal(e.to_string()))?)
     }
 
     // ==================== Recommendations ====================
