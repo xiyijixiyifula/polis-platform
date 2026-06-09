@@ -34,7 +34,7 @@ WEB_DIR="web"
 SERVER_BIN_DIR="/usr/local/bin"
 SERVER_WEB_DIR="/root/polis/web"
 SERVER_ENV_FILE="/root/polis/.env"
-SYSTEMD_SERVICES=(polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-web)
+SYSTEMD_SERVICES=(polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-chain polis-web)
 
 # 自动生成版本号: v0.3.YYYYMMDD-HHMM
 VERSION="v0.3.$(date +%Y%m%d-%H%M)"
