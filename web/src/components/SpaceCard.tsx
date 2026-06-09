@@ -174,8 +174,6 @@ export function SpaceCard({ space }: SpaceCardProps) {
               {ownerName ? (
                 <span>
                   <span className="text-primary-600 dark:text-primary-400">@{ownerName}</span>
-                  <span className="text-gray-300 dark:text-gray-600">/</span>
-                  <span className="text-gray-700 dark:text-gray-300 font-mono">{communitySlug}</span>
                 </span>
               ) : (
                 <span className="font-mono text-gray-700 dark:text-gray-300">{communitySlug}</span>
