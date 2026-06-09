@@ -200,7 +200,7 @@ export default function BindWalletPage() {
 									<p className="text-xs text-gray-500 mb-2">复制以下命令到终端执行：</p>
 									<div className="flex items-center gap-2 mb-2">
 										<code className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded flex-1 break-all">
-											polis-chain wallet sign --data "{nonce}"
+											polis-chain wallet sign --password "你的密码" --message "{nonce}"
 										</code>
 										<button
 											onClick={() => handleCopy(`polis-chain wallet sign --data "${nonce}"`)}
@@ -220,7 +220,7 @@ export default function BindWalletPage() {
 										如何获取公钥？
 									</div>
 									<p className="text-xs text-amber-600 dark:text-amber-500">
-										运行 <code className="text-xs bg-amber-100 dark:bg-amber-800 px-1 rounded">polis-chain wallet show</code> 查看钱包详情，复制 "Public Key (hex)" 字段。
+										运行 <code className="text-xs bg-amber-100 dark:bg-amber-800 px-1 rounded">polis-chain wallet show --password "你的密码"</code> 查看钱包详情，复制 "Public Key (hex)" 字段。
 									</p>
 								</div>
 							</div>
