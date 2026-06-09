@@ -100,9 +100,9 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
               {post.module_label || getModuleLabel(post.module_type)}
             </span>
             <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
-            <span className="text-gray-900 dark:text-white font-semibold truncate">
+            <Link href={postLink} className="text-gray-900 dark:text-white font-semibold truncate hover:text-primary-600 dark:hover:text-primary-400">
               {post.title || '无标题'}
-            </span>
+            </Link>
           </div>
 
           {/* Visibility badge */}
