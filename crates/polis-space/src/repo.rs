@@ -88,8 +88,8 @@ impl SpaceRepo {
                     Argon2::default()
                         .hash_password(pwd.as_bytes(), &salt)
                         .map(|h| h.to_string())
-                        .map_err(|_| AppError::Validation("密码哈希失败".to_string()))
-                }).await.map_err(|e| AppError::Internal(e.to_string()))??;
+                        .map_err(|_| AppError::validation("密码哈希失败".to_string()))
+                }).await.map_err(|e| AppError::internal(e.to_string()))??;
                 Some(hash)
             }
             _ => None,
@@ -226,7 +226,7 @@ impl SpaceRepo {
     ) -> Result<Membership, AppError> {
         // 检查是否在封禁期
         if self.is_banned(space_id, user_id).await? {
-            return Err(AppError::Forbidden("你已被该社区封禁，无法加入".to_string()));
+            return Err(AppError::forbidden("你已被该社区封禁，无法加入".to_string()));
         }
 
         let membership = sqlx::query_as::<_, Membership>(
@@ -467,7 +467,7 @@ impl SpaceRepo {
         let space = sqlx::query_as::<_, Space>(
             "SELECT * FROM spaces WHERE id = $1"
         ).bind(space_id).fetch_optional(&self.pool).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         let days_running = (chrono::Utc::now() - space.created_at).num_days().max(0) as i32;
         let base_xp = space.member_count as i32 * 10
@@ -675,9 +675,9 @@ impl SpaceRepo {
                 let h2 = h.clone();
                 Ok(tokio::task::spawn_blocking(move || {
                     let parsed = PasswordHash::new(&h2)
-                        .map_err(|_| AppError::Internal("密码验证失败".to_string()))?;
+                        .map_err(|_| AppError::internal("密码验证失败".to_string()))?;
                     Ok::<_, AppError>(Argon2::default().verify_password(pwd.as_bytes(), &parsed).is_ok())
-                }).await.map_err(|e| AppError::Internal(e.to_string()))??)
+                }).await.map_err(|e| AppError::internal(e.to_string()))??)
             }
             None => Ok(false),
         }

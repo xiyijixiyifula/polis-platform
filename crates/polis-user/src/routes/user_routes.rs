@@ -145,9 +145,9 @@ async fn follow_by_username(
     Path(username): Path<String>,
 ) -> Result<Json<ApiResponse<bool>>, AppError> {
     let target = h.repo.find_by_username(&username).await?
-        .ok_or(AppError::NotFound("User not found".to_string()))?;
+        .ok_or(AppError::not_found("User not found".to_string()))?;
     if target.id == uid {
-        return Err(AppError::Validation("Cannot follow yourself".to_string()));
+        return Err(AppError::validation("Cannot follow yourself".to_string()));
     }
     let followed = h.toggle_follow(uid, "user", target.id).await?;
     Ok(Json(ApiResponse::success(followed)))
@@ -160,7 +160,7 @@ async fn unfollow_by_username(
     Path(username): Path<String>,
 ) -> Result<Json<ApiResponse<bool>>, AppError> {
     let target = h.repo.find_by_username(&username).await?
-        .ok_or(AppError::NotFound("User not found".to_string()))?;
+        .ok_or(AppError::not_found("User not found".to_string()))?;
     let followed = h.toggle_follow(uid, "user", target.id).await?;
     Ok(Json(ApiResponse::success(followed)))
 }

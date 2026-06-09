@@ -44,7 +44,7 @@ async fn install_plugin(
     use base64::Engine as _;
     let wasm_bytes = base64::engine::general_purpose::STANDARD
         .decode(&req.wasm_base64)
-        .map_err(|e| AppError::Validation(format!("Invalid base64 WASM: {}", e)))?;
+        .map_err(|e| AppError::validation(format!("Invalid base64 WASM: {}", e)))?;
 
     let result = handler.install_plugin(
         space_id, author_id, &req.name,

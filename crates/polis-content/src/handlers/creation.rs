@@ -52,7 +52,7 @@ impl CreationHandler {
         .bind(req.password)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(creation)
     }
@@ -86,7 +86,7 @@ impl CreationHandler {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let total: i64 = sqlx::query_scalar(
             r#"
@@ -135,8 +135,8 @@ impl CreationHandler {
         .bind(username)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
-        .ok_or(AppError::NotFound("用户不存在".to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?
+        .ok_or(AppError::not_found("用户不存在".to_string()))?;
 
         let page = query.page.unwrap_or(1);
         let page_size = query.page_size.unwrap_or(20);
@@ -160,7 +160,7 @@ impl CreationHandler {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let total: i64 = sqlx::query_scalar(
             r#"
@@ -205,13 +205,13 @@ impl CreationHandler {
             .bind(id)
             .fetch_optional(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?
-            .ok_or(AppError::NotFound("创作不存在".to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?
+            .ok_or(AppError::not_found("创作不存在".to_string()))?;
 
         // 私有的只能作者自己看
         if creation.visibility == "private" {
             if current_user_id.map_or(true, |uid| uid != creation.creator_id) {
-                return Err(AppError::Forbidden("无权查看此创作".to_string()));
+                return Err(AppError::forbidden("无权查看此创作".to_string()));
             }
         }
 
@@ -233,12 +233,12 @@ impl CreationHandler {
             .bind(id)
             .fetch_optional(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         match existing {
             Some((creator_id,)) if creator_id == user_id => {}
-            Some(_) => return Err(AppError::Forbidden("无权修改此创作".to_string())),
-            None => return Err(AppError::NotFound("创作不存在".to_string())),
+            Some(_) => return Err(AppError::forbidden("无权修改此创作".to_string())),
+            None => return Err(AppError::not_found("创作不存在".to_string())),
         }
 
         let creation = sqlx::query_as::<_, Creation>(
@@ -269,7 +269,7 @@ impl CreationHandler {
         .bind(&req.status)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(creation)
     }
@@ -281,10 +281,10 @@ impl CreationHandler {
             .bind(user_id)
             .execute(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         if result.rows_affected() == 0 {
-            return Err(AppError::NotFound("创作不存在".to_string()));
+            return Err(AppError::not_found("创作不存在".to_string()));
         }
 
         Ok(())
@@ -307,8 +307,8 @@ impl CreationHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
-        .ok_or(AppError::Forbidden("无权操作此创作".to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?
+        .ok_or(AppError::forbidden("无权操作此创作".to_string()))?;
 
         // 获取社区 ID 和 owner_id
         let space_row: Option<(Uuid, Option<Uuid>)> = sqlx::query_as(
@@ -317,9 +317,9 @@ impl CreationHandler {
         .bind(&req.space_ns)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
-        let (space_id, space_owner) = space_row.ok_or(AppError::NotFound("社区不存在".to_string()))?;
+        let (space_id, space_owner) = space_row.ok_or(AppError::not_found("社区不存在".to_string()))?;
 
         // 检查自定义模块模式和作品类型
         let module_info: Option<(String, serde_json::Value, String)> = sqlx::query_as(
@@ -329,18 +329,18 @@ impl CreationHandler {
         .bind(&req.module_type)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         if let Some((mode, allowed_types, module_name)) = module_info {
             // 创建者模式：仅 owner 可投稿
             if mode == "creator_only" && space_owner != Some(user_id) {
-                return Err(AppError::Forbidden(format!("仅社区创建者可在「{}」模块发布作品", module_name)));
+                return Err(AppError::forbidden(format!("仅社区创建者可在「{}」模块发布作品", module_name)));
             }
             // 作品类型校验
             let allowed: Vec<String> = serde_json::from_value(allowed_types).unwrap_or_default();
             let content_type = creation.content_type.clone();
             if !allowed.contains(&content_type) {
-                return Err(AppError::Forbidden(format!(
+                return Err(AppError::forbidden(format!(
                     "「{}」模块不接受 {} 类型的作品（允许: {}）",
                     module_name,
                     content_type,
@@ -350,7 +350,7 @@ impl CreationHandler {
         } else {
             // 模块不存在或未激活，检查是否为旧模块类型（兼容迁移过渡期）
             // 如果没有匹配的 space_modules 记录，拒绝投稿
-            return Err(AppError::Forbidden("目标社区未开启该模块".to_string()));
+            return Err(AppError::forbidden("目标社区未开启该模块".to_string()));
         }
 
         // 检查是否已存在
@@ -362,10 +362,10 @@ impl CreationHandler {
         .bind(&req.module_type)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         if existing.is_some() {
-            return Err(AppError::Conflict("已经投稿到该社区".to_string()));
+            return Err(AppError::conflict("已经投稿到该社区".to_string()));
         }
 
         // 检查社区审核策略
@@ -373,7 +373,7 @@ impl CreationHandler {
             .bind(space_id)
             .fetch_optional(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         let initial_status = match space_vis.as_deref() {
             Some("private") => "pending_review",
@@ -396,7 +396,7 @@ impl CreationHandler {
         .bind(initial_status)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         // 同步创建 posts 记录，让社区动态可直接展示该作品
         sqlx::query(
@@ -415,7 +415,7 @@ impl CreationHandler {
         .bind(creation_id)
         .execute(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         // 更新社区帖子计数
         sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
@@ -437,16 +437,16 @@ impl CreationHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
-        let (creation_id, space_id, module_type) = ref_info.ok_or(AppError::NotFound("引用不存在".to_string()))?;
+        let (creation_id, space_id, module_type) = ref_info.ok_or(AppError::not_found("引用不存在".to_string()))?;
 
         // 删除引用
         sqlx::query("DELETE FROM community_module_refs WHERE id = $1")
             .bind(id)
             .execute(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         // 同步软删除对应的 posts 记录
         if let Err(e) = sqlx::query(
@@ -478,10 +478,10 @@ impl CreationHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         if _owner.is_none() {
-            return Err(AppError::Forbidden("无权查看".to_string()));
+            return Err(AppError::forbidden("无权查看".to_string()));
         }
 
         let rows = sqlx::query_as::<_, (Uuid, String, Option<String>, String, bool, i32, chrono::DateTime<chrono::Utc>, Uuid, String, String, i64, i64)>(
@@ -546,8 +546,8 @@ impl CreationHandler {
             .bind(ns)
             .fetch_optional(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?
-            .ok_or(AppError::NotFound("社区不存在".to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?
+            .ok_or(AppError::not_found("社区不存在".to_string()))?;
 
         let refs = sqlx::query_as::<_, CommunityModuleRef>(
             r#"
@@ -569,7 +569,7 @@ impl CreationHandler {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let total: i64 = sqlx::query_scalar(
             r#"
@@ -592,7 +592,7 @@ impl CreationHandler {
             .bind(space_id)
             .fetch_one(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
         let space = SpaceMini { id: sid, namespace: sns, title: stitle };
 
         let user_id = current_user_id.unwrap_or_default();
@@ -601,7 +601,7 @@ impl CreationHandler {
             .bind(&creation_ids)
             .fetch_all(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
         let creation_map: std::collections::HashMap<Uuid, Creation> = creations.into_iter().map(|c| (c.id, c)).collect();
         let all_creations: Vec<Creation> = creation_map.values().cloned().collect();
         let batch_publics = creations_to_batch(&self.pool, &all_creations, user_id).await?;
@@ -611,7 +611,7 @@ impl CreationHandler {
         for module_ref in refs {
             let creation_public = public_map.get(&module_ref.creation_id)
                 .cloned()
-                .ok_or(AppError::NotFound("创作数据不存在".to_string()))?;
+                .ok_or(AppError::not_found("创作数据不存在".to_string()))?;
 
             public_list.push(ModuleRefPublic {
                 id: module_ref.id,
@@ -708,7 +708,7 @@ impl CreationHandler {
         .unwrap_or(false);
 
         if !is_moderator && !is_owner {
-            return Err(AppError::Forbidden("无权管理此引用".to_string()));
+            return Err(AppError::forbidden("无权管理此引用".to_string()));
         }
 
         let module_ref = match req.action.as_str() {
@@ -721,7 +721,7 @@ impl CreationHandler {
                 .bind(status)
                 .fetch_one(&self.pool)
                 .await
-                .map_err(|e| AppError::Internal(e.to_string()))?
+                .map_err(|e| AppError::internal(e.to_string()))?
             }
             "show" | "approve" => {
                 sqlx::query_as::<_, CommunityModuleRef>(
@@ -730,7 +730,7 @@ impl CreationHandler {
                 .bind(id)
                 .fetch_one(&self.pool)
                 .await
-                .map_err(|e| AppError::Internal(e.to_string()))?
+                .map_err(|e| AppError::internal(e.to_string()))?
             }
             "pin" => {
                 sqlx::query_as::<_, CommunityModuleRef>(
@@ -739,7 +739,7 @@ impl CreationHandler {
                 .bind(id)
                 .fetch_one(&self.pool)
                 .await
-                .map_err(|e| AppError::Internal(e.to_string()))?
+                .map_err(|e| AppError::internal(e.to_string()))?
             }
             "unpin" => {
                 sqlx::query_as::<_, CommunityModuleRef>(
@@ -748,9 +748,9 @@ impl CreationHandler {
                 .bind(id)
                 .fetch_one(&self.pool)
                 .await
-                .map_err(|e| AppError::Internal(e.to_string()))?
+                .map_err(|e| AppError::internal(e.to_string()))?
             }
-            _ => return Err(AppError::Validation("无效的操作".to_string())),
+            _ => return Err(AppError::validation("无效的操作".to_string())),
         };
 
         Ok(module_ref)
@@ -779,7 +779,7 @@ async fn creations_to_batch(
     .bind(&creator_ids)
     .fetch_all(pool)
     .await
-    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(|e| AppError::internal(e.to_string()))?
     .into_iter()
     .map(|u: polis_core::models::User| (u.id, UserPublic::from(u)))
     .collect();
@@ -920,7 +920,7 @@ async fn creation_to_public(
     .fetch_one(pool)
     .await
     .map(|u| UserPublic::from(u))
-    .map_err(|e| AppError::Internal(e.to_string()))?;
+    .map_err(|e| AppError::internal(e.to_string()))?;
 
     let is_liked: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM likes WHERE target_type = 'creation' AND target_id = $1 AND user_id = $2)",

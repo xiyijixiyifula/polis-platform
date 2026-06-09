@@ -16,4 +16,5 @@ axum = { workspace = true }
 jsonwebtoken = { workspace = true }
 http = "1"
 regex = { workspace = true }
+tracing = { workspace = true }
 tokio = { workspace = true }

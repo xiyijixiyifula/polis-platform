@@ -304,9 +304,10 @@ export default function FeedLayout() {
                 {hasMore && (
                   <div ref={loadMoreRef} className="py-6 text-center">
                     {loadingMore ? (
-                      <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                        <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                        <span>加载中...</span>
+                      <div className="animate-pulse space-y-3">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
                       </div>
                     ) : (
                       <span className="text-sm text-gray-400">下拉加载更多</span>

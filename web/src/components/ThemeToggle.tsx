@@ -37,7 +37,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={toggle}
-      className="rounded-full p-2 transition-colors"
+      className="rounded-full p-2.5 transition-colors"
       style={{ color: dark ? '#0A84FF' : '#86868b' }}
       onMouseEnter={(e) => {
         e.currentTarget.style.backgroundColor = dark ? 'rgba(10,132,255,0.1)' : 'rgba(0,0,0,0.05)';

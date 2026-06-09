@@ -260,7 +260,13 @@ export default function ConversationPage() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4 space-y-4">
         {loading ? (
-          <div className="text-center py-12 text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+          <div className="animate-pulse space-y-3 py-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                <div className={`h-12 bg-gray-200 dark:bg-gray-700 rounded-2xl ${i % 2 === 0 ? 'w-3/5 rounded-br-md' : 'w-2/3 rounded-bl-md'}`}></div>
+              </div>
+            ))}
+          </div>
         ) : displayMsgs.length === 0 ? (
           <div className="text-center py-16">
             <p className="text-gray-400 dark:text-gray-500 text-sm">

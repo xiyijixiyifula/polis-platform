@@ -28,10 +28,10 @@ impl AgentHandler {
         .bind(&req.username)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         if existing.is_some() {
-            return Err(AppError::Conflict("用户名已被使用".to_string()));
+            return Err(AppError::conflict("用户名已被使用".to_string()));
         }
 
         // 生成 API Key
@@ -49,11 +49,11 @@ impl AgentHandler {
             let salt = SaltString::generate(&mut OsRng);
             let argon2 = Argon2::default();
             let ph = argon2.hash_password(pwd.as_bytes(), &salt)
-                .map_err(|e| AppError::Internal(e.to_string()))?.to_string();
+                .map_err(|e| AppError::internal(e.to_string()))?.to_string();
             let akh = argon2.hash_password(ak.as_bytes(), &salt)
-                .map_err(|e| AppError::Internal(e.to_string()))?.to_string();
+                .map_err(|e| AppError::internal(e.to_string()))?.to_string();
             Ok::<_, AppError>((ph, akh))
-        }).await.map_err(|e| AppError::Internal(e.to_string()))??;
+        }).await.map_err(|e| AppError::internal(e.to_string()))??;
 
         // 创建 user 记录
         let user: (Uuid,) = sqlx::query_as(
@@ -66,7 +66,7 @@ impl AgentHandler {
         .bind(&password_hash)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         // 创建 agent 记录
         let capabilities = serde_json::to_value(&req.capabilities).unwrap_or_default();
@@ -82,7 +82,7 @@ impl AgentHandler {
         .bind(api_key_prefix)
         .execute(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let result = serde_json::json!({
             "agent_id": user.0,
@@ -109,20 +109,20 @@ impl AgentHandler {
         .bind(agent_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
-        let agent = agent.ok_or(AppError::Forbidden("Agent 不存在或已禁用".to_string()))?;
+        let agent = agent.ok_or(AppError::forbidden("Agent 不存在或已禁用".to_string()))?;
 
         // 验证 API Key (spawn_blocking)
-        let api_key_hash = agent.api_key_hash.ok_or(AppError::Forbidden("Agent 未设置 API Key".to_string()))?;
+        let api_key_hash = agent.api_key_hash.ok_or(AppError::forbidden("Agent 未设置 API Key".to_string()))?;
         let ak = api_key.to_string();
         let hash = api_key_hash.to_string();
         tokio::task::spawn_blocking(move || {
             use argon2::{Argon2, PasswordHash, PasswordVerifier};
-            let parsed = PasswordHash::new(&hash).map_err(|e| AppError::Internal(e.to_string()))?;
+            let parsed = PasswordHash::new(&hash).map_err(|e| AppError::internal(e.to_string()))?;
             Argon2::default().verify_password(ak.as_bytes(), &parsed)
-                .map_err(|_| AppError::Forbidden("API Key 无效".to_string()))
-        }).await.map_err(|e| AppError::Internal(e.to_string()))??;
+                .map_err(|_| AppError::forbidden("API Key 无效".to_string()))
+        }).await.map_err(|e| AppError::internal(e.to_string()))??;
 
         // 更新最后活跃时间
         if let Err(e) = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")
@@ -145,7 +145,7 @@ impl AgentHandler {
             &claims,
             &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
         )
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(token)
     }
@@ -161,10 +161,10 @@ impl AgentHandler {
         .bind(agent_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let (id, user_id, username, display_name, agent_type, capabilities, is_active, status, last_active_at, created_at) =
-            row.ok_or(AppError::NotFound("Agent 不存在".to_string()))?;
+            row.ok_or(AppError::not_found("Agent 不存在".to_string()))?;
 
         let cap_list: Vec<String> = serde_json::from_value(capabilities).unwrap_or_default();
 
@@ -193,7 +193,7 @@ impl AgentHandler {
         .bind(owner_user_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(rows.into_iter().map(|(id, user_id, username, display_name, agent_type, capabilities, is_active, status, last_active_at, created_at)| {
             let cap_list: Vec<String> = serde_json::from_value(capabilities).unwrap_or_default();
@@ -211,10 +211,10 @@ impl AgentHandler {
         .bind(owner_id)
         .execute(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         if result.rows_affected() == 0 {
-            return Err(AppError::NotFound("Agent 不存在".to_string()));
+            return Err(AppError::not_found("Agent 不存在".to_string()));
         }
         Ok(())
     }
@@ -235,10 +235,10 @@ impl AgentHandler {
         .bind(registered_by)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         if is_admin.is_none() {
-            return Err(AppError::Forbidden("仅社区管理员可注册 Agent".to_string()));
+            return Err(AppError::forbidden("仅社区管理员可注册 Agent".to_string()));
         }
 
         let trigger_words = serde_json::to_value(req.trigger_words.unwrap_or_default()).unwrap_or_default();
@@ -255,7 +255,7 @@ impl AgentHandler {
         .bind(&auto_trigger)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(sa)
     }
@@ -274,7 +274,7 @@ impl AgentHandler {
         .bind(space_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(rows.into_iter().map(|(sa_id, sa_space_id, trigger_words, auto_trigger, sa_created_at, a_id, u_id, username, display_name, agent_type, capabilities, is_active, status)| {
             let cap_list: Vec<String> = serde_json::from_value(capabilities).unwrap_or_default();

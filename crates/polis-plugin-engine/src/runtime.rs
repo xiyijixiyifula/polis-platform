@@ -60,7 +60,7 @@ impl PluginEngine {
         permissions: Vec<PluginPermission>,
     ) -> Result<(), AppError> {
         let module = Module::new(&self.engine, wasm_bytes)
-            .map_err(|e| AppError::Internal(format!("Failed to compile WASM module: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to compile WASM module: {}", e)))?;
 
         let mut linker: Linker<PluginContext> = Linker::new(&self.engine);
 
@@ -72,7 +72,7 @@ impl PluginEngine {
 
         let _instance = linker
             .instantiate(&mut store, &module)
-            .map_err(|e| AppError::Internal(format!("Failed to instantiate plugin: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to instantiate plugin: {}", e)))?;
 
         let plugin = PluginInstance {
             id,
@@ -108,7 +108,7 @@ impl PluginEngine {
         let _ = plugin_id;
         let _ = function_name;
         let _ = args;
-        Err(AppError::Internal("Function calling not yet fully implemented".to_string()))
+        Err(AppError::internal("Function calling not yet fully implemented".to_string()))
     }
 
     /// 卸载插件
@@ -117,7 +117,7 @@ impl PluginEngine {
             .write()
             .await
             .remove(&plugin_id)
-            .ok_or(AppError::NotFound("Plugin not found".to_string()))?;
+            .ok_or(AppError::not_found("Plugin not found".to_string()))?;
         tracing::info!("Plugin {} unloaded", plugin_id);
         Ok(())
     }

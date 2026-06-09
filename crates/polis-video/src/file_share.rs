@@ -50,14 +50,14 @@ impl FileShareRepo {
                          FROM file_shares f WHERE f.id = sl.file_id)
             ) FROM share_links sl WHERE sl.code = $1"#
         ).bind(code).fetch_optional(&self.pool).await?
-        .ok_or(AppError::NotFound("分享链接不存在或已失效".to_string()))?;
+        .ok_or(AppError::not_found("分享链接不存在或已失效".to_string()))?;
 
         let data = link.0;
         // 验证密码
         if let Some(stored_pwd) = data["password"].as_str() {
             if !stored_pwd.is_empty() {
                 if password.is_none() || password.unwrap_or("") != stored_pwd {
-                    return Err(AppError::Forbidden("提取码错误".to_string()));
+                    return Err(AppError::forbidden("提取码错误".to_string()));
                 }
             }
         }
@@ -65,7 +65,7 @@ impl FileShareRepo {
         if let Some(expires) = data["expires_at"].as_str() {
             if let Ok(t) = chrono::DateTime::parse_from_rfc3339(expires) {
                 if t < chrono::Utc::now() {
-                    return Err(AppError::Forbidden("分享链接已过期".to_string()));
+                    return Err(AppError::forbidden("分享链接已过期".to_string()));
                 }
             }
         }

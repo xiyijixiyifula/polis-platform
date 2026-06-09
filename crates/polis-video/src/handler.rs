@@ -46,19 +46,19 @@ impl VideoHandler {
         let max_mb = self.get_max_video_size_mb().await;
         let max_bytes = max_mb * 1024 * 1024;
         if data.len() as u64 > max_bytes {
-            return Err(AppError::Validation(format!("文件大小超过 {}MB 限制", max_mb)));
+            return Err(AppError::validation(format!("文件大小超过 {}MB 限制", max_mb)));
         }
         let ext = extension.trim_start_matches('.').to_lowercase();
         if !self.config.allowed_extensions.contains(&ext) {
-            return Err(AppError::Validation(format!("不支持的文件格式: {}。支持: {:?}", ext, self.config.allowed_extensions)));
+            return Err(AppError::validation(format!("不支持的文件格式: {}。支持: {:?}", ext, self.config.allowed_extensions)));
         }
         let file_id = Uuid::new_v4();
         let storage_path = PathBuf::from(&self.config.storage_path);
-        tokio::fs::create_dir_all(&storage_path).await.map_err(|e| AppError::Internal(format!("创建存储目录失败: {}", e)))?;
+        tokio::fs::create_dir_all(&storage_path).await.map_err(|e| AppError::internal(format!("创建存储目录失败: {}", e)))?;
         let filename = format!("{}.{}", file_id, ext);
         let filepath = storage_path.join(&filename);
-        let mut file = tokio::fs::File::create(&filepath).await.map_err(|e| AppError::Internal(format!("创建文件失败: {}", e)))?;
-        file.write_all(data).await.map_err(|e| AppError::Internal(format!("写入文件失败: {}", e)))?;
+        let mut file = tokio::fs::File::create(&filepath).await.map_err(|e| AppError::internal(format!("创建文件失败: {}", e)))?;
+        file.write_all(data).await.map_err(|e| AppError::internal(format!("写入文件失败: {}", e)))?;
         let duration = self.get_video_duration(&filepath).await;
         let vis = match visibility { "private" => "private", "unlisted" => "unlisted", _ => "public" };
         let video = self.repo.create(uploader_id, title, description, filepath.to_str().unwrap_or(""), data.len() as i64, duration, vis).await?;
@@ -145,7 +145,7 @@ impl VideoHandler {
     // ===== 视频详情 =====
 
     pub async fn get_video(&self, video_id: Uuid, user_id: Option<Uuid>) -> Result<VideoPublic, AppError> {
-        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::NotFound("视频不存在".to_string()))?;
+        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::not_found("视频不存在".to_string()))?;
         self.check_access(&video, user_id, None)?;
         if let Err(e) = self.repo.increment_view(video_id).await {
             tracing::warn!("Failed to increment view count for video {}: {}", video_id, e);
@@ -163,7 +163,7 @@ impl VideoHandler {
 
     /// 在社区上下文中查看视频
     pub async fn get_video_in_space(&self, video_id: Uuid, ns: &str, user_id: Option<Uuid>) -> Result<VideoPublic, AppError> {
-        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::NotFound("视频不存在".to_string()))?;
+        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::not_found("视频不存在".to_string()))?;
         self.check_access(&video, user_id, None)?;
         let sid = resolve_space_id(&self.repo.pool, ns).await?;
         let review = self.repo.find_space_review(sid, video_id).await?;
@@ -189,13 +189,13 @@ impl VideoHandler {
     // ===== 分享码访问 =====
 
     pub async fn get_video_by_share_code(&self, code: &str, user_id: Option<Uuid>, password: Option<&str>) -> Result<VideoPublic, AppError> {
-        let video = self.repo.find_by_share_code(code).await?.ok_or(AppError::NotFound("视频不存在或链接已失效".to_string()))?;
+        let video = self.repo.find_by_share_code(code).await?.ok_or(AppError::not_found("视频不存在或链接已失效".to_string()))?;
         // 密码检查
         if let Some(ref pwd) = video.share_password {
             if !pwd.is_empty() {
                 match password {
                     Some(p) if p == *pwd => {},
-                    _ => return Err(AppError::Forbidden("需要密码访问".to_string())),
+                    _ => return Err(AppError::forbidden("需要密码访问".to_string())),
                 }
             }
         }
@@ -214,9 +214,9 @@ impl VideoHandler {
     // ===== 发布到社区 =====
 
     pub async fn publish_to_spaces(&self, video_id: Uuid, user_id: Uuid, req: PublishRequest) -> Result<(), AppError> {
-        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::NotFound("视频不存在".to_string()))?;
+        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::not_found("视频不存在".to_string()))?;
         if video.uploader_id != user_id {
-            return Err(AppError::Forbidden("只能投送自己的视频".to_string()));
+            return Err(AppError::forbidden("只能投送自己的视频".to_string()));
         }
         // 验证每个目标社区的权限：模块开启 + 成员资格
         for &sid in &req.space_ids {
@@ -231,7 +231,7 @@ impl VideoHandler {
         let status = match req.status.as_str() {
             "approved" => "approved",
             "rejected" => "rejected",
-            _ => return Err(AppError::Validation("审核状态必须是 approved 或 rejected".to_string())),
+            _ => return Err(AppError::validation("审核状态必须是 approved 或 rejected".to_string())),
         };
         self.repo.review_in_space(sid, video_id, reviewer_id, status, req.reason.as_deref()).await
     }
@@ -239,14 +239,14 @@ impl VideoHandler {
     // ===== 编辑 & 删除 =====
 
     pub async fn update_video(&self, video_id: Uuid, user_id: Uuid, req: UpdateVideoRequest) -> Result<(), AppError> {
-        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::NotFound("视频不存在".to_string()))?;
-        if video.uploader_id != user_id { return Err(AppError::Forbidden("只能编辑自己的视频".to_string())); }
+        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::not_found("视频不存在".to_string()))?;
+        if video.uploader_id != user_id { return Err(AppError::forbidden("只能编辑自己的视频".to_string())); }
         self.repo.update(video_id, req.title.as_deref(), req.description.as_deref(), req.visibility.as_deref()).await
     }
 
     pub async fn delete_video(&self, video_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
-        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::NotFound("视频不存在".to_string()))?;
-        if video.uploader_id != user_id { return Err(AppError::Forbidden("只能删除自己的视频".to_string())); }
+        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::not_found("视频不存在".to_string()))?;
+        if video.uploader_id != user_id { return Err(AppError::forbidden("只能删除自己的视频".to_string())); }
         if let Err(e) = tokio::fs::remove_file(&video.original_url).await {
             tracing::warn!("Failed to delete video file {}: {}", video.original_url, e);
         }
@@ -263,8 +263,8 @@ impl VideoHandler {
     // ===== 密码分享 =====
 
     pub async fn set_share_password(&self, video_id: Uuid, user_id: Uuid, req: SetPasswordRequest) -> Result<(), AppError> {
-        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::NotFound("视频不存在".to_string()))?;
-        if video.uploader_id != user_id { return Err(AppError::Forbidden("只能设置自己的视频".to_string())); }
+        let video = self.repo.find_by_id(video_id).await?.ok_or(AppError::not_found("视频不存在".to_string()))?;
+        if video.uploader_id != user_id { return Err(AppError::forbidden("只能设置自己的视频".to_string())); }
         self.repo.set_share_password(video_id, &req.password).await
     }
 
@@ -296,7 +296,7 @@ impl VideoHandler {
 
     fn check_access(&self, video: &Video, user_id: Option<Uuid>, _password: Option<&str>) -> Result<(), AppError> {
         if video.visibility == "private" {
-            match user_id { Some(uid) if uid == video.uploader_id => Ok(()), _ => Err(AppError::Forbidden("该视频为私有，仅上传者可查看".to_string())) }
+            match user_id { Some(uid) if uid == video.uploader_id => Ok(()), _ => Err(AppError::forbidden("该视频为私有，仅上传者可查看".to_string())) }
         } else { Ok(()) }
     }
 
@@ -332,7 +332,7 @@ impl VideoHandler {
 }
 
 async fn transcode_video(input: &PathBuf, output_dir: &PathBuf, _config: &VideoServiceConfig) -> Result<(String, Option<String>, serde_json::Value), AppError> {
-    tokio::fs::create_dir_all(output_dir).await.map_err(|e| AppError::Internal(format!("创建HLS目录失败: {}", e)))?;
+    tokio::fs::create_dir_all(output_dir).await.map_err(|e| AppError::internal(format!("创建HLS目录失败: {}", e)))?;
     let output_playlist = output_dir.join("index.m3u8");
     let file_id = output_dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
 
@@ -353,12 +353,12 @@ async fn transcode_video(input: &PathBuf, output_dir: &PathBuf, _config: &VideoS
             "-hls_segment_filename", output_dir.join("segment_%03d.ts").to_str().unwrap_or(""),
             output_playlist.to_str().unwrap_or(""),
         ])
-        .output().await.map_err(|e| AppError::External(format!("FFmpeg启动失败: {}", e)))?;
+        .output().await.map_err(|e| AppError::external(format!("FFmpeg启动失败: {}", e)))?;
 
     if !result.status.success() {
         let stderr = String::from_utf8_lossy(&result.stderr);
         tracing::error!("FFmpeg转码失败: {}", stderr);
-        return Err(AppError::External(format!("FFmpeg转码失败: {}", stderr.lines().last().unwrap_or("未知错误"))));
+        return Err(AppError::external(format!("FFmpeg转码失败: {}", stderr.lines().last().unwrap_or("未知错误"))));
     }
 
     // 生成缩略图（取第5秒）

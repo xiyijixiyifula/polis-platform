@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use polis_core::events::Event;
+use polis_core::shutdown::shutdown_signal;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
 
@@ -54,7 +55,9 @@ async fn main() -> anyhow::Result<()> {
         tracing::info!("Aggregate service starting on {}", addr);
 
         let listener = tokio::net::TcpListener::bind(&addr).await?;
-        axum::serve(listener, app).await?;
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal())
+            .await?;
     } else {
         tracing::warn!("NATS not available, aggregate service running without event processing");
         let handler = Arc::new(AggregateHandler::new(Aggregator::clone(&aggregator)));
@@ -62,7 +65,9 @@ async fn main() -> anyhow::Result<()> {
 
         let addr = format!("0.0.0.0:{}", port);
         let listener = tokio::net::TcpListener::bind(&addr).await?;
-        axum::serve(listener, app).await?;
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal())
+            .await?;
     }
 
     Ok(())

@@ -296,7 +296,7 @@ function ThreadPublishInner() {
 
 export default function ThreadPublishPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-2xl px-4 py-20 text-center text-gray-500"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>}>
+    <Suspense fallback={<div className="mx-auto max-w-2xl px-4 py-20 animate-pulse space-y-4"><div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48"></div><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div><div className="h-32 bg-gray-200 dark:bg-gray-700 rounded w-full"></div></div>}>
       <ThreadPublishInner />
     </Suspense>
   );

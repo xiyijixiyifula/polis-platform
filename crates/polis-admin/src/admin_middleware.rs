@@ -22,17 +22,17 @@ pub async fn admin_auth(
         .headers()
         .get("Authorization")
         .and_then(|value| value.to_str().ok())
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::unauthorized())?;
 
     let token = auth_header
         .strip_prefix("Bearer ")
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::unauthorized())?;
 
     let claims = verify_admin_token(token, &handler.config)
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| AppError::unauthorized())?;
 
     let user_id = Uuid::parse_str(&claims.sub)
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| AppError::unauthorized())?;
 
     req.extensions_mut().insert(user_id);
     req.extensions_mut().insert(claims.role);

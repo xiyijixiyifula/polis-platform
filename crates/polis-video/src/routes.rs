@@ -35,14 +35,14 @@ async fn extract_user_id(handler: &VideoHandler, headers: &HeaderMap) -> Result<
                     return Ok(None); // 已撤销的 token 视为未登录
                 }
             }
-            Uuid::parse_str(&data.claims.sub).map(Some).map_err(|_| AppError::Forbidden("Invalid token".to_string()))
+            Uuid::parse_str(&data.claims.sub).map(Some).map_err(|_| AppError::forbidden("Invalid token".to_string()))
         }
         Err(_) => Ok(None),
     }
 }
 
 async fn require_user(handler: &VideoHandler, headers: &HeaderMap) -> Result<Uuid, AppError> {
-    extract_user_id(handler, headers).await?.ok_or(AppError::Forbidden("请先登录".to_string()))
+    extract_user_id(handler, headers).await?.ok_or(AppError::forbidden("请先登录".to_string()))
 }
 
 // ===== Query params =====
@@ -63,23 +63,23 @@ enum SpaceAction { List, GetVideo(Uuid), Review(Uuid) }
 
 fn parse_space_path(path: &str) -> Result<(String, SpaceAction), AppError> {
     let rem = path.strip_prefix("/api/spaces/").unwrap_or("");
-    let pos = rem.find("/videos").ok_or(AppError::NotFound("Invalid path".to_string()))?;
+    let pos = rem.find("/videos").ok_or(AppError::not_found("Invalid path".to_string()))?;
     let ns_raw = &rem[..pos];
     let ns = percent_encoding::percent_decode_str(ns_raw).decode_utf8()
-        .map_err(|_| AppError::Validation("Invalid UTF-8 in namespace".to_string()))?
+        .map_err(|_| AppError::validation("Invalid UTF-8 in namespace".to_string()))?
         .to_string()
         .replace('~', "/");
-    if ns.is_empty() { return Err(AppError::NotFound("Missing namespace".to_string())); }
+    if ns.is_empty() { return Err(AppError::not_found("Missing namespace".to_string())); }
 
     let after = &rem[pos + 7..].trim_start_matches('/');
     if after.is_empty() {
         return Ok((ns, SpaceAction::List));
     }
     if let Some(rest) = after.strip_suffix("/review").or_else(|| after.strip_suffix("/review/")) {
-        let vid = Uuid::parse_str(rest).map_err(|_| AppError::Validation("Invalid video ID".to_string()))?;
+        let vid = Uuid::parse_str(rest).map_err(|_| AppError::validation("Invalid video ID".to_string()))?;
         return Ok((ns, SpaceAction::Review(vid)));
     }
-    let vid = Uuid::parse_str(after).map_err(|_| AppError::Validation("Invalid video ID".to_string()))?;
+    let vid = Uuid::parse_str(after).map_err(|_| AppError::validation("Invalid video ID".to_string()))?;
     Ok((ns, SpaceAction::GetVideo(vid)))
 }
 
@@ -130,14 +130,14 @@ async fn upload_video(State(h): State<Arc<VideoHandler>>, headers: HeaderMap, mu
     let mut file_data: Option<Vec<u8>> = None;
     let mut filename = String::new();
 
-    while let Some(field) = multipart.next_field().await.map_err(|e| AppError::Validation(format!("读取表单字段失败: {}", e)))? {
+    while let Some(field) = multipart.next_field().await.map_err(|e| AppError::validation(format!("读取表单字段失败: {}", e)))? {
         let name = field.name().unwrap_or("").to_string();
         match name.as_str() {
             "file" => {
                 filename = field.file_name().unwrap_or("video.mp4").to_string();
-                let data = field.bytes().await.map_err(|e| AppError::Validation(format!("读取文件数据失败: {}", e)))?;
+                let data = field.bytes().await.map_err(|e| AppError::validation(format!("读取文件数据失败: {}", e)))?;
                 if data.len() > (h.config.max_file_size_mb as usize) * 1024 * 1024 {
-                    return Err(AppError::Validation(format!("文件大小超过{}MB限制", h.config.max_file_size_mb)));
+                    return Err(AppError::validation(format!("文件大小超过{}MB限制", h.config.max_file_size_mb)));
                 }
                 file_data = Some(data.to_vec());
             }
@@ -148,7 +148,7 @@ async fn upload_video(State(h): State<Arc<VideoHandler>>, headers: HeaderMap, mu
         }
     }
 
-    let data = file_data.ok_or(AppError::Validation("请选择视频文件".to_string()))?;
+    let data = file_data.ok_or(AppError::validation("请选择视频文件".to_string()))?;
     let ext = std::path::Path::new(&filename).extension()
         .and_then(|e| e.to_str()).unwrap_or("mp4").to_string();
 
@@ -265,7 +265,7 @@ async fn space_get(State(h): State<Arc<VideoHandler>>, Path(path): Path<String>,
             let v = h.get_video_in_space(vid, &ns, uid).await?;
             Ok(ok(serde_json::to_value(v).unwrap_or_default()))
         }
-        SpaceAction::Review(_) => Err(AppError::Validation("Use POST for review".to_string())),
+        SpaceAction::Review(_) => Err(AppError::validation("Use POST for review".to_string())),
     }
 }
 
@@ -279,7 +279,7 @@ async fn space_post(State(h): State<Arc<VideoHandler>>, Path(path): Path<String>
             h.review_in_space(&ns, vid, uid, data).await?;
             Ok(ok_str("审核完成"))
         }
-        _ => Err(AppError::NotFound("Unknown action".to_string())),
+        _ => Err(AppError::not_found("Unknown action".to_string())),
     }
 }
 

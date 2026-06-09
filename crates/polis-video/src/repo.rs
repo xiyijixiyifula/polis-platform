@@ -84,7 +84,7 @@ impl VideoRepo {
             r#"SELECT sv.space_id, s.namespace, s.title, sv.review_status
                FROM space_videos sv JOIN spaces s ON sv.space_id=s.id
                WHERE sv.video_id=$1 ORDER BY sv.submitted_at DESC"#
-        ).bind(video_id).fetch_all(&self.pool).await.map_err(|e| AppError::Database(e))
+        ).bind(video_id).fetch_all(&self.pool).await.map_err(|e| AppError::database(e))
     }
 
     /// 获取视频在特定社区的审核状态
@@ -103,14 +103,14 @@ impl VideoRepo {
         let visibility: String = sqlx::query_scalar(
             "SELECT visibility FROM spaces WHERE id = $1 AND status = 'active'"
         ).bind(space_id).fetch_optional(&self.pool).await?
-            .ok_or(AppError::NotFound("目标社区不存在或已关闭".to_string()))?;
+            .ok_or(AppError::not_found("目标社区不存在或已关闭".to_string()))?;
 
         // 检查是否有活跃模块允许视频内容（查 space_modules 表，而非旧的 spaces.enabled_modules）
         let has_video: bool = sqlx::query_scalar(
             r#"SELECT EXISTS(SELECT 1 FROM space_modules WHERE space_id = $1 AND is_active = true AND allowed_content_types::jsonb @> '["video"]'::jsonb)"#
         ).bind(space_id).fetch_one(&self.pool).await?;
         if !has_video {
-            return Err(AppError::Forbidden("目标社区未开启视频模块".to_string()));
+            return Err(AppError::forbidden("目标社区未开启视频模块".to_string()));
         }
 
         // 公开社区任何人可投稿，私有社区需要是成员
@@ -119,7 +119,7 @@ impl VideoRepo {
                 "SELECT EXISTS(SELECT 1 FROM memberships WHERE space_id = $1 AND user_id = $2 AND role != 'banned')"
             ).bind(space_id).bind(user_id).fetch_one(&self.pool).await?;
             if !is_member {
-                return Err(AppError::Forbidden("私有社区需要先加入才能投稿".to_string()));
+                return Err(AppError::forbidden("私有社区需要先加入才能投稿".to_string()));
             }
         }
 

@@ -32,7 +32,7 @@ function renderMarkdown(md: string): string {
       return `<a href="${safe}" class="text-primary-600 hover:underline" target="_blank" rel="noopener noreferrer">${text}</a>`;
     })
     // 图片
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-lg max-w-full my-2" />')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="rounded-lg max-w-full my-2" loading="lazy" />')
     // 无序列表
     .replace(/^- (.+)$/gm, '<li class="text-gray-600 ml-5 list-disc">$1</li>')
     // 有序列表

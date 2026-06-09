@@ -51,8 +51,18 @@ export default function ExplorePage() {
       </div>
 
       {loading ? (
-        <div className="card py-12 text-center text-gray-400">
-          <div className="animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+        <div className="animate-pulse grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="card p-5 space-y-3">
+              <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
+              <div className="flex items-center gap-2 pt-2">
+                <div className="h-4 w-4 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : filtered.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

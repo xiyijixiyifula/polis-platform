@@ -29,22 +29,22 @@ pub async fn hash_password_async(password: String) -> Result<String, AppError> {
         let salt = SaltString::generate(&mut OsRng);
         let hash = Argon2::default()
             .hash_password(password.as_bytes(), &salt)
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(hash.to_string())
     })
     .await
-    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(|e| AppError::internal(e.to_string()))?
 }
 
 /// 异步密码验证（spawn_blocking 避免阻塞 async runtime）
 pub async fn verify_password_async(password: String, hash: String) -> Result<bool, AppError> {
     tokio::task::spawn_blocking(move || {
         let parsed = PasswordHash::new(&hash)
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(Argon2::default().verify_password(password.as_bytes(), &parsed).is_ok())
     })
     .await
-    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(|e| AppError::internal(e.to_string()))?
 }
 
 /// 生成 JWT Access Token

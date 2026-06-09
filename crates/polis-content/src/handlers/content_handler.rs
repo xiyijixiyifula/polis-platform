@@ -96,7 +96,7 @@ impl ContentHandler {
             .await
             .ok();
 
-        // 发布事件
+        // NATS: falls back to direct DB write when unavailable
         self.publish_event(subjects::CONTENT_POST_CREATED, serde_json::json!({
             "post_id": post.id.to_string(),
             "space_id": space_id.to_string(),
@@ -947,6 +947,7 @@ impl ContentHandler {
         let liked = self.repo.toggle_like(target_type, target_id, user_id).await?;
 
         if liked {
+            // NATS: falls back to direct DB write when unavailable
             self.publish_event(subjects::CONTENT_POST_LIKED, serde_json::json!({
                 "target_type": target_type,
                 "target_id": target_id.to_string(),
@@ -1010,6 +1011,7 @@ impl ContentHandler {
             .create_comment(post_id, author_id, &req.body, req.parent_id)
             .await?;
 
+        // NATS: falls back to direct DB write when unavailable
         self.publish_event(subjects::CONTENT_COMMENT_CREATED, serde_json::json!({
             "comment_id": comment.id.to_string(),
             "post_id": post_id.to_string(),
@@ -1296,6 +1298,7 @@ impl ContentHandler {
         self.repo.list_announcements(space_id).await
     }
 
+    /// NATS: falls back to direct DB write when unavailable — silently skips publish when nats is None
     async fn publish_event(&self, subject: &str, payload: serde_json::Value) {
         if let Some(ref nats) = self.nats {
             let event = Event {

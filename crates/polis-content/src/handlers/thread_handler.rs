@@ -32,7 +32,7 @@ impl ThreadHandler {
         .bind(&participants)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(thread)
     }
 
@@ -45,8 +45,8 @@ impl ThreadHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
-        .ok_or(AppError::NotFound("对话流不存在".to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?
+        .ok_or(AppError::not_found("对话流不存在".to_string()))?;
         Ok(thread)
     }
 
@@ -66,7 +66,7 @@ impl ThreadHandler {
         .bind(user_id)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let threads = sqlx::query_as::<_, Thread>(
             "SELECT * FROM threads WHERE creator_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
@@ -76,7 +76,7 @@ impl ThreadHandler {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let total_pages = (total.0 as f64 / page_size as f64).ceil() as u32;
         Ok((threads, Pagination { page, page_size, total: total.0 as u64, total_pages }))
@@ -90,7 +90,7 @@ impl ThreadHandler {
         .bind(thread_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(msgs)
     }
 
@@ -109,8 +109,8 @@ impl ThreadHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
-        .ok_or(AppError::Forbidden("无权操作此对话流".to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?
+        .ok_or(AppError::forbidden("无权操作此对话流".to_string()))?;
 
         // 获取下一个 message_order
         let max_order: Option<(i32,)> = sqlx::query_as(
@@ -119,7 +119,7 @@ impl ThreadHandler {
         .bind(thread_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let next_order = max_order.map(|(o,)| o + 1).unwrap_or(0);
         let content_type = req.content_type.unwrap_or_else(|| "text".to_string());
@@ -137,7 +137,7 @@ impl ThreadHandler {
         .bind(next_order)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         // 更新 thread 的 updated_at
         if let Err(e) = sqlx::query("UPDATE threads SET updated_at = NOW() WHERE id = $1")
@@ -165,8 +165,8 @@ impl ThreadHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
-        .ok_or(AppError::Forbidden("无权操作此对话流".to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?
+        .ok_or(AppError::forbidden("无权操作此对话流".to_string()))?;
 
         // 获取所有消息并格式化为 Markdown
         let msgs = sqlx::query_as::<_, ThreadMessage>(
@@ -175,7 +175,7 @@ impl ThreadHandler {
         .bind(thread_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let markdown_body: String = msgs.iter().map(|m| {
             let role_label = match m.role.as_str() {
@@ -200,7 +200,7 @@ impl ThreadHandler {
         .bind(&tags)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         // 更新 thread 状态
         if let Err(e) = sqlx::query(
@@ -223,7 +223,7 @@ impl ThreadHandler {
                 .bind(ns)
                 .fetch_optional(&self.pool)
                 .await
-                .map_err(|e| AppError::Internal(e.to_string()))
+                .map_err(|e| AppError::internal(e.to_string()))
                 .ok()
                 .flatten();
 
@@ -294,10 +294,10 @@ impl ThreadHandler {
         .bind(user_id)
         .execute(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         if result.rows_affected() == 0 {
-            return Err(AppError::NotFound("对话流不存在".to_string()));
+            return Err(AppError::not_found("对话流不存在".to_string()));
         }
         Ok(())
     }

@@ -320,7 +320,7 @@ export default function OnboardingPage() {
                     >
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center text-lg shrink-0 overflow-hidden">
                         {space.icon_url ? (
-                          <img src={space.icon_url} alt="" className="w-full h-full object-cover" />
+                          <img src={space.icon_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                         ) : (
                           space.title.charAt(0)
                         )}
@@ -367,7 +367,7 @@ export default function OnboardingPage() {
               <label className="relative cursor-pointer group">
                 <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center overflow-hidden shadow-md group-hover:shadow-lg transition-shadow">
                   {avatarPreview ? (
-                    <img src={avatarPreview} alt="头像预览" className="w-full h-full object-cover" />
+                    <img src={avatarPreview} alt="头像预览" className="w-full h-full object-cover" loading="lazy" />
                   ) : (
                     <User className="w-10 h-10 text-gray-400 dark:text-gray-500" />
                   )}

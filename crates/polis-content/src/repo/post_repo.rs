@@ -257,7 +257,7 @@ impl PostRepo {
         if let Some(ref p) = post {
             if let Some(ref hash) = p.password_hash {
                 let _parsed = PasswordHash::new(hash)
-                    .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
+                    .map_err(|e| AppError::internal(format!("Password hash error: {}", e)))?;
                 let pwd3 = password.to_string();
                 let hash3 = hash.to_string();
                 let verified3 = tokio::task::spawn_blocking(move || {
@@ -390,7 +390,7 @@ impl PostRepo {
             .pool
             .begin()
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         let existing = sqlx::query_scalar::<_, Option<Uuid>>(
             "SELECT id FROM likes WHERE target_type = $1 AND target_id = $2 AND user_id = $3",
@@ -475,7 +475,7 @@ impl PostRepo {
 
         tx.commit()
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(result)
     }
 
@@ -519,7 +519,7 @@ impl PostRepo {
             ORDER BY l.created_at DESC LIMIT $2 OFFSET $3"#
         ).bind(user_id).bind(page_size as i64).bind(offset)
         .fetch_all(&*self.pool).await
-        .map_err(|e| AppError::Internal(format!("liked posts query: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("liked posts query: {}", e)))?;
 
         Ok(rows
             .into_iter()
@@ -1009,7 +1009,7 @@ impl PostRepo {
         .bind(reference_id)
         .fetch_optional(&*self.pool)
         .await?
-        .ok_or_else(|| AppError::NotFound("Reference not found or already reviewed".to_string()))?;
+        .ok_or_else(|| AppError::not_found("Reference not found or already reviewed".to_string()))?;
         Ok(row)
     }
 
@@ -1027,7 +1027,7 @@ impl PostRepo {
         .await?;
 
         if result.rows_affected() == 0 {
-            return Err(AppError::NotFound(
+            return Err(AppError::not_found(
                 "Reference not found or not yours".to_string(),
             ));
         }

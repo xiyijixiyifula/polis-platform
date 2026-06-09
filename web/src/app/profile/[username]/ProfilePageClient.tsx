@@ -17,7 +17,7 @@ function FollowList({ users: list, loading, emptyText }: {
   loading: boolean;
   emptyText: string;
 }) {
-  if (loading) return <div className="text-center py-8 text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
+  if (loading) return <div className="animate-pulse space-y-3 py-8"><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div><div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div><div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div></div>;
   if (list.length === 0) return <div className="text-center py-8 text-gray-500 dark:text-gray-400">{emptyText}</div>;
   return (
     <div className="space-y-2">
@@ -626,7 +626,13 @@ export default function UserProfilePage({ username }: { username: string }) {
       {/* isSelf: 收藏 Tab */}
       {isSelf && activeTab === 'bookmarks' && (
         bookmarksLoading ? (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+          <div className="glass-card p-6 animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+          </div>
         ) : bookmarks.length > 0 ? (
           <div className="glass-card p-0 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
             {bookmarks.map((item: any) => (
@@ -644,7 +650,13 @@ export default function UserProfilePage({ username }: { username: string }) {
       {/* isSelf: 点赞 Tab */}
       {isSelf && activeTab === 'likes' && (
         likedLoading ? (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+          <div className="glass-card p-6 animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+          </div>
         ) : likedPosts.length > 0 ? (
           <div className="glass-card p-0 divide-y divide-gray-100 dark:divide-gray-800 overflow-hidden">
             {likedPosts.map((item: any) => (
@@ -687,7 +699,13 @@ export default function UserProfilePage({ username }: { username: string }) {
           })()}
 
           {creationsLoading ? (
-            <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+            <div className="glass-card p-6 animate-pulse space-y-4">
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+              <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+            </div>
           ) : (() => {
             const filtered = myCreations.filter((c: any) => {
               if (worksSubTab === 'overview') return true;
@@ -729,7 +747,13 @@ export default function UserProfilePage({ username }: { username: string }) {
       {/* isSelf: 私密作品 Tab */}
       {isSelf && activeTab === 'private' && (
         creationsLoading ? (
-          <div className="glass-card p-6 py-12 text-center text-gray-500 dark:text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+          <div className="glass-card p-6 animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+          </div>
         ) : (() => {
           const privateWorks = myCreations.filter((c: any) => c.visibility === 'private');
           if (privateWorks.length === 0) return (

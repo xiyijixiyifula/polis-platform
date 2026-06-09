@@ -20,11 +20,11 @@ pub async fn auth_middleware(
         .headers()
         .get("Authorization")
         .and_then(|value| value.to_str().ok())
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::unauthorized())?;
 
     let token = auth_header
         .strip_prefix("Bearer ")
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::unauthorized())?;
 
     let token_data = decode::<Claims>(
         token,
@@ -35,23 +35,23 @@ pub async fn auth_middleware(
         ),
         &polis_core::auth::secure_validation(),
     )
-    .map_err(|_| AppError::Unauthorized)?;
+    .map_err(|_| AppError::unauthorized())?;
 
     let claims = token_data.claims;
 
     if claims.token_type.as_deref() != Some("access") {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::unauthorized());
     }
 
     // 检查 token 是否在黑名单中（已登出）
     if let Some(ref jti) = claims.jti {
         if handler.token_blacklist.is_blacklisted(jti).await {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::unauthorized());
         }
     }
 
     let user_id = Uuid::parse_str(&claims.sub)
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| AppError::unauthorized())?;
 
     req.extensions_mut().insert(user_id);
     if let Some(username) = claims.username {

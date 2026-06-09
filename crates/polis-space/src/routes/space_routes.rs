@@ -64,7 +64,7 @@ fn decode_namespace(raw: &str) -> Result<String, AppError> {
     percent_decode_str(raw)
         .decode_utf8()
         .map(|s| s.to_string().replace('~', "/"))
-        .map_err(|_| AppError::Validation("Invalid UTF-8 in namespace".to_string()))
+        .map_err(|_| AppError::validation("Invalid UTF-8 in namespace".to_string()))
 }
 
 /// 处理公共 GET 路径
@@ -77,7 +77,7 @@ async fn handle_public_path(
         .or_else(|| path.strip_prefix("/api/space/"))
         .unwrap_or("");
     if remaining.is_empty() || remaining == "trending" {
-        return Err(AppError::NotFound("Invalid path".to_string()));
+        return Err(AppError::not_found("Invalid path".to_string()));
     }
 
     // 提取 namespace（去掉尾部动作）
@@ -144,7 +144,7 @@ async fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Result
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "))
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::unauthorized())?;
     let secret = std::env::var("JWT_SECRET")
         .expect("JWT_SECRET environment variable must be set");
     let token_data = decode::<Claims>(
@@ -152,12 +152,12 @@ async fn extract_user_id_from_headers(headers: &axum::http::HeaderMap) -> Result
         &DecodingKey::from_secret(secret.as_bytes()),
         &polis_core::auth::secure_validation(),
     )
-    .map_err(|_| AppError::Unauthorized)?;
+    .map_err(|_| AppError::unauthorized())?;
     if token_data.claims.token_type.as_deref() != Some("access") {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::unauthorized());
     }
     Uuid::parse_str(&token_data.claims.sub)
-        .map_err(|_| AppError::Unauthorized)
+        .map_err(|_| AppError::unauthorized())
 }
 
 /// 处理需要认证的路径
@@ -173,7 +173,7 @@ async fn handle_auth_path(
         .or_else(|| path.strip_prefix("/api/space/"))
         .unwrap_or("");
     if remaining.is_empty() {
-        return Err(AppError::NotFound("Invalid path".to_string()));
+        return Err(AppError::not_found("Invalid path".to_string()));
     }
 
     // 提取 namespace (去掉尾部动作)
@@ -195,7 +195,7 @@ async fn handle_auth_path(
     }
 
     if ns.is_empty() {
-        return Err(AppError::NotFound("Invalid namespace".to_string()));
+        return Err(AppError::not_found("Invalid namespace".to_string()));
     }
 
     // URL 解码命名空间（支持中文等非 ASCII 字符）
@@ -204,15 +204,15 @@ async fn handle_auth_path(
     // 辅助：从 body 中反序列化 JSON
     async fn read_json_body<T: serde::de::DeserializeOwned>(req: Request) -> Result<T, AppError> {
         let body_bytes = axum::body::to_bytes(req.into_body(), 1024 * 1024).await
-            .map_err(|_| AppError::Validation("Failed to read body".to_string()))?;
+            .map_err(|_| AppError::validation("Failed to read body".to_string()))?;
         serde_json::from_slice(&body_bytes)
-            .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))
+            .map_err(|e| AppError::validation(format!("Invalid JSON: {}", e)))
     }
 
     if remaining.ends_with("/join") && method == axum::http::Method::POST {
         let message: Option<String> = {
             let body_bytes = axum::body::to_bytes(req.into_body(), 1024 * 1024).await
-                .map_err(|_| AppError::Validation("Failed to read body".to_string()))?;
+                .map_err(|_| AppError::validation("Failed to read body".to_string()))?;
             if body_bytes.is_empty() {
                 None
             } else {
@@ -340,7 +340,7 @@ async fn handle_auth_path(
         return Ok(Json(serde_json::json!({"code": 0, "data": space})));
     }
 
-    Err(AppError::NotFound("Route not found".to_string()))
+    Err(AppError::not_found("Route not found".to_string()))
 }
 
 /// POST /api/spaces - 创建社区

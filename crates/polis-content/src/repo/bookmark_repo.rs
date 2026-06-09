@@ -92,7 +92,7 @@ impl BookmarkRepo {
             WHERE b.user_id = $1 AND p.is_deleted = FALSE"#
         ).bind(user_id)
         .fetch_all(&*self.pool).await
-        .map_err(|e| AppError::Internal(format!("bookmarks post query: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("bookmarks post query: {}", e)))?;
 
         // 视频收藏
         let video_rows = sqlx::query(
@@ -112,7 +112,7 @@ impl BookmarkRepo {
             WHERE b.user_id = $1"#
         ).bind(user_id)
         .fetch_all(&*self.pool).await
-        .map_err(|e| AppError::Internal(format!("bookmarks video query: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("bookmarks video query: {}", e)))?;
 
         use sqlx::Row;
         let mut items: Vec<(String, serde_json::Value)> = Vec::new();

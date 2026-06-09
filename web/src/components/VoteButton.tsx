@@ -71,7 +71,7 @@ export function VoteButton({ targetType, targetId }: VoteButtonProps) {
       <button
         onClick={() => handleVote(1)}
         title="赞同"
-        className={`rounded p-1 transition-all duration-150 active:scale-90 ${
+        className={`rounded p-2.5 transition-all duration-150 active:scale-90 min-h-[44px] min-w-[44px] flex items-center justify-center ${
           myVote === 1 ? 'text-primary-600 scale-110' : 'text-gray-300 hover:text-primary-500'
         }`}
       >
@@ -87,7 +87,7 @@ export function VoteButton({ targetType, targetId }: VoteButtonProps) {
       <button
         onClick={() => handleVote(-1)}
         title="反对"
-        className={`rounded p-1 transition-all duration-150 active:scale-90 ${
+        className={`rounded p-2.5 transition-all duration-150 active:scale-90 min-h-[44px] min-w-[44px] flex items-center justify-center ${
           myVote === -1 ? 'text-red-500 scale-110' : 'text-gray-300 hover:text-red-400'
         }`}
       >

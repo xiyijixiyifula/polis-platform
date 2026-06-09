@@ -66,8 +66,8 @@ async fn create_order(
     headers: HeaderMap,
     Json(req): Json<serde_json::Value>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let product_id = Uuid::parse_str(req["product_id"].as_str().ok_or(AppError::Validation("product_id required".to_string()))?)
-        .map_err(|_| AppError::Validation("Invalid product_id".to_string()))?;
+    let product_id = Uuid::parse_str(req["product_id"].as_str().ok_or(AppError::validation("product_id required".to_string()))?)
+        .map_err(|_| AppError::validation("Invalid product_id".to_string()))?;
     let buyer_id = auth::require_user(&headers)?;
     let order = handler.create_order(product_id, buyer_id).await?;
     Ok(Json(ApiResponse::success(order)))

@@ -69,7 +69,7 @@ impl TierRepo {
     ) -> Result<(), AppError> {
         let current = self.get_tier(tier_id).await?;
         if current.space_id != space_id {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "Tier does not belong to this space".to_string(),
             ));
         }
@@ -101,7 +101,7 @@ impl TierRepo {
     ) -> Result<(), AppError> {
         let current = self.get_tier(tier_id).await?;
         if current.space_id != space_id {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "Tier does not belong to this space".to_string(),
             ));
         }
@@ -112,7 +112,7 @@ impl TierRepo {
         .fetch_one(&*self.pool)
         .await?;
         if count.0 > 0 {
-            return Err(AppError::Conflict(
+            return Err(AppError::conflict(
                 "Cannot delete tier with active subscriptions".to_string(),
             ));
         }
@@ -131,7 +131,7 @@ impl TierRepo {
     ) -> Result<Uuid, AppError> {
         let tier = self.get_tier(tier_id).await?;
         if tier.space_id != space_id {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "Tier does not belong to this space".to_string(),
             ));
         }

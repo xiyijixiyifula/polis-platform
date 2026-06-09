@@ -143,9 +143,13 @@ export default function CommentsSection() {
               className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 mb-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
             {commentPostsLoading ? (
-              <div className="text-center py-8">
-                <div className="h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-                <span className="text-xs text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</span>
+              <div className="animate-pulse space-y-3 py-4">
+                {[1, 2].map((i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                  </div>
+                ))}
               </div>
             ) : filteredCommentPosts.length === 0 ? (
               <div className="text-center py-8">

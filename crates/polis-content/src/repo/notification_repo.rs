@@ -69,7 +69,7 @@ impl NotificationRepo {
         .bind(user_id)
         .fetch_all(&*self.pool)
         .await
-        .map_err(|e| AppError::Internal(format!("Failed to get conversations: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("Failed to get conversations: {}", e)))?;
 
         Ok(rows.into_iter().map(|(id, username, display_name, avatar_url, bio, verified, notification_prefs, created_at, last_message, last_message_at, unread_count)| {
             serde_json::json!({
@@ -149,7 +149,7 @@ impl NotificationRepo {
         .await?
         .rows_affected();
         if affected == 0 {
-            return Err(AppError::NotFound("Message not found".to_string()));
+            return Err(AppError::not_found("Message not found".to_string()));
         }
         Ok(())
     }
@@ -188,7 +188,7 @@ impl NotificationRepo {
         .bind(user_id)
         .fetch_optional(&*self.pool)
         .await?
-        .ok_or(AppError::NotFound("Message not found".to_string()))?;
+        .ok_or(AppError::not_found("Message not found".to_string()))?;
         Ok(row.0)
     }
 

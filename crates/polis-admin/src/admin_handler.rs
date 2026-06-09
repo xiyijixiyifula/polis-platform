@@ -45,11 +45,11 @@ impl AdminHandler {
 
     pub fn update_admin_code(&self, new_code: &str) -> Result<(), AppError> {
         if new_code.len() < 8 {
-            return Err(AppError::Validation("Admin code must be at least 8 characters".to_string()));
+            return Err(AppError::validation("Admin code must be at least 8 characters".to_string()));
         }
         fs::write(ADMIN_CODE_FILE, new_code)
-            .map_err(|e| AppError::Internal(format!("Failed to save admin code: {}", e)))?;
-        let mut code = self.admin_code.write().map_err(|e| AppError::Internal(format!("Lock error: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to save admin code: {}", e)))?;
+        let mut code = self.admin_code.write().map_err(|e| AppError::internal(format!("Lock error: {}", e)))?;
         *code = new_code.to_string();
         tracing::info!("Admin code updated and persisted");
         Ok(())
@@ -240,7 +240,7 @@ impl AdminHandler {
         let new_status = match action {
             "resolve" => "resolved",
             "dismiss" => "dismissed",
-            _ => return Err(AppError::Validation("Invalid action".to_string())),
+            _ => return Err(AppError::validation("Invalid action".to_string())),
         };
         sqlx::query("UPDATE reports SET status = $1, handled_by = $2, resolved_at = NOW() WHERE id = $3")
             .bind(new_status).bind(handled_by).bind(report_id)
@@ -369,23 +369,23 @@ impl AdminHandler {
                WHERE aa.agent_id = $1 AND aa.is_active = TRUE"#
         ).bind(req.agent_id).fetch_optional(&self.pool).await?;
 
-        let (agent_id, role, _permissions) = perm.ok_or(AppError::Forbidden("Agent 无管理员权限".to_string()))?;
+        let (agent_id, role, _permissions) = perm.ok_or(AppError::forbidden("Agent 无管理员权限".to_string()))?;
 
         // 验证 API Key
         let agent: Option<(Uuid, String)> = sqlx::query_as(
             "SELECT user_id, api_key_hash FROM agents WHERE id = $1 AND is_active = TRUE"
         ).bind(agent_id).fetch_optional(&self.pool).await?;
 
-        let (user_id, api_key_hash) = agent.ok_or(AppError::Forbidden("Agent 不存在".to_string()))?;
+        let (user_id, api_key_hash) = agent.ok_or(AppError::forbidden("Agent 不存在".to_string()))?;
 
         let ak = req.api_key.clone();
         let hash = api_key_hash.clone();
         tokio::task::spawn_blocking(move || {
             use argon2::{Argon2, PasswordHash, PasswordVerifier};
-            let parsed = PasswordHash::new(&hash).map_err(|_| AppError::Forbidden("认证失败".to_string()))?;
+            let parsed = PasswordHash::new(&hash).map_err(|_| AppError::forbidden("认证失败".to_string()))?;
             Argon2::default().verify_password(ak.as_bytes(), &parsed)
-                .map_err(|_| AppError::Forbidden("API Key 无效".to_string()))
-        }).await.map_err(|e| AppError::Internal(e.to_string()))??;
+                .map_err(|_| AppError::forbidden("API Key 无效".to_string()))
+        }).await.map_err(|e| AppError::internal(e.to_string()))??;
 
         // 更新最后活跃
         if let Err(e) = sqlx::query("UPDATE agents SET last_active_at = NOW() WHERE id = $1")
@@ -395,7 +395,7 @@ impl AdminHandler {
 
         // 生成 admin JWT
         let token = crate::auth::generate_admin_token(user_id, &role, &self.config)
-            .map_err(|e| AppError::Internal(format!("JWT: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("JWT: {}", e)))?;
 
         self.audit_log(user_id, "agent", "system", Uuid::nil(), "agent_admin_login", None, Some("logged_in"), None).await;
 
@@ -502,7 +502,7 @@ impl AdminHandler {
             "approve" | "show" => "visible",
             "reject" => "rejected",
             "hide" => "hidden",
-            _ => return Err(AppError::Validation("Invalid action for ref review".to_string())),
+            _ => return Err(AppError::validation("Invalid action for ref review".to_string())),
         };
         sqlx::query("UPDATE community_module_refs SET display_status = $1 WHERE id = $2")
             .bind(new_status).bind(ref_id).execute(&self.pool).await?;
@@ -550,7 +550,7 @@ impl AdminHandler {
         let row = sqlx::query(
             "SELECT id, username, display_name, CONCAT(LEFT(email, 3), '***', SUBSTRING(email FROM POSITION('@' IN email))) as email, bio, verified, verified_type, COALESCE(banned, FALSE) as banned, banned_at, ban_reason, created_at, updated_at FROM users WHERE id = $1"
         ).bind(user_id).fetch_optional(&self.pool).await?
-        .ok_or(AppError::NotFound("User not found".to_string()))?;
+        .ok_or(AppError::not_found("User not found".to_string()))?;
 
         Ok(serde_json::json!({
             "id": row.get::<Uuid, _>("id"),
@@ -574,7 +574,7 @@ impl AdminHandler {
         let row = sqlx::query(
             "SELECT s.id, s.namespace, s.slug, s.owner_id, u.username as owner_username, u.display_name as owner_display_name, s.is_root, s.root_space_id, s.title, s.description, s.icon_url, s.banner_url, s.visibility, s.status, s.enabled_modules, s.member_count, s.post_count, s.created_at, s.updated_at FROM spaces s LEFT JOIN users u ON s.owner_id = u.id WHERE s.id = $1"
         ).bind(space_id).fetch_optional(&self.pool).await?
-        .ok_or(AppError::NotFound("Space not found".to_string()))?;
+        .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         Ok(serde_json::json!({
             "id": row.get::<Uuid, _>("id"),
@@ -605,7 +605,7 @@ impl AdminHandler {
         let row = sqlx::query(
             "SELECT p.id, p.space_id, s.title as space_title, p.module_type, p.author_id, u.username as author_username, u.display_name as author_display_name, p.title, p.body, p.content_type, p.tags, p.visibility, p.is_pinned, p.is_featured, p.is_deleted, p.view_count, p.like_count, p.comment_count, p.created_at, p.updated_at FROM posts p LEFT JOIN spaces s ON p.space_id = s.id LEFT JOIN users u ON p.author_id = u.id WHERE p.id = $1"
         ).bind(post_id).fetch_optional(&self.pool).await?
-        .ok_or(AppError::NotFound("Post not found".to_string()))?;
+        .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         Ok(serde_json::json!({
             "id": row.get::<Uuid, _>("id"),
@@ -635,7 +635,7 @@ impl AdminHandler {
     pub async fn update_space_status(&self, space_id: Uuid, status: &str) -> Result<(), AppError> {
         let valid = matches!(status, "active" | "archived" | "hidden" | "closed");
         if !valid {
-            return Err(AppError::Validation("Invalid status. Use: active, archived, hidden, closed".to_string()));
+            return Err(AppError::validation("Invalid status. Use: active, archived, hidden, closed".to_string()));
         }
         sqlx::query("UPDATE spaces SET status = $1, updated_at = NOW() WHERE id = $2")
             .bind(status).bind(space_id)
@@ -887,7 +887,7 @@ impl AdminHandler {
     pub async fn get_platform_settings(&self) -> Result<serde_json::Value, AppError> {
         let rows: Vec<(String, serde_json::Value)> = sqlx::query_as(
             "SELECT key, value FROM platform_settings ORDER BY key"
-        ).fetch_all(&self.pool).await.map_err(|e| AppError::Internal(format!("读取平台设置失败: {}", e)))?;
+        ).fetch_all(&self.pool).await.map_err(|e| AppError::internal(format!("读取平台设置失败: {}", e)))?;
         let mut map = serde_json::Map::new();
         for (k, v) in rows {
             map.insert(k, v);
@@ -899,7 +899,7 @@ impl AdminHandler {
         for (key, value) in &settings {
             sqlx::query(
                 "INSERT INTO platform_settings (key, value, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO UPDATE SET value = $2, updated_at = NOW()"
-            ).bind(key).bind(value).execute(&self.pool).await.map_err(|e| AppError::Internal(format!("保存平台设置失败: {}", e)))?;
+            ).bind(key).bind(value).execute(&self.pool).await.map_err(|e| AppError::internal(format!("保存平台设置失败: {}", e)))?;
         }
         Ok(())
     }

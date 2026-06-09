@@ -5,6 +5,7 @@ use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
 
 use polis_core::events::subjects;
+use polis_core::shutdown::shutdown_signal;
 use polis_content::config::ContentServiceConfig;
 use polis_content::handlers::content_handler::ContentHandler;
 use polis_content::routes::content_routes;
@@ -73,7 +74,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Content service starting on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }

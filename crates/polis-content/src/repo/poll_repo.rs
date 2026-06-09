@@ -57,7 +57,7 @@ impl PollRepo {
             .pool
             .begin()
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
         let existing: Option<(Uuid,)> = sqlx::query_as(
             "SELECT id FROM poll_votes WHERE poll_id = $1 AND user_id = $2",
         )
@@ -66,7 +66,7 @@ impl PollRepo {
         .fetch_optional(&mut *tx)
         .await?;
         if existing.is_some() {
-            return Err(AppError::Forbidden("你已经投过票了".to_string()));
+            return Err(AppError::forbidden("你已经投过票了".to_string()));
         }
         sqlx::query(
             "INSERT INTO poll_votes (poll_id, option_id, user_id) VALUES ($1, $2, $3)",
@@ -82,7 +82,7 @@ impl PollRepo {
             .await?;
         tx.commit()
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(())
     }
 

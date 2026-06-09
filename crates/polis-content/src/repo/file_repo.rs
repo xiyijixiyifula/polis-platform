@@ -58,7 +58,7 @@ impl FileRepo {
         .bind(file_id)
         .fetch_one(&*self.pool)
         .await
-        .map_err(|_| AppError::NotFound("File not found".to_string()))
+        .map_err(|_| AppError::not_found("File not found".to_string()))
     }
 
     pub async fn create_share_link(
@@ -103,7 +103,7 @@ impl FileRepo {
         .bind(code)
         .fetch_one(&*self.pool)
         .await
-        .map_err(|_| AppError::NotFound("Share link not found".to_string()))
+        .map_err(|_| AppError::not_found("Share link not found".to_string()))
     }
 
     pub async fn increment_share_download(

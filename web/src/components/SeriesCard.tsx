@@ -39,7 +39,7 @@ export function SeriesCard({ series, namespace }: {
       {/* Cover */}
       <div className={`w-24 sm:w-28 shrink-0 bg-gradient-to-br ${coverGradient} flex items-center justify-center relative`}>
         {series.cover_url ? (
-          <img src={series.cover_url} alt={series.title} className="w-full h-full object-cover" />
+          <img src={series.cover_url} alt={series.title} className="w-full h-full object-cover" loading="lazy" />
         ) : (
           <BookOpen className="h-8 w-8 text-white/70" />
         )}

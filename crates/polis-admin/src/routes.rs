@@ -111,10 +111,10 @@ async fn admin_login(
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
     if let Some(ref code) = req.admin_code {
         if code != &handler.get_admin_code() {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::unauthorized());
         }
     } else {
-        return Err(AppError::Validation("Admin code required".to_string()));
+        return Err(AppError::validation("Admin code required".to_string()));
     }
 
     use sqlx::Row;
@@ -124,7 +124,7 @@ async fn admin_login(
     .bind(&req.email)
     .fetch_optional(&handler.pool)
     .await?
-    .ok_or(AppError::NotFound("User not found".to_string()))?;
+    .ok_or(AppError::not_found("User not found".to_string()))?;
 
     let user_id: Uuid = user_row.get("id");
     let username: String = user_row.get("username");
@@ -139,13 +139,13 @@ async fn admin_login(
             Argon2,
         };
         let parsed_hash = PasswordHash::new(&hash)
-            .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Password hash error: {}", e)))?;
         Argon2::default().verify_password(pwd.as_bytes(), &parsed_hash)
-            .map_err(|_| AppError::Unauthorized)
-    }).await.map_err(|e| AppError::Internal(e.to_string()))??;
+            .map_err(|_| AppError::unauthorized())
+    }).await.map_err(|e| AppError::internal(e.to_string()))??;
 
     let token = crate::auth::generate_admin_token(user_id, "admin", &handler.config)
-        .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("JWT error: {}", e)))?;
 
     Ok(Json(ApiResponse::success(serde_json::json!({
         "access_token": token,
@@ -739,7 +739,7 @@ async fn update_admin_code_handler(
     Json(req): Json<UpdateAdminCodeRequest>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
     if req.current_code != handler.get_admin_code() {
-        return Err(AppError::Validation("当前验证码不正确".to_string()));
+        return Err(AppError::validation("当前验证码不正确".to_string()));
     }
     handler.update_admin_code(&req.new_code)?;
     tracing::info!("Admin code updated via API");
@@ -758,7 +758,7 @@ async fn update_platform_settings(
     Json(body): Json<serde_json::Value>,
 ) -> Result<Json<ApiResponse<()>>, AppError> {
     let map = body.as_object()
-        .ok_or_else(|| AppError::Validation("请求体必须是 JSON 对象".to_string()))?
+        .ok_or_else(|| AppError::validation("请求体必须是 JSON 对象".to_string()))?
         .clone();
     handler.update_platform_settings(map).await?;
     Ok(Json(ApiResponse::success(())))

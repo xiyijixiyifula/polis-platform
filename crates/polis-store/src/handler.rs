@@ -23,7 +23,7 @@ impl StoreHandler {
         stock: i32,
     ) -> Result<serde_json::Value, AppError> {
         if price_cents <= 0 {
-            return Err(AppError::Validation("Price must be positive".to_string()));
+            return Err(AppError::validation("Price must be positive".to_string()));
         }
 
         let product_id: (Uuid,) = sqlx::query_as(
@@ -68,10 +68,10 @@ impl StoreHandler {
         .await?;
 
         let (seller_id, amount_cents, stock) = product
-            .ok_or(AppError::NotFound("Product not found or inactive".to_string()))?;
+            .ok_or(AppError::not_found("Product not found or inactive".to_string()))?;
 
         if stock <= 0 {
-            return Err(AppError::Validation("Product out of stock".to_string()));
+            return Err(AppError::validation("Product out of stock".to_string()));
         }
 
         // 扣减库存

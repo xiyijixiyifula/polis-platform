@@ -50,7 +50,7 @@ impl BookmarkRepo {
             ORDER BY b.created_at DESC LIMIT $2 OFFSET $3"#
         ).bind(user_id).bind(page_size as i64).bind(offset)
         .fetch_all(&self.pool).await
-        .map_err(|e| AppError::Internal(format!("bookmarks list query: {}", e)))?;
+        .map_err(|e| AppError::internal(format!("bookmarks list query: {}", e)))?;
 
         Ok(rows.into_iter().map(|r| {
             serde_json::json!({

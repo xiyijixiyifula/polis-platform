@@ -5,6 +5,7 @@ use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
 
 use polis_core::events::subjects;
+use polis_core::shutdown::shutdown_signal;
 use polis_space::config::SpaceServiceConfig;
 use polis_space::handlers::space_handler::SpaceHandler;
 use polis_space::routes::space_routes;
@@ -73,7 +74,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Space service starting on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }

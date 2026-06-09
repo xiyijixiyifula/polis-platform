@@ -20,14 +20,14 @@ impl Aggregator {
     /// 处理内容创建事件
     pub async fn handle_post_created(&self, event: &Event) -> Result<(), AppError> {
         let post_id = event.payload["post_id"].as_str()
-            .ok_or(AppError::Validation("Missing post_id".to_string()))?;
+            .ok_or(AppError::validation("Missing post_id".to_string()))?;
         let space_id = event.payload["space_id"].as_str()
-            .ok_or(AppError::Validation("Missing space_id".to_string()))?;
+            .ok_or(AppError::validation("Missing space_id".to_string()))?;
 
         let post_uuid = Uuid::parse_str(post_id)
-            .map_err(|_| AppError::Validation("Invalid post_id".to_string()))?;
+            .map_err(|_| AppError::validation("Invalid post_id".to_string()))?;
         let space_uuid = Uuid::parse_str(space_id)
-            .map_err(|_| AppError::Validation("Invalid space_id".to_string()))?;
+            .map_err(|_| AppError::validation("Invalid space_id".to_string()))?;
 
         // 查找这个社区所属的根社区
         let root_id: Option<(Uuid,)> = sqlx::query_as(

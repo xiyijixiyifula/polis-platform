@@ -26,13 +26,13 @@ fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
     };
     let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
     match jsonwebtoken::decode::<Claims>(token, &jsonwebtoken::DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation()) {
-        Ok(data) => Uuid::parse_str(&data.claims.sub).map(Some).map_err(|_| AppError::Forbidden("Invalid token".to_string())),
+        Ok(data) => Uuid::parse_str(&data.claims.sub).map(Some).map_err(|_| AppError::forbidden("Invalid token".to_string())),
         Err(_) => Ok(None),
     }
 }
 
 fn require_user(headers: &HeaderMap) -> Result<Uuid, AppError> {
-    extract_user_id(headers)?.ok_or(AppError::Forbidden("请先登录".to_string()))
+    extract_user_id(headers)?.ok_or(AppError::forbidden("请先登录".to_string()))
 }
 
 use polis_core::auth::Claims;

@@ -2,13 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Building2, FileText, Settings, LogOut, Shield, AlertTriangle, MessageSquare, DollarSign, TrendingUp, ClipboardCheck, History } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, FileText, Settings, LogOut, Shield, AlertTriangle, MessageSquare, DollarSign, TrendingUp, ClipboardCheck, History, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getAdminToken, setAdminToken } from '@/lib/api';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     setMounted(true);
@@ -68,8 +74,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
-      {/* Sidebar */}
-      <aside className="w-56 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col">
+      {/* Mobile overlay backdrop */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* Sidebar — hidden on mobile, shown as overlay when toggled */}
+      <aside className={`w-56 shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 flex flex-col
+        fixed inset-y-0 left-0 z-50 transition-transform duration-200 lg:relative lg:translate-x-0
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex items-center gap-2 px-5 h-14 border-b border-gray-200 dark:border-gray-700">
           <div className="h-7 w-7 rounded-lg bg-primary-600 flex items-center justify-center text-white text-xs font-bold">P</div>
           <span className="font-semibold text-gray-900 dark:text-gray-100">Polis 管理</span>
@@ -99,7 +112,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main content */}
       <main className="flex-1 overflow-auto">
-        <div className="p-6">{children}</div>
+        <div className="p-6">
+          {/* Mobile menu toggle */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden mb-4 p-2 -ml-2 rounded-lg text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300"
+            aria-label="打开菜单"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          {children}
+        </div>
       </main>
     </div>
   );

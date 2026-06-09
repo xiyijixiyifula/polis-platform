@@ -18,7 +18,7 @@ impl MessageHandler {
     /// 发送私信
     pub async fn send_message(&self, sender_id: Uuid, req: SendMessageRequest) -> Result<DirectMessage, AppError> {
         if req.to_user_id == sender_id {
-            return Err(AppError::Validation("Cannot send message to yourself".to_string()));
+            return Err(AppError::validation("Cannot send message to yourself".to_string()));
         }
         self.repo.send_direct_message(sender_id, req.to_user_id, &req.content).await
     }

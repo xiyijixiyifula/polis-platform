@@ -47,7 +47,7 @@ impl PayHandler {
         provider: &str,
     ) -> Result<serde_json::Value, AppError> {
         if amount_cents <= 0 {
-            return Err(AppError::Validation("Amount must be positive".to_string()));
+            return Err(AppError::validation("Amount must be positive".to_string()));
         }
 
         let tx_id: (Uuid,) = sqlx::query_as(

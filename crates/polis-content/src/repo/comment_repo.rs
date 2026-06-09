@@ -24,7 +24,7 @@ impl CommentRepo {
             .pool
             .begin()
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         let comment = sqlx::query_as::<_, Comment>(
             r#"
@@ -47,7 +47,7 @@ impl CommentRepo {
 
         tx.commit()
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         Ok(comment)
     }

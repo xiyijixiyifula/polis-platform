@@ -158,7 +158,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onTogglePin(); }}
-                className={`flex items-center gap-1 hover:text-amber-500 transition-colors ${post.is_pinned ? 'text-amber-500' : ''}`}
+                className={`flex items-center gap-1 px-1 py-0.5 hover:text-amber-500 transition-colors ${post.is_pinned ? 'text-amber-500' : ''}`}
                 title={post.is_pinned ? '取消置顶' : '置顶'}
               >
                 <Pin className={`h-3.5 w-3.5 ${post.is_pinned ? 'fill-current' : ''}`} />
@@ -170,7 +170,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleFeature(); }}
-                className={`flex items-center gap-1 hover:text-amber-500 transition-colors ${isFeatured ? 'text-amber-500' : ''}`}
+                className={`flex items-center gap-1 px-1 py-0.5 hover:text-amber-500 transition-colors ${isFeatured ? 'text-amber-500' : ''}`}
                 title={isFeatured ? '取消精选' : '设为精选'}
               >
                 <Star className={`h-3.5 w-3.5 ${isFeatured ? 'fill-current' : ''}`} />
@@ -182,7 +182,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleUnhide(); }}
-                className="flex items-center gap-1 text-orange-500 hover:text-green-500 transition-colors"
+                className="flex items-center gap-1 px-1 py-0.5 text-orange-500 hover:text-green-500 transition-colors"
                 title="取消隐藏"
               >
                 <EyeOff className="h-3.5 w-3.5" />
@@ -194,7 +194,7 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
               <button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); onToggleHide(); }}
-                className="flex items-center gap-1 hover:text-red-500 transition-colors"
+                className="flex items-center gap-1 px-1 py-0.5 hover:text-red-500 transition-colors"
                 title="隐藏"
               >
                 <EyeOff className="h-3.5 w-3.5" />

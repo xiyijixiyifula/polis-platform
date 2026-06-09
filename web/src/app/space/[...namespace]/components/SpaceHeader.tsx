@@ -57,7 +57,7 @@ export default function SpaceHeader(props: SpaceHeaderProps) {
 					<div className="relative z-10 flex items-start gap-4">
 						<div className="h-16 w-16 shrink-0 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden">
 							{space.icon_url ? (
-								<img src={space.icon_url} className="h-full w-full object-cover" alt="" />
+								<img src={space.icon_url} className="h-full w-full object-cover" alt="" loading="lazy" />
 							) : (
 								space.title.charAt(0)
 							)}
@@ -155,7 +155,7 @@ export default function SpaceHeader(props: SpaceHeaderProps) {
 								<label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">图标</label>
 								<div className="flex items-center gap-3">
 									{editForm.icon_url ? (
-										<img src={editForm.icon_url} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+										<img src={editForm.icon_url} alt="" className="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-gray-700" loading="lazy" />
 									) : (
 										<div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-400">
 											<ImageIcon className="h-5 w-5" />
@@ -182,7 +182,7 @@ export default function SpaceHeader(props: SpaceHeaderProps) {
 								<label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">封面</label>
 								<div className="space-y-2">
 									{editForm.banner_url && (
-										<img src={editForm.banner_url} alt="" className="w-full h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
+										<img src={editForm.banner_url} alt="" className="w-full h-24 rounded-lg object-cover border border-gray-200 dark:border-gray-700" loading="lazy" />
 									)}
 									<label>
 										<input type="file" accept="image/*" className="hidden" disabled={uploadingBanner}

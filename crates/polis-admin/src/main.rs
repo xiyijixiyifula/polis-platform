@@ -5,6 +5,7 @@ use tracing_subscriber::EnvFilter;
 
 use polis_admin::admin_handler::AdminHandler;
 use polis_admin::config::AdminConfig;
+use polis_core::shutdown::shutdown_signal;
 use polis_admin::routes::admin_routes;
 
 #[tokio::main]
@@ -31,7 +32,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Admin service starting on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }

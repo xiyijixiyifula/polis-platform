@@ -137,7 +137,17 @@ export default function ManagePageClient({ rawNamespace }: { rawNamespace: strin
   };
 
   if (loading) {
-    return <div className="max-w-4xl mx-auto px-4 py-16 text-center text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>;
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-16 animate-pulse space-y-6">
+        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48"></div>
+        <div className="card p-6 space-y-4">
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+          <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+        </div>
+      </div>
+    );
   }
 
   if (!space) return null;
@@ -223,7 +233,7 @@ export default function ManagePageClient({ rawNamespace }: { rawNamespace: strin
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">图标</label>
               <div className="flex items-center gap-3">
                 {space.icon_url && (
-                  <img src={space.icon_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
+                  <img src={space.icon_url} alt="" className="w-12 h-12 rounded-lg object-cover" loading="lazy" />
                 )}
                 <input
                   type="file"
@@ -238,7 +248,7 @@ export default function ManagePageClient({ rawNamespace }: { rawNamespace: strin
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">封面</label>
               <div className="flex items-center gap-3">
                 {space.banner_url && (
-                  <img src={space.banner_url} alt="" className="w-24 h-12 rounded object-cover" />
+                  <img src={space.banner_url} alt="" className="w-24 h-12 rounded object-cover" loading="lazy" />
                 )}
                 <input
                   type="file"
@@ -270,7 +280,17 @@ export default function ManagePageClient({ rawNamespace }: { rawNamespace: strin
           <div>
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">成员管理</h2>
             {membersLoading ? (
-              <div className="py-8 text-center text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+              <div className="animate-pulse space-y-3 py-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 py-2">
+                  <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full shrink-0"></div>
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
             ) : members.length > 0 ? (
               <div className="space-y-2">
                 {members.map((m) => (

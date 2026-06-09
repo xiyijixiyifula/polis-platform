@@ -5,6 +5,7 @@ use tracing_subscriber::EnvFilter;
 
 use polis_user::config::UserServiceConfig;
 use polis_user::handlers::user_handler::UserHandler;
+use polis_core::shutdown::shutdown_signal;
 use polis_user::routes::user_routes;
 
 #[tokio::main]
@@ -57,7 +58,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("User service starting on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }

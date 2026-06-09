@@ -172,7 +172,7 @@ export function Header() {
           {/* Language Switcher */}
           <div className="relative" ref={langMenuRef}>
             <button onClick={() => setShowLangMenu(!showLangMenu)}
-              className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              className="rounded-full p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
               title={t('lang.switchTo')}>
               <Globe className="h-5 w-5" />
             </button>
@@ -222,7 +222,7 @@ export function Header() {
                 <Plus className="h-3.5 w-3.5" />
                 {t('home.createSpace')}
               </Link>
-              <Link href="/messages" className="relative rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+              <Link href="/messages" className="relative rounded-full p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
                 <MessageSquare className="h-5 w-5" />
                 {unreadDmCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1">
@@ -230,7 +230,7 @@ export function Header() {
                   </span>
                 )}
               </Link>
-              <Link href="/notifications" className="relative rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+              <Link href="/notifications" className="relative rounded-full p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 h-4 min-w-[16px] flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white px-1">
@@ -240,7 +240,7 @@ export function Header() {
               </Link>
               <div className="relative">
                 <button onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                  className="rounded-full p-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700">
                   <User className="h-5 w-5" />
                 </button>
                 {showUserMenu && (
@@ -264,7 +264,7 @@ export function Header() {
               <Link href="/register" className="btn-primary text-xs px-4 py-1.5">{t('nav.register')}</Link>
             </div>
           )}
-          <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <button className="md:hidden p-2.5" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>

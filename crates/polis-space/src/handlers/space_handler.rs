@@ -41,19 +41,19 @@ impl SpaceHandler {
         // 验证 title
         let title = req.title.trim();
         if title.is_empty() {
-            return Err(AppError::Validation(
+            return Err(AppError::validation(
                 "社区名称不能为空".to_string(),
             ));
         }
         if title.chars().count() > 50 {
-            return Err(AppError::Validation(
+            return Err(AppError::validation(
                 "社区名称不能超过50个字符".to_string(),
             ));
         }
 
         // 验证 slug
         if req.slug.len() < 2 || req.slug.len() > 100 {
-            return Err(AppError::Validation(
+            return Err(AppError::validation(
                 "Slug must be between 2 and 100 characters".to_string(),
             ));
         }
@@ -63,7 +63,7 @@ impl SpaceHandler {
 
         // 检查 namespace 唯一性
         if let Some(_) = self.repo.find_by_namespace(&namespace).await? {
-            return Err(AppError::Conflict(format!(
+            return Err(AppError::conflict(format!(
                 "Space '{}' already exists",
                 namespace
             )));
@@ -153,7 +153,7 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
         Ok(self.space_to_public(space).await)
     }
 
@@ -168,19 +168,19 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         // 检查权限
         let role = self
             .repo
             .get_member_role(space.id, user_id)
             .await?
-            .ok_or(AppError::Forbidden(
+            .ok_or(AppError::forbidden(
                 "You are not a member of this space".to_string(),
             ))?;
 
         if role != "owner" && role != "admin" {
-            return Err(AppError::Forbidden(
+            return Err(AppError::forbidden(
                 "Only owners and admins can update space settings".to_string(),
             ));
         }
@@ -195,11 +195,11 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("社区不存在".to_string()))?;
+            .ok_or(AppError::not_found("社区不存在".to_string()))?;
 
         let archived = self.repo.archive(space.id, user_id).await?;
         if !archived {
-            return Err(AppError::Forbidden("仅社区创建者可以删除社区".to_string()));
+            return Err(AppError::forbidden("仅社区创建者可以删除社区".to_string()));
         }
         Ok(())
     }
@@ -210,7 +210,7 @@ impl SpaceHandler {
             .repo
             .find_root_by_slug(slug)
             .await?
-            .ok_or(AppError::NotFound("Root space not found".to_string()))?;
+            .ok_or(AppError::not_found("Root space not found".to_string()))?;
 
         let subspaces = self.repo.find_sub_spaces(root.id).await?;
         let mut result = Vec::new();
@@ -256,7 +256,7 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         if space.visibility == "private" {
             // 私有社区需要审批，通知 owner
@@ -300,7 +300,7 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         // 通知 owner（有人离开了）
         if let Some(owner_id) = space.owner_id {
@@ -320,18 +320,18 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         // 检查操作者权限
         let role = self.repo.get_member_role(space.id, operator_id).await?
-            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+            .ok_or(AppError::forbidden("你不是该社区成员".to_string()))?;
         if role != "owner" && role != "admin" {
-            return Err(AppError::Forbidden("只有社区创建者和管理员可以封禁成员".to_string()));
+            return Err(AppError::forbidden("只有社区创建者和管理员可以封禁成员".to_string()));
         }
 
         // 不能封禁自己
         if operator_id == target_user_id {
-            return Err(AppError::Forbidden("不能封禁自己".to_string()));
+            return Err(AppError::forbidden("不能封禁自己".to_string()));
         }
 
         self.repo.ban_member(space.id, target_user_id, reason, duration_hours).await?;
@@ -353,12 +353,12 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         let role = self.repo.get_member_role(space.id, operator_id).await?
-            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+            .ok_or(AppError::forbidden("你不是该社区成员".to_string()))?;
         if role != "owner" && role != "admin" {
-            return Err(AppError::Forbidden("只有社区创建者和管理员可以解封成员".to_string()));
+            return Err(AppError::forbidden("只有社区创建者和管理员可以解封成员".to_string()));
         }
 
         self.repo.unban_member(space.id, target_user_id).await?;
@@ -372,13 +372,13 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         // 检查操作者权限
         let operator_role = self.repo.get_member_role(space.id, operator_id).await?
-            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+            .ok_or(AppError::forbidden("你不是该社区成员".to_string()))?;
         if operator_role != "owner" {
-            return Err(AppError::Forbidden("只有社区创建者可以设置管理员".to_string()));
+            return Err(AppError::forbidden("只有社区创建者可以设置管理员".to_string()));
         }
 
         // 验证角色
@@ -386,12 +386,12 @@ impl SpaceHandler {
             "admin" => "管理员",
             "moderator" => "版主",
             "member" => "成员",
-            _ => return Err(AppError::Validation("无效的角色".to_string())),
+            _ => return Err(AppError::validation("无效的角色".to_string())),
         };
 
         // 不能修改自己的角色
         if operator_id == target_user_id {
-            return Err(AppError::Forbidden("不能修改自己的角色".to_string()));
+            return Err(AppError::forbidden("不能修改自己的角色".to_string()));
         }
 
         self.repo.set_member_role(space.id, target_user_id, new_role).await?;
@@ -408,13 +408,13 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         // 检查操作者权限
         let role = self.repo.get_member_role(space.id, operator_id).await?
-            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+            .ok_or(AppError::forbidden("你不是该社区成员".to_string()))?;
         if role != "owner" && role != "admin" {
-            return Err(AppError::Forbidden("只有社区创建者和管理员可以查看申请列表".to_string()));
+            return Err(AppError::forbidden("只有社区创建者和管理员可以查看申请列表".to_string()));
         }
 
         self.repo.list_join_requests(space.id).await
@@ -426,13 +426,13 @@ impl SpaceHandler {
             .repo
             .find_by_namespace(namespace)
             .await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         // 检查操作者权限
         let role = self.repo.get_member_role(space.id, operator_id).await?
-            .ok_or(AppError::Forbidden("你不是该社区成员".to_string()))?;
+            .ok_or(AppError::forbidden("你不是该社区成员".to_string()))?;
         if role != "owner" && role != "admin" {
-            return Err(AppError::Forbidden("只有社区创建者和管理员可以审批申请".to_string()));
+            return Err(AppError::forbidden("只有社区创建者和管理员可以审批申请".to_string()));
         }
 
         self.repo.review_join_request(space.id, target_user_id, approved, operator_id).await?;
@@ -520,7 +520,7 @@ impl SpaceHandler {
     /// 关注社区
     pub async fn follow_space(&self, namespace: &str, user_id: Uuid) -> Result<bool, AppError> {
         let space = self.repo.find_by_namespace(namespace).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
         let following = self.repo.follow_space(space.id, user_id).await?;
 
         // 通知社区 owner
@@ -536,7 +536,7 @@ impl SpaceHandler {
     /// 取消关注社区
     pub async fn unfollow_space(&self, namespace: &str, user_id: Uuid) -> Result<bool, AppError> {
         let space = self.repo.find_by_namespace(namespace).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
         let following = self.repo.unfollow_space(space.id, user_id).await?;
         Ok(following)
     }
@@ -544,7 +544,7 @@ impl SpaceHandler {
     /// 收藏社区
     pub async fn star_space(&self, namespace: &str, user_id: Uuid) -> Result<bool, AppError> {
         let space = self.repo.find_by_namespace(namespace).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
         let starred = self.repo.star_space(space.id, user_id).await?;
         Ok(starred)
     }
@@ -552,7 +552,7 @@ impl SpaceHandler {
     /// 取消收藏社区
     pub async fn unstar_space(&self, namespace: &str, user_id: Uuid) -> Result<bool, AppError> {
         let space = self.repo.find_by_namespace(namespace).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
         let starred = self.repo.unstar_space(space.id, user_id).await?;
         Ok(starred)
     }
@@ -586,7 +586,7 @@ impl SpaceHandler {
     /// 列表社区所有模块
     pub async fn list_modules(&self, namespace: &str) -> Result<Vec<SpaceModulePublic>, AppError> {
         let space = self.repo.find_by_namespace(namespace).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
         let modules = self.repo.list_modules(space.id).await?;
         Ok(modules.into_iter().map(|m| m.into()).collect())
     }
@@ -594,21 +594,21 @@ impl SpaceHandler {
     /// 创建模块（仅 owner）
     pub async fn create_module(&self, namespace: &str, user_id: Uuid, req: CreateModuleRequest) -> Result<SpaceModulePublic, AppError> {
         let space = self.repo.find_by_namespace(namespace).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         // 仅 owner 可创建模块
         let role = self.repo.get_member_role(space.id, user_id).await?;
         if role != Some("owner".to_string()) {
-            return Err(AppError::Forbidden("仅社区创建者可管理模块".to_string()));
+            return Err(AppError::forbidden("仅社区创建者可管理模块".to_string()));
         }
 
         // 验证 name
         let name = req.name.trim();
         if name.is_empty() {
-            return Err(AppError::Validation("模块名称不能为空".to_string()));
+            return Err(AppError::validation("模块名称不能为空".to_string()));
         }
         if name.chars().count() > 10 {
-            return Err(AppError::Validation("模块名称不能超过10个字符".to_string()));
+            return Err(AppError::validation("模块名称不能超过10个字符".to_string()));
         }
 
         let m = self.repo.create_module(space.id, &CreateModuleRequest {
@@ -625,21 +625,21 @@ impl SpaceHandler {
     /// 更新模块（仅 owner）
     pub async fn update_module(&self, namespace: &str, module_key: &str, user_id: Uuid, req: UpdateModuleRequest) -> Result<SpaceModulePublic, AppError> {
         let space = self.repo.find_by_namespace(namespace).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         let role = self.repo.get_member_role(space.id, user_id).await?;
         if role != Some("owner".to_string()) {
-            return Err(AppError::Forbidden("仅社区创建者可管理模块".to_string()));
+            return Err(AppError::forbidden("仅社区创建者可管理模块".to_string()));
         }
 
         if let Some(ref name) = req.name {
             if name.chars().count() > 10 {
-                return Err(AppError::Validation("模块名称不能超过10个字符".to_string()));
+                return Err(AppError::validation("模块名称不能超过10个字符".to_string()));
             }
         }
 
         let m = self.repo.update_module(space.id, module_key, &req).await?
-            .ok_or(AppError::NotFound("模块不存在".to_string()))?;
+            .ok_or(AppError::not_found("模块不存在".to_string()))?;
 
         Ok(m.into())
     }
@@ -647,11 +647,11 @@ impl SpaceHandler {
     /// 删除模块（仅 owner）
     pub async fn delete_module(&self, namespace: &str, module_key: &str, user_id: Uuid) -> Result<bool, AppError> {
         let space = self.repo.find_by_namespace(namespace).await?
-            .ok_or(AppError::NotFound("Space not found".to_string()))?;
+            .ok_or(AppError::not_found("Space not found".to_string()))?;
 
         let role = self.repo.get_member_role(space.id, user_id).await?;
         if role != Some("owner".to_string()) {
-            return Err(AppError::Forbidden("仅社区创建者可管理模块".to_string()));
+            return Err(AppError::forbidden("仅社区创建者可管理模块".to_string()));
         }
 
         self.repo.delete_module(space.id, module_key).await

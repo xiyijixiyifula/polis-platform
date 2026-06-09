@@ -63,7 +63,7 @@ pub fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
 
 /// 从请求头中提取用户 ID，未登录时返回 401
 pub fn require_user(headers: &HeaderMap) -> Result<Uuid, AppError> {
-    extract_user_id(headers)?.ok_or(AppError::Unauthorized)
+    extract_user_id(headers)?.ok_or(AppError::unauthorized())
 }
 
 /// 解码 JWT token，返回用户 UUID
@@ -78,8 +78,8 @@ fn decode_jwt(token: &str) -> Result<Uuid, AppError> {
     ) {
         Ok(data) => {
             Uuid::parse_str(&data.claims.sub)
-                .map_err(|_| AppError::Forbidden("Invalid user ID in token".to_string()))
+                .map_err(|_| AppError::forbidden("Invalid user ID in token".to_string()))
         }
-        Err(_) => Err(AppError::Forbidden("Invalid or expired token".to_string())),
+        Err(_) => Err(AppError::forbidden("Invalid or expired token".to_string())),
     }
 }

@@ -28,7 +28,7 @@ impl MeiliClient {
             .header("Authorization", format!("Bearer {}", self.api_key))
             .send()
             .await
-            .map_err(|e| AppError::External(format!("Meili check error: {}", e)))?;
+            .map_err(|e| AppError::external(format!("Meili check error: {}", e)))?;
 
         if check_resp.status().is_success() {
             return Ok(()); // Index already exists
@@ -45,13 +45,13 @@ impl MeiliClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AppError::External(format!("Meili create error: {}", e)))?;
+            .map_err(|e| AppError::external(format!("Meili create error: {}", e)))?;
 
         let status_code = resp.status().as_u16();
         if !resp.status().is_success() && status_code != 201 {
             let text = resp.text().await.unwrap_or_default();
             if status_code != 409 {
-                return Err(AppError::External(format!("Meili create index failed: {}", text)));
+                return Err(AppError::external(format!("Meili create index failed: {}", text)));
             }
         }
 
@@ -72,11 +72,11 @@ impl MeiliClient {
             .json(&documents)
             .send()
             .await
-            .map_err(|e| AppError::External(format!("Meili add docs error: {}", e)))?;
+            .map_err(|e| AppError::external(format!("Meili add docs error: {}", e)))?;
 
         if !resp.status().is_success() {
             let text = resp.text().await.unwrap_or_default();
-            return Err(AppError::External(format!("Meili add documents failed: {}", text)));
+            return Err(AppError::external(format!("Meili add documents failed: {}", text)));
         }
 
         Ok(())
@@ -92,11 +92,11 @@ impl MeiliClient {
             .json(&ids)
             .send()
             .await
-            .map_err(|e| AppError::External(format!("Meili delete error: {}", e)))?;
+            .map_err(|e| AppError::external(format!("Meili delete error: {}", e)))?;
 
         if !resp.status().is_success() {
             let text = resp.text().await.unwrap_or_default();
-            return Err(AppError::External(format!("Meili delete failed: {}", text)));
+            return Err(AppError::external(format!("Meili delete failed: {}", text)));
         }
 
         Ok(())
@@ -129,17 +129,17 @@ impl MeiliClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| AppError::External(format!("Meili search error: {}", e)))?;
+            .map_err(|e| AppError::external(format!("Meili search error: {}", e)))?;
 
         if !resp.status().is_success() {
             let text = resp.text().await.unwrap_or_default();
-            return Err(AppError::External(format!("Meili search failed: {}", text)));
+            return Err(AppError::external(format!("Meili search failed: {}", text)));
         }
 
         let results: SearchResults = resp
             .json()
             .await
-            .map_err(|e| AppError::External(format!("Meili parse error: {}", e)))?;
+            .map_err(|e| AppError::external(format!("Meili parse error: {}", e)))?;
 
         Ok(results)
     }
@@ -158,11 +158,11 @@ impl MeiliClient {
             .json(settings)
             .send()
             .await
-            .map_err(|e| AppError::External(format!("Meili settings error: {}", e)))?;
+            .map_err(|e| AppError::external(format!("Meili settings error: {}", e)))?;
 
         if !resp.status().is_success() {
             let text = resp.text().await.unwrap_or_default();
-            return Err(AppError::External(format!("Meili update settings failed: {}", text)));
+            return Err(AppError::external(format!("Meili update settings failed: {}", text)));
         }
 
         Ok(())

@@ -176,7 +176,7 @@ impl WebhookHandler {
         .bind(req.secret.as_deref())
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(wh)
     }
 
@@ -205,7 +205,7 @@ impl WebhookHandler {
                 .await
             }
         }
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(webhooks)
     }
 
@@ -224,10 +224,10 @@ impl WebhookHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         if owner.is_none() {
-            return Err(AppError::Forbidden("无权操作此 Webhook".to_string()));
+            return Err(AppError::forbidden("无权操作此 Webhook".to_string()));
         }
 
         // 使用 COALESCE 实现部分更新
@@ -248,7 +248,7 @@ impl WebhookHandler {
         .bind(id)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
         Ok(wh)
     }
 
@@ -259,10 +259,10 @@ impl WebhookHandler {
             .bind(user_id)
             .execute(&self.pool)
             .await
-            .map_err(|e| AppError::Internal(e.to_string()))?;
+            .map_err(|e| AppError::internal(e.to_string()))?;
 
         if result.rows_affected() == 0 {
-            return Err(AppError::NotFound("Webhook 不存在".to_string()));
+            return Err(AppError::not_found("Webhook 不存在".to_string()));
         }
         Ok(())
     }
@@ -283,8 +283,8 @@ impl WebhookHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?
-        .ok_or(AppError::NotFound("Webhook 不存在".to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?
+        .ok_or(AppError::not_found("Webhook 不存在".to_string()))?;
 
         let offset = ((page - 1) * page_size) as i64;
         let limit = page_size as i64;
@@ -294,7 +294,7 @@ impl WebhookHandler {
         .bind(webhook_id)
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let deliveries = sqlx::query_as::<_, WebhookDelivery>(
             "SELECT * FROM webhook_deliveries WHERE webhook_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
@@ -304,7 +304,7 @@ impl WebhookHandler {
         .bind(offset)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| AppError::Internal(e.to_string()))?;
+        .map_err(|e| AppError::internal(e.to_string()))?;
 
         let total_pages = (total.0 as f64 / page_size as f64).ceil() as u32;
         Ok((deliveries, Pagination { page, page_size, total: total.0 as u64, total_pages }))

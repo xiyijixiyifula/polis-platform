@@ -26,7 +26,7 @@ impl CodeHandler {
     ) -> Result<serde_json::Value, AppError> {
         // 验证仓库名
         if name.len() < 2 || name.len() > 100 {
-            return Err(AppError::Validation(
+            return Err(AppError::validation(
                 "Repository name must be between 2 and 100 characters".to_string(),
             ));
         }
@@ -41,7 +41,7 @@ impl CodeHandler {
         .await?;
 
         if existing.is_some() {
-            return Err(AppError::Conflict("Repository already exists".to_string()));
+            return Err(AppError::conflict("Repository already exists".to_string()));
         }
 
         // 创建数据库记录
@@ -63,12 +63,12 @@ impl CodeHandler {
         // 在文件系统上初始化 Git 仓库
         let repo_path = self.config.repos_root.join(repo_id.0.to_string());
         tokio::fs::create_dir_all(&repo_path).await
-            .map_err(|e| AppError::Internal(format!("Failed to create repo directory: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to create repo directory: {}", e)))?;
 
         // 使用 git2 初始化 bare 仓库
         let bare_repo_path = repo_path.join("bare.git");
         git2::Repository::init_bare(&bare_repo_path)
-            .map_err(|e| AppError::Internal(format!("Failed to init git repo: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to init git repo: {}", e)))?;
 
         // 创建 worktree (用于 HTTP 推送)
         let worktree_path = repo_path.join("worktree");
@@ -92,7 +92,7 @@ impl CodeHandler {
         .bind(repo_id)
         .fetch_optional(&self.pool)
         .await?
-        .ok_or(AppError::NotFound("Repository not found".to_string()))?;
+        .ok_or(AppError::not_found("Repository not found".to_string()))?;
 
         Ok(row.0)
     }
@@ -118,7 +118,7 @@ impl CodeHandler {
         let repo_path = self.config.repos_root.join(repo_id.to_string());
 
         let git_repo = git2::Repository::open_bare(repo_path.join("bare.git"))
-            .map_err(|e| AppError::Internal(format!("Failed to open git repo: {}", e)))?;
+            .map_err(|e| AppError::internal(format!("Failed to open git repo: {}", e)))?;
 
         let tree = git_repo
             .find_reference(&format!("refs/heads/{}", branch))

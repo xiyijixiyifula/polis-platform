@@ -18,10 +18,10 @@ pub async fn resolve_space_id(pool: &PgPool, namespace: &str) -> Result<Uuid, Ap
     .bind(&namespace)
     .fetch_optional(pool)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(|e| AppError::database(e))?;
 
     row.map(|r| r.0)
-        .ok_or_else(|| AppError::NotFound(format!("Space '{}' not found", namespace)))
+        .ok_or_else(|| AppError::not_found(format!("Space '{}' not found", namespace)))
 }
 
 /// 根据 namespace 查询 space_id，返回 Option
@@ -33,7 +33,7 @@ pub async fn resolve_space_id_optional(pool: &PgPool, namespace: &str) -> Result
     .bind(&namespace)
     .fetch_optional(pool)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(|e| AppError::database(e))?;
 
     Ok(row.map(|r| r.0))
 }
@@ -46,7 +46,7 @@ pub async fn resolve_space_enabled_modules(pool: &PgPool, space_id: Uuid) -> Res
     .bind(space_id)
     .fetch_all(pool)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(|e| AppError::database(e))?;
 
     if rows.is_empty() {
         return Ok(vec![]);
@@ -64,8 +64,8 @@ pub async fn resolve_root_space_id(pool: &PgPool, slug: &str) -> Result<Uuid, Ap
     .bind(slug)
     .fetch_optional(pool)
     .await
-    .map_err(|e| AppError::Database(e))?;
+    .map_err(|e| AppError::database(e))?;
 
     row.map(|r| r.0)
-        .ok_or_else(|| AppError::NotFound(format!("Root space '{}' not found", slug)))
+        .ok_or_else(|| AppError::not_found(format!("Root space '{}' not found", slug)))
 }

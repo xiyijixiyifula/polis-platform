@@ -5,6 +5,7 @@ use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
 
 use polis_core::events::subjects;
+use polis_core::shutdown::shutdown_signal;
 use polis_video::config::VideoServiceConfig;
 use polis_video::handler::VideoHandler;
 use polis_video::repo::VideoRepo;
@@ -67,7 +68,9 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Video service starting on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }

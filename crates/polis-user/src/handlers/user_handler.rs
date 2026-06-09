@@ -100,7 +100,7 @@ impl UserHandler {
         )
         .map_err(|e| AppError::Internal(format!("JWT error: {}", e)))?;
 
-        // 发布注册事件
+        // NATS: falls back to direct DB write when unavailable
         self.publish_event(subjects::USER_REGISTERED, serde_json::json!({
             "user_id": user.id.to_string(),
             "username": user.username,
@@ -271,7 +271,7 @@ impl UserHandler {
         Ok(user.into())
     }
 
-    /// 发布 NATS 事件
+    /// NATS: falls back to direct DB write when unavailable — silently skips publish when nats is None
     async fn publish_event(&self, subject: &str, payload: serde_json::Value) {
         if let Some(ref nats) = self.nats {
             let event = Event {
@@ -389,7 +389,7 @@ impl UserHandler {
             sqlx::query("INSERT INTO follows (follower_id, followee_type, followee_id) VALUES ($1, $2, $3)")
                 .bind(follower_id).bind(followee_type).bind(followee_id)
                 .execute(&self.repo.pool).await?;
-            // 发布关注事件 + 直接创建通知（NATS 可能未部署）
+            // NATS: falls back to direct DB write when unavailable — 直接创建通知（不走 NATS）
             if followee_type == "user" {
                 self.publish_event(subjects::USER_FOLLOWED, serde_json::json!({
                     "follower_id": follower_id.to_string(),

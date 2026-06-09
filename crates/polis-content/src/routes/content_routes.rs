@@ -35,7 +35,7 @@ fn maybe_extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> 
         None => return Ok(None),
     };
     let secret = std::env::var("JWT_SECRET")
-        .map_err(|_| AppError::Internal("JWT_SECRET environment variable must be set".into()))?;
+        .map_err(|_| AppError::internal("JWT_SECRET environment variable must be set"))?;
     match decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation()) {
         Ok(data) => {
             match Uuid::parse_str(&data.claims.sub) {
@@ -78,12 +78,12 @@ pub struct SaveDraftRequest { pub space_id: Option<Uuid>, pub title: String, pub
 fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String>), AppError> {
     let remaining_raw = path.strip_prefix("/api/spaces/").unwrap_or("");
     if remaining_raw.is_empty() {
-        return Err(AppError::NotFound("Invalid path".to_string()));
+        return Err(AppError::not_found("Invalid path".to_string()));
     }
     // URL 解码命名空间（支持中文等非 ASCII 字符 + ~ → / 转换）
     let remaining = percent_decode_str(remaining_raw)
         .decode_utf8()
-        .map_err(|_| AppError::Validation("Invalid UTF-8 in path".to_string()))?
+        .map_err(|_| AppError::validation("Invalid UTF-8 in path".to_string()))?
         .to_string()
         .replace('~', "/");
 
@@ -91,7 +91,7 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     if let Some(pos) = remaining.find("/posts") {
         let ns = &remaining[..pos];
         if ns.is_empty() {
-            return Err(AppError::NotFound("Missing namespace".to_string()));
+            return Err(AppError::not_found("Missing namespace".to_string()));
         }
         let after_posts = &remaining[pos + 6..]; // skip "/posts"
         if after_posts.is_empty() {
@@ -101,7 +101,7 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
         if parts.is_empty() {
             return Ok((ns.to_string(), None, None));
         }
-        let id = Uuid::parse_str(parts[0]).map_err(|_| AppError::Validation("Invalid post ID".to_string()))?;
+        let id = Uuid::parse_str(parts[0]).map_err(|_| AppError::validation("Invalid post ID".to_string()))?;
         let sub_action = parts.get(1).map(|s| s.to_string());
         return Ok((ns.to_string(), Some(id), sub_action));
     }
@@ -109,7 +109,7 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     if remaining.contains("/featured") {
         let ns = remaining.strip_suffix("/featured").unwrap_or(remaining.as_str());
         if ns.is_empty() {
-            return Err(AppError::NotFound("Missing namespace".to_string()));
+            return Err(AppError::not_found("Missing namespace".to_string()));
         }
         return Ok((ns.to_string(), None, Some("featured".to_string())));
     }
@@ -117,21 +117,21 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     if remaining.contains("/announcements") {
         let ns = remaining.strip_suffix("/announcements").unwrap_or(remaining.as_str());
         if ns.is_empty() {
-            return Err(AppError::NotFound("Missing namespace".to_string()));
+            return Err(AppError::not_found("Missing namespace".to_string()));
         }
         return Ok((ns.to_string(), None, Some("announcements".to_string())));
     }
 
     if remaining.contains("/files") {
         let ns = remaining.strip_suffix("/files").unwrap_or(remaining.as_str());
-        if ns.is_empty() { return Err(AppError::NotFound("Missing namespace".to_string())); }
+        if ns.is_empty() { return Err(AppError::not_found("Missing namespace".to_string())); }
         return Ok((ns.to_string(), None, Some("files".to_string())));
     }
 
     if remaining.contains("/polls") {
         let ns = remaining.strip_suffix("/polls").unwrap_or(remaining.as_str());
         if ns.is_empty() {
-            return Err(AppError::NotFound("Missing namespace".to_string()));
+            return Err(AppError::not_found("Missing namespace".to_string()));
         }
         return Ok((ns.to_string(), None, Some("polls".to_string())));
     }
@@ -139,7 +139,7 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     if remaining.contains("/analytics") {
         let ns = remaining.strip_suffix("/analytics").unwrap_or(remaining.as_str());
         if ns.is_empty() {
-            return Err(AppError::NotFound("Missing namespace".to_string()));
+            return Err(AppError::not_found("Missing namespace".to_string()));
         }
         return Ok((ns.to_string(), None, Some("analytics".to_string())));
     }
@@ -147,7 +147,7 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
     if let Some(pos) = remaining.find("/references") {
         let ns = &remaining[..pos];
         if ns.is_empty() {
-            return Err(AppError::NotFound("Missing namespace".to_string()));
+            return Err(AppError::not_found("Missing namespace".to_string()));
         }
         let after_refs = &remaining[pos + 11..]; // skip "/references"
         if after_refs.is_empty() {
@@ -157,12 +157,12 @@ fn parse_content_path(path: &str) -> Result<(String, Option<Uuid>, Option<String
         if parts.is_empty() {
             return Ok((ns.to_string(), None, Some("references".to_string())));
         }
-        let ref_id = Uuid::parse_str(parts[0]).map_err(|_| AppError::Validation("Invalid reference ID".to_string()))?;
+        let ref_id = Uuid::parse_str(parts[0]).map_err(|_| AppError::validation("Invalid reference ID".to_string()))?;
         let action = parts.get(1).map(|s| format!("ref-{}", s));
         return Ok((ns.to_string(), Some(ref_id), action));
     }
 
-    Err(AppError::NotFound("Invalid content path".to_string()))
+    Err(AppError::not_found("Invalid content path".to_string()))
 }
 
 pub fn content_routes(handler: Arc<ContentHandler>) -> Router {
@@ -297,7 +297,7 @@ async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, heade
         .bind(space_id)
         .fetch_one(pool)
         .await
-        .map_err(|_| AppError::NotFound("Space not found".to_string()))?;
+        .map_err(|_| AppError::not_found("Space not found".to_string()))?;
 
     let visibility = &row.0;
     let has_password = row.1.is_some();
@@ -309,16 +309,16 @@ async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, heade
     // 私有空间：检查是否为成员
     if visibility == "private" {
         let uid = maybe_extract_user_id(headers)?
-            .ok_or_else(|| AppError::Forbidden("此空间为私有空间".to_string()))?;
+            .ok_or_else(|| AppError::forbidden("此空间为私有空间".to_string()))?;
         let is_member = sqlx::query_scalar::<_, Option<i32>>(
             "SELECT 1 FROM memberships WHERE space_id = $1 AND user_id = $2"
         )
         .bind(space_id).bind(uid)
         .fetch_optional(pool).await
-        .map_err(|e| AppError::Database(e))?
+        .map_err(|e| AppError::database(e))?
         .is_some();
         if !is_member {
-            return Err(AppError::Forbidden("此空间为私有空间，仅成员可访问".to_string()));
+            return Err(AppError::forbidden("此空间为私有空间，仅成员可访问".to_string()));
         }
         return Ok(());
     }
@@ -345,7 +345,7 @@ async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, heade
                 .unwrap_or("");
 
             if pwd.is_empty() {
-                return Err(AppError::Forbidden("此空间需要密码访问".to_string()));
+                return Err(AppError::forbidden("此空间需要密码访问".to_string()));
             }
 
             let hash_str = row.1.as_deref().unwrap_or("");
@@ -360,10 +360,10 @@ async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, heade
                     return Ok(());
                 }
             }
-            return Err(AppError::Forbidden("密码错误".to_string()));
+            return Err(AppError::forbidden("密码错误".to_string()));
         }
 
-        return Err(AppError::Forbidden("此空间不对外公开".to_string()));
+        return Err(AppError::forbidden("此空间不对外公开".to_string()));
     }
 
     Ok(())
@@ -452,12 +452,12 @@ async fn handle_public_content(
         (None, Some("references")) => {
             // 仅空间所有者可查看待审核投稿
             let current_user = maybe_extract_user_id(req.headers())?;
-            let uid = current_user.ok_or(AppError::Unauthorized)?;
+            let uid = current_user.ok_or(AppError::unauthorized())?;
             let owner_id: Option<Uuid> = sqlx::query_scalar(
                 "SELECT owner_id FROM spaces WHERE id = $1"
             ).bind(space_id).fetch_optional(&h.pool).await?.flatten();
             if owner_id != Some(uid) {
-                return Err(AppError::Forbidden("Only space owner can view references".to_string()));
+                return Err(AppError::forbidden("Only space owner can view references".to_string()));
             }
             let refs = h.repo.list_pending_references_by_space(space_id).await?;
             let post_ids: Vec<Uuid> = refs.iter().map(|r| r.post_id).collect();
@@ -477,7 +477,7 @@ async fn handle_public_content(
             }).collect();
             Ok(json_ok(ApiResponse::success(items)))
         }
-        _ => Err(AppError::NotFound("Route not found".to_string())),
+        _ => Err(AppError::not_found("Route not found".to_string())),
     }
 }
 
@@ -493,7 +493,7 @@ async fn handle_auth_content(
 
     // 读取请求体
     let body_bytes = axum::body::to_bytes(req.into_body(), 10 * 1024 * 1024).await
-        .map_err(|_| AppError::Validation("Failed to read body".to_string()))?;
+        .map_err(|_| AppError::validation("Failed to read body".to_string()))?;
 
     let (ns, post_id, sub_action) = parse_content_path(&path)?;
 
@@ -502,10 +502,10 @@ async fn handle_auth_content(
             match (post_id, sub_action.as_deref()) {
                 (None, Some("files")) => {
                     let r: UploadFileRequest = serde_json::from_slice(&body_bytes)
-                        .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
+                        .map_err(|e| AppError::validation(format!("Invalid JSON: {}", e)))?;
                     use base64::Engine;
                     let data = base64::engine::general_purpose::STANDARD.decode(&r.data_base64)
-                        .map_err(|e| AppError::Validation(format!("Invalid base64: {}", e)))?;
+                        .map_err(|e| AppError::validation(format!("Invalid base64: {}", e)))?;
                     let mime_type = r.mime_type.unwrap_or_else(|| "application/octet-stream".to_string());
                     let space_id = resolve_space_id(&h.pool, &ns).await?;
                     // 私有空间：仅成员可上传文件
@@ -516,7 +516,7 @@ async fn handle_auth_content(
                 (None, None) | (None, Some("posts")) => {
                     // POST /api/spaces/{ns}/posts - create
                     let r: CreatePostRequest = serde_json::from_slice(&body_bytes)
-                        .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
+                        .map_err(|e| AppError::validation(format!("Invalid JSON: {}", e)))?;
                     let space_id = resolve_space_id(&h.pool, &ns).await?;
 
                     // 私有空间：仅成员可发帖（仿微信群权限模式）
@@ -541,7 +541,7 @@ async fn handle_auth_content(
                             .await?
                             .flatten();
                             if owner_id != Some(uid) {
-                                return Err(AppError::Forbidden("仅社区创建者可在此模块发布内容".to_string()));
+                                return Err(AppError::forbidden("仅社区创建者可在此模块发布内容".to_string()));
                             }
                         }
                     }
@@ -555,7 +555,7 @@ async fn handle_auth_content(
                 }
                 (Some(id), Some("comments")) => {
                     let r: CreateCommentRequest = serde_json::from_slice(&body_bytes)
-                        .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
+                        .map_err(|e| AppError::validation(format!("Invalid JSON: {}", e)))?;
                     let comment = h.create_comment(id, uid, r).await?;
                     Ok(json_ok(ApiResponse::success(comment)))
                 }
@@ -565,7 +565,7 @@ async fn handle_auth_content(
                 }
                 (Some(id), Some("report")) => {
                     let r: ReportRequest = serde_json::from_slice(&body_bytes)
-                        .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
+                        .map_err(|e| AppError::validation(format!("Invalid JSON: {}", e)))?;
                     h.repo.create_report(uid, "post", id, &r.reason).await?;
                     Ok(json_ok(ApiResponse::success(())))
                 }
@@ -587,7 +587,7 @@ async fn handle_auth_content(
                         "SELECT owner_id FROM spaces WHERE id = $1"
                     ).bind(space_id).fetch_optional(&h.pool).await?.flatten();
                     if owner_id != Some(uid) {
-                        return Err(AppError::Forbidden("Only space owner can approve references".to_string()));
+                        return Err(AppError::forbidden("Only space owner can approve references".to_string()));
                     }
                     let ref_row: PostReference = h.review_reference(ref_id, "approved", uid).await?;
                     Ok(json_ok(ApiResponse::success(ref_row)))
@@ -598,25 +598,25 @@ async fn handle_auth_content(
                         "SELECT owner_id FROM spaces WHERE id = $1"
                     ).bind(space_id).fetch_optional(&h.pool).await?.flatten();
                     if owner_id != Some(uid) {
-                        return Err(AppError::Forbidden("Only space owner can reject references".to_string()));
+                        return Err(AppError::forbidden("Only space owner can reject references".to_string()));
                     }
                     let ref_row: PostReference = h.review_reference(ref_id, "rejected", uid).await?;
                     Ok(json_ok(ApiResponse::success(ref_row)))
                 }
-                _ => Err(AppError::NotFound("Route not found".to_string())),
+                _ => Err(AppError::not_found("Route not found".to_string())),
             }
         }
         axum::http::Method::PUT => {
             match (post_id, sub_action.as_deref()) {
                 (Some(id), None) => {
                     let r: UpdatePostRequest = serde_json::from_slice(&body_bytes)
-                        .map_err(|e| AppError::Validation(format!("Invalid JSON: {}", e)))?;
+                        .map_err(|e| AppError::validation(format!("Invalid JSON: {}", e)))?;
                     h.update_post(id, uid, r).await?;
                     // 返回 PostPublic（含 author 对象），保持前端类型一致
                     let public = h.get_post_public(id, Some(uid)).await?;
                     Ok(json_ok(ApiResponse::success(public)))
                 }
-                _ => Err(AppError::NotFound("Route not found".to_string())),
+                _ => Err(AppError::not_found("Route not found".to_string())),
             }
         }
         axum::http::Method::DELETE => {
@@ -625,10 +625,10 @@ async fn handle_auth_content(
                     h.delete_post(id, uid).await?;
                     Ok(json_ok(ApiResponse::success(())))
                 }
-                _ => Err(AppError::NotFound("Route not found".to_string())),
+                _ => Err(AppError::not_found("Route not found".to_string())),
             }
         }
-        _ => Err(AppError::NotFound("Method not allowed".to_string())),
+        _ => Err(AppError::not_found("Method not allowed".to_string())),
     }
 }
 
@@ -891,14 +891,14 @@ async fn download_post_route(
     Path(id): Path<Uuid>,
 ) -> Result<Response, AppError> {
     let post = h.repo.find_post_by_id(id).await?
-        .ok_or(AppError::NotFound("Post not found".to_string()))?;
+        .ok_or(AppError::not_found("Post not found".to_string()))?;
 
     // SEC-002: Private posts are only downloadable by the author
     if post.visibility == "private" {
         let current_user = maybe_extract_user_id(&headers)?;
         match current_user {
             Some(uid) if uid == post.author_id => {}
-            _ => return Err(AppError::Forbidden("This post is private".to_string())),
+            _ => return Err(AppError::forbidden("This post is private".to_string())),
         }
     }
 
@@ -943,16 +943,16 @@ async fn create_comment_by_post_id(
     let auth_header = headers
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::unauthorized())?;
     let token = auth_header
         .strip_prefix("Bearer ")
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::unauthorized())?;
     let secret = std::env::var("JWT_SECRET")
-        .map_err(|_| AppError::Internal("JWT_SECRET environment variable must be set".into()))?;
+        .map_err(|_| AppError::internal("JWT_SECRET environment variable must be set"))?;
     let token_data = decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &polis_core::auth::secure_validation())
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| AppError::unauthorized())?;
     let uid = Uuid::parse_str(&token_data.claims.sub)
-        .map_err(|_| AppError::Unauthorized)?;
+        .map_err(|_| AppError::unauthorized())?;
     let comment = h.create_comment(id, uid, req).await?;
     Ok(json_ok(ApiResponse::success(comment)))
 }
@@ -1071,7 +1071,7 @@ async fn report_post_by_id_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     // Verify post exists
     h.repo.find_post_by_id(id).await?
-        .ok_or(AppError::NotFound("Post not found".to_string()))?;
+        .ok_or(AppError::not_found("Post not found".to_string()))?;
     // Create report entry (simplified — stores in notifications-like format)
     let report_id = h.repo.create_report(uid, "post", id, &req.reason).await?;
     Ok(json_ok(ApiResponse::success(serde_json::json!({"report_id": report_id.to_string(), "message": "举报已提交"}))))
@@ -1318,7 +1318,7 @@ async fn upload_file_route(
 fn base64_decode(input: &str) -> Result<Vec<u8>, AppError> {
     use base64::Engine;
     base64::engine::general_purpose::STANDARD.decode(input)
-        .map_err(|e| AppError::Validation(format!("Invalid base64: {}", e)))
+        .map_err(|e| AppError::validation(format!("Invalid base64: {}", e)))
 }
 
 async fn update_post_by_id_route(
@@ -1585,7 +1585,7 @@ async fn batch_delete_conversations_route(
     Json(req): Json<BatchDeleteRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     if req.ids.is_empty() {
-        return Err(AppError::Validation("请选择要删除的对话".to_string()));
+        return Err(AppError::validation("请选择要删除的对话".to_string()));
     }
     let dm = MessageHandler::new(h.pool.clone());
     let deleted = dm.batch_delete_conversations(uid, req.ids).await?;
@@ -1611,7 +1611,7 @@ async fn search_messages_route(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let q = params.get("q").cloned().unwrap_or_default();
     if q.is_empty() {
-        return Err(AppError::Validation("搜索关键词不能为空".to_string()));
+        return Err(AppError::validation("搜索关键词不能为空".to_string()));
     }
     let other_user_id = params.get("user_id").and_then(|s| Uuid::parse_str(s).ok());
     let limit: i64 = params.get("page_size").and_then(|s| s.parse().ok()).unwrap_or(20).min(50);
@@ -1675,7 +1675,7 @@ async fn create_tip_route(State(h): State<Arc<ContentHandler>>, axum::Extension(
     let target_type = r.target_type.as_deref().unwrap_or("post");
     // Get receiver_id: for posts, it's the author
     let receiver_id = if target_type == "post" {
-        h.repo.find_post_by_id(r.target_id).await?.map(|p| p.author_id).ok_or(AppError::NotFound("Post not found".to_string()))?
+        h.repo.find_post_by_id(r.target_id).await?.map(|p| p.author_id).ok_or(AppError::not_found("Post not found".to_string()))?
     } else {
         r.target_id // for other types, use target_id directly
     };

@@ -12,6 +12,7 @@ use axum::{
     Json,
 };
 use polis_core::models::ApiResponse;
+use polis_core::shutdown::shutdown_signal;
 use serde_json::{json, Value};
 use tokio::sync::Mutex;
 use tower_http::{compression::CompressionLayer, trace::TraceLayer};
@@ -177,6 +178,7 @@ async fn main() -> anyhow::Result<()> {
         listener,
         app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
     )
+    .with_graceful_shutdown(shutdown_signal())
     .await?;
 
     Ok(())

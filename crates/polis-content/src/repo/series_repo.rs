@@ -51,9 +51,9 @@ impl SeriesRepo {
             .bind(series_id)
             .fetch_one(&*self.pool)
             .await
-            .map_err(|_| AppError::NotFound("Series not found".to_string()))?;
+            .map_err(|_| AppError::not_found("Series not found".to_string()))?;
         if existing.0 != user_id {
-            return Err(AppError::Forbidden("Not the series owner".to_string()));
+            return Err(AppError::forbidden("Not the series owner".to_string()));
         }
         sqlx::query(
             "UPDATE series SET title = COALESCE($2, title), description = COALESCE($3, description), cover_url = COALESCE($4, cover_url), visibility = COALESCE($5, visibility), is_published = COALESCE($6, is_published), sort_order = COALESCE($7, sort_order), updated_at = NOW() WHERE id = $1",
@@ -79,9 +79,9 @@ impl SeriesRepo {
             .bind(series_id)
             .fetch_one(&*self.pool)
             .await
-            .map_err(|_| AppError::NotFound("Series not found".to_string()))?;
+            .map_err(|_| AppError::not_found("Series not found".to_string()))?;
         if existing.0 != user_id {
-            return Err(AppError::Forbidden("Not the series owner".to_string()));
+            return Err(AppError::forbidden("Not the series owner".to_string()));
         }
         sqlx::query("DELETE FROM series_posts WHERE series_id = $1")
             .bind(series_id)
@@ -112,7 +112,7 @@ impl SeriesRepo {
             .bind(series_id)
             .fetch_one(&*self.pool)
             .await
-            .map_err(|_| AppError::NotFound("Series not found".to_string()))
+            .map_err(|_| AppError::not_found("Series not found".to_string()))
     }
 
     pub async fn add_post_to_series(

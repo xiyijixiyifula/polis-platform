@@ -170,7 +170,13 @@ export default function TabRenderer(props: TabRendererProps) {
 							<h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">社区动态</h3>
 						</div>
 						{postLoading ? (
-							<div className="glass-card py-6 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+							<div className="glass-card p-6 animate-pulse space-y-3">
+									<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+									<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+									<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+									<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mt-4"></div>
+									<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
+								</div>
 						) : posts.length > 0 ? (
 							<div className="space-y-1">
 								{posts.slice(0, 20).map((post) => {
@@ -457,7 +463,13 @@ export default function TabRenderer(props: TabRendererProps) {
 					</Link>
 
 					{postLoading ? (
-						<div className="glass-card py-8 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+						<div className="glass-card p-6 animate-pulse space-y-3">
+							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mt-4"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
+						</div>
 					) : posts.filter(p => p.module_type === 'wiki').length > 0 ? (
 						<div className="space-y-3">
 							{posts.filter(p => p.module_type === 'wiki').map((post) => (
@@ -603,7 +615,18 @@ export default function TabRenderer(props: TabRendererProps) {
 					{isOwner && <JoinRequestsPanel namespace={cleanNamespace} />}
 
 					{membersLoading ? (
-						<div className="glass-card py-8 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+						<div className="glass-card p-6 animate-pulse space-y-3">
+						<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
+						{[1, 2, 3].map((i) => (
+							<div key={i} className="flex items-center gap-3">
+								<div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full shrink-0"></div>
+								<div className="flex-1 space-y-1.5">
+									<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+									<div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+								</div>
+							</div>
+						))}
+					</div>
 					) : members.length > 0 ? (
 						<div className="space-y-2">
 							{members.map((m) => (
@@ -840,7 +863,13 @@ export default function TabRenderer(props: TabRendererProps) {
 					</Link>
 
 					{postLoading ? (
-						<div className="glass-card py-8 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+						<div className="glass-card p-6 animate-pulse space-y-3">
+							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mt-4"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
+						</div>
 					) : posts.filter(p => p.module_type === 'game').length > 0 ? (
 						<div className="space-y-3">
 							{posts.filter(p => p.module_type === 'game').map((post) => (
@@ -880,7 +909,13 @@ export default function TabRenderer(props: TabRendererProps) {
 					</Link>
 
 					{postLoading ? (
-						<div className="glass-card py-8 text-center text-gray-400 animate-pulse"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+						<div className="glass-card p-6 animate-pulse space-y-3">
+							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mt-4"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
+						</div>
 					) : posts.filter(p => p.module_type === 'mini_app').length > 0 ? (
 						<div className="space-y-3">
 							{posts.filter(p => p.module_type === 'mini_app').map((post) => (
@@ -983,7 +1018,13 @@ export default function TabRenderer(props: TabRendererProps) {
 						)}
 
 						{postLoading ? (
-							<div className="glass-card py-8 text-center text-gray-400"><span className="inline-block h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...</div>
+							<div className="glass-card p-6 animate-pulse space-y-3">
+							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+							<div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mt-4"></div>
+							<div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-4/5"></div>
+						</div>
 						) : filteredPosts.length > 0 ? (
 							<div className="space-y-2">
 								{filteredPosts.map((p: any) => (

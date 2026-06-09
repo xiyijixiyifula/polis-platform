@@ -64,8 +64,16 @@ export default function FollowersPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-          <span className="inline-block h-5 w-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mr-2 align-middle"></span>加载中...
+        <div className="animate-pulse space-y-3 py-8">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 py-2">
+              <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full shrink-0"></div>
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
+              </div>
+            </div>
+          ))}
         </div>
       ) : followers.length > 0 ? (
         <div className="space-y-2">
