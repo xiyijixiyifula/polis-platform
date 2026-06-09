@@ -46,7 +46,9 @@ export interface Series {
 
 export interface Space {
   id: string;
+  /** @deprecated URL/API标识符 — 渲染UI请使用 title 字段 */
   namespace: string;
+  /** @deprecated URL/API标识符 — 渲染UI请使用 title 字段 */
   slug: string;
   owner_id: string | null;
   is_root: boolean;
@@ -399,7 +401,9 @@ export const spaces = {
 export interface SpaceModule {
   id: string;
   space_id: string;
+  /** ✅ UI显示名称 — 可安全渲染 */
   name: string;
+  /** @deprecated URL/API标识符 — 渲染UI请使用 name 字段 */
   module_key: string;
   mode: 'free' | 'creator_only';
   allowed_content_types: string[];
