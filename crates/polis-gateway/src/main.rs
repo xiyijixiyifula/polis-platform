@@ -33,6 +33,7 @@ struct RateLimitEntry {
 struct GatewayState {
     config: GatewayConfig,
     client: reqwest::Client,
+    /// 速率限制映射 — 条目通过后台清理任务驱逐（每 5 分钟扫描一次，清理 window_start 过期超过 60s 的 IP），防止内存泄漏
     rate_limits: Mutex<HashMap<IpAddr, RateLimitEntry>>,
 }
 
@@ -67,6 +68,29 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/videos", any(proxy_to_video))
         .route("/hls/{*path}", any(proxy_to_video))
         .layer(axum::extract::DefaultBodyLimit::max(config.max_video_bytes));
+
+    // 启动速率限制器后台清理：每 5 分钟清除过期条目以避免内存泄漏
+    // 过期判定：window_start + 60s < now（与中间件窗口一致）
+    {
+        let state = state.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
+            loop {
+                interval.tick().await;
+                let mut limits = state.rate_limits.lock().await;
+                let before = limits.len();
+                let now = Instant::now();
+                let window = std::time::Duration::from_secs(60);
+                limits.retain(|_ip, entry| {
+                    now.duration_since(entry.window_start) <= window
+                });
+                let removed = before - limits.len();
+                if removed > 0 {
+                    tracing::debug!("Rate limiter cleanup: removed {} expired entries", removed);
+                }
+            }
+        });
+    }
 
     let app = Router::new()
         // 代理路由 - 用户服务

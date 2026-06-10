@@ -223,9 +223,10 @@ impl ThreadHandler {
                 .bind(ns)
                 .fetch_optional(&self.pool)
                 .await
-                .map_err(|e| AppError::internal(e.to_string()))
-                .ok()
-                .flatten();
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to lookup space by namespace '{}': {}", ns, e);
+                    None
+                });
 
                 if let Some(sid) = sp_id {
                     // 插入引用

@@ -93,7 +93,10 @@ async fn handle_public_path(
     if remaining.ends_with("/members") {
         let decoded_ns = decode_namespace(ns)?;
         let space = handler.get_space(&decoded_ns).await?;
-        let members = handler.repo.get_members_with_users(space.id).await.unwrap_or_default();
+        let members = handler.repo.get_members_with_users(space.id).await.unwrap_or_else(|e| {
+            tracing::warn!("Failed to fetch members for space {}: {}", space.id, e);
+            Default::default()
+        });
         return Ok(Json(serde_json::json!({"code": 0, "data": members})));
     }
 

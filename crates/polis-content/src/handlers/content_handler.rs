@@ -90,11 +90,13 @@ impl ContentHandler {
             .await?;
 
         // 更新社区帖子计数
-        sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
+        if let Err(e) = sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
             .bind(space_id)
             .execute(&self.pool)
             .await
-            .ok();
+        {
+            tracing::warn!("Failed to update post_count for space {}: {}", space_id, e);
+        }
 
         // NATS: falls back to direct DB write when unavailable
         self.publish_event(subjects::CONTENT_POST_CREATED, serde_json::json!({
@@ -219,7 +221,10 @@ impl ContentHandler {
         let authors = self.repo.find_users_batch(&author_ids).await?;
 
         let space_ids: Vec<Uuid> = posts.iter().map(|p| p.space_id).collect();
-        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_default();
+        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_else(|e| {
+            tracing::warn!("Failed to fetch spaces batch: {}", e);
+            Default::default()
+        });
 
         let post_publics = posts
             .into_iter()
@@ -278,7 +283,9 @@ impl ContentHandler {
             .await?
             .ok_or(AppError::not_found("Post not found".to_string()))?;
 
-        self.repo.increment_view_count(post_id).await.ok();
+        if let Err(e) = self.repo.increment_view_count(post_id).await {
+            tracing::warn!("Failed to increment view_count for post {}: {}", post_id, e);
+        }
         Ok(post)
     }
 
@@ -288,7 +295,10 @@ impl ContentHandler {
         let author_ids: Vec<Uuid> = posts.iter().map(|p| p.author_id).collect();
         let authors = self.repo.find_users_batch(&author_ids).await?;
         let space_ids: Vec<Uuid> = posts.iter().map(|p| p.space_id).collect();
-        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_default();
+        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_else(|e| {
+            tracing::warn!("Failed to fetch spaces batch: {}", e);
+            Default::default()
+        });
         let post_publics = posts
             .into_iter()
             .map(|p| {
@@ -434,7 +444,10 @@ impl ContentHandler {
             created_at: series.created_at, updated_at: series.updated_at,
         };
         let space_ids: Vec<Uuid> = posts.iter().map(|p| p.space_id).collect();
-        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_default();
+        let spaces = self.repo.find_spaces_batch(&space_ids).await.unwrap_or_else(|e| {
+            tracing::warn!("Failed to fetch spaces batch: {}", e);
+            Default::default()
+        });
         let post_publics: Vec<PostPublic> = posts.into_iter().map(|p| {
             let space_ns = spaces.get(&p.space_id)
                 .and_then(|s| s.get("namespace").and_then(|v| v.as_str()))
@@ -497,8 +510,11 @@ impl ContentHandler {
         let effective_visibility = if post.visibility == "hidden" && post.hidden_until.is_some() {
             let expired = post.hidden_until.unwrap() <= Utc::now();
             if expired {
-                let _ = sqlx::query("UPDATE posts SET visibility = 'public', hidden_until = NULL WHERE id = $1")
-                    .bind(post_id).execute(&self.repo.pool).await;
+                if let Err(e) = sqlx::query("UPDATE posts SET visibility = 'public', hidden_until = NULL WHERE id = $1")
+                    .bind(post_id).execute(&self.repo.pool).await
+                {
+                    tracing::warn!("Failed to auto-unhide post {}: {}", post_id, e);
+                }
                 "public".to_string()
             } else {
                 "hidden".to_string()
@@ -515,7 +531,9 @@ impl ContentHandler {
             }
         }
 
-        self.repo.increment_view_count(post_id).await.ok();
+        if let Err(e) = self.repo.increment_view_count(post_id).await {
+            tracing::warn!("Failed to increment view_count for post {}: {}", post_id, e);
+        }
 
         let author_ids = vec![post.author_id];
         let authors = self.repo.find_users_batch(&author_ids).await?;
@@ -553,9 +571,12 @@ impl ContentHandler {
         // 解析社区 namespace（用于前端 API 调用，避免额外一次空间查询）
         let space_ns = self.repo.find_spaces_batch(&[post.space_id])
             .await
-            .ok()
-            .and_then(|spaces| spaces.get(&post.space_id)
-                .and_then(|s| s.get("namespace").and_then(|v| v.as_str().map(String::from))))
+            .unwrap_or_else(|e| {
+                tracing::warn!("Failed to fetch space namespace for space {}: {}", post.space_id, e);
+                Default::default()
+            })
+            .get(&post.space_id)
+            .and_then(|s| s.get("namespace").and_then(|v| v.as_str().map(String::from)))
             .unwrap_or_default();
 
         Ok(PostPublic {
@@ -662,9 +683,12 @@ impl ContentHandler {
 
         let space_ns = self.repo.find_spaces_batch(&[post.space_id])
             .await
-            .ok()
-            .and_then(|spaces| spaces.get(&post.space_id)
-                .and_then(|s| s.get("namespace").and_then(|v| v.as_str().map(String::from))))
+            .unwrap_or_else(|e| {
+                tracing::warn!("Failed to fetch space namespace for space {}: {}", post.space_id, e);
+                Default::default()
+            })
+            .get(&post.space_id)
+            .and_then(|s| s.get("namespace").and_then(|v| v.as_str().map(String::from)))
             .unwrap_or_default();
 
         Ok(PostPublic {
@@ -1342,8 +1366,10 @@ impl ContentHandler {
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
-        .ok()
-        .flatten()
+        .unwrap_or_else(|e| {
+            tracing::warn!("Failed to fetch user name for user {}: {}", user_id, e);
+            None
+        })
     }
 
 
@@ -1444,7 +1470,10 @@ impl ContentHandler {
     async fn get_max_upload_size_mb(&self) -> i64 {
         let result: Option<(serde_json::Value,)> = sqlx::query_as(
             "SELECT value FROM platform_settings WHERE key = 'max_upload_size_mb'"
-        ).fetch_optional(&self.pool).await.ok().flatten();
+        ).fetch_optional(&self.pool).await.unwrap_or_else(|e| {
+            tracing::warn!("Failed to query platform_settings max_upload_size_mb: {}", e);
+            None
+        });
         if let Some((val,)) = result {
             if let Some(n) = val.as_i64() {
                 if n > 0 { return n; }

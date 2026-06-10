@@ -418,11 +418,13 @@ impl CreationHandler {
         .map_err(|e| AppError::internal(e.to_string()))?;
 
         // 更新社区帖子计数
-        sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
+        if let Err(e) = sqlx::query("UPDATE spaces SET post_count = post_count + 1 WHERE id = $1")
             .bind(space_id)
             .execute(&self.pool)
             .await
-            .ok();
+        {
+            tracing::warn!("Failed to update post_count for space {}: {}", space_id, e);
+        }
 
         Ok(module_ref)
     }

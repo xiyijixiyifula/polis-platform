@@ -398,7 +398,10 @@ impl UserHandler {
                 // 直接创建通知（不走 NATS，确保在没有 NATS 的环境也能工作）
                 let follower_name = sqlx::query_scalar::<_, String>(
                     "SELECT display_name FROM users WHERE id = $1"
-                ).bind(follower_id).fetch_optional(&self.repo.pool).await.ok().flatten().unwrap_or_else(|| "有人".to_string());
+                ).bind(follower_id).fetch_optional(&self.repo.pool).await.unwrap_or_else(|e| {
+                    tracing::warn!("Failed to fetch follower name for user {}: {}", follower_id, e);
+                    None
+                }).unwrap_or_else(|| "有人".to_string());
                 let content = format!("{} 关注了你", follower_name);
                 if let Err(e) = sqlx::query(
                     "INSERT INTO notifications (user_id, type, actor_id, target_type, target_id, content) VALUES ($1, $2, $3, $4, $5, $6)"

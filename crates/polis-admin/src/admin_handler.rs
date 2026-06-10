@@ -15,11 +15,20 @@ use crate::audit::AuditLogger;
 const ADMIN_CODE_FILE: &str = "/root/polis/admin_code.txt";
 
 fn load_admin_code(env_code: &str) -> String {
-    fs::read_to_string(ADMIN_CODE_FILE)
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| env_code.to_string())
+    match fs::read_to_string(ADMIN_CODE_FILE) {
+        Ok(s) => {
+            let trimmed = s.trim().to_string();
+            if !trimmed.is_empty() {
+                trimmed
+            } else {
+                env_code.to_string()
+            }
+        }
+        Err(e) => {
+            tracing::warn!("Failed to read admin_code.txt, falling back to env var: {}", e);
+            env_code.to_string()
+        }
+    }
 }
 
 pub struct AdminHandler {
