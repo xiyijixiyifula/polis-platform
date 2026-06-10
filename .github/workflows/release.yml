@@ -33,14 +33,8 @@ jobs:
             cargo clippy -p $svc -- -D warnings
           done
 
-      - name: Test Backend (per-crate)
-        run: |
-          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate polis-chain; do
-            cargo test -p $svc --release 2>&1 | tail -5
-          done
-
       - name: Test Backend (workspace)
-        run: cargo test --workspace --release --no-fail-fast
+        run: cargo test --workspace --release --no-fail-fast 2>&1 | tail -20
 
       - name: Build Backend (native, no cross-compile)
         run: |
