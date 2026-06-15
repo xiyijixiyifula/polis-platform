@@ -3,6 +3,8 @@
 use polis_core::admin::*;
 use polis_core::error::AppError;
 use polis_core::models::{AuditLogQuery, ReviewQueueQuery, BatchReviewRequest, AgentAdminLoginRequest, CreateReviewRuleRequest, AgentReviewDecision};
+use polis_core::token_blacklist::TokenBlacklist;
+use polis_core::to_json_value;
 use sqlx::PgPool;
 use std::fs;
 use std::sync::RwLock;
@@ -42,6 +44,8 @@ pub struct AdminHandler {
     /// In-memory rate limiter for admin login brute-force protection.
     /// Maps IP address -> (failed_attempts, blocked_until).
     pub login_rate_limiter: Mutex<HashMap<String, Vec<Instant>>>,
+    /// Shared token blacklist for admin JWT revocation (logout).
+    pub token_blacklist: TokenBlacklist,
 }
 
 impl AdminHandler {
@@ -52,7 +56,8 @@ impl AdminHandler {
         }
         let audit = AuditLogger::new(pool.clone());
         let login_rate_limiter = Mutex::new(HashMap::new());
-        Self { pool, config, admin_code: RwLock::new(admin_code), audit, login_rate_limiter }
+        let token_blacklist = TokenBlacklist::new();
+        Self { pool, config, admin_code: RwLock::new(admin_code), audit, login_rate_limiter, token_blacklist }
     }
 
     pub fn get_admin_code(&self) -> String {
@@ -454,11 +459,17 @@ impl AdminHandler {
         Ok(token)
     }
 
+    /// 管理员登出 — 将当前 token 的 jti 加入黑名单。
+    pub async fn admin_logout(&self, jti: &str) {
+        self.token_blacklist.blacklist(jti).await;
+        tracing::info!("Admin token revoked: jti={}", jti);
+    }
+
     // ==================== 审核规则配置 ====================
 
     pub async fn create_review_rule(&self, admin_id: Uuid, req: CreateReviewRuleRequest) -> Result<serde_json::Value, AppError> {
         use sqlx::Row;
-        let target_types = serde_json::to_value(req.target_types).unwrap_or_default();
+        let target_types = to_json_value(&req.target_types);
         let row = sqlx::query(
             r#"INSERT INTO review_rules (name, description, rule_type, config, target_types, priority, is_active, created_by)
                VALUES ($1, $2, $3, $4, $5, $6, TRUE, $7)
@@ -493,7 +504,7 @@ impl AdminHandler {
     }
 
     pub async fn update_review_rule(&self, admin_id: Uuid, rule_id: Uuid, req: CreateReviewRuleRequest) -> Result<(), AppError> {
-        let target_types = serde_json::to_value(req.target_types).unwrap_or_default();
+        let target_types = to_json_value(&req.target_types);
         sqlx::query(
             "UPDATE review_rules SET name=$1, description=$2, rule_type=$3, config=$4, target_types=$5, priority=$6, updated_at=NOW() WHERE id=$7"
         ).bind(&req.name).bind(req.description.as_deref()).bind(&req.rule_type)

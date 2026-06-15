@@ -31,6 +31,11 @@ pub async fn admin_auth(
     let claims = verify_admin_token(token, &handler.config)
         .map_err(|_| AppError::unauthorized())?;
 
+    // Check if this token's jti has been revoked (logout).
+    if handler.token_blacklist.is_blacklisted(&claims.jti).await {
+        return Err(AppError::unauthorized());
+    }
+
     let user_id = Uuid::parse_str(&claims.sub)
         .map_err(|_| AppError::unauthorized())?;
 

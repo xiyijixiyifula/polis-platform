@@ -12,6 +12,8 @@ pub struct ContentServiceConfig {
     pub chain_api_url: Option<String>,
     /// 站点 ID (SHA256(domain)), 用于链上存证
     pub chain_site_id: Option<String>,
+    /// 内部 API 共享密钥，用于跨服务调用认证（如 polis-content → polis-user XP bridge）
+    pub internal_api_secret: String,
 }
 
 impl ContentServiceConfig {
@@ -33,6 +35,11 @@ impl ContentServiceConfig {
                 .unwrap_or_else(|_| "http://localhost:3001".to_string()),
             chain_api_url: env::var("CHAIN_API_URL").ok(),
             chain_site_id: env::var("CHAIN_SITE_ID").ok(),
+            internal_api_secret: env::var("INTERNAL_API_SECRET")
+                .unwrap_or_else(|_| {
+                    tracing::warn!("INTERNAL_API_SECRET not set — XP bridge calls will be rejected by polis-user");
+                    "".to_string()
+                }),
         }
     }
 }

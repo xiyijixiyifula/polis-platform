@@ -89,7 +89,8 @@ impl BindWalletHandler {
         }
 
         let verifying_key = VerifyingKey::from_bytes(
-            &pubkey_bytes[..32].try_into().unwrap()
+            &pubkey_bytes[..32].try_into()
+                .map_err(|_| AppError::internal("公钥切片转换失败".to_string()))?
         ).map_err(|e| AppError::validation(format!("无效的 Ed25519 公钥: {}", e)))?;
 
         // 验证地址 = "0xPOL_" + hex(SHA256(pubkey)[..20])

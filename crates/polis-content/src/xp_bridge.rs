@@ -11,6 +11,8 @@ const XP_RETRY_BASE_MS: u64 = 200;
 pub struct XpBridge {
     client: reqwest::Client,
     user_service_url: String,
+    /// 内部 API 共享密钥，通过 X-Internal-Secret header 发送给 polis-user
+    internal_api_secret: String,
     /// 链节点 API URL (如 http://127.0.0.1:8545)
     chain_api_url: Option<String>,
     /// 站点 ID (SHA256(domain)), 用于链上存证
@@ -22,13 +24,14 @@ pub struct XpBridge {
 }
 
 impl XpBridge {
-    pub fn new(user_service_url: String) -> Self {
+    pub fn new(user_service_url: String, internal_api_secret: String) -> Self {
         Self {
             client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
                 .build()
                 .expect("Failed to build XpBridge HTTP client"),
             user_service_url,
+            internal_api_secret,
             chain_api_url: None,
             site_id: None,
             signing_key: None,
@@ -78,7 +81,12 @@ impl XpBridge {
 
         let mut last_err = None;
         for attempt in 0..XP_RETRY_MAX {
-            match self.client.post(&url).json(&body).send().await {
+            match self.client.post(&url)
+                .header("X-Internal-Secret", &self.internal_api_secret)
+                .json(&body)
+                .send()
+                .await
+            {
                 Ok(resp) if resp.status().is_success() => {
                     last_err = None;
                     break;

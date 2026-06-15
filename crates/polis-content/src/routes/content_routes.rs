@@ -7,6 +7,7 @@ use uuid::Uuid;
 use percent_encoding::percent_decode_str;
 use polis_core::error::AppError;
 use polis_core::models::{ApiResponse, CreateCommentRequest, CreatePostRequest, CreateSeriesRequest, UpdateSeriesRequest, AddPostToSeriesRequest, PostReference, SeriesPublic, UpdatePostRequest, UnlockPostRequest, PaginationParams, SendMessageRequest, MarkMessagesReadRequest, CreateTierRequest, UpdateTierRequest, CreateTipRequest};
+use polis_core::to_json_value;
 use polis_core::resolver::resolve::{resolve_space_id, resolve_space_enabled_modules};
 use crate::handlers::content_handler::ContentHandler;
 use crate::handlers::chat_handler::ChatHandler;
@@ -763,10 +764,7 @@ async fn save_draft_route(
     Json(req): Json<SaveDraftRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let tags = req.tags.as_ref()
-        .map(|t| serde_json::to_value(t).unwrap_or_else(|e| {
-            tracing::warn!("Serialization error in save_draft tags: {}", e);
-            serde_json::Value::Array(vec![])
-        }))
+        .map(to_json_value)
         .unwrap_or(serde_json::Value::Array(vec![]));
     let module_type = req.module_type.unwrap_or_else(|| "article".to_string());
     let draft_id = h.save_draft(uid, req.space_id, &req.title, &req.body, &module_type, &tags).await?;
@@ -1219,12 +1217,13 @@ async fn get_file_route(
     let (data, _filename, mime_type) = h.get_file(id).await?;
     let content_type = mime_type.parse::<axum::http::HeaderValue>()
         .unwrap_or_else(|_| axum::http::HeaderValue::from_static("application/octet-stream"));
-    // SAFETY: Response::builder() with a valid CONTENT_TYPE header and body
-    // will never fail — the header name is statically known-valid.
-    Ok(Response::builder()
+    Response::builder()
         .header(axum::http::header::CONTENT_TYPE, content_type)
         .body(axum::body::Body::from(data))
-        .expect("get_file_route: response build should not fail"))
+        .map_err(|e| {
+            tracing::error!("Failed to build file response: {}", e);
+            AppError::internal("构建文件响应失败")
+        })
 }
 // ===== 付费社区（会员等级）路由处理函数 =====
 

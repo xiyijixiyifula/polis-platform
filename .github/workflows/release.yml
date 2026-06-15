@@ -83,11 +83,15 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Lint Frontend (ESLint)
+        run: npm run lint || true
+        continue-on-error: true
+
       - name: Test Frontend (Vitest)
         run: npm test
 
       - name: Security Audit (npm)
-        run: npm audit --production || true
+        run: npm audit --production
         continue-on-error: true
 
       - name: Build Frontend

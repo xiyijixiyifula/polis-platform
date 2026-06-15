@@ -32,6 +32,7 @@ fn test_config(db_url: &str) -> UserServiceConfig {
         jwt_refresh_expiry: 604800, // 7 days
         nats_url: "nats://localhost:4222".to_string(),
         frontend_url: "http://localhost:3000".to_string(),
+        internal_api_secret: "test-internal-api-secret".to_string(),
     }
 }
 

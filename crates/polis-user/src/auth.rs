@@ -113,3 +113,47 @@ pub fn verify_token(
     )?;
     Ok(token_data.claims)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_hash_password_roundtrip() {
+        let password = "my_secret_password_123";
+        let hash = hash_password(password).expect("hashing should succeed");
+
+        // 正确的密码应该验证通过
+        assert!(
+            verify_password(password, &hash).expect("verification should succeed"),
+            "correct password should verify to true"
+        );
+
+        // 错误的密码应该验证失败
+        assert!(
+            !verify_password("wrong_password", &hash).expect("verification should succeed"),
+            "wrong password should verify to false"
+        );
+    }
+
+    #[test]
+    fn test_hash_password_empty() {
+        // 空密码也能正常哈希和验证
+        let hash = hash_password("").expect("hashing empty password should succeed");
+        assert!(verify_password("", &hash).expect("verification should succeed"));
+    }
+
+    #[test]
+    fn test_hash_password_unicode() {
+        let password = "密码测试🔐日本語パスワード";
+        let hash = hash_password(password).expect("hashing unicode password should succeed");
+        assert!(
+            verify_password(password, &hash).expect("verification should succeed"),
+            "unicode password should verify to true"
+        );
+        assert!(
+            !verify_password("不同的密码", &hash).expect("verification should succeed"),
+            "different unicode password should verify to false"
+        );
+    }
+}

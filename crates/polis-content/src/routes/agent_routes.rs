@@ -11,6 +11,7 @@ use polis_core::models::{
     ApiResponse, RegisterAgentRequest, AgentApiKeyLoginRequest, AgentLoginRequest,
     RegisterSpaceAgentRequest, UpdateAgentStatusRequest,
 };
+use polis_core::to_json_value;
 use crate::handlers::content_handler::ContentHandler;
 use crate::handlers::agent_handler::AgentHandler;
 
@@ -123,10 +124,7 @@ async fn list_my_agents(
     let uid = require_user(&headers)?;
     let handler = AgentHandler::new(h.pool.clone());
     let agents = handler.list_mine(uid).await?;
-    Ok(ok(serde_json::to_value(&agents).unwrap_or_else(|e| {
-        tracing::warn!("Serialization error in list_my_agents: {}", e);
-        serde_json::json!({"error": "serialization_failed"})
-    })))
+    Ok(ok(to_json_value(&agents)))
 }
 
 async fn get_agent(
@@ -135,10 +133,7 @@ async fn get_agent(
 ) -> Result<Json<JVal>, AppError> {
     let handler = AgentHandler::new(h.pool.clone());
     let agent = handler.get(id).await?;
-    Ok(ok(serde_json::to_value(&agent).unwrap_or_else(|e| {
-        tracing::warn!("Serialization error in get_agent: {}", e);
-        serde_json::json!({"error": "serialization_failed"})
-    })))
+    Ok(ok(to_json_value(&agent)))
 }
 
 async fn update_agent_status(
@@ -159,10 +154,7 @@ async fn list_space_agents(
 ) -> Result<Json<JVal>, AppError> {
     let handler = AgentHandler::new(h.pool.clone());
     let agents = handler.list_space_agents(space_id).await?;
-    Ok(ok(serde_json::to_value(&agents).unwrap_or_else(|e| {
-        tracing::warn!("Serialization error in list_space_agents: {}", e);
-        serde_json::json!({"error": "serialization_failed"})
-    })))
+    Ok(ok(to_json_value(&agents)))
 }
 
 async fn register_space_agent(
@@ -174,8 +166,5 @@ async fn register_space_agent(
     let uid = require_user(&headers)?;
     let handler = AgentHandler::new(h.pool.clone());
     let sa = handler.register_to_space(space_id, req.agent_id, uid, req).await?;
-    Ok(ok(serde_json::to_value(&sa).unwrap_or_else(|e| {
-        tracing::warn!("Serialization error in register_space_agent: {}", e);
-        serde_json::json!({"error": "serialization_failed"})
-    })))
+    Ok(ok(to_json_value(&sa)))
 }

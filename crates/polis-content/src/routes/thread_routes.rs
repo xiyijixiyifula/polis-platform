@@ -11,6 +11,7 @@ use polis_core::error::AppError;
 use polis_core::models::{
     ApiResponse, CreateThreadRequest, AddThreadMessageRequest, PublishThreadRequest,
 };
+use polis_core::to_json_value;
 use crate::handlers::content_handler::ContentHandler;
 use crate::handlers::thread_handler::ThreadHandler;
 
@@ -59,10 +60,7 @@ async fn create_thread(
     let uid = require_user(&headers)?;
     let handler = ThreadHandler::new(h.pool.clone());
     let thread = handler.create(uid, req).await?;
-    Ok(ok(serde_json::to_value(&thread).unwrap_or_else(|e| {
-        tracing::warn!("Serialization error in create_thread: {}", e);
-        serde_json::json!({"error": "serialization_failed"})
-    })))
+    Ok(ok(to_json_value(&thread)))
 }
 
 async fn list_my_threads(
@@ -77,10 +75,7 @@ async fn list_my_threads(
     let (threads, pagination) = handler.list_mine(uid, page, page_size).await?;
     Ok(Json(JVal {
         code: 0, message: "ok".to_string(),
-        data: Some(serde_json::to_value(&threads).unwrap_or_else(|e| {
-            tracing::warn!("Serialization error in list_my_threads: {}", e);
-            serde_json::json!({"error": "serialization_failed"})
-        })),
+        data: Some(to_json_value(&threads)),
         pagination: Some(pagination),
     }))
 }
@@ -93,10 +88,7 @@ async fn get_thread(
     let uid = require_user(&headers)?;
     let handler = ThreadHandler::new(h.pool.clone());
     let thread = handler.get(id, uid).await?;
-    Ok(ok(serde_json::to_value(&thread).unwrap_or_else(|e| {
-        tracing::warn!("Serialization error in get_thread: {}", e);
-        serde_json::json!({"error": "serialization_failed"})
-    })))
+    Ok(ok(to_json_value(&thread)))
 }
 
 async fn get_messages(
@@ -109,10 +101,7 @@ async fn get_messages(
     // 验证线程所有权
     let _thread = handler.get(thread_id, uid).await?;
     let msgs = handler.messages(thread_id).await?;
-    Ok(ok(serde_json::to_value(&msgs).unwrap_or_else(|e| {
-        tracing::warn!("Serialization error in get_messages: {}", e);
-        serde_json::json!({"error": "serialization_failed"})
-    })))
+    Ok(ok(to_json_value(&msgs)))
 }
 
 async fn add_message(
@@ -124,10 +113,7 @@ async fn add_message(
     let uid = require_user(&headers)?;
     let handler = ThreadHandler::new(h.pool.clone());
     let msg = handler.add_message(uid, thread_id, req).await?;
-    Ok(ok(serde_json::to_value(&msg).unwrap_or_else(|e| {
-        tracing::warn!("Serialization error in add_message: {}", e);
-        serde_json::json!({"error": "serialization_failed"})
-    })))
+    Ok(ok(to_json_value(&msg)))
 }
 
 async fn publish_thread(

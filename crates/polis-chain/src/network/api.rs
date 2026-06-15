@@ -104,7 +104,9 @@ async fn get_status(State(state): State<AppState>) -> impl IntoResponse {
         - state.start_time;
 
     let (tx, rx) = tokio::sync::oneshot::channel();
-    let _ = state.p2p_cmd.send(P2PCommand::GetPeers(tx));
+    if state.p2p_cmd.send(P2PCommand::GetPeers(tx)).is_err() {
+        tracing::warn!("P2P command channel closed");
+    }
     let peers = rx.await.unwrap_or_default();
 
     ok(serde_json::json!({
@@ -208,7 +210,9 @@ async fn submit_transaction(
 
             let tx_hash = hex::encode(signed_tx.hash);
             // 先广播交易到 P2P 网络
-            let _ = state.p2p_cmd.send(P2PCommand::BroadcastTransaction(signed_tx.clone()));
+            if state.p2p_cmd.send(P2PCommand::BroadcastTransaction(signed_tx.clone())).is_err() {
+                tracing::warn!("P2P command channel closed");
+            }
             let mut mempool = state.mempool.lock().await;
             match mempool.add(signed_tx) {
                 Ok(true) => {
@@ -368,12 +372,16 @@ async fn submit_activity(
     if let Some(mut account) = maybe_account {
         account.available_xp += xp_value as u64;
         account.total_xp += xp_value as u64;
-        let _ = state.storage.put_account_state(user_ref, &account);
+        if let Err(e) = state.storage.put_account_state(user_ref, &account) {
+            tracing::error!("Failed to put account state: {}", e);
+        }
     } else {
         let mut account = crate::state::AccountState::new(user_ref.to_string(), timestamp);
         account.available_xp = xp_value as u64;
         account.total_xp = xp_value as u64;
-        let _ = state.storage.put_account_state(user_ref, &account);
+        if let Err(e) = state.storage.put_account_state(user_ref, &account) {
+            tracing::error!("Failed to put account state: {}", e);
+        }
     }
 
     // 存储交易 (如果有签名则附带，没有则保持向后兼容)
@@ -383,7 +391,9 @@ async fn submit_activity(
         hex::decode(signature_hex).unwrap_or_default()
     };
     let signed = crate::transaction::SignedTransaction::new(tx, site_id.to_string(), sig_vec);
-    let _ = state.storage.put_transaction(&signed);
+    if let Err(e) = state.storage.put_transaction(&signed) {
+        tracing::error!("Failed to put transaction: {}", e);
+    }
 
     // 活动索引
     let activity = crate::state::ActivityRecord {
@@ -397,11 +407,13 @@ async fn submit_activity(
         tx_hash,
     };
     let activity_key = format!("{}_{}", user_ref, nonce);
-    let _ = state.storage.put_serialized(
+    if let Err(e) = state.storage.put_serialized(
         crate::storage::rocks::CF_ACTIVITY_INDEX,
         activity_key.as_bytes(),
         &activity,
-    );
+    ) {
+        tracing::error!("Failed to put activity index: {}", e);
+    }
 
     tracing::info!(
         "ActivityProof: user={}.., action={}, xp={}",
@@ -505,14 +517,16 @@ async fn get_current_round(State(state): State<AppState>) -> impl IntoResponse {
                     config.mining_reward * 20 / 100,
                 ];
                 let mut prev = prev_round;
-                let _ = crate::mining::round::settle_round(
+                if let Err(e) = crate::mining::round::settle_round(
                     &state.storage,
                     &mut prev,
                     &prev_block_hash,
                     config.winner_percentage,
                     config.min_xp_to_participate,
                     &reward_dist,
-                );
+                ) {
+                    tracing::error!("Failed to settle mining round: {}", e);
+                }
             }
         }
     }
@@ -623,7 +637,9 @@ async fn create_wallet(State(state): State<AppState>) -> impl IntoResponse {
         .expect("system clock is set before UNIX epoch")
         .as_secs();
     let account = crate::state::AccountState::new(wallet.address.clone(), now);
-    let _ = state.storage.put_account_state(&wallet.address, &account);
+    if let Err(e) = state.storage.put_account_state(&wallet.address, &account) {
+        tracing::error!("Failed to put account state: {}", e);
+    }
 
     ok(serde_json::json!({
         "address": wallet.address,
@@ -690,11 +706,13 @@ async fn register_site(
         public_key,
     };
 
-    let _ = state.storage.put_serialized(
+    if let Err(e) = state.storage.put_serialized(
         crate::storage::rocks::CF_SITE_REGISTRY,
         site_id.as_bytes(),
         &site,
-    );
+    ) {
+        tracing::error!("Failed to put site registry: {}", e);
+    }
 
     tracing::info!("站点注册: {} -> site_id={}", domain, site_id);
 
@@ -731,7 +749,9 @@ async fn get_site(
 
 async fn get_peers(State(state): State<AppState>) -> impl IntoResponse {
     let (tx, rx) = tokio::sync::oneshot::channel();
-    let _ = state.p2p_cmd.send(P2PCommand::GetPeers(tx));
+    if state.p2p_cmd.send(P2PCommand::GetPeers(tx)).is_err() {
+        tracing::warn!("P2P command channel closed");
+    }
     let peers = rx.await.unwrap_or_default();
 
     ok(serde_json::json!({

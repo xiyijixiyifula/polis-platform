@@ -41,6 +41,8 @@ struct GatewayState {
     client: reqwest::Client,
     /// 速率限制映射 — 条目通过后台清理任务驱逐（每 5 分钟扫描一次，清理 window_start 过期超过 60s 的 IP），防止内存泄漏
     rate_limits: Mutex<HashMap<IpAddr, RateLimitEntry>>,
+    /// 后台任务的 JoinHandle — graceful shutdown 时全部 abort，防止任务静默丢失
+    handles: Mutex<Vec<tokio::task::JoinHandle<()>>>,
 }
 
 #[tokio::main]
@@ -63,6 +65,7 @@ async fn main() -> anyhow::Result<()> {
             .build()?,
         config: config.clone(),
         rate_limits: Mutex::new(HashMap::new()),
+        handles: Mutex::new(Vec::new()),
     });
 
     // CORS 由 Nginx 统一管理
@@ -78,12 +81,12 @@ async fn main() -> anyhow::Result<()> {
     // 启动速率限制器后台清理：每 5 分钟清除过期条目以避免内存泄漏
     // 过期判定：window_start + 60s < now（与中间件窗口一致）
     {
-        let state = state.clone();
-        tokio::spawn(async move {
+        let state_for_spawn = state.clone();
+        let handle = tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(300));
             loop {
                 interval.tick().await;
-                let mut limits = state.rate_limits.lock().await;
+                let mut limits = state_for_spawn.rate_limits.lock().await;
                 let before = limits.len();
                 let now = Instant::now();
                 let window = std::time::Duration::from_secs(60);
@@ -96,6 +99,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         });
+        state.handles.lock().await.push(handle);
     }
 
     let app = Router::new()
@@ -200,7 +204,7 @@ async fn main() -> anyhow::Result<()> {
         ))
         .layer(TraceLayer::new_for_http())
         .layer(CompressionLayer::new())
-        .with_state(state);
+        .with_state(state.clone());
 
     let addr = format!("{}:{}", config.host, config.port);
     tracing::info!("API Gateway starting on {}", addr);
@@ -212,6 +216,13 @@ async fn main() -> anyhow::Result<()> {
     )
     .with_graceful_shutdown(shutdown_signal())
     .await?;
+
+    // 优雅关闭：abort 所有后台任务以确保完整清理
+    let mut handles = state.handles.lock().await;
+    for handle in handles.drain(..) {
+        handle.abort();
+    }
+    tracing::info!("All background tasks aborted, gateway shut down cleanly");
 
     Ok(())
 }
@@ -588,5 +599,11 @@ async fn proxy_request_with_limit(
 
     tracing::error!("Proxy failed after all retries for {}", target_url);
     ERROR_COUNT.fetch_add(1, Ordering::Relaxed);
-    Err(last_error.unwrap())
+    match last_error {
+        Some(e) => Err(e),
+        None => Err((
+            StatusCode::BAD_GATEWAY,
+            Json(ApiResponse::error(1502, "All backend services unreachable")),
+        )),
+    }
 }

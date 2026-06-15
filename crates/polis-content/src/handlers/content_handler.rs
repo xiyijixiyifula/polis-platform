@@ -27,9 +27,14 @@ pub struct ContentHandler {
 }
 
 impl ContentHandler {
-    pub fn new(pool: PgPool, config: ContentServiceConfig, nats: Option<NatsClient>) -> Self {
+    pub fn new(
+        pool: PgPool,
+        config: ContentServiceConfig,
+        nats: Option<NatsClient>,
+        token_blacklist: TokenBlacklist,
+    ) -> Self {
         let webhook = Arc::new(WebhookDispatcher::new(pool.clone()));
-        let mut xp = XpBridge::new(config.user_service_url.clone());
+        let mut xp = XpBridge::new(config.user_service_url.clone(), config.internal_api_secret.clone());
         if let (Some(chain_url), Some(site_id)) = (&config.chain_api_url, &config.chain_site_id) {
             xp = xp.with_chain(chain_url.clone(), site_id.clone());
         }
@@ -40,7 +45,7 @@ impl ContentHandler {
             nats,
             webhook,
             xp,
-            token_blacklist: Arc::new(TokenBlacklist::new()),
+            token_blacklist: Arc::new(token_blacklist),
         }
     }
 

@@ -128,6 +128,8 @@ pub struct P2PNode {
     pub local_peer_id: PeerId,
     pub event_rx: mpsc::UnboundedReceiver<P2PEvent>,
     pub cmd_tx: mpsc::UnboundedSender<P2PCommand>,
+    /// 事件循环的 JoinHandle — 调用者可 abort 以确保优雅关闭
+    pub event_loop_handle: tokio::task::JoinHandle<()>,
     connected_peers: HashSet<PeerId>,
 }
 
@@ -244,7 +246,7 @@ impl P2PNode {
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
 
         // 启动事件循环
-        tokio::spawn(run_event_loop(
+        let event_loop_handle = tokio::spawn(run_event_loop(
             swarm,
             cmd_rx,
             event_tx,
@@ -258,6 +260,7 @@ impl P2PNode {
             local_peer_id,
             event_rx,
             cmd_tx,
+            event_loop_handle,
             connected_peers: HashSet::new(),
         })
     }

@@ -87,6 +87,8 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
         .route("/api/admin/agent/stats", get(get_agent_stats))
         // 审计日志
         .route("/api/admin/audit-logs", get(get_audit_logs))
+        // 登出
+        .route("/api/admin/logout", post(admin_logout_handler))
         // 跨社区引用管理
         .route("/api/admin/refs", get(list_refs))
         .route("/api/admin/refs/{id}/review", post(review_ref))
@@ -207,9 +209,23 @@ async fn admin_login(
 /// POST /api/admin/agent/login - AI Agent 管理员登录
 async fn agent_admin_login(
     State(handler): State<Arc<AdminHandler>>,
+    headers: HeaderMap,
+    ConnectInfo(remote_addr): ConnectInfo<SocketAddr>,
     Json(req): Json<AgentAdminLoginRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let token = handler.agent_admin_login(req).await?;
+    let client_ip = extract_client_ip(&headers, Some(remote_addr));
+
+    // Rate-limit check before any credential validation
+    handler.check_login_rate(&client_ip)?;
+
+    let token = match handler.agent_admin_login(req).await {
+        Ok(token) => token,
+        Err(e) => {
+            handler.record_login_failure(&client_ip);
+            return Err(e);
+        }
+    };
+
     Ok(Json(ApiResponse::success(serde_json::json!({
         "access_token": token,
         "user_type": "agent",
@@ -876,4 +892,26 @@ async fn health_check(State(h): State<Arc<AdminHandler>>) -> Json<ApiResponse<se
         "database": db_ok,
         "version": env!("CARGO_PKG_VERSION"),
     })))
+}
+
+/// POST /api/admin/logout — 管理员登出，将当前 token 的 jti 加入黑名单。
+async fn admin_logout_handler(
+    State(handler): State<Arc<AdminHandler>>,
+    headers: HeaderMap,
+) -> Result<Json<ApiResponse<()>>, AppError> {
+    let auth_header = headers
+        .get("Authorization")
+        .and_then(|v| v.to_str().ok())
+        .ok_or(AppError::unauthorized())?;
+
+    let token = auth_header
+        .strip_prefix("Bearer ")
+        .ok_or(AppError::unauthorized())?;
+
+    let claims = crate::auth::verify_admin_token(token, &handler.config)
+        .map_err(|_| AppError::unauthorized())?;
+
+    handler.admin_logout(&claims.jti).await;
+
+    Ok(Json(ApiResponse::success(())))
 }

@@ -81,11 +81,13 @@ impl BlockSynchronizer {
             );
 
             // 向对方请求缺失的区块
-            let _ = self.p2p_cmd.send(P2PCommand::RequestBlocks {
+            if self.p2p_cmd.send(P2PCommand::RequestBlocks {
                 peer: from,
                 start: local + 1,
                 end: block_number,
-            });
+            }).is_err() {
+                tracing::warn!("P2P command channel closed");
+            }
         }
     }
 
@@ -127,7 +129,9 @@ impl BlockSynchronizer {
                 break;
             }
             for tx in &block.transactions {
-                let _ = self.storage.put_transaction(tx);
+                if let Err(e) = self.storage.put_transaction(tx) {
+                    tracing::error!("Failed to put transaction: {}", e);
+                }
             }
             state.synced_height = block.header.number;
             tracing::debug!("同步区块: height={}", block.header.number);
@@ -152,11 +156,11 @@ impl BlockSynchronizer {
     }
 }
 
-/// 启动同步事件循环
+/// 启动同步事件循环，返回 JoinHandle 供调用者在 shutdown 时 abort
 pub fn start_sync_loop(
     _synchronizer: Arc<BlockSynchronizer>,
     mut event_rx: mpsc::UnboundedReceiver<P2PEvent>,
-) {
+) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(30));
 
@@ -181,5 +185,5 @@ pub fn start_sync_loop(
         }
 
         tracing::info!("同步事件循环退出");
-    });
+    })
 }

@@ -200,6 +200,17 @@ impl axum::response::IntoResponse for AppError {
 
         let status = axum::http::StatusCode::from_u16(self.status_code())
             .unwrap_or(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
-        (status, axum::Json(body)).into_response()
+
+        let mut response = (status, axum::Json(body)).into_response();
+
+        // Add Retry-After header for 429 Too Many Requests (15-minute cooldown)
+        if status == axum::http::StatusCode::TOO_MANY_REQUESTS {
+            response.headers_mut().insert(
+                axum::http::header::RETRY_AFTER,
+                axum::http::HeaderValue::from_static("900"),
+            );
+        }
+
+        response
     }
 }

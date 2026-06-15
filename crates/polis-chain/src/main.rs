@@ -252,15 +252,23 @@ async fn run_node() -> Result<(), Box<dyn std::error::Error>> {
     let (consensus_tx, consensus_rx) = tokio::sync::mpsc::unbounded_channel();
     let (sync_tx, sync_rx) = tokio::sync::mpsc::unbounded_channel();
 
-    // 启动共识事件循环
-    consensus_bridge::start_consensus_loop(bridge.clone(), consensus_rx);
+    // 收集所有后台任务的 JoinHandle，用于 graceful shutdown 时 abort
+    let mut bg_handles: Vec<tokio::task::JoinHandle<()>> = Vec::new();
+
+    // P2P 事件循环句柄
+    bg_handles.push(p2p_node.event_loop_handle);
+
+    // 共识事件循环
+    let consensus_handle = consensus_bridge::start_consensus_loop(bridge.clone(), consensus_rx);
+    bg_handles.push(consensus_handle);
 
     // --- 区块同步启动 ---
     let synchronizer = Arc::new(BlockSynchronizer::new(
         storage.clone(),
         p2p_cmd.clone(),
     ));
-    sync::start_sync_loop(synchronizer, sync_rx);
+    let sync_handle = sync::start_sync_loop(synchronizer, sync_rx);
+    bg_handles.push(sync_handle);
 
     // --- 事件路由启动 ---
     let router = EventRouter::new(
@@ -270,7 +278,8 @@ async fn run_node() -> Result<(), Box<dyn std::error::Error>> {
         consensus_tx,
         sync_tx,
     );
-    router.spawn(p2p_event_rx);
+    let router_handle = router.spawn(p2p_event_rx);
+    bg_handles.push(router_handle);
 
     // 如果是创世节点且是 validator，主动提议第一个区块
     if config.is_genesis && config.mode == "validator" {
@@ -291,6 +300,12 @@ async fn run_node() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("HTTP API 监听: {}:{}", config.api_host, config.api_port);
     axum::serve(listener, app).await?;
+
+    // 优雅关闭：abort 所有后台任务以确保完整清理
+    for handle in bg_handles {
+        handle.abort();
+    }
+    tracing::info!("All background tasks aborted, chain node shut down cleanly");
 
     Ok(())
 }

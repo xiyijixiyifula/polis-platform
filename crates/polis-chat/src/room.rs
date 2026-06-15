@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use tokio::sync::{RwLock, broadcast};
+use tokio::task::JoinHandle;
 
 /// 聊天消息
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -18,6 +20,7 @@ pub struct ChatMessage {
 pub struct ChatRoom {
     pub space_id: String,
     pub tx: broadcast::Sender<ChatMessage>,
+    last_active: std::sync::Mutex<Instant>,
 }
 
 impl ChatRoom {
@@ -26,6 +29,7 @@ impl ChatRoom {
         Self {
             space_id: space_id.to_string(),
             tx,
+            last_active: std::sync::Mutex::new(Instant::now()),
         }
     }
 
@@ -36,11 +40,27 @@ impl ChatRoom {
     pub fn subscribe(&self) -> broadcast::Receiver<ChatMessage> {
         self.tx.subscribe()
     }
+
+    /// 更新房间最后活跃时间
+    pub fn touch(&self) {
+        if let Ok(mut la) = self.last_active.lock() {
+            *la = Instant::now();
+        }
+    }
+
+    /// 返回房间最后活跃时间
+    pub fn last_active(&self) -> Instant {
+        self.last_active
+            .lock()
+            .map(|la| *la)
+            .unwrap_or_else(|_| Instant::now())
+    }
 }
 
 /// 房间管理器
 pub struct RoomManager {
     rooms: RwLock<HashMap<String, Arc<ChatRoom>>>,
+    cleanup_handle: std::sync::Mutex<Option<JoinHandle<()>>>,
 }
 
 impl Default for RoomManager {
@@ -53,6 +73,33 @@ impl RoomManager {
     pub fn new() -> Self {
         Self {
             rooms: RwLock::new(HashMap::new()),
+            cleanup_handle: std::sync::Mutex::new(None),
+        }
+    }
+
+    /// 启动后台清理任务，每5分钟移除超过1小时未活动的房间
+    pub fn start_cleanup(self: &Arc<Self>) {
+        let manager = self.clone();
+        let handle = tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(300)); // 5 minutes
+            interval.tick().await; // skip first immediate tick
+            loop {
+                interval.tick().await;
+                let stale_threshold = Instant::now() - Duration::from_secs(3600); // 1 hour
+                let mut rooms = manager.rooms.write().await;
+                let before = rooms.len();
+                rooms.retain(|_, room| room.last_active() >= stale_threshold);
+                let removed = before - rooms.len();
+                if removed > 0 {
+                    tracing::info!("TTL eviction: removed {} stale chat room(s)", removed);
+                }
+            }
+        });
+        // Replace any existing handle (idempotent — aborts prior handle on re-call)
+        if let Ok(mut guard) = self.cleanup_handle.lock() {
+            if let Some(old) = guard.replace(handle) {
+                old.abort();
+            }
         }
     }
 
@@ -73,6 +120,7 @@ impl RoomManager {
     /// 向房间广播消息
     pub async fn broadcast(&self, space_id: &str, message: ChatMessage) {
         if let Some(room) = self.rooms.read().await.get(space_id) {
+            room.touch();
             let _ = room.tx.send(message);
         }
     }

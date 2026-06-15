@@ -12,6 +12,8 @@ pub struct AdminClaims {
     pub role: String,
     pub exp: usize,
     pub iat: usize,
+    /// JWT ID — unique per token, used for individual token revocation (logout).
+    pub jti: String,
 }
 
 /// 验证管理员身份
@@ -42,6 +44,7 @@ pub fn generate_admin_token(
         role: role.to_string(),
         exp: now + config.jwt_access_expiry as usize,
         iat: now,
+        jti: Uuid::new_v4().to_string(),
     };
     encode(
         &Header::default(),

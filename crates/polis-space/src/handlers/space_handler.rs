@@ -22,12 +22,17 @@ pub struct SpaceHandler {
 }
 
 impl SpaceHandler {
-    pub fn new(pool: PgPool, config: SpaceServiceConfig, nats: Option<NatsClient>) -> Self {
+    pub fn new(
+        pool: PgPool,
+        config: SpaceServiceConfig,
+        nats: Option<NatsClient>,
+        token_blacklist: TokenBlacklist,
+    ) -> Self {
         Self {
             repo: SpaceRepo::new(pool),
             config,
             nats,
-            token_blacklist: Arc::new(TokenBlacklist::new()),
+            token_blacklist: Arc::new(token_blacklist),
         }
     }
 

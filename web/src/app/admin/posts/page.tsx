@@ -75,7 +75,7 @@ export default function AdminPostsPage() {
           body: JSON.stringify({ duration_hours: batchHideDuration || null }),
         });
         count++;
-      } catch (e) { /* continue */ }
+      } catch (e) { console.error('[Admin doBatchHide] Failed to hide post:', id, e); }
     }
     fetchPosts(); setSelected(new Set());
     toastSuccess(`已隐藏 ${count} 篇帖子`);

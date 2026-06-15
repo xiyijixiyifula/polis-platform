@@ -14,7 +14,6 @@ members = [
     "crates/polis-code",
     "crates/polis-store",
     "crates/polis-pay",
-    "crates/polis-export",
     "crates/polis-plugin-engine",
     "crates/polis-admin",
     "crates/polisctl",
@@ -78,9 +77,6 @@ anyhow = "1"
 # Redis
 redis = { version = "0.27", features = ["tokio-comp", "json"] }
 
-# Object storage
-aws-sdk-s3 = "1"
-
 # Messaging (NATS)
 async-nats = "0.38"
 
@@ -90,12 +86,6 @@ wasmtime = "24"
 # Git
 git2 = "0.19"
 
-# Telemetry
-opentelemetry = "0.25"
-opentelemetry-otlp = "0.25"
-metrics = "0.24"
-metrics-exporter-prometheus = "0.16"
-
 # Regex
 regex = "1"
 
@@ -104,7 +94,6 @@ futures = "0.3"
 futures-util = "0.3"
 
 # Testing
-rstest = "0.22"
 testcontainers = "0.23"
 
 [profile.release]

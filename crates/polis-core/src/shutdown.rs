@@ -10,10 +10,14 @@ pub async fn shutdown_signal() {
 
     #[cfg(unix)]
     let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .unwrap()
-            .recv()
-            .await;
+        match signal::unix::signal(signal::unix::SignalKind::terminate()).ok() {
+            Some(mut sig) => {
+                sig.recv().await;
+            }
+            None => {
+                std::future::pending::<()>().await;
+            }
+        }
         tracing::info!("Received SIGTERM, shutting down...");
     };
 

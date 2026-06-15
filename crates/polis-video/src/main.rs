@@ -7,6 +7,7 @@ use tracing_subscriber::EnvFilter;
 use polis_core::events::subjects;
 use polis_core::shutdown::shutdown_signal;
 use polis_core::nats_reconnect::NatsReconnect;
+use polis_core::token_blacklist::TokenBlacklist;
 use polis_video::config::VideoServiceConfig;
 use polis_video::handler::VideoHandler;
 use polis_video::repo::VideoRepo;
@@ -35,8 +36,11 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
 
+    // 从 PostgreSQL 加载持久化的 token 黑名单
+    let token_blacklist = TokenBlacklist::load_from_db(&pool).await;
+
     let repo = VideoRepo::new(pool);
-    let handler = Arc::new(VideoHandler::new(repo, config.clone()));
+    let handler = Arc::new(VideoHandler::new(repo, config.clone(), token_blacklist));
 
     // 订阅 NATS token 黑名单事件，同步更新本地黑名单
     // 生产环境应使用 Redis 替代内存黑名单 + NATS 同步

@@ -7,6 +7,7 @@ use tracing_subscriber::EnvFilter;
 use polis_core::events::subjects;
 use polis_core::shutdown::shutdown_signal;
 use polis_core::nats_reconnect::NatsReconnect;
+use polis_core::token_blacklist::TokenBlacklist;
 use polis_content::config::ContentServiceConfig;
 use polis_content::handlers::content_handler::ContentHandler;
 use polis_content::routes::content_routes;
@@ -32,7 +33,15 @@ async fn main() -> anyhow::Result<()> {
 
     let nats = NatsReconnect::connect(&config.nats_url).await;
 
-    let handler = Arc::new(ContentHandler::new(pool, config.clone(), nats));
+    // 从 PostgreSQL 加载持久化的 token 黑名单
+    let token_blacklist = TokenBlacklist::load_from_db(&pool).await;
+
+    let handler = Arc::new(ContentHandler::new(
+        pool,
+        config.clone(),
+        nats,
+        token_blacklist,
+    ));
 
     // 订阅 NATS token 黑名单事件，同步拉黑其他服务撤销的 token
     // 生产环境应使用 Redis 替代内存黑名单 + NATS 同步

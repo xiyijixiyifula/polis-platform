@@ -7,6 +7,7 @@ use polis_notify::handler::NotifyHandler;
 use polis_notify::routes::notify_routes;
 use polis_core::events::subjects;
 use polis_core::nats_reconnect::NatsReconnect;
+use polis_core::token_blacklist::TokenBlacklist;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -15,7 +16,11 @@ async fn main() -> anyhow::Result<()> {
     let config = NotifyConfig::from_env();
     let pool = PgPoolOptions::new().max_connections(5).acquire_timeout(std::time::Duration::from_secs(10)).connect(&config.database_url).await?;
     sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
-    let handler = Arc::new(NotifyHandler::new(pool));
+
+    // 从 PostgreSQL 加载持久化的 token 黑名单
+    let token_blacklist = TokenBlacklist::load_from_db(&pool).await;
+
+    let handler = Arc::new(NotifyHandler::new(pool, token_blacklist));
 
     // Connect to NATS and subscribe to events for notification generation
     let nats_handler = handler.clone();

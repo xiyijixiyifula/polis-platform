@@ -23,9 +23,9 @@ impl Default for ChatHandler {
 
 impl ChatHandler {
     pub fn new() -> Self {
-        Self {
-            rooms: Arc::new(RoomManager::new()),
-        }
+        let rooms = Arc::new(RoomManager::new());
+        rooms.start_cleanup();
+        Self { rooms }
     }
 
     /// 处理 WebSocket 升级请求

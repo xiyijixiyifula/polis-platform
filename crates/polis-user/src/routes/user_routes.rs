@@ -280,7 +280,18 @@ struct AwardXpRequest {
     target_type: Option<String>,
     target_id: Option<Uuid>,
 }
-async fn award_xp_bridge(State(h): State<Arc<UserHandler>>, Json(r): Json<AwardXpRequest>) -> Result<Json<ApiResponse<()>>, AppError> {
+async fn award_xp_bridge(State(h): State<Arc<UserHandler>>, headers: HeaderMap, Json(r): Json<AwardXpRequest>) -> Result<Json<ApiResponse<()>>, AppError> {
+    // 内部 API 共享密钥校验：防止未授权的外部调用者直接发放 XP
+    let expected = &h.config.internal_api_secret;
+    let provided = headers.get("X-Internal-Secret").and_then(|v| v.to_str().ok()).unwrap_or("");
+    if expected.is_empty() {
+        tracing::warn!("INTERNAL_API_SECRET is not configured — blocking internal XP bridge call for safety");
+        return Err(AppError::forbidden("Internal API secret not configured".to_string()));
+    }
+    if provided != expected {
+        tracing::warn!("Rejected XP bridge call with invalid X-Internal-Secret");
+        return Err(AppError::forbidden("Forbidden".to_string()));
+    }
     h.award_xp_bridge(r.user_id, &r.action_type, &r.description, r.target_type.as_deref(), r.target_id).await?;
     Ok(Json(ApiResponse::success(())))
 }

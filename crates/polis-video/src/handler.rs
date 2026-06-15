@@ -17,11 +17,15 @@ pub struct VideoHandler {
 }
 
 impl VideoHandler {
-    pub fn new(repo: VideoRepo, config: VideoServiceConfig) -> Self {
+    pub fn new(
+        repo: VideoRepo,
+        config: VideoServiceConfig,
+        token_blacklist: TokenBlacklist,
+    ) -> Self {
         Self {
             repo,
             config,
-            token_blacklist: Arc::new(TokenBlacklist::new()),
+            token_blacklist: Arc::new(token_blacklist),
         }
     }
 

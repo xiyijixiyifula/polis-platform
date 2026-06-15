@@ -6,9 +6,6 @@ import {
   Plus, Filter, PenLine, FileText, MessageSquareText, Home, Heart, Eye, Users,
   MessageCircle, TrendingUp, TrendingDown, UserCheck, UserPlus, UserMinus, Clock, BarChart3,
 } from 'lucide-react';
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts';
 import CreationCard, { type CreationPublic } from '@/components/CreationCard';
 import SubmitDialog from '@/components/SubmitDialog';
 import CommentsSection from './components/CommentsSection';
@@ -327,33 +324,30 @@ export default function MyCreationsPage() {
                   <span className="text-xs text-gray-500">{'\u8fd17\u5929'}</span>
                 </div>
                 {trendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={240}>
-                    <AreaChart data={trendData}>
-                      <defs>
-                        <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="likesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{
-                          borderRadius: '8px',
-                          border: '1px solid #e2e8f0',
-                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-                          fontSize: '13px',
-                        }}
-                      />
-                      <Area type="monotone" dataKey="views" stroke="#10b981" strokeWidth={2} fill="url(#viewsGradient)" name={'\u9605\u8bfb\u91cf'} />
-                      <Area type="monotone" dataKey="likes" stroke="#ef4444" strokeWidth={2} fill="url(#likesGradient)" name={'\u70b9\u8d5e\u6570'} />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  <div className="space-y-2">
+                    {trendData.map((d) => {
+                      const maxVal = Math.max(1, ...trendData.map((t) => Math.max(t.views, t.likes)));
+                      return (
+                        <div key={d.date} className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 w-10 text-right tabular-nums">{d.date}</span>
+                          <div className="flex-1 flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-emerald-600 w-6 text-right tabular-nums">{d.views}</span>
+                              <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-sm overflow-hidden">
+                                <div className="h-full bg-emerald-400 rounded-sm transition-all" style={{ width: `${(d.views / maxVal) * 100}%` }} />
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[10px] text-red-500 w-6 text-right tabular-nums">{d.likes}</span>
+                              <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-sm overflow-hidden">
+                                <div className="h-full bg-red-400 rounded-sm transition-all" style={{ width: `${(d.likes / maxVal) * 100}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="h-60 flex items-center justify-center text-gray-400 text-sm">
                     {'\u6682\u65e0\u6570\u636e\uff0c\u53d1\u5e03\u4f5c\u54c1\u540e\u67e5\u770b\u8d8b\u52bf'}

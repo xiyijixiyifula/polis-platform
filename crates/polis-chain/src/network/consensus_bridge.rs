@@ -318,11 +318,11 @@ impl ConsensusBridge {
     }
 }
 
-/// 启动共识事件循环 (run in tokio::spawn)
+/// 启动共识事件循环，返回 JoinHandle 供调用者在 shutdown 时 abort
 pub fn start_consensus_loop(
     bridge: Arc<ConsensusBridge>,
     mut event_rx: mpsc::UnboundedReceiver<P2PEvent>,
-) {
+) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
         let mut round_timer = tokio::time::interval(bridge.round_timeout);
 
@@ -401,5 +401,5 @@ pub fn start_consensus_loop(
         }
 
         tracing::info!("共识事件循环退出");
-    });
+    })
 }

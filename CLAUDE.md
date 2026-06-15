@@ -92,6 +92,32 @@ curl -fsSL "https://github.com/xiyijixiyifula/polis-platform/releases/download/v
 ### 3. 禁止服务器编译（不可违反）
 服务器配置低（1.6GB 内存），`npm run build` + `cargo build` 会吃满内存导致 OOM 宕机。所有编译在 macOS 本地完成，通过 zig cc 交叉编译为 x86_64-unknown-linux-gnu。
 
+### 3.1 交叉编译提醒（每次都检查）
+
+> ⚠️ 本地 Mac 是 ARM (aarch64-apple-darwin)，服务器是 x86_64 Linux。
+> **直接 `cargo build --release` 生成 ARM 二进制，部署到服务器必定 `Exec format error` (exit 203/EXEC)。**
+
+```bash
+# 正确：交叉编译 (每次部署必须用这个)
+cargo zigbuild --release --target x86_64-unknown-linux-gnu -p polis-gateway -p polis-user -p polis-space -p polis-content -p polis-admin -p polis-video -p polis-aggregate -p polis-chain
+
+# 错误：本地编译 (ARM 二进制，部署到 x86_64 必定失败)
+cargo build --release   # ← 绝对不要用于部署
+
+# 验证二进制架构
+file target/x86_64-unknown-linux-gnu/release/polis-gateway
+# 必须输出: ELF 64-bit LSB executable, x86-64, ..., for GNU/Linux
+```
+
+**前提条件**: 安装 `cargo-zigbuild` 和 Rust target:
+```bash
+brew install zig
+cargo install cargo-zigbuild
+rustup target add x86_64-unknown-linux-gnu
+```
+
+**复发历史**: 此 Bug 已复发多次 ([wrong-build-target](docs/bugs/patterns/wrong-build-target.md))。每次部署前必须确认使用了 `cargo zigbuild --target x86_64-unknown-linux-gnu`。
+
 ### 4. macOS 打包规范
 - 打包前: `COPYFILE_DISABLE=1 tar -czf ...` 避免 AppleDouble (`._*`) 和 xattr 污染
 - 前端: 只打 `.next/` 和 `public/`，不打 `node_modules`（standalone 自带）

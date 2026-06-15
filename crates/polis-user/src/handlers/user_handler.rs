@@ -15,6 +15,41 @@ use crate::repo::UserRepo;
 use crate::handlers::bind_wallet::BindWalletHandler;
 use polis_core::token_blacklist::TokenBlacklist;
 
+/// 验证用户名：3-39 字符，不允许空白、/、\、@
+pub fn validate_username(username: &str) -> Result<(), AppError> {
+    if username.len() < 3 || username.len() > 39 {
+        return Err(AppError::validation(
+            "Username must be between 3 and 39 characters".to_string(),
+        ));
+    }
+    if username.chars().any(|c| c.is_whitespace() || c == '/' || c == '\\' || c == '@') {
+        return Err(AppError::validation(
+            "用户名不能包含空格、/、\\、@ 字符".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// 验证密码：至少 8 个字符
+pub fn validate_password(password: &str) -> Result<(), AppError> {
+    if password.len() < 8 {
+        return Err(AppError::validation(
+            "Password must be at least 8 characters".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// 验证邮箱：不能为空或纯空白
+pub fn validate_email(email: &str) -> Result<(), AppError> {
+    if email.trim().is_empty() {
+        return Err(AppError::validation(
+            "Email cannot be empty".to_string(),
+        ));
+    }
+    Ok(())
+}
+
 /// 用户业务逻辑处理器
 pub struct UserHandler {
     pub repo: UserRepo,
@@ -45,22 +80,9 @@ impl UserHandler {
     /// 用户注册
     pub async fn register(&self, req: RegisterRequest) -> Result<LoginResponse, AppError> {
         // 验证输入
-        if req.username.len() < 3 || req.username.len() > 39 {
-            return Err(AppError::validation(
-                "Username must be between 3 and 39 characters".to_string(),
-            ));
-        }
-        // 用户名不允许空白字符和路径危险字符
-        if req.username.chars().any(|c| c.is_whitespace() || c == '/' || c == '\\' || c == '@') {
-            return Err(AppError::validation(
-                "用户名不能包含空格、/、\\、@ 字符".to_string(),
-            ));
-        }
-        if req.password.len() < 8 {
-            return Err(AppError::validation(
-                "Password must be at least 8 characters".to_string(),
-            ));
-        }
+        validate_username(&req.username)?;
+        validate_password(&req.password)?;
+        validate_email(&req.email)?;
 
         // 检查邮箱是否已注册
         if self.repo.find_by_email(&req.email).await?.is_some() {
@@ -117,6 +139,9 @@ impl UserHandler {
 
     /// 用户登录
     pub async fn login(&self, req: LoginRequest) -> Result<LoginResponse, AppError> {
+        validate_email(&req.email)?;
+        validate_password(&req.password)?;
+
         let user = self
             .repo
             .find_by_email(&req.email)
@@ -313,7 +338,7 @@ impl UserHandler {
             .ok_or(AppError::not_found("User not found".to_string()))?;
         let valid = crate::auth::verify_password_async(old_password.to_string(), user.password_hash.clone()).await?;
         if !valid { return Err(AppError::forbidden("Wrong password".to_string())); }
-        if new_password.len() < 8 { return Err(AppError::validation("Password must be at least 8 characters".to_string())); }
+        validate_password(new_password)?;
         let new_hash = crate::auth::hash_password_async(new_password.to_string()).await?;
         sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
             .bind(&new_hash).bind(user_id)
@@ -346,9 +371,7 @@ impl UserHandler {
 
     /// 使用重置令牌修改密码
     pub async fn reset_password(&self, token: &str, new_password: &str) -> Result<(), AppError> {
-        if new_password.len() < 8 {
-            return Err(AppError::validation("Password must be at least 8 characters".to_string()));
-        }
+        validate_password(new_password)?;
 
         let mut hasher = Sha256::new();
         hasher.update(token.as_bytes());
@@ -714,5 +737,129 @@ impl UserHandler {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── 用户名验证 ──
+
+    #[test]
+    fn test_validate_username_empty() {
+        let result = validate_username("");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().error_type(), "Validation");
+    }
+
+    #[test]
+    fn test_validate_username_too_short() {
+        let result = validate_username("ab"); // 2 chars, min is 3
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().error_type(), "Validation");
+    }
+
+    #[test]
+    fn test_validate_username_min_boundary() {
+        assert!(validate_username("abc").is_ok());
+    }
+
+    #[test]
+    fn test_validate_username_max_boundary() {
+        let username_39 = "a".repeat(39);
+        assert!(validate_username(&username_39).is_ok());
+    }
+
+    #[test]
+    fn test_validate_username_too_long() {
+        let username_40 = "a".repeat(40); // 40 chars, max is 39
+        let result = validate_username(&username_40);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_username_contains_space() {
+        let result = validate_username("user name");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().error_type(), "Validation");
+    }
+
+    #[test]
+    fn test_validate_username_contains_slash() {
+        let result = validate_username("user/name");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_username_contains_backslash() {
+        let result = validate_username("user\\name");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_username_contains_at() {
+        let result = validate_username("user@name");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_username_valid() {
+        assert!(validate_username("john_doe-123").is_ok());
+        assert!(validate_username("张三").is_ok());
+        assert!(validate_username("a").is_err()); // too short
+    }
+
+    // ── 密码验证 ──
+
+    #[test]
+    fn test_validate_password_empty() {
+        let result = validate_password("");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().error_type(), "Validation");
+    }
+
+    #[test]
+    fn test_validate_password_too_short() {
+        let result = validate_password("1234567"); // 7 chars, min is 8
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_password_min_boundary() {
+        assert!(validate_password("12345678").is_ok());
+    }
+
+    #[test]
+    fn test_validate_password_long() {
+        assert!(validate_password("a_very_long_password_with_many_characters_123!").is_ok());
+    }
+
+    // ── 邮箱验证 ──
+
+    #[test]
+    fn test_validate_email_empty() {
+        let result = validate_email("");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().error_type(), "Validation");
+    }
+
+    #[test]
+    fn test_validate_email_whitespace_only() {
+        let result = validate_email("   ");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().error_type(), "Validation");
+    }
+
+    #[test]
+    fn test_validate_email_valid() {
+        assert!(validate_email("user@example.com").is_ok());
+        assert!(validate_email("test@test.co").is_ok());
+    }
+
+    #[test]
+    fn test_validate_email_with_whitespace_padding() {
+        // trim 只检查 trim 后为空，所以两边带空格是合法的
+        assert!(validate_email(" user@example.com ").is_ok());
     }
 }

@@ -13,6 +13,8 @@ pub struct UserServiceConfig {
     pub nats_url: String,
     /// 前端域名，用于 CSRF Origin/Referer 校验（敏感操作如修改密码、绑定钱包）
     pub frontend_url: String,
+    /// 内部 API 共享密钥，用于跨服务调用认证（如 polis-content → polis-user 的 XP bridge）
+    pub internal_api_secret: String,
 }
 
 impl UserServiceConfig {
@@ -38,6 +40,11 @@ impl UserServiceConfig {
                 .expect("JWT_REFRESH_EXPIRY must be a number"),
             nats_url: env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string()),
             frontend_url: env::var("FRONTEND_URL").unwrap_or_else(|_| "https://www.mzgw.com".to_string()),
+            internal_api_secret: env::var("INTERNAL_API_SECRET")
+                .unwrap_or_else(|_| {
+                    tracing::warn!("INTERNAL_API_SECRET not set — internal API endpoints (XP bridge) will be unprotected");
+                    "".to_string()
+                }),
         }
     }
 }

@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use futures_util::StreamExt;
 use polis_core::events::Event;
+use polis_core::nats_reconnect::NatsReconnect;
 use tracing_subscriber::EnvFilter;
 
 use polis_search::config::SearchServiceConfig;
@@ -49,8 +50,8 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Meilisearch indexes ready");
 
     // 连接 NATS 并订阅事件
-    let _nats = match async_nats::connect(&config.nats_url).await {
-        Ok(client) => {
+    let _nats = match NatsReconnect::connect(&config.nats_url).await {
+        Some(client) => {
             tracing::info!("Connected to NATS for event indexing");
 
             let meili_clone = meili.clone();
@@ -66,8 +67,8 @@ async fn main() -> anyhow::Result<()> {
 
             Some(client)
         }
-        Err(e) => {
-            tracing::warn!("Failed to connect to NATS: {}", e);
+        None => {
+            tracing::warn!("Failed to connect to NATS");
             None
         }
     };

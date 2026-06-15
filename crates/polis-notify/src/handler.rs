@@ -12,10 +12,10 @@ pub struct NotifyHandler {
 }
 
 impl NotifyHandler {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: PgPool, token_blacklist: TokenBlacklist) -> Self {
         Self {
             pool,
-            token_blacklist: Arc::new(TokenBlacklist::new()),
+            token_blacklist: Arc::new(token_blacklist),
         }
     }
 

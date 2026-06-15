@@ -21,13 +21,18 @@ export function formatDate(date: string) {
 }
 
 export function formatCount(count: number): string {
-  if (count >= 10000) {
-    return (count / 10000).toFixed(1) + '万';
+  try {
+    if (count >= 10000) {
+      return (count / 10000).toFixed(1) + '万';
+    }
+    if (count >= 1000) {
+      return (count / 1000).toFixed(1) + 'k';
+    }
+    return count.toString();
+  } catch (e) {
+    console.warn('[formatCount] Failed to format value:', count, e);
+    return String(count);
   }
-  if (count >= 1000) {
-    return (count / 1000).toFixed(1) + 'k';
-  }
-  return count.toString();
 }
 
 /** 移除 Markdown 格式，提取纯文本 */
@@ -151,5 +156,5 @@ export function recordSpaceView(space: { namespace: string; title: string; icon_
     // Trim to max
     if (list.length > MAX_RECENT_SPACES) list = list.slice(0, MAX_RECENT_SPACES);
     localStorage.setItem(RECENT_SPACES_KEY, JSON.stringify(list));
-  } catch {}
+  } catch (e) { console.warn('[recordSpaceView] Failed to save to localStorage:', e); }
 }

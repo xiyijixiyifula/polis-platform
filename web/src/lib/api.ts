@@ -135,7 +135,7 @@ export async function resolveSpaceNs(spaceId: string): Promise<string> {
         }
       }
     }
-  } catch {}
+  } catch (e) { console.error('[resolveSpaceNs] Failed to resolve namespace via trending fetch:', e); }
   try {
     const res = await fetch(`${API_BASE}/spaces/${spaceId}`);
     if (res.ok) {
@@ -145,7 +145,7 @@ export async function resolveSpaceNs(spaceId: string): Promise<string> {
         return data.data.namespace;
       }
     }
-  } catch {}
+  } catch (e) { console.error('[resolveSpaceNs] Failed to resolve namespace via direct fetch:', e); }
   return spaceId;
 }
 
@@ -587,7 +587,7 @@ export const posts = {
         const spaceNs = post.space_ns || await resolveSpaceNs(post.space_id);
         return { post, spaceNs };
       }
-    } catch {}
+    } catch (e) { console.error('[posts.getById] Failed to fetch post:', id, e); }
     return null;
   },
 

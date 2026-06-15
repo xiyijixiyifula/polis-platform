@@ -96,13 +96,13 @@ impl EventRouter {
         }
     }
 
-    /// 启动事件路由循环
-    pub fn spawn(self, mut event_rx: mpsc::UnboundedReceiver<P2PEvent>) {
+    /// 启动事件路由循环，返回 JoinHandle 供调用者在 shutdown 时 abort
+    pub fn spawn(self, mut event_rx: mpsc::UnboundedReceiver<P2PEvent>) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             while let Some(event) = event_rx.recv().await {
                 self.handle_event(event).await;
             }
             tracing::info!("事件路由循环退出");
-        });
+        })
     }
 }

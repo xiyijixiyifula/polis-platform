@@ -3,6 +3,7 @@ use std::sync::Arc;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
 
+use polis_core::nats_reconnect::NatsReconnect;
 use polis_pay::config::PayServiceConfig;
 use polis_pay::handler::PayHandler;
 use polis_pay::routes::pay_routes;
@@ -25,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
 
     sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
 
-    let nats = async_nats::connect(&config.nats_url).await.ok();
+    let nats = NatsReconnect::connect(&config.nats_url).await;
 
     let handler = Arc::new(PayHandler::new(pool, config.clone(), nats));
     let app = pay_routes(handler);
