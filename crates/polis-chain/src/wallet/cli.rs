@@ -131,7 +131,10 @@ impl CliWallet {
         let api_url = format!("http://{}:{}/api/v1/status", config.api_host, config.api_port);
         match reqwest::get(&api_url).await {
             Ok(resp) => {
-                let json: serde_json::Value = resp.json().await.unwrap_or_default();
+                let json: serde_json::Value = resp.json().await.unwrap_or_else(|e| {
+                    eprintln!("警告: 无法解析节点状态响应: {}", e);
+                    serde_json::Value::default()
+                });
                 let height = json.get("data").and_then(|d| d.get("block_height")).and_then(|v| v.as_u64()).unwrap_or(0);
                 let peer_count = json.get("data").and_then(|d| d.get("peer_count")).and_then(|v| v.as_u64()).unwrap_or(0);
                 println!("节点状态:");
@@ -168,7 +171,10 @@ impl CliWallet {
         let wallet_url = format!("{}/api/v1/wallet/{}", api_url, wallet.address);
         let current_nonce = match reqwest::get(&wallet_url).await {
             Ok(resp) => {
-                let json: serde_json::Value = resp.json().await.unwrap_or_default();
+                let json: serde_json::Value = resp.json().await.unwrap_or_else(|e| {
+                    eprintln!("警告: 无法解析钱包查询响应: {}", e);
+                    serde_json::Value::default()
+                });
                 json.get("data")
                     .and_then(|d| d.get("nonce"))
                     .and_then(|v| v.as_u64())
@@ -203,7 +209,10 @@ impl CliWallet {
             .await
             .map_err(|e| ChainError::Network(format!("提交交易失败: {}", e)))?;
 
-        let result: serde_json::Value = resp.json().await.unwrap_or_default();
+        let result: serde_json::Value = resp.json().await.unwrap_or_else(|e| {
+            eprintln!("警告: 无法解析交易提交响应: {}", e);
+            serde_json::Value::default()
+        });
         let code = result.get("code").and_then(|v| v.as_i64()).unwrap_or(-1);
 
         if code == 0 {

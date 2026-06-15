@@ -23,6 +23,8 @@ async fn main() -> anyhow::Result<()> {
         .connect(&config.database_url)
         .await?;
 
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
+
     let handler = Arc::new(StoreHandler::new(pool));
     let app = store_routes(handler);
 

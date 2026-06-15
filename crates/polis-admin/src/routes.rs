@@ -1,11 +1,13 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::{Extension, Path, Query, State},
+    extract::{ConnectInfo, Extension, Path, Query, State},
     middleware,
     routing::{delete, get, post, put},
     Json, Router,
 };
+use axum::http::HeaderMap;
+use std::net::SocketAddr;
 use serde::Deserialize;
 use uuid::Uuid;
 
@@ -104,16 +106,52 @@ pub fn admin_routes(handler: Arc<AdminHandler>) -> Router {
 // 公共路由（无需鉴权）
 // ============================================================
 
+/// Extract client IP from headers or connection remote address.
+/// Checks X-Forwarded-For (first entry), then X-Real-IP, then falls back to socket addr.
+fn extract_client_ip(headers: &HeaderMap, remote_addr: Option<SocketAddr>) -> String {
+    // X-Forwarded-For: "client, proxy1, proxy2" — take the first (original client)
+    if let Some(xff) = headers.get("x-forwarded-for") {
+        if let Ok(val) = xff.to_str() {
+            if let Some(first) = val.split(',').next() {
+                let ip = first.trim();
+                if !ip.is_empty() {
+                    return ip.to_string();
+                }
+            }
+        }
+    }
+    // X-Real-IP (single IP set by nginx)
+    if let Some(xri) = headers.get("x-real-ip") {
+        if let Ok(val) = xri.to_str() {
+            let ip = val.trim();
+            if !ip.is_empty() {
+                return ip.to_string();
+            }
+        }
+    }
+    // Fallback to TCP remote address
+    remote_addr.map(|a| a.ip().to_string()).unwrap_or_else(|| "unknown".to_string())
+}
+
 /// POST /api/admin/login - 人类管理员登录
 async fn admin_login(
     State(handler): State<Arc<AdminHandler>>,
+    headers: HeaderMap,
+    ConnectInfo(remote_addr): ConnectInfo<SocketAddr>,
     Json(req): Json<AdminLoginRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    let client_ip = extract_client_ip(&headers, Some(remote_addr));
+
+    // Rate-limit check before any credential validation
+    handler.check_login_rate(&client_ip)?;
+
     if let Some(ref code) = req.admin_code {
         if code != &handler.get_admin_code() {
+            handler.record_login_failure(&client_ip);
             return Err(AppError::unauthorized());
         }
     } else {
+        handler.record_login_failure(&client_ip);
         return Err(AppError::validation("Admin code required".to_string()));
     }
 
@@ -124,7 +162,11 @@ async fn admin_login(
     .bind(&req.email)
     .fetch_optional(&handler.pool)
     .await?
-    .ok_or(AppError::not_found("User not found".to_string()))?;
+    .ok_or_else(|| {
+        // Record failure on user-not-found too (could be probing for valid emails)
+        handler.record_login_failure(&client_ip);
+        AppError::not_found("User not found".to_string())
+    })?;
 
     let user_id: Uuid = user_row.get("id");
     let username: String = user_row.get("username");
@@ -133,7 +175,7 @@ async fn admin_login(
 
     let pwd = req.password.clone();
     let hash = password_hash.clone();
-    tokio::task::spawn_blocking(move || {
+    let verify_result = tokio::task::spawn_blocking(move || {
         use argon2::{
             password_hash::{PasswordHash, PasswordVerifier},
             Argon2,
@@ -142,7 +184,12 @@ async fn admin_login(
             .map_err(|e| AppError::internal(format!("Password hash error: {}", e)))?;
         Argon2::default().verify_password(pwd.as_bytes(), &parsed_hash)
             .map_err(|_| AppError::unauthorized())
-    }).await.map_err(|e| AppError::internal(e.to_string()))??;
+    }).await.map_err(|e| AppError::internal(e.to_string()))?;
+
+    if let Err(e) = verify_result {
+        handler.record_login_failure(&client_ip);
+        return Err(e);
+    }
 
     let token = crate::auth::generate_admin_token(user_id, "admin", &handler.config)
         .map_err(|e| AppError::internal(format!("JWT error: {}", e)))?;

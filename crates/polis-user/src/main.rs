@@ -6,6 +6,8 @@ use tracing_subscriber::EnvFilter;
 use polis_user::config::UserServiceConfig;
 use polis_user::handlers::user_handler::UserHandler;
 use polis_core::shutdown::shutdown_signal;
+use polis_core::token_blacklist::TokenBlacklist;
+use polis_core::nats_reconnect::NatsReconnect;
 use polis_user::routes::user_routes;
 
 #[tokio::main]
@@ -29,25 +31,22 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("Failed to connect to PostgreSQL");
 
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
+
     tracing::info!("Connected to PostgreSQL");
 
-    // 连接 NATS (可选)
-    let nats = match async_nats::connect(&config.nats_url).await {
-        Ok(client) => {
-            tracing::info!("Connected to NATS");
-            Some(client)
-        }
-        Err(e) => {
-            tracing::warn!("Failed to connect to NATS: {}", e);
-            None
-        }
-    };
+    // 从 PostgreSQL 加载持久化的 token 黑名单
+    let token_blacklist = TokenBlacklist::load_from_db(&pool).await;
+
+    // 连接 NATS (可选，自动重连)
+    let nats = NatsReconnect::connect(&config.nats_url).await;
 
     // 创建处理器
     let handler = Arc::new(UserHandler::new(
         pool,
         config.clone(),
         nats,
+        token_blacklist,
     ));
 
     // 构建路由

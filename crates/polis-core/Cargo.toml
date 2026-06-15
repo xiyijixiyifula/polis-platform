@@ -18,3 +18,4 @@ http = "1"
 regex = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
+async-nats = { workspace = true }

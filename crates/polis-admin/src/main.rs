@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use sqlx::postgres::PgPoolOptions;
@@ -25,6 +26,8 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("Failed to connect to PostgreSQL");
 
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
+
     let handler = Arc::new(AdminHandler::new(pool, config.clone()));
     let app = admin_routes(handler);
 
@@ -32,7 +35,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Admin service starting on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    axum::serve(listener, app)
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .with_graceful_shutdown(shutdown_signal())
         .await?;
 

@@ -135,16 +135,27 @@ impl SpaceHandler {
             pub_space.level = Some(level);
             pub_space.xp = Some(xp);
         }
-        if let Ok(count) = self.repo.get_follower_count(pub_space.id).await {
-            pub_space.follower_count = count;
-        }
-        if let Ok(has) = self.repo.has_password(pub_space.id).await {
-            pub_space.has_password = has;
-        }
-        if let Ok(count) = self.repo.get_star_count(pub_space.id).await {
-            pub_space.star_count = count;
-        }
         pub_space
+    }
+
+    /// 批量将 Vec&lt;Space&gt; 转为 Vec&lt;SpacePublic&gt;，使用单次批量查询获取等级
+    async fn spaces_to_public_batch(
+        &self,
+        spaces: Vec<polis_core::models::Space>,
+    ) -> Result<Vec<SpacePublic>, AppError> {
+        let levels = self.repo.get_cached_space_levels(&spaces).await.unwrap_or_default();
+        let result: Vec<SpacePublic> = spaces
+            .into_iter()
+            .map(|s| {
+                let mut pub_space: SpacePublic = s.into();
+                if let Some(&(xp, level)) = levels.get(&pub_space.id) {
+                    pub_space.level = Some(level);
+                    pub_space.xp = Some(xp);
+                }
+                pub_space
+            })
+            .collect();
+        Ok(result)
     }
 
     /// 获取社区详情
@@ -213,40 +224,31 @@ impl SpaceHandler {
             .ok_or(AppError::not_found("Root space not found".to_string()))?;
 
         let subspaces = self.repo.find_sub_spaces(root.id).await?;
-        let mut result = Vec::new();
-        for s in subspaces { result.push(self.space_to_public(s).await); }
-        Ok(result)
+        self.spaces_to_public_batch(subspaces).await
     }
 
     /// 获取用户拥有的社区
     pub async fn get_user_spaces(&self, user_id: Uuid) -> Result<Vec<SpacePublic>, AppError> {
         let spaces = self.repo.find_by_owner(user_id).await?;
-        let mut result = Vec::new();
-        for s in spaces { result.push(self.space_to_public(s).await); }
-        Ok(result)
+        self.spaces_to_public_batch(spaces).await
     }
 
     /// 搜索社区
     pub async fn search_spaces(&self, query: &str, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
         let spaces = self.repo.search(query, limit).await?;
-        let mut result = Vec::new();
-        for s in spaces { result.push(self.space_to_public(s).await); }
-        Ok(result)
+        self.spaces_to_public_batch(spaces).await
     }
 
     /// 获取热门社区
     pub async fn get_trending_spaces(&self, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
         let spaces = self.repo.find_trending(limit).await?;
-        let mut result = Vec::new();
-        for s in spaces { result.push(self.space_to_public(s).await); }
-        Ok(result)
+        self.spaces_to_public_batch(spaces).await
     }
 
     /// 分页列出所有公开社区
     pub async fn list_spaces(&self, page: u32, page_size: u32) -> Result<(Vec<SpacePublic>, i64), AppError> {
         let (spaces, total) = self.repo.find_all(page, page_size).await?;
-        let mut result = Vec::new();
-        for s in spaces { result.push(self.space_to_public(s).await); }
+        let result = self.spaces_to_public_batch(spaces).await?;
         Ok((result, total))
     }
 
@@ -560,23 +562,14 @@ impl SpaceHandler {
     /// 获取用户收藏的社区列表
     pub async fn get_starred_spaces(&self, user_id: Uuid) -> Result<Vec<SpacePublic>, AppError> {
         let ids = self.repo.get_starred_spaces(user_id).await?;
-        let mut spaces = Vec::new();
-        for id in ids {
-            if let Ok(Some(space)) = self.repo.find_by_id(id).await {
-                spaces.push(self.space_to_public(space).await);
-            }
-        }
-        Ok(spaces)
+        let spaces = self.repo.find_by_ids(&ids).await?;
+        self.spaces_to_public_batch(spaces).await
     }
 
     /// 获取最多收藏的社区
     pub async fn get_most_starred(&self, limit: u32) -> Result<Vec<SpacePublic>, AppError> {
         let spaces = self.repo.find_most_starred(limit as i64).await?;
-        let mut result = Vec::new();
-        for space in spaces {
-            result.push(self.space_to_public(space).await);
-        }
-        Ok(result)
+        self.spaces_to_public_batch(spaces).await
     }
 
     // ==================== 自定义模块 CRUD ====================

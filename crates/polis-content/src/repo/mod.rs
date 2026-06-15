@@ -419,6 +419,13 @@ impl ContentRepo {
         self.post.find_user_by_username(username).await
     }
 
+    pub async fn find_users_by_usernames(
+        &self,
+        usernames: &[String],
+    ) -> Result<std::collections::HashMap<String, polis_core::models::User>, AppError> {
+        self.post.find_users_by_usernames(usernames).await
+    }
+
     // ===== 书签 =====
 
     pub async fn toggle_bookmark(

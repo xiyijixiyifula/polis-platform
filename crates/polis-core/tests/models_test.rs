@@ -85,6 +85,9 @@ fn test_space_public_from_space() {
         metadata: serde_json::json!({}),
         member_count: 100,
         post_count: 50,
+        follower_count: 10,
+        star_count: 5,
+        password_hash: None,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
     };

@@ -1,11 +1,12 @@
 use std::sync::Arc;
-use axum::{extract::{Path, State}, middleware, routing::{get, post, put}, Json, Router};
+use axum::{extract::{Path, State}, http::HeaderMap, middleware, routing::{get, post, put}, Json, Router};
 use serde::Deserialize;
 use uuid::Uuid;
 use polis_core::error::AppError;
 use polis_core::models::{ApiResponse, LoginRequest, LoginResponse, LogoutRequest, RefreshTokenRequest, RegisterRequest, UpdateUserRequest, UserPublic, PushSubscribeRequest, RedeemInviteRequest, CompleteQuestRequest};
 use crate::handlers::user_handler::UserHandler;
 use crate::middleware::auth::{auth_middleware, Jti};
+use crate::middleware::csrf;
 
 #[derive(Deserialize)]
 pub struct ChangePasswordRequest { pub old_password: String, pub new_password: String }
@@ -88,7 +89,8 @@ async fn update_profile(State(h): State<Arc<UserHandler>>, axum::Extension(uid):
 async fn get_my_profile(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>) -> Result<Json<ApiResponse<UserPublic>>, AppError> {
     Ok(Json(ApiResponse::success(h.get_my_profile(uid).await?)))
 }
-async fn change_password(State(h): State<Arc<UserHandler>>, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<ChangePasswordRequest>) -> Result<Json<ApiResponse<()>>, AppError> {
+async fn change_password(State(h): State<Arc<UserHandler>>, headers: HeaderMap, axum::Extension(uid): axum::Extension<Uuid>, Json(r): Json<ChangePasswordRequest>) -> Result<Json<ApiResponse<()>>, AppError> {
+    csrf::check_csrf_origin(&headers, &h.config.frontend_url)?;
     h.change_password(uid, &r.old_password, &r.new_password).await?;
     Ok(Json(ApiResponse::success(())))
 }
@@ -292,9 +294,11 @@ struct BindWalletChallengeRequest {
 
 async fn bind_wallet_challenge(
     State(h): State<Arc<UserHandler>>,
+    headers: HeaderMap,
     axum::Extension(uid): axum::Extension<Uuid>,
     Json(r): Json<BindWalletChallengeRequest>,
 ) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
+    csrf::check_csrf_origin(&headers, &h.config.frontend_url)?;
     let nonce = h.bind_wallet.generate_challenge(uid, &r.address).await?;
     Ok(Json(ApiResponse::success(serde_json::json!({
         "nonce": nonce,
@@ -312,9 +316,11 @@ struct BindWalletVerifyRequest {
 
 async fn bind_wallet_verify(
     State(h): State<Arc<UserHandler>>,
+    headers: HeaderMap,
     axum::Extension(uid): axum::Extension<Uuid>,
     Json(r): Json<BindWalletVerifyRequest>,
 ) -> Result<Json<ApiResponse<UserPublic>>, AppError> {
+    csrf::check_csrf_origin(&headers, &h.config.frontend_url)?;
     let user = h.bind_wallet.verify_and_bind(
         uid,
         &r.address,

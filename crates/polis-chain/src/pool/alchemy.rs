@@ -25,7 +25,7 @@ pub fn get_or_create_pool(storage: &Storage) -> ChainResult<PoolState> {
         None => {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("system clock is set before UNIX epoch")
                 .as_secs();
             let pool = PoolState {
                 pool_id: format!("pool-{}", now),
@@ -110,7 +110,7 @@ pub fn trigger_alchemy(
 
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("system clock is set before UNIX epoch")
         .as_secs();
 
     let burned = pool.current_amount;
@@ -176,7 +176,9 @@ pub fn trigger_alchemy(
         // 更新用户账户的稀有币列表
         if let Ok(Some(mut account)) = storage.get_account_state(&winner.address) {
             account.premium_coins.push(coin_id.clone());
-            let _ = storage.put_account_state(&winner.address, &account);
+            if let Err(e) = storage.put_account_state(&winner.address, &account) {
+                tracing::warn!("Alchemy: failed to save premium coin for {}: {}", winner.address, e);
+            }
         }
 
         minted.push(MintedPremiumCoin {

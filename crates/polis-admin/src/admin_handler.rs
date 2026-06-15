@@ -6,6 +6,9 @@ use polis_core::models::{AuditLogQuery, ReviewQueueQuery, BatchReviewRequest, Ag
 use sqlx::PgPool;
 use std::fs;
 use std::sync::RwLock;
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use crate::config::AdminConfig;
@@ -36,6 +39,9 @@ pub struct AdminHandler {
     pub config: AdminConfig,
     pub admin_code: RwLock<String>,
     pub audit: AuditLogger,
+    /// In-memory rate limiter for admin login brute-force protection.
+    /// Maps IP address -> (failed_attempts, blocked_until).
+    pub login_rate_limiter: Mutex<HashMap<String, Vec<Instant>>>,
 }
 
 impl AdminHandler {
@@ -45,11 +51,47 @@ impl AdminHandler {
             tracing::warn!("Failed to persist admin code to {}: {}", ADMIN_CODE_FILE, e);
         }
         let audit = AuditLogger::new(pool.clone());
-        Self { pool, config, admin_code: RwLock::new(admin_code), audit }
+        let login_rate_limiter = Mutex::new(HashMap::new());
+        Self { pool, config, admin_code: RwLock::new(admin_code), audit, login_rate_limiter }
     }
 
     pub fn get_admin_code(&self) -> String {
         self.admin_code.read().map(|s| s.clone()).unwrap_or_default()
+    }
+
+    /// Check whether the given IP is rate-limited for admin login.
+    /// After 5 failed attempts within 15 minutes, the IP is blocked for 15 minutes.
+    pub fn check_login_rate(&self, ip: &str) -> Result<(), AppError> {
+        let window = Duration::from_secs(15 * 60); // 15 minutes
+        let max_attempts = 5;
+        let now = Instant::now();
+
+        let mut map = self.login_rate_limiter
+            .lock()
+            .map_err(|e| AppError::internal(format!("Rate limiter lock error: {}", e)))?;
+
+        // Periodic cleanup: remove entries older than the window
+        map.retain(|_, attempts| {
+            attempts.retain(|t| now.duration_since(*t) < window);
+            !attempts.is_empty()
+        });
+
+        if let Some(attempts) = map.get(ip) {
+            if attempts.len() >= max_attempts {
+                return Err(AppError::too_many_requests(
+                    "Too many failed login attempts. Please try again in 15 minutes."
+                ));
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Record a failed login attempt for the given IP.
+    pub fn record_login_failure(&self, ip: &str) {
+        if let Ok(mut map) = self.login_rate_limiter.lock() {
+            map.entry(ip.to_string()).or_default().push(Instant::now());
+        }
     }
 
     pub fn update_admin_code(&self, new_code: &str) -> Result<(), AppError> {

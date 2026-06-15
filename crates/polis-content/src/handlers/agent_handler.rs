@@ -1,3 +1,4 @@
+use polis_core::auth::{self, Claims};
 use polis_core::error::AppError;
 use polis_core::models::{
     Agent, AgentPublic, RegisterAgentRequest, SpaceAgent, SpaceAgentPublic,
@@ -132,20 +133,19 @@ impl AgentHandler {
             tracing::warn!("Failed to update agent {} last_active_at: {}", agent.id, e);
         }
 
-        // 生成 JWT
-        let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET environment variable must be set");
-        let claims = serde_json::json!({
-            "sub": agent.user_id.to_string(),
-            "agent_id": agent.id.to_string(),
-            "user_type": "agent",
-            "exp": (chrono::Utc::now() + chrono::Duration::days(7)).timestamp(),
-        });
-        let token = jsonwebtoken::encode(
-            &jsonwebtoken::Header::default(),
-            &claims,
-            &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
-        )
-        .map_err(|e| AppError::internal(e.to_string()))?;
+        // 生成 JWT（使用标准 Claims 结构体，包含 jti 和 token_type）
+        let now = chrono::Utc::now();
+        let claims = Claims {
+            sub: agent.user_id.to_string(),
+            agent_id: Some(agent.id.to_string()),
+            token_type: Some("agent".to_string()),
+            jti: Some(Uuid::new_v4().to_string()),
+            exp: Some((now + chrono::Duration::days(7)).timestamp() as usize),
+            iat: Some(now.timestamp() as usize),
+            username: None,
+            display_name: None,
+        };
+        let token = auth::encode_token(&claims)?;
 
         Ok(token)
     }

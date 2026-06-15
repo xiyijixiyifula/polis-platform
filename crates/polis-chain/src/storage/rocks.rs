@@ -175,7 +175,7 @@ impl Storage {
     pub fn latest_block_number(&self) -> ChainResult<u64> {
         match self.get(CF_META, b"latest_block_number")? {
             Some(bytes) if bytes.len() == 8 => {
-                Ok(u64::from_be_bytes(bytes.try_into().unwrap()))
+                Ok(u64::from_be_bytes(bytes.try_into().expect("length already verified as 8")))
             }
             _ => Ok(0),
         }

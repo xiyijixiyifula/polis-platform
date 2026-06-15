@@ -28,10 +28,9 @@ pub fn get_or_create_current_round(
     min_xp: u64,
     prev_block_hash: &[u8; 32],
 ) -> ChainResult<MiningRound> {
-    // SAFETY: 系统时间不可能早于 UNIX_EPOCH (1970)，此调用在所有现代系统上均为 infallible
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
+        .expect("system clock is set before UNIX epoch")
         .as_secs();
 
     let round_id = now / round_duration_secs;
@@ -56,14 +55,16 @@ pub fn get_or_create_current_round(
                             reward * 30 / 100,  // 30%
                             reward * 20 / 100,  // 20%
                         ];
-                        let _ = settle_round(
+                        if let Err(e) = settle_round(
                             storage,
                             &mut prev_round,
                             prev_block_hash,
                             winner_percentage,
                             min_xp,
                             &reward_dist,
-                        );
+                        ) {
+                            tracing::warn!("Mining: failed to settle previous round {}: {}", prev_id, e);
+                        }
                     }
                 }
             }
@@ -158,7 +159,9 @@ pub fn settle_round(
 
         if let Ok(Some(mut account)) = storage.get_account_state(address) {
             account.balance += amount;
-            let _ = storage.put_account_state(address, &account);
+            if let Err(e) = storage.put_account_state(address, &account) {
+                tracing::warn!("Mining: failed to save account state for {}: {}", address, e);
+            }
         }
     }
 
@@ -166,7 +169,9 @@ pub fn settle_round(
     for (address, _) in &participants {
         if let Ok(Some(mut account)) = storage.get_account_state(address) {
             account.available_xp = 0;
-            let _ = storage.put_account_state(address, &account);
+            if let Err(e) = storage.put_account_state(address, &account) {
+                tracing::warn!("Mining: failed to save account state for {}: {}", address, e);
+            }
         }
     }
 

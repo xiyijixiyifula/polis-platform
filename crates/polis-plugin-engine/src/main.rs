@@ -24,6 +24,8 @@ async fn main() -> anyhow::Result<()> {
         .connect(&database_url)
         .await?;
 
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
+
     let engine = PluginEngine::new()
         .map_err(|e| anyhow::anyhow!("Failed to create plugin engine: {}", e))?;
 

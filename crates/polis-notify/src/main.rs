@@ -6,6 +6,7 @@ use polis_notify::config::NotifyConfig;
 use polis_notify::handler::NotifyHandler;
 use polis_notify::routes::notify_routes;
 use polis_core::events::subjects;
+use polis_core::nats_reconnect::NatsReconnect;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -13,14 +14,15 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt().with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into())).json().init();
     let config = NotifyConfig::from_env();
     let pool = PgPoolOptions::new().max_connections(5).acquire_timeout(std::time::Duration::from_secs(10)).connect(&config.database_url).await?;
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
     let handler = Arc::new(NotifyHandler::new(pool));
 
     // Connect to NATS and subscribe to events for notification generation
     let nats_handler = handler.clone();
     let nats_url = config.nats_url.clone();
     tokio::spawn(async move {
-        match async_nats::connect(&nats_url).await {
-            Ok(nats_client) => {
+        match NatsReconnect::connect(&nats_url).await {
+            Some(nats_client) => {
                 tracing::info!("Notify service connected to NATS, subscribing to events");
 
                 let subjects = vec![
@@ -76,8 +78,8 @@ async fn main() -> anyhow::Result<()> {
 
                 tracing::info!("NATS subscriptions active");
             }
-            Err(e) => {
-                tracing::warn!("Notify failed to connect NATS: {}. Event notifications disabled.", e);
+            None => {
+                tracing::warn!("Notify failed to connect NATS. Event notifications disabled.");
             }
         }
     });

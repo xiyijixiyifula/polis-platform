@@ -99,8 +99,7 @@ async fn get_status(State(state): State<AppState>) -> impl IntoResponse {
     let latest = state.storage.latest_block_number().unwrap_or(0);
     let elapsed = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
-        .unwrap()
+        .expect("system clock is set before UNIX epoch")
         .as_secs()
         - state.start_time;
 
@@ -453,8 +452,7 @@ async fn get_user_xp(
 ) -> impl IntoResponse {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
-        .unwrap()
+        .expect("system clock is set before UNIX epoch")
         .as_secs();
 
     let account = state
@@ -475,8 +473,7 @@ async fn get_user_xp(
 async fn get_current_round(State(state): State<AppState>) -> impl IntoResponse {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
-        .unwrap()
+        .expect("system clock is set before UNIX epoch")
         .as_secs();
 
     let round_id = now / 3600;
@@ -623,8 +620,7 @@ async fn create_wallet(State(state): State<AppState>) -> impl IntoResponse {
 
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
-        .unwrap()
+        .expect("system clock is set before UNIX epoch")
         .as_secs();
     let account = crate::state::AccountState::new(wallet.address.clone(), now);
     let _ = state.storage.put_account_state(&wallet.address, &account);
@@ -748,8 +744,7 @@ async fn get_peers(State(state): State<AppState>) -> impl IntoResponse {
 async fn get_round_participants(State(state): State<AppState>) -> impl IntoResponse {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        // SAFETY: SystemTime::now() is always after UNIX_EPOCH
-        .unwrap()
+        .expect("system clock is set before UNIX epoch")
         .as_secs();
     let round_id = now / 3600;
 

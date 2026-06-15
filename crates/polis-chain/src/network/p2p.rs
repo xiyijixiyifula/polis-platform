@@ -233,7 +233,9 @@ impl P2PNode {
         // Bootstrap
         for addr_str in bootstrap_nodes {
             if let Ok(addr) = addr_str.parse::<Multiaddr>() {
-                let _ = swarm.dial(addr.clone());
+                if let Err(e) = swarm.dial(addr.clone()) {
+                    tracing::warn!("P2P: failed to dial bootstrap node {}: {}", addr, e);
+                }
                 tracing::info!("拨号 bootstrap: {}", addr);
             }
         }
@@ -313,12 +315,16 @@ async fn run_event_loop(
                     SwarmEvent::ConnectionEstablished { peer_id, .. } => {
                         tracing::info!("节点已连接: {}", peer_id);
                         connected_peers.insert(peer_id);
-                        let _ = event_tx.send(P2PEvent::PeerConnected(peer_id));
+                        if let Err(e) = event_tx.send(P2PEvent::PeerConnected(peer_id)) {
+                            tracing::warn!("P2P: failed to send PeerConnected event: {}", e);
+                        }
                     }
                     SwarmEvent::ConnectionClosed { peer_id, .. } => {
                         tracing::info!("节点已断开: {}", peer_id);
                         connected_peers.remove(&peer_id);
-                        let _ = event_tx.send(P2PEvent::PeerDisconnected(peer_id));
+                        if let Err(e) = event_tx.send(P2PEvent::PeerDisconnected(peer_id)) {
+                            tracing::warn!("P2P: failed to send PeerDisconnected event: {}", e);
+                        }
                     }
                     SwarmEvent::IncomingConnectionError { send_back_addr, error, .. } => {
                         tracing::warn!("入站连接错误 {}: {}", send_back_addr, error);
@@ -356,18 +362,24 @@ async fn run_event_loop(
                     }
                     Some(P2PCommand::SendBlockResponse { request_id, blocks }) => {
                         if let Some(channel) = pending_requests.remove(&request_id) {
-                            let _ = swarm.behaviour_mut().request_response.send_response(
+                            if let Err(e) = swarm.behaviour_mut().request_response.send_response(
                                 channel,
                                 BlockSyncResponse { blocks },
-                            );
+                            ) {
+                                tracing::warn!("P2P: failed to send BlockSyncResponse: {:?}", e);
+                            }
                         }
                     }
                     Some(P2PCommand::Dial(addr)) => {
-                        let _ = swarm.dial(addr);
+                        if let Err(e) = swarm.dial(addr) {
+                            tracing::warn!("P2P: failed to dial peer: {}", e);
+                        }
                     }
                     Some(P2PCommand::GetPeers(tx)) => {
                         let peers: Vec<String> = connected_peers.iter().map(|p| p.to_string()).collect();
-                        let _ = tx.send(peers);
+                        if tx.send(peers).is_err() {
+                            tracing::warn!("P2P: GetPeers requester dropped channel before receiving response");
+                        }
                     }
                     None => break,
                 }
@@ -398,27 +410,33 @@ fn handle_gossipsub_event(
     if let gossipsub::Event::Message { propagation_source, message, .. } = event {
         // 尝试反序列化共识消息
         if let Ok(consensus_msg) = bincode::deserialize::<ConsensusWireMessage>(&message.data) {
-            let _ = event_tx.send(P2PEvent::ConsensusMessage {
+            if let Err(e) = event_tx.send(P2PEvent::ConsensusMessage {
                 from: propagation_source,
                 message: consensus_msg,
-            });
+            }) {
+                tracing::warn!("P2P: failed to send ConsensusMessage event: {}", e);
+            }
             return;
         }
         // 尝试反序列化交易
         if let Ok(tx) = bincode::deserialize::<SignedTransaction>(&message.data) {
-            let _ = event_tx.send(P2PEvent::TransactionBroadcast {
+            if let Err(e) = event_tx.send(P2PEvent::TransactionBroadcast {
                 from: propagation_source,
                 transaction: tx,
-            });
+            }) {
+                tracing::warn!("P2P: failed to send TransactionBroadcast event: {}", e);
+            }
             return;
         }
         // 尝试反序列化区块公告
         if let Ok(ann) = bincode::deserialize::<BlockAnnouncementWire>(&message.data) {
-            let _ = event_tx.send(P2PEvent::BlockAnnouncement {
+            if let Err(e) = event_tx.send(P2PEvent::BlockAnnouncement {
                 from: propagation_source,
                 block_number: ann.block_number,
                 block_hash: ann.block_hash,
-            });
+            }) {
+                tracing::warn!("P2P: failed to send BlockAnnouncement event: {}", e);
+            }
         }
     }
 }
@@ -431,7 +449,9 @@ fn handle_mdns_event(
         for (peer_id, addr) in list {
             tracing::debug!("mDNS 发现节点: {} @ {}", peer_id, addr);
             swarm.behaviour_mut().kademlia.add_address(&peer_id, addr.clone());
-            let _ = swarm.dial(addr);
+            if let Err(e) = swarm.dial(addr) {
+                tracing::warn!("P2P: failed to dial mDNS discovered peer: {}", e);
+            }
         }
     }
 }
@@ -445,19 +465,23 @@ fn handle_request_response_event(
         request_response::Event::Message { peer, message } => match message {
             request_response::Message::Request { request_id, request, channel } => {
                 pending_requests.insert(request_id, channel);
-                let _ = event_tx.send(P2PEvent::BlockRequest {
+                if let Err(e) = event_tx.send(P2PEvent::BlockRequest {
                     from: peer,
                     request_id,
                     start: request.start,
                     end: request.end,
-                });
+                }) {
+                    tracing::warn!("P2P: failed to send BlockRequest event: {}", e);
+                }
             }
             request_response::Message::Response { request_id, response } => {
-                let _ = event_tx.send(P2PEvent::BlockResponse {
+                if let Err(e) = event_tx.send(P2PEvent::BlockResponse {
                     from: peer,
                     request_id,
                     blocks: response.blocks,
-                });
+                }) {
+                    tracing::warn!("P2P: failed to send BlockResponse event: {}", e);
+                }
             }
         },
         request_response::Event::OutboundFailure { peer, request_id: _, error } => {

@@ -31,7 +31,7 @@ impl ActivityProofBuilder {
             xp_value,
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
+                .expect("system clock is set before UNIX epoch")
                 .as_secs(),
             nonce,
         }

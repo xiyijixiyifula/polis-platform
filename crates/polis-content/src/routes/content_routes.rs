@@ -763,7 +763,10 @@ async fn save_draft_route(
     Json(req): Json<SaveDraftRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let tags = req.tags.as_ref()
-        .map(|t| serde_json::to_value(t).unwrap_or_default())
+        .map(|t| serde_json::to_value(t).unwrap_or_else(|e| {
+            tracing::warn!("Serialization error in save_draft tags: {}", e);
+            serde_json::Value::Array(vec![])
+        }))
         .unwrap_or(serde_json::Value::Array(vec![]));
     let module_type = req.module_type.unwrap_or_else(|| "article".to_string());
     let draft_id = h.save_draft(uid, req.space_id, &req.title, &req.body, &module_type, &tags).await?;

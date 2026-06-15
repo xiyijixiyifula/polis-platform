@@ -29,6 +29,9 @@ pub enum AppErrorKind {
 
     #[error("External service error: {0}")]
     External(String),
+
+    #[error("Too many requests: {0}")]
+    TooManyRequests(String),
 }
 
 /// 统一的错误类型（带请求上下文）
@@ -87,6 +90,10 @@ impl AppError {
         Self::from_kind(AppErrorKind::External(msg.into()))
     }
 
+    pub fn too_many_requests(msg: impl Into<String>) -> Self {
+        Self::from_kind(AppErrorKind::TooManyRequests(msg.into()))
+    }
+
     // ── Builder 方法 ──
 
     pub fn with_request_id(mut self, id: impl Into<String>) -> Self {
@@ -113,6 +120,7 @@ impl AppError {
             AppErrorKind::Database(_) => "Database",
             AppErrorKind::Cache(_) => "Cache",
             AppErrorKind::External(_) => "External",
+            AppErrorKind::TooManyRequests(_) => "TooManyRequests",
         }
     }
 
@@ -128,6 +136,7 @@ impl AppError {
             | AppErrorKind::Database(_)
             | AppErrorKind::Cache(_)
             | AppErrorKind::External(_) => 500,
+            AppErrorKind::TooManyRequests(_) => 429,
         }
     }
 
@@ -143,6 +152,7 @@ impl AppError {
             AppErrorKind::Database(_) => 1501,
             AppErrorKind::Cache(_) => 1502,
             AppErrorKind::External(_) => 1503,
+            AppErrorKind::TooManyRequests(_) => 1429,
         }
     }
 }

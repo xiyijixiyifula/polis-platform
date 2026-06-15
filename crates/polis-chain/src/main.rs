@@ -100,7 +100,7 @@ fn blocking_run<F: std::future::Future>(f: F) -> F::Output {
             // SAFETY: Runtime::new() only fails on extreme resource exhaustion (OOM);
             // if we cannot create a Tokio runtime, the program cannot function anyway.
             tokio::runtime::Runtime::new()
-                .unwrap()
+                .expect("failed to create Tokio runtime — system resource exhaustion")
                 .block_on(f)
         }
     }

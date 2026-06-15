@@ -29,6 +29,7 @@ impl UserHandler {
         pool: PgPool,
         config: UserServiceConfig,
         nats: Option<NatsClient>,
+        token_blacklist: TokenBlacklist,
     ) -> Self {
         let repo = UserRepo::new(pool);
         let bind_wallet = BindWalletHandler::new(repo.clone());
@@ -37,7 +38,7 @@ impl UserHandler {
             config,
             nats,
             bind_wallet,
-            token_blacklist: TokenBlacklist::new(),
+            token_blacklist,
         }
     }
 
@@ -653,8 +654,12 @@ impl UserHandler {
             if self.token_blacklist.is_blacklisted(jti).await {
                 return Err(AppError::unauthorized());
             }
-            // 撤销旧 refresh token，并通知其他服务
-            self.token_blacklist.blacklist(jti).await;
+            // 撤销旧 refresh token（持久化到 DB + NATS 广播）
+            let expires_at = chrono::Utc::now()
+                + chrono::Duration::seconds(self.config.jwt_refresh_expiry);
+            self.token_blacklist
+                .blacklist_with_persistence(jti, expires_at, &self.repo.pool)
+                .await;
             self.nats_publish_blacklisted(jti).await;
         }
 
@@ -684,17 +689,25 @@ impl UserHandler {
         })
     }
 
-    /// 登出 — 撤销 access token（和可选的 refresh token）
+    /// 登出 — 撤销 access token（和可选的 refresh token），持久化到 DB
     pub async fn logout(&self, jti: &str, refresh_token: Option<&str>) -> Result<(), AppError> {
-        // 撤销 access token
-        self.token_blacklist.blacklist(jti).await;
+        // 撤销 access token（持久化到 DB + NATS 广播）
+        let access_expires_at = chrono::Utc::now()
+            + chrono::Duration::seconds(self.config.jwt_access_expiry);
+        self.token_blacklist
+            .blacklist_with_persistence(jti, access_expires_at, &self.repo.pool)
+            .await;
         self.nats_publish_blacklisted(jti).await;
 
         // 如果提供了 refresh token，也撤销它
         if let Some(rt) = refresh_token {
             if let Ok(claims) = auth::verify_token(rt, &self.config.jwt_secret) {
                 if let Some(ref rt_jti) = claims.jti {
-                    self.token_blacklist.blacklist(rt_jti).await;
+                    let refresh_expires_at = chrono::Utc::now()
+                        + chrono::Duration::seconds(self.config.jwt_refresh_expiry);
+                    self.token_blacklist
+                        .blacklist_with_persistence(rt_jti, refresh_expires_at, &self.repo.pool)
+                        .await;
                     self.nats_publish_blacklisted(rt_jti).await;
                 }
             }

@@ -33,6 +33,9 @@ pub struct Claims {
     /// JWT ID (jti) — 唯一标识每个 token，用于黑名单撤销
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub jti: Option<String>,
+    /// Agent ID — 标识发起请求的 Agent（仅 Agent token 携带）
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub agent_id: Option<String>,
 }
 
 /// 创建安全 JWT 验证配置（显式启用 exp 校验 + token_type 默认校验）
@@ -64,6 +67,18 @@ pub fn extract_user_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
 /// 从请求头中提取用户 ID，未登录时返回 401
 pub fn require_user(headers: &HeaderMap) -> Result<Uuid, AppError> {
     extract_user_id(headers)?.ok_or(AppError::unauthorized())
+}
+
+/// 将 Claims 编码为 JWT token 字符串
+pub fn encode_token(claims: &Claims) -> Result<String, AppError> {
+    let secret = std::env::var("JWT_SECRET")
+        .expect("JWT_SECRET environment variable must be set");
+    jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        claims,
+        &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .map_err(|e| AppError::internal(format!("JWT encode error: {}", e)))
 }
 
 /// 解码 JWT token，返回用户 UUID

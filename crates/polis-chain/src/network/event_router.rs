@@ -45,7 +45,9 @@ impl EventRouter {
     pub async fn handle_event(&self, event: P2PEvent) {
         match event {
             P2PEvent::ConsensusMessage { .. } => {
-                let _ = self.consensus_tx.send(event);
+                if let Err(e) = self.consensus_tx.send(event) {
+                    tracing::warn!("EventRouter: failed to forward ConsensusMessage to consensus bridge: {}", e);
+                }
             }
 
             P2PEvent::TransactionBroadcast { transaction, .. } => {
@@ -72,15 +74,19 @@ impl EventRouter {
                         break;
                     }
                 }
-                let _ = self.p2p_cmd.send(P2PCommand::SendBlockResponse {
+                if let Err(e) = self.p2p_cmd.send(P2PCommand::SendBlockResponse {
                     request_id,
                     blocks,
-                });
+                }) {
+                    tracing::warn!("EventRouter: failed to send BlockResponse back to P2P layer: {}", e);
+                }
             }
 
             P2PEvent::BlockResponse { .. }
             | P2PEvent::BlockAnnouncement { .. } => {
-                let _ = self.sync_tx.send(event);
+                if let Err(e) = self.sync_tx.send(event) {
+                    tracing::warn!("EventRouter: failed to forward BlockResponse/BlockAnnouncement to block synchronizer: {}", e);
+                }
             }
 
             P2PEvent::PeerConnected(_) | P2PEvent::PeerDisconnected(_) => {

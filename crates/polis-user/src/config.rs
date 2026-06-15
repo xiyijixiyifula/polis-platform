@@ -11,6 +11,8 @@ pub struct UserServiceConfig {
     pub jwt_access_expiry: i64,   // 秒
     pub jwt_refresh_expiry: i64,  // 秒
     pub nats_url: String,
+    /// 前端域名，用于 CSRF Origin/Referer 校验（敏感操作如修改密码、绑定钱包）
+    pub frontend_url: String,
 }
 
 impl UserServiceConfig {
@@ -35,6 +37,7 @@ impl UserServiceConfig {
                 .parse()
                 .expect("JWT_REFRESH_EXPIRY must be a number"),
             nats_url: env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string()),
+            frontend_url: env::var("FRONTEND_URL").unwrap_or_else(|_| "https://www.mzgw.com".to_string()),
         }
     }
 }

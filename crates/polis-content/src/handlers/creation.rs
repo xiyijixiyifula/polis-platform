@@ -105,11 +105,7 @@ impl CreationHandler {
         .await
         .unwrap_or(0);
 
-        let mut public_list = Vec::new();
-        for creation in creations {
-            let public = creation_to_public(&self.pool, creation, user_id).await?;
-            public_list.push(public);
-        }
+        let public_list = creations_to_batch(&self.pool, &creations, user_id).await?;
 
         let pagination = Pagination {
             page,
@@ -179,11 +175,7 @@ impl CreationHandler {
         .unwrap_or(0);
 
         let uid = current_user_id.unwrap_or_default();
-        let mut public_list = Vec::new();
-        for creation in creations {
-            let public = creation_to_public(&self.pool, creation, uid).await?;
-            public_list.push(public);
-        }
+        let public_list = creations_to_batch(&self.pool, &creations, uid).await?;
 
         let pagination = Pagination {
             page,

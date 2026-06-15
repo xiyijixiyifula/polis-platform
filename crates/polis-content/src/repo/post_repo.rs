@@ -1,6 +1,6 @@
 use polis_core::error::AppError;
 use polis_core::models::{
-    CommunityEvent, EditorPick, Pagination, Post, PostReference, UserPublic, WeeklyTopic,
+    CommunityEvent, EditorPick, Pagination, Post, PostReference, User, UserPublic, WeeklyTopic,
 };
 use sqlx::PgPool;
 use std::collections::HashMap;
@@ -930,6 +930,31 @@ impl PostRepo {
         .fetch_optional(&*self.pool)
         .await
         .map_err(AppError::from)
+    }
+
+    /// Batch lookup users by usernames (case-insensitive).
+    /// Returns a HashMap keyed by lowercase username for O(1) lookup.
+    pub async fn find_users_by_usernames(
+        &self,
+        usernames: &[String],
+    ) -> Result<HashMap<String, User>, AppError> {
+        if usernames.is_empty() {
+            return Ok(HashMap::new());
+        }
+        // Lowercase on the app side; DB does LOWER(username) = ANY($1)
+        let lowercased: Vec<String> = usernames.iter().map(|n| n.to_lowercase()).collect();
+        let rows: Vec<User> = sqlx::query_as::<_, User>(
+            "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE LOWER(username) = ANY($1::text[])",
+        )
+        .bind(&lowercased)
+        .fetch_all(&*self.pool)
+        .await
+        .map_err(AppError::from)?;
+        let map: HashMap<String, User> = rows
+            .into_iter()
+            .map(|u| (u.username.to_lowercase(), u))
+            .collect();
+        Ok(map)
     }
 
     // ===== 跨社区投稿引用 =====

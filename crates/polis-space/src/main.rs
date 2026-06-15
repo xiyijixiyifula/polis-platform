@@ -6,6 +6,7 @@ use tracing_subscriber::EnvFilter;
 
 use polis_core::events::subjects;
 use polis_core::shutdown::shutdown_signal;
+use polis_core::nats_reconnect::NatsReconnect;
 use polis_space::config::SpaceServiceConfig;
 use polis_space::handlers::space_handler::SpaceHandler;
 use polis_space::routes::space_routes;
@@ -26,18 +27,10 @@ async fn main() -> anyhow::Result<()> {
         .connect(&config.database_url)
         .await
         .expect("Failed to connect to PostgreSQL");
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
     tracing::info!("Connected to PostgreSQL");
 
-    let nats = match async_nats::connect(&config.nats_url).await {
-        Ok(client) => {
-            tracing::info!("Connected to NATS");
-            Some(client)
-        }
-        Err(e) => {
-            tracing::warn!("Failed to connect to NATS: {}", e);
-            None
-        }
-    };
+    let nats = NatsReconnect::connect(&config.nats_url).await;
 
     let handler = Arc::new(SpaceHandler::new(pool, config.clone(), nats));
 
@@ -46,8 +39,8 @@ async fn main() -> anyhow::Result<()> {
     let sub_blacklist = handler.token_blacklist.clone();
     let sub_nats_url = config.nats_url.clone();
     tokio::spawn(async move {
-        match async_nats::connect(&sub_nats_url).await {
-            Ok(nc) => {
+        match NatsReconnect::connect(&sub_nats_url).await {
+            Some(nc) => {
                 tracing::info!("Space service subscribed to token blacklist events");
                 let mut sub = match nc.subscribe(subjects::TOKEN_BLACKLISTED.to_string()).await {
                     Ok(s) => s,
@@ -62,8 +55,8 @@ async fn main() -> anyhow::Result<()> {
                     sub_blacklist.blacklist(&jti).await;
                 }
             }
-            Err(e) => {
-                tracing::warn!("Space service failed to connect to NATS for blacklist sync: {}", e);
+            None => {
+                tracing::warn!("Space service failed to connect to NATS for blacklist sync");
             }
         }
     });

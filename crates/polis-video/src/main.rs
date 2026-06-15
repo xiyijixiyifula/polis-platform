@@ -6,6 +6,7 @@ use tracing_subscriber::EnvFilter;
 
 use polis_core::events::subjects;
 use polis_core::shutdown::shutdown_signal;
+use polis_core::nats_reconnect::NatsReconnect;
 use polis_video::config::VideoServiceConfig;
 use polis_video::handler::VideoHandler;
 use polis_video::repo::VideoRepo;
@@ -32,6 +33,8 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("Failed to connect to PostgreSQL");
 
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
+
     let repo = VideoRepo::new(pool);
     let handler = Arc::new(VideoHandler::new(repo, config.clone()));
 
@@ -40,8 +43,8 @@ async fn main() -> anyhow::Result<()> {
     let sub_blacklist = handler.token_blacklist.clone();
     let sub_nats_url = config.nats_url.clone();
     tokio::spawn(async move {
-        match async_nats::connect(&sub_nats_url).await {
-            Ok(nc) => {
+        match NatsReconnect::connect(&sub_nats_url).await {
+            Some(nc) => {
                 tracing::info!("Video service subscribed to token blacklist events");
                 let mut sub = match nc.subscribe(subjects::TOKEN_BLACKLISTED.to_string()).await {
                     Ok(s) => s,
@@ -56,8 +59,8 @@ async fn main() -> anyhow::Result<()> {
                     sub_blacklist.blacklist(&jti).await;
                 }
             }
-            Err(e) => {
-                tracing::warn!("Video service failed to connect to NATS for blacklist sync: {}", e);
+            None => {
+                tracing::warn!("Video service failed to connect to NATS for blacklist sync");
             }
         }
     });

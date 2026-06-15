@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use polis_core::events::Event;
 use polis_core::shutdown::shutdown_signal;
+use polis_core::nats_reconnect::NatsReconnect;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
 
@@ -28,10 +29,12 @@ async fn main() -> anyhow::Result<()> {
         .connect(&database_url)
         .await?;
 
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
+
     let aggregator = Arc::new(Aggregator::new(pool.clone()));
 
-    // 连接 NATS 订阅内容事件
-    if let Ok(nats) = async_nats::connect(&nats_url).await {
+    // 连接 NATS 订阅内容事件（自动重连）
+    if let Some(nats) = NatsReconnect::connect(&nats_url).await {
         tracing::info!("Connected to NATS for aggregate events");
 
         let agg = aggregator.clone();

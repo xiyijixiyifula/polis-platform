@@ -124,7 +124,7 @@ impl IbftEngine {
 
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("system clock is set before UNIX epoch")
             .as_secs();
 
         let mut block = Block {

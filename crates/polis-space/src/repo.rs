@@ -35,7 +35,7 @@ impl SpaceRepo {
             r#"
             INSERT INTO spaces (namespace, slug, owner_id, is_root, root_space_id, title, description, visibility, enabled_modules)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at
+            RETURNING id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at
             "#,
         )
         .bind(namespace)
@@ -55,7 +55,7 @@ impl SpaceRepo {
     /// 根据 namespace 查找社区
     pub async fn find_by_namespace(&self, namespace: &str) -> Result<Option<Space>, AppError> {
         let space = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE namespace = $1 AND status = 'active'",
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE namespace = $1 AND status = 'active'",
         )
         .bind(namespace)
         .fetch_optional(&self.pool)
@@ -63,10 +63,24 @@ impl SpaceRepo {
         Ok(space)
     }
 
+    /// 批量根据 ID 查找社区
+    pub async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Space>, AppError> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let spaces = sqlx::query_as::<_, Space>(
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE id = ANY($1)",
+        )
+        .bind(ids)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(spaces)
+    }
+
     /// 根据 ID 查找社区
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<Space>, AppError> {
         let space = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE id = $1",
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -108,7 +122,7 @@ impl SpaceRepo {
                 password_hash = COALESCE($8, password_hash),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at
+            RETURNING id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at
             "#,
         )
         .bind(id)
@@ -139,7 +153,7 @@ impl SpaceRepo {
     /// 搜索根社区（无 owner_id）
     pub async fn find_root_by_slug(&self, slug: &str) -> Result<Option<Space>, AppError> {
         let space = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE slug = $1 AND is_root = TRUE AND status = 'active'",
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE slug = $1 AND is_root = TRUE AND status = 'active'",
         )
         .bind(slug)
         .fetch_optional(&self.pool)
@@ -150,7 +164,7 @@ impl SpaceRepo {
     /// 获取根社区的关联用户社区
     pub async fn find_sub_spaces(&self, root_space_id: Uuid) -> Result<Vec<Space>, AppError> {
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE root_space_id = $1 AND status = 'active' ORDER BY member_count DESC",
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE root_space_id = $1 AND status = 'active' ORDER BY member_count DESC",
         )
         .bind(root_space_id)
         .fetch_all(&self.pool)
@@ -161,7 +175,7 @@ impl SpaceRepo {
     /// 获取用户拥有的社区
     pub async fn find_by_owner(&self, owner_id: Uuid) -> Result<Vec<Space>, AppError> {
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE owner_id = $1 AND status = 'active' ORDER BY created_at DESC",
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE owner_id = $1 AND status = 'active' ORDER BY created_at DESC",
         )
         .bind(owner_id)
         .fetch_all(&self.pool)
@@ -173,7 +187,7 @@ impl SpaceRepo {
     /// 算法: member_count(权重0.3) + post_count(权重0.5) + 近期活跃加分(7天内权重+1)
     pub async fn find_trending(&self, limit: u32) -> Result<Vec<Space>, AppError> {
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY (member_count * 0.3 + post_count * 0.5 + star_count * 0.4 + CASE WHEN updated_at > NOW() - INTERVAL '7 days' THEN 1.5 ELSE 0 END) DESC, created_at DESC LIMIT $1",
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY (member_count * 0.3 + post_count * 0.5 + star_count * 0.4 + CASE WHEN updated_at > NOW() - INTERVAL '7 days' THEN 1.5 ELSE 0 END) DESC, created_at DESC LIMIT $1",
         )
         .bind(limit as i64)
         .fetch_all(&self.pool)
@@ -192,7 +206,7 @@ impl SpaceRepo {
         .fetch_one(&self.pool)
         .await?;
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY (member_count * 0.3 + post_count * 0.5 + 1.0 / GREATEST(EXTRACT(EPOCH FROM (NOW() - updated_at)) / 86400.0, 1.0) * 2.0) DESC, created_at DESC LIMIT $1 OFFSET $2"
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY (member_count * 0.3 + post_count * 0.5 + 1.0 / GREATEST(EXTRACT(EPOCH FROM (NOW() - updated_at)) / 86400.0, 1.0) * 2.0) DESC, created_at DESC LIMIT $1 OFFSET $2"
         )
         .bind(limit)
         .bind(offset)
@@ -207,7 +221,7 @@ impl SpaceRepo {
         // The % wildcards are prepended/appended around the parameterized value, not injected into SQL text.
         let pattern = format!("%{}%", query);
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE status = 'active' AND visibility = 'public' AND (title ILIKE $1 OR description ILIKE $1 OR namespace ILIKE $1) ORDER BY member_count DESC LIMIT $2",
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE status = 'active' AND visibility = 'public' AND (title ILIKE $1 OR description ILIKE $1 OR namespace ILIKE $1) ORDER BY member_count DESC LIMIT $2",
         )
         .bind(&pattern)
         .bind(limit as i64)
@@ -419,21 +433,36 @@ impl SpaceRepo {
         let rows = sqlx::query_as::<_, (Uuid, Uuid, String, Option<String>, chrono::DateTime<chrono::Utc>,)>(
             "SELECT space_id, user_id, status, message, created_at FROM space_join_requests WHERE space_id=$1 AND status='pending' ORDER BY created_at DESC"
         ).bind(space_id).fetch_all(&self.pool).await?;
-        let mut result = Vec::new();
-        for (_, uid, status, msg, created) in rows {
-            // Fetch user info
-            let user: Option<(String, String)> = sqlx::query_as(
-                "SELECT username, display_name FROM users WHERE id=$1"
-            ).bind(uid).fetch_optional(&self.pool).await?;
-            result.push(serde_json::json!({
+
+        if rows.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // 批量获取用户信息
+        let user_ids: Vec<Uuid> = rows.iter().map(|(_, uid, _, _, _)| *uid).collect();
+        let users: Vec<(Uuid, String, String)> = sqlx::query_as(
+            "SELECT id, username, display_name FROM users WHERE id = ANY($1)"
+        ).bind(&user_ids).fetch_all(&self.pool).await?;
+
+        let user_map: std::collections::HashMap<Uuid, (String, String)> = users
+            .into_iter()
+            .map(|(id, uname, dname)| (id, (uname, dname)))
+            .collect();
+
+        let result: Vec<serde_json::Value> = rows.into_iter().map(|(_, uid, status, msg, created)| {
+            let (username, display_name) = user_map
+                .get(&uid)
+                .map(|(u, d)| (u.as_str(), d.as_str()))
+                .unwrap_or(("unknown", "unknown"));
+            serde_json::json!({
                 "user_id": uid.to_string(),
-                "username": user.as_ref().map(|u| &u.0).unwrap_or(&"unknown".to_string()),
-                "display_name": user.as_ref().map(|u| &u.1).unwrap_or(&"unknown".to_string()),
+                "username": username,
+                "display_name": display_name,
                 "status": status,
                 "message": msg,
                 "created_at": created.to_rfc3339(),
-            }));
-        }
+            })
+        }).collect();
         Ok(result)
     }
 
@@ -466,7 +495,7 @@ impl SpaceRepo {
 
         // 计算基础 XP
         let space = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE id = $1"
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE id = $1"
         ).bind(space_id).fetch_optional(&self.pool).await?
             .ok_or(AppError::not_found("Space not found".to_string()))?;
 
@@ -488,7 +517,7 @@ impl SpaceRepo {
         Ok((today_xp as i32, level))
     }
 
-    /// 批量获取空间等级
+    /// 批量获取空间等级（写入路径，会更新 space_levels 缓存）
     pub async fn compute_space_levels_batch(&self, space_ids: &[Uuid]) -> Result<Vec<(Uuid, i32, i32)>, AppError> {
         let mut results = Vec::new();
         for &id in space_ids {
@@ -497,6 +526,61 @@ impl SpaceRepo {
             }
         }
         Ok(results)
+    }
+
+    /// 批量获取空间等级（只读路径，不写入 space_levels）
+    /// 从 space_levels 表批量查询，对未缓存的 space 从 Space 的 member_count/post_count 就地计算
+    pub async fn get_cached_space_levels(
+        &self,
+        spaces: &[Space],
+    ) -> Result<std::collections::HashMap<Uuid, (i32, i32)>, AppError> {
+        use std::collections::HashMap;
+
+        let mut levels = HashMap::new();
+        if spaces.is_empty() {
+            return Ok(levels);
+        }
+
+        let space_ids: Vec<Uuid> = spaces.iter().map(|s| s.id).collect();
+
+        // 批量查询已缓存的等级（在当前 daily_reset 窗口内有效）
+        let cached: Vec<(Uuid, i32, i32)> = sqlx::query_as(
+            r#"SELECT space_id, xp, level
+               FROM space_levels
+               WHERE space_id = ANY($1)
+                 AND daily_reset_at >= CURRENT_DATE"#,
+        )
+        .bind(&space_ids)
+        .fetch_all(&self.pool)
+        .await?;
+
+        for (space_id, xp, level) in cached {
+            levels.insert(space_id, (xp, level));
+        }
+
+        // 对未缓存的 space，从 Space 结构体的 member_count/post_count 就地计算
+        for space in spaces {
+            if levels.contains_key(&space.id) {
+                continue;
+            }
+            let days_running = (chrono::Utc::now() - space.created_at)
+                .num_days()
+                .max(0) as i32;
+            let base_xp = space.member_count as i32 * 10
+                + space.post_count as i32 * 5
+                + days_running;
+            let today_xp = base_xp.min(200);
+
+            // 使用数据库函数 calc_space_level 计算等级
+            let level: i32 = sqlx::query_scalar("SELECT calc_space_level($1)")
+                .bind(today_xp)
+                .fetch_one(&self.pool)
+                .await?;
+
+            levels.insert(space.id, (today_xp, level));
+        }
+
+        Ok(levels)
     }
 
     // ===== 关注统计 =====
@@ -646,7 +730,7 @@ impl SpaceRepo {
     /// 获取最多收藏的社区 (Top N)
     pub async fn find_most_starred(&self, limit: i64) -> Result<Vec<Space>, AppError> {
         let spaces = sqlx::query_as::<_, Space>(
-            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, created_at, updated_at FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY star_count DESC LIMIT $1"
+            "SELECT id, namespace, slug, owner_id, is_root, root_space_id, title, description, icon_url, banner_url, visibility, status, custom_rules, enabled_modules, metadata, member_count, post_count, follower_count, star_count, password_hash, created_at, updated_at FROM spaces WHERE status = 'active' AND visibility = 'public' ORDER BY star_count DESC LIMIT $1"
         )
         .bind(limit)
         .fetch_all(&self.pool).await?;

@@ -65,6 +65,7 @@ pub fn generate_access_token(
         iat: Some(now),
         token_type: Some("access".to_string()),
         jti: Some(jti),
+        agent_id: None,
     };
     encode(
         &Header::default(),
@@ -91,6 +92,7 @@ pub fn generate_refresh_token(
         iat: Some(now),
         token_type: Some("refresh".to_string()),
         jti: Some(jti),
+        agent_id: None,
     };
     encode(
         &Header::default(),

@@ -23,6 +23,8 @@ async fn main() -> anyhow::Result<()> {
         .connect(&config.database_url)
         .await?;
 
+    sqlx::query("SET statement_timeout = '30s'").execute(&pool).await?;
+
     let nats = async_nats::connect(&config.nats_url).await.ok();
 
     let handler = Arc::new(PayHandler::new(pool, config.clone(), nats));

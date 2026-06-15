@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::net::IpAddr;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -21,6 +22,11 @@ use tracing_subscriber::EnvFilter;
 use crate::config::GatewayConfig;
 
 mod config;
+
+/// Global metrics counters (Prometheus-compatible)
+static CONNECTION_COUNT: AtomicU64 = AtomicU64::new(0);
+static REQUEST_COUNT: AtomicU64 = AtomicU64::new(0);
+static ERROR_COUNT: AtomicU64 = AtomicU64::new(0);
 
 /// 速率限制条目
 #[derive(Debug)]
@@ -178,6 +184,8 @@ async fn main() -> anyhow::Result<()> {
         // 健康检查 - Gateway 自身
         .route("/health", get(health_check))
         .route("/api/health", get(health_check))
+        // Prometheus 指标
+        .route("/metrics", get(metrics_handler))
         // 健康检查 - 各微服务代理
         .route("/api/health/user", get(proxy_health_user))
         .route("/api/health/space", get(proxy_health_space))
@@ -237,6 +245,7 @@ async fn rate_limit_middleware(
 
     if entry.count > limit {
         tracing::warn!("Rate limit exceeded for {} ({} req/min)", ip, entry.count);
+        ERROR_COUNT.fetch_add(1, Ordering::Relaxed);
         return Err((
             StatusCode::TOO_MANY_REQUESTS,
             Json(ApiResponse::error(1429, "请求过于频繁，请稍后再试")),
@@ -244,12 +253,34 @@ async fn rate_limit_middleware(
     }
 
     drop(limits);
+    CONNECTION_COUNT.fetch_add(1, Ordering::Relaxed);
+    REQUEST_COUNT.fetch_add(1, Ordering::Relaxed);
     Ok(next.run(request).await)
 }
 
 /// 健康检查
 async fn health_check() -> Json<ApiResponse<String>> {
     Json(ApiResponse::success("Polis API Gateway is running".to_string()))
+}
+
+/// Prometheus 风格 /metrics 端点
+async fn metrics_handler() -> String {
+    let connections = CONNECTION_COUNT.load(Ordering::Relaxed);
+    let requests = REQUEST_COUNT.load(Ordering::Relaxed);
+    let errors = ERROR_COUNT.load(Ordering::Relaxed);
+
+    format!(
+        "# HELP polis_gateway_connections_total Total HTTP connections accepted.\n\
+         # TYPE polis_gateway_connections_total counter\n\
+         polis_gateway_connections_total {}\n\
+         # HELP polis_gateway_requests_total Total HTTP requests received.\n\
+         # TYPE polis_gateway_requests_total counter\n\
+         polis_gateway_requests_total {}\n\
+         # HELP polis_gateway_errors_total Total proxy/processing errors.\n\
+         # TYPE polis_gateway_errors_total counter\n\
+         polis_gateway_errors_total {}\n",
+        connections, requests, errors,
+    )
 }
 
 /// 代理 health 请求到指定 URL，返回服务健康 JSON
@@ -473,6 +504,7 @@ async fn proxy_request_with_limit(
         .await
         .map_err(|e| {
             tracing::error!("Body read error (limit={}MB): {}", limit_bytes / 1024 / 1024, e);
+            ERROR_COUNT.fetch_add(1, Ordering::Relaxed);
             (
                 StatusCode::PAYLOAD_TOO_LARGE,
                 Json(ApiResponse::error(1413, &format!("Request body exceeds {} MB limit", limit_bytes / 1024 / 1024))),
@@ -555,5 +587,6 @@ async fn proxy_request_with_limit(
     }
 
     tracing::error!("Proxy failed after all retries for {}", target_url);
+    ERROR_COUNT.fetch_add(1, Ordering::Relaxed);
     Err(last_error.unwrap())
 }

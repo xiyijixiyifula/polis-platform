@@ -32,6 +32,12 @@ jobs:
           rm -f .cargo/config.toml
           cargo clippy --workspace -- -D warnings
 
+      - name: Security Audit (Rust)
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit
+        continue-on-error: true
+
       - name: Test Backend (workspace)
         run: cargo test --workspace --release --no-fail-fast
 
@@ -80,6 +86,10 @@ jobs:
       - name: Test Frontend (Vitest)
         run: npm test
 
+      - name: Security Audit (npm)
+        run: npm audit --production
+        continue-on-error: true
+
       - name: Build Frontend
         run: npm run build
 
@@ -107,3 +117,62 @@ jobs:
             backend-linux/release-binaries.tar.gz
             frontend/release-web.tar.gz
           generate_release_notes: true
+
+  smoke-test:
+    name: Post-Deploy Smoke Test
+    needs: [release]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Production Health Check
+        run: |
+          sleep 10
+          echo "=== Smoke Test: Production Health Check ==="
+
+          # 1. Homepage
+          HTTP_HOME=$(curl -fsk -o /dev/null -w "%{http_code}" --max-time 15 https://www.mzgw.com/)
+          if [ "$HTTP_HOME" = "200" ]; then
+            echo "PASS: Homepage -> HTTP $HTTP_HOME"
+          else
+            echo "FAIL: Homepage -> HTTP $HTTP_HOME"
+            exit 1
+          fi
+
+          # 2. API health
+          HTTP_HEALTH=$(curl -fsk -o /dev/null -w "%{http_code}" --max-time 15 https://www.mzgw.com/api/health)
+          if [ "$HTTP_HEALTH" = "200" ]; then
+            echo "PASS: /api/health -> HTTP $HTTP_HEALTH"
+          else
+            echo "FAIL: /api/health -> HTTP $HTTP_HEALTH"
+            exit 1
+          fi
+
+          # 3. Aggregated health (all services)
+          HTTP_ALL=$(curl -fsk -o /dev/null -w "%{http_code}" --max-time 15 https://www.mzgw.com/api/health/all)
+          if [ "$HTTP_ALL" = "200" ]; then
+            echo "PASS: /api/health/all -> HTTP $HTTP_ALL"
+          else
+            echo "FAIL: /api/health/all -> HTTP $HTTP_ALL"
+            exit 1
+          fi
+
+          # 4. Trending spaces (key public endpoint)
+          HTTP_TREND=$(curl -fsk -o /dev/null -w "%{http_code}" --max-time 15 https://www.mzgw.com/api/spaces/trending)
+          if [ "$HTTP_TREND" = "200" ]; then
+            echo "PASS: /api/spaces/trending -> HTTP $HTTP_TREND"
+          else
+            echo "FAIL: /api/spaces/trending -> HTTP $HTTP_TREND"
+            exit 1
+          fi
+
+          # 5. Feed (key public endpoint)
+          HTTP_FEED=$(curl -fsk -o /dev/null -w "%{http_code}" --max-time 15 "https://www.mzgw.com/api/feed?limit=5")
+          if [ "$HTTP_FEED" = "200" ]; then
+            echo "PASS: /api/feed -> HTTP $HTTP_FEED"
+          else
+            echo "FAIL: /api/feed -> HTTP $HTTP_FEED"
+            exit 1
+          fi
+
+          echo ""
+          echo "=== ALL SMOKE TESTS PASSED ==="

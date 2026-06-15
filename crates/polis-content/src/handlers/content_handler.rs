@@ -110,18 +110,27 @@ impl ContentHandler {
         // XP: 发帖奖励
         self.xp.on_post_created(author_id).await;
 
-        // Process @mentions
+        // Process @mentions — batch lookup to avoid N+1 queries
         let mentioned_users = mention::parse_mentions(&req.body);
-        for mentioned_name in &mentioned_users {
-            if let Ok(Some(user)) = self.repo.find_user_by_username(mentioned_name).await {
-                if user.id != author_id {
-                    let actor_name = self.find_user_name(author_id).await.unwrap_or_else(|| "有人".to_string());
-                    let content = format!("{} 在帖子中提到了你", actor_name);
-                    self.create_notification(
-                        user.id, "mention",
-                        Some(author_id), Some("post"), Some(post.id),
-                        &content,
-                    ).await;
+        if !mentioned_users.is_empty() {
+            let users_map = self.repo.find_users_by_usernames(&mentioned_users).await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to batch-lookup mentioned users: {}", e);
+                    std::collections::HashMap::new()
+                });
+            if !users_map.is_empty() {
+                let actor_name = self.find_user_name(author_id).await.unwrap_or_else(|| "有人".to_string());
+                for mentioned_name in &mentioned_users {
+                    if let Some(user) = users_map.get(&mentioned_name.to_lowercase()) {
+                        if user.id != author_id {
+                            let content = format!("{} 在帖子中提到了你", actor_name);
+                            self.create_notification(
+                                user.id, "mention",
+                                Some(author_id), Some("post"), Some(post.id),
+                                &content,
+                            ).await;
+                        }
+                    }
                 }
             }
         }
@@ -1047,18 +1056,27 @@ impl ContentHandler {
         // XP: 评论奖励
         self.xp.on_comment_created(author_id).await;
 
-        // Process @mentions in comments
+        // Process @mentions in comments — batch lookup to avoid N+1 queries
         let mentioned_users = mention::parse_mentions(&req.body);
-        for mentioned_name in &mentioned_users {
-            if let Ok(Some(user)) = self.repo.find_user_by_username(mentioned_name).await {
-                if user.id != author_id {
-                    let actor_name = self.find_user_name(author_id).await.unwrap_or_else(|| "有人".to_string());
-                    let content = format!("{} 在评论中提到了你", actor_name);
-                    self.create_notification(
-                        user.id, "mention",
-                        Some(author_id), Some("comment"), Some(comment.id),
-                        &content,
-                    ).await;
+        if !mentioned_users.is_empty() {
+            let users_map = self.repo.find_users_by_usernames(&mentioned_users).await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to batch-lookup mentioned users: {}", e);
+                    std::collections::HashMap::new()
+                });
+            if !users_map.is_empty() {
+                let actor_name = self.find_user_name(author_id).await.unwrap_or_else(|| "有人".to_string());
+                for mentioned_name in &mentioned_users {
+                    if let Some(user) = users_map.get(&mentioned_name.to_lowercase()) {
+                        if user.id != author_id {
+                            let content = format!("{} 在评论中提到了你", actor_name);
+                            self.create_notification(
+                                user.id, "mention",
+                                Some(author_id), Some("comment"), Some(comment.id),
+                                &content,
+                            ).await;
+                        }
+                    }
                 }
             }
         }

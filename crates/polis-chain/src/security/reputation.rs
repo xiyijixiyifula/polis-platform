@@ -137,7 +137,7 @@ impl ReputationEngine {
         let total_stake: u64 = validators.iter().map(|v| v.stake_amount).sum();
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .expect("system clock is set before UNIX epoch")
             .as_secs();
 
         let max_duration: u64 = validators

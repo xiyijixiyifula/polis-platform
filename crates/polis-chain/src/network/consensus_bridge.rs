@@ -66,7 +66,9 @@ impl ConsensusBridge {
                 // 创建自己的 Prepare 投票并添加到引擎
                 if let Some(ref sk) = self.signing_key {
                     let seal = engine.create_seal(&block.hash, sk);
-                    let _ = engine.add_prepare(seal.clone(), &block.hash);
+                    if let Err(e) = engine.add_prepare(seal.clone(), &block.hash) {
+                        tracing::warn!("ConsensusBridge: failed to add self-prepare vote: {}", e);
+                    }
 
                     // 广播 Prepare 给其他验证者
                     let prepare = ConsensusWireMessage::Prepare {
@@ -75,8 +77,11 @@ impl ConsensusBridge {
                         block_hash: block.hash,
                         seal,
                     };
-                    let _ = self.p2p_cmd
-                        .send(P2PCommand::BroadcastConsensusMessage(prepare));
+                    if let Err(e) = self.p2p_cmd
+                        .send(P2PCommand::BroadcastConsensusMessage(prepare))
+                    {
+                        tracing::warn!("ConsensusBridge: failed to broadcast Prepare vote: {}", e);
+                    }
 
                     // 检查是否已收集足够 Prepare
                     let prepared = engine.has_quorum_prepares();
@@ -173,8 +178,11 @@ impl ConsensusBridge {
             block: block.clone(),
             proposer: self.node_address.clone(),
         };
-        let _ = self.p2p_cmd
-            .send(P2PCommand::BroadcastConsensusMessage(msg));
+        if let Err(e) = self.p2p_cmd
+            .send(P2PCommand::BroadcastConsensusMessage(msg))
+        {
+            tracing::warn!("ConsensusBridge: failed to broadcast PrePrepare proposal: {}", e);
+        }
 
         tracing::info!(
             "提议区块: height={} round={} hash={} txs={}",
@@ -221,7 +229,9 @@ impl ConsensusBridge {
             round,
             validator: self.node_address.clone(),
         };
-        let _ = self.p2p_cmd.send(P2PCommand::BroadcastConsensusMessage(msg));
+        if let Err(e) = self.p2p_cmd.send(P2PCommand::BroadcastConsensusMessage(msg)) {
+            tracing::warn!("ConsensusBridge: failed to broadcast RoundChange: {}", e);
+        }
 
         let mut engine = self.consensus.lock().await;
         engine.start_new_round();
@@ -231,7 +241,9 @@ impl ConsensusBridge {
         drop(engine);
 
         if is_proposer {
-            let _ = self.propose_new_block().await;
+            if let Err(e) = self.propose_new_block().await {
+                tracing::warn!("ConsensusBridge: failed to propose new block in new round: {}", e);
+            }
         }
     }
 
@@ -254,8 +266,11 @@ impl ConsensusBridge {
                 block_hash,
                 seal,
             };
-            let _ = self.p2p_cmd
-                .send(P2PCommand::BroadcastConsensusMessage(commit));
+            if let Err(e) = self.p2p_cmd
+                .send(P2PCommand::BroadcastConsensusMessage(commit))
+            {
+                tracing::warn!("ConsensusBridge: failed to broadcast Commit vote: {}", e);
+            }
         }
     }
 
@@ -274,10 +289,12 @@ impl ConsensusBridge {
         }
 
         // 广播区块公告
-        let _ = self.p2p_cmd.send(P2PCommand::BroadcastBlockAnnouncement {
+        if let Err(e) = self.p2p_cmd.send(P2PCommand::BroadcastBlockAnnouncement {
             block_number: block.header.number,
             block_hash: block.hash,
-        });
+        }) {
+            tracing::warn!("ConsensusBridge: failed to broadcast block announcement: {}", e);
+        }
 
         tracing::info!(
             "区块已最终确定: height={} hash={} txs={}",
@@ -292,7 +309,9 @@ impl ConsensusBridge {
         drop(engine);
 
         if is_proposer {
-            let _ = self.propose_new_block().await;
+            if let Err(e) = self.propose_new_block().await {
+                tracing::warn!("ConsensusBridge: failed to propose block after finalization: {}", e);
+            }
         }
 
         Ok(())
@@ -333,7 +352,9 @@ pub fn start_consensus_loop(
                         ConsensusPhase::Idle => {
                             // 如果是 proposer 且还在 Idle，尝试提议
                             if is_proposer {
-                                let _ = bridge.propose_new_block().await;
+                                if let Err(e) = bridge.propose_new_block().await {
+                                    tracing::warn!("ConsensusBridge: failed to propose block after round timeout: {}", e);
+                                }
                             }
                         }
                         ConsensusPhase::Committed => {
@@ -357,8 +378,11 @@ pub fn start_consensus_loop(
                                 round: new_round,
                                 validator: bridge.node_address.clone(),
                             };
-                            let _ = bridge.p2p_cmd
-                                .send(P2PCommand::BroadcastConsensusMessage(msg));
+                            if let Err(e) = bridge.p2p_cmd
+                                .send(P2PCommand::BroadcastConsensusMessage(msg))
+                            {
+                                tracing::warn!("ConsensusBridge: failed to broadcast RoundChange on timeout: {}", e);
+                            }
 
                             // 检查是否是新一轮的 proposer
                             let engine = bridge.consensus.lock().await;
@@ -366,7 +390,9 @@ pub fn start_consensus_loop(
                             drop(engine);
 
                             if is_proposer {
-                                let _ = bridge.propose_new_block().await;
+                                if let Err(e) = bridge.propose_new_block().await {
+                                    tracing::warn!("ConsensusBridge: failed to propose block after timeout RoundChange: {}", e);
+                                }
                             }
                         }
                     }
