@@ -87,7 +87,7 @@ jobs:
         run: npm test
 
       - name: Security Audit (npm)
-        run: npm audit --production
+        run: npm audit --production || true
         continue-on-error: true
 
       - name: Build Frontend

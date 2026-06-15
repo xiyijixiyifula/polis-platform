@@ -78,7 +78,7 @@ pub fn deposit(storage: &Storage, from_address: &str, amount: u64) -> ChainResul
             total_deposited: amount,
         });
     }
-    pool.top_depositors.sort_by(|a, b| b.total_deposited.cmp(&a.total_deposited));
+    pool.top_depositors.sort_by_key(|d| std::cmp::Reverse(d.total_deposited));
 
     save_pool(storage, &pool)?;
 
