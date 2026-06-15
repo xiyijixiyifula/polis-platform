@@ -51,7 +51,7 @@ impl BindWalletHandler {
         }
 
         let random_bytes: [u8; 16] = rand::thread_rng().gen();
-        let nonce_prefix = hex::encode(&random_bytes);
+        let nonce_prefix = hex::encode(random_bytes);
         let nonce = format!(
             "Bind {} to Polis user {}: {}",
             address, user_id, nonce_prefix

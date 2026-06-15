@@ -19,7 +19,7 @@ impl AdminRole {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn from_role_str(s: &str) -> Option<Self> {
         match s {
             "super_admin" => Some(Self::SuperAdmin),
             "admin" => Some(Self::Admin),

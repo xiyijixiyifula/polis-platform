@@ -331,6 +331,7 @@ pub async fn rules_list(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn rules_create(
     config: &Config, client: &HttpClient,
     name: &str, rule_type: &str, config_str: &str,

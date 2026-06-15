@@ -12,6 +12,7 @@ impl StoreHandler {
     }
 
     /// 上架商品
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_product(
         &self,
         space_id: Uuid,

@@ -10,8 +10,8 @@ pub fn generate_seed(
 ) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(prev_block_hash);
-    hasher.update(&round_id.to_be_bytes());
-    hasher.update(&timestamp.to_be_bytes());
+    hasher.update(round_id.to_be_bytes());
+    hasher.update(timestamp.to_be_bytes());
     hasher.update(tickets_merkle_root);
     hasher.finalize().into()
 }
@@ -30,13 +30,13 @@ pub fn select_winners(seed: &[u8; 32], total_tickets: u64, winner_count: u32) ->
 
     while winners.len() < count as usize && used.len() < total_tickets as usize {
         let mut hasher = Sha256::new();
-        hasher.update(&rng_seed);
-        hasher.update(&(winners.len() as u64).to_be_bytes());
+        hasher.update(rng_seed);
+        hasher.update((winners.len() as u64).to_be_bytes());
         rng_seed = hasher.finalize().into();
 
         let mut val: u64 = 0;
-        for i in 0..8 {
-            val = (val << 8) | (rng_seed[i] as u64);
+        for &byte in rng_seed.iter().take(8) {
+            val = (val << 8) | (byte as u64);
         }
         let idx = val % total_tickets;
 
@@ -73,14 +73,14 @@ pub fn select_weighted_winners(
     while winners.len() < count as usize && used.len() < participants.len() {
         // 哈希链扩展种子
         let mut hasher = Sha256::new();
-        hasher.update(&rng_seed);
-        hasher.update(&(winners.len() as u64).to_be_bytes());
+        hasher.update(rng_seed);
+        hasher.update((winners.len() as u64).to_be_bytes());
         rng_seed = hasher.finalize().into();
 
         // 随机值 → 累积分布选取
         let mut rand_val: u64 = 0;
-        for i in 0..8 {
-            rand_val = (rand_val << 8) | (rng_seed[i] as u64);
+        for &byte in rng_seed.iter().take(8) {
+            rand_val = (rand_val << 8) | (byte as u64);
         }
         let target = rand_val % total_xp;
 

@@ -90,7 +90,7 @@ impl VideoRepo {
     /// 获取视频在特定社区的审核状态
     pub async fn find_space_review(&self, space_id: Uuid, video_id: Uuid) -> Result<Option<SpaceVideo>, AppError> {
         Ok(sqlx::query_as::<_, SpaceVideo>(
-            "SELECT * FROM space_videos WHERE space_id=$1 AND video_id=$2"
+            "SELECT space_id, video_id, added_by, added_at FROM space_videos WHERE space_id=$1 AND video_id=$2"
         ).bind(space_id).bind(video_id).fetch_optional(&self.pool).await?)
     }
 

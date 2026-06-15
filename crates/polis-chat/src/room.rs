@@ -43,6 +43,12 @@ pub struct RoomManager {
     rooms: RwLock<HashMap<String, Arc<ChatRoom>>>,
 }
 
+impl Default for RoomManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RoomManager {
     pub fn new() -> Self {
         Self {

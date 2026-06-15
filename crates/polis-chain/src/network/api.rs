@@ -127,7 +127,7 @@ async fn get_chain_info(State(state): State<AppState>) -> impl IntoResponse {
         .get_meta(b"genesis_hash")
         .ok()
         .flatten()
-        .map(|b| hex::encode(b))
+        .map(hex::encode)
         .unwrap_or_default();
 
     ok(serde_json::json!({
@@ -346,7 +346,7 @@ async fn submit_activity(
                 Ok(b) => b,
                 Err(_) => return err(400, "无效的签名格式"),
             };
-            if let Err(_) = crypto::verify_signature(&vk, msg.as_bytes(), &sig_bytes) {
+            if crypto::verify_signature(&vk, msg.as_bytes(), &sig_bytes).is_err() {
                 return err(401, "ActivityProof 签名验证失败");
             }
         }
@@ -828,7 +828,7 @@ async fn pool_deposit(
         Ok(b) => b,
         Err(_) => return err(400, "无效的签名格式"),
     };
-    if let Err(_) = crypto::verify_signature(&vk, message.as_bytes(), &sig_bytes) {
+    if crypto::verify_signature(&vk, message.as_bytes(), &sig_bytes).is_err() {
         return err(401, "签名验证失败");
     }
 

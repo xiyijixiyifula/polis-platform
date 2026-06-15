@@ -30,7 +30,7 @@ impl CommentRepo {
             r#"
             INSERT INTO comments (post_id, author_id, body, parent_id)
             VALUES ($1, $2, $3, $4)
-            RETURNING *
+            RETURNING id, post_id, author_id, parent_id, body, is_deleted, is_pinned, like_count, created_at
             "#,
         )
         .bind(post_id)
@@ -57,7 +57,7 @@ impl CommentRepo {
         post_id: Uuid,
     ) -> Result<Vec<Comment>, AppError> {
         let comments = sqlx::query_as::<_, Comment>(
-            "SELECT * FROM comments WHERE post_id = $1 AND is_deleted = FALSE ORDER BY created_at ASC",
+            "SELECT id, post_id, author_id, parent_id, body, is_deleted, is_pinned, like_count, created_at FROM comments WHERE post_id = $1 AND is_deleted = FALSE ORDER BY created_at ASC",
         )
         .bind(post_id)
         .fetch_all(&*self.pool)
@@ -85,7 +85,7 @@ impl CommentRepo {
 
     pub async fn find_comment_by_id(&self, id: Uuid) -> Result<Option<Comment>, AppError> {
         let c = sqlx::query_as::<_, Comment>(
-            "SELECT * FROM comments WHERE id = $1 AND is_deleted = FALSE",
+            "SELECT id, post_id, author_id, parent_id, body, is_deleted, is_pinned, like_count, created_at FROM comments WHERE id = $1 AND is_deleted = FALSE",
         )
         .bind(id)
         .fetch_optional(&*self.pool)

@@ -65,6 +65,7 @@ impl AdminHandler {
     }
 
     /// 记录审计日志的快捷方法
+    #[allow(clippy::too_many_arguments)]
     async fn audit_log(&self, actor_id: Uuid, actor_type: &str, target_type: &str, target_id: Uuid, action: &str, old_state: Option<&str>, new_state: Option<&str>, reason: Option<&str>) {
         self.audit.log(actor_id, actor_type, target_type, target_id, action, old_state, new_state, reason).await;
     }

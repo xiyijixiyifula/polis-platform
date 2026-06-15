@@ -1,5 +1,6 @@
 use std::env;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct GatewayConfig {
     pub host: String,

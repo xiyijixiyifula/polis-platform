@@ -54,7 +54,7 @@ struct PageQuery { page: Option<i64>, page_size: Option<i64> }
 struct ShareQuery { password: Option<String> }
 
 fn page_params(q: PageQuery) -> (i64, i64) {
-    (q.page.unwrap_or(1).max(1), q.page_size.unwrap_or(20).min(100).max(1))
+    (q.page.unwrap_or(1).max(1), q.page_size.unwrap_or(20).clamp(1, 100))
 }
 
 // ===== Space path parser =====

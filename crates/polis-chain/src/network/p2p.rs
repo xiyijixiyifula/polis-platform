@@ -290,20 +290,20 @@ async fn run_event_loop(
                     SwarmEvent::Behaviour(P2PBehaviourEvent::Mdns(me)) => {
                         handle_mdns_event(me, &mut swarm);
                     }
-                    SwarmEvent::Behaviour(P2PBehaviourEvent::Kademlia(ke)) => {
-                        if let kad::Event::OutboundQueryProgressed { result: kad::QueryResult::Bootstrap(Ok(_)), .. } = ke {
-                            tracing::debug!("Kademlia bootstrap 完成");
-                        }
+                    SwarmEvent::Behaviour(P2PBehaviourEvent::Kademlia(
+                        kad::Event::OutboundQueryProgressed { result: kad::QueryResult::Bootstrap(Ok(_)), .. },
+                    )) => {
+                        tracing::debug!("Kademlia bootstrap 完成");
                     }
                     SwarmEvent::Behaviour(P2PBehaviourEvent::RequestResponse(rre)) => {
                         handle_request_response_event(rre, &event_tx, &mut pending_requests);
                     }
-                    SwarmEvent::Behaviour(P2PBehaviourEvent::Identify(ie)) => {
-                        if let identify::Event::Received { peer_id, info, .. } = ie {
-                            tracing::debug!("识别到节点: {} ({})", peer_id, info.agent_version);
-                            for addr in info.listen_addrs {
-                                swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
-                            }
+                    SwarmEvent::Behaviour(P2PBehaviourEvent::Identify(
+                        identify::Event::Received { peer_id, info, .. },
+                    )) => {
+                        tracing::debug!("识别到节点: {} ({})", peer_id, info.agent_version);
+                        for addr in info.listen_addrs {
+                            swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
                         }
                     }
                     SwarmEvent::Behaviour(_) => {}

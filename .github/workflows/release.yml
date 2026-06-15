@@ -30,9 +30,7 @@ jobs:
       - name: Lint Backend (clippy)
         run: |
           rm -f .cargo/config.toml
-          for svc in polis-gateway polis-user polis-space polis-content polis-admin polis-video polis-aggregate; do
-            cargo clippy -p $svc -- -W warnings 2>&1 | tail -5 || true
-          done
+          cargo clippy --workspace -- -D warnings
 
       - name: Test Backend (workspace)
         run: cargo test --workspace --release --no-fail-fast 2>&1 | tail -20

@@ -24,7 +24,7 @@ impl ThreadHandler {
         let participants = req.participants.unwrap_or(serde_json::json!({}));
         let thread = sqlx::query_as::<_, Thread>(
             r#"INSERT INTO threads (title, creator_id, community_id, participants)
-               VALUES ($1, $2, $3, $4) RETURNING *"#,
+               VALUES ($1, $2, $3, $4) RETURNING id, title, creator_id, community_id, participants, status, creation_id, created_at, updated_at"#,
         )
         .bind(&req.title)
         .bind(user_id)
@@ -39,7 +39,7 @@ impl ThreadHandler {
     /// 获取对话流
     pub async fn get(&self, id: Uuid, user_id: Uuid) -> Result<Thread, AppError> {
         let thread = sqlx::query_as::<_, Thread>(
-            "SELECT * FROM threads WHERE id = $1 AND creator_id = $2",
+            "SELECT id, title, creator_id, community_id, participants, status, creation_id, created_at, updated_at FROM threads WHERE id = $1 AND creator_id = $2",
         )
         .bind(id)
         .bind(user_id)
@@ -69,7 +69,7 @@ impl ThreadHandler {
         .map_err(|e| AppError::internal(e.to_string()))?;
 
         let threads = sqlx::query_as::<_, Thread>(
-            "SELECT * FROM threads WHERE creator_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
+            "SELECT id, title, creator_id, community_id, participants, status, creation_id, created_at, updated_at FROM threads WHERE creator_id = $1 ORDER BY updated_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(user_id)
         .bind(limit)
@@ -85,7 +85,7 @@ impl ThreadHandler {
     /// 获取对话消息
     pub async fn messages(&self, thread_id: Uuid) -> Result<Vec<ThreadMessage>, AppError> {
         let msgs = sqlx::query_as::<_, ThreadMessage>(
-            "SELECT * FROM thread_messages WHERE thread_id = $1 ORDER BY message_order ASC",
+            "SELECT id, thread_id, user_id, agent_id, role, content, content_type, message_order, created_at FROM thread_messages WHERE thread_id = $1 ORDER BY message_order ASC",
         )
         .bind(thread_id)
         .fetch_all(&self.pool)
@@ -126,7 +126,7 @@ impl ThreadHandler {
 
         let msg = sqlx::query_as::<_, ThreadMessage>(
             r#"INSERT INTO thread_messages (thread_id, user_id, agent_id, role, content, content_type, message_order)
-               VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *"#,
+               VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, thread_id, user_id, agent_id, role, content, content_type, message_order, created_at"#,
         )
         .bind(thread_id)
         .bind(user_id)
@@ -170,7 +170,7 @@ impl ThreadHandler {
 
         // 获取所有消息并格式化为 Markdown
         let msgs = sqlx::query_as::<_, ThreadMessage>(
-            "SELECT * FROM thread_messages WHERE thread_id = $1 ORDER BY message_order ASC",
+            "SELECT id, thread_id, user_id, agent_id, role, content, content_type, message_order, created_at FROM thread_messages WHERE thread_id = $1 ORDER BY message_order ASC",
         )
         .bind(thread_id)
         .fetch_all(&self.pool)

@@ -26,7 +26,7 @@ impl HttpClient {
 
     /// GET raw bytes (for file downloads, non-JSON responses)
     pub async fn get_raw(&self, path: &str) -> Result<Vec<u8>, anyhow::Error> {
-        let req = self.client.get(&self.url(path));
+        let req = self.client.get(self.url(path));
         let resp = req.send().await.context("GET request failed")?;
         let status = resp.status();
         if !status.is_success() {
@@ -36,7 +36,7 @@ impl HttpClient {
     }
 
     pub async fn get(&self, path: &str, token: Option<&str>) -> Result<Value, anyhow::Error> {
-        let mut req = self.client.get(&self.url(path));
+        let mut req = self.client.get(self.url(path));
         if let Some(t) = token {
             req = req.header("Authorization", format!("Bearer {}", t));
         }
@@ -51,7 +51,7 @@ impl HttpClient {
     }
 
     pub async fn post(&self, path: &str, token: Option<&str>, body: &Value) -> Result<Value, anyhow::Error> {
-        let mut req = self.client.post(&self.url(path)).json(body);
+        let mut req = self.client.post(self.url(path)).json(body);
         if let Some(t) = token {
             req = req.header("Authorization", format!("Bearer {}", t));
         }
@@ -66,7 +66,7 @@ impl HttpClient {
     }
 
     pub async fn put(&self, path: &str, token: Option<&str>, body: &Value) -> Result<Value, anyhow::Error> {
-        let mut req = self.client.put(&self.url(path)).json(body);
+        let mut req = self.client.put(self.url(path)).json(body);
         if let Some(t) = token {
             req = req.header("Authorization", format!("Bearer {}", t));
         }
@@ -81,7 +81,7 @@ impl HttpClient {
     }
 
     pub async fn delete(&self, path: &str, token: Option<&str>) -> Result<Value, anyhow::Error> {
-        let mut req = self.client.delete(&self.url(path));
+        let mut req = self.client.delete(self.url(path));
         if let Some(t) = token {
             req = req.header("Authorization", format!("Bearer {}", t));
         }

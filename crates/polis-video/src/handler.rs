@@ -323,6 +323,7 @@ impl VideoHandler {
         }
     }
 
+    #[allow(clippy::ptr_arg)]
     async fn get_video_duration(&self, filepath: &PathBuf) -> Option<i32> {
         let output = tokio::process::Command::new("ffprobe")
             .args(["-v","error","-show_entries","format=duration","-of","csv=p=0", filepath.to_str().unwrap_or("")])
@@ -331,6 +332,7 @@ impl VideoHandler {
     }
 }
 
+#[allow(clippy::ptr_arg)]
 async fn transcode_video(input: &PathBuf, output_dir: &PathBuf, _config: &VideoServiceConfig) -> Result<(String, Option<String>, serde_json::Value), AppError> {
     tokio::fs::create_dir_all(output_dir).await.map_err(|e| AppError::internal(format!("创建HLS目录失败: {}", e)))?;
     let output_playlist = output_dir.join("index.m3u8");

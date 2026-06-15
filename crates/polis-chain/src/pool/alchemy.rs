@@ -261,14 +261,14 @@ fn select_alchemy_winners(
 
             // 哈希链扩展种子
             let mut hasher = sha2::Sha256::new();
-            hasher.update(&rng_seed);
-            hasher.update(&serial.to_be_bytes());
+            hasher.update(rng_seed);
+            hasher.update(serial.to_be_bytes());
             rng_seed = hasher.finalize().into();
 
             // 生成随机值
             let mut rand_val: u64 = 0;
-            for i in 0..8 {
-                rand_val = (rand_val << 8) | (rng_seed[i] as u64);
+            for &byte in rng_seed.iter().take(8) {
+                rand_val = (rand_val << 8) | (byte as u64);
             }
             let target = rand_val % total;
 

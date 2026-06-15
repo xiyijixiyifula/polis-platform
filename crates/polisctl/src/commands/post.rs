@@ -31,6 +31,7 @@ pub async fn get(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create(
     config: &Config,
     client: &HttpClient,

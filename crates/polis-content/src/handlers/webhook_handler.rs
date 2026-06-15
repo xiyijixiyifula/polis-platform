@@ -49,7 +49,7 @@ impl WebhookDispatcher {
         match space_id {
             Some(sid) => {
                 sqlx::query_as::<_, Webhook>(
-                    "SELECT * FROM webhooks WHERE is_active = TRUE AND (space_id = $1 OR space_id IS NULL) AND events @> $2",
+                    "SELECT id, user_id, space_id, events, url, secret, is_active, last_delivery_at, last_delivery_status, delivery_count, created_at, updated_at FROM webhooks WHERE is_active = TRUE AND (space_id = $1 OR space_id IS NULL) AND events @> $2",
                 )
                 .bind(sid)
                 .bind(&event_json)
@@ -58,7 +58,7 @@ impl WebhookDispatcher {
             }
             None => {
                 sqlx::query_as::<_, Webhook>(
-                    "SELECT * FROM webhooks WHERE is_active = TRUE AND events @> $1",
+                    "SELECT id, user_id, space_id, events, url, secret, is_active, last_delivery_at, last_delivery_status, delivery_count, created_at, updated_at FROM webhooks WHERE is_active = TRUE AND events @> $1",
                 )
                 .bind(&event_json)
                 .fetch_all(pool)
@@ -167,7 +167,7 @@ impl WebhookHandler {
         let events = serde_json::to_value(req.events).unwrap_or_default();
         let wh = sqlx::query_as::<_, Webhook>(
             r#"INSERT INTO webhooks (user_id, space_id, events, url, secret)
-               VALUES ($1, $2, $3, $4, $5) RETURNING *"#,
+               VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, space_id, events, url, secret, is_active, last_delivery_at, last_delivery_status, delivery_count, created_at, updated_at"#,
         )
         .bind(user_id)
         .bind(req.space_id)
@@ -189,7 +189,7 @@ impl WebhookHandler {
         let webhooks = match space_id {
             Some(sid) => {
                 sqlx::query_as::<_, Webhook>(
-                    "SELECT * FROM webhooks WHERE user_id = $1 AND space_id = $2 ORDER BY created_at DESC",
+                    "SELECT id, user_id, space_id, events, url, secret, is_active, last_delivery_at, last_delivery_status, delivery_count, created_at, updated_at FROM webhooks WHERE user_id = $1 AND space_id = $2 ORDER BY created_at DESC",
                 )
                 .bind(user_id)
                 .bind(sid)
@@ -198,7 +198,7 @@ impl WebhookHandler {
             }
             None => {
                 sqlx::query_as::<_, Webhook>(
-                    "SELECT * FROM webhooks WHERE user_id = $1 ORDER BY created_at DESC",
+                    "SELECT id, user_id, space_id, events, url, secret, is_active, last_delivery_at, last_delivery_status, delivery_count, created_at, updated_at FROM webhooks WHERE user_id = $1 ORDER BY created_at DESC",
                 )
                 .bind(user_id)
                 .fetch_all(&self.pool)
@@ -239,7 +239,7 @@ impl WebhookHandler {
                secret = COALESCE($3, secret),
                is_active = COALESCE($4, is_active),
                updated_at = NOW()
-               WHERE id = $5 RETURNING *"#,
+               WHERE id = $5 RETURNING id, user_id, space_id, events, url, secret, is_active, last_delivery_at, last_delivery_status, delivery_count, created_at, updated_at"#,
         )
         .bind(events.as_ref())
         .bind(req.url.as_deref())
@@ -297,7 +297,7 @@ impl WebhookHandler {
         .map_err(|e| AppError::internal(e.to_string()))?;
 
         let deliveries = sqlx::query_as::<_, WebhookDelivery>(
-            "SELECT * FROM webhook_deliveries WHERE webhook_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+            "SELECT id, webhook_id, event_type, payload, status_code, response_body, error_message, duration_ms, created_at FROM webhook_deliveries WHERE webhook_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(webhook_id)
         .bind(limit)

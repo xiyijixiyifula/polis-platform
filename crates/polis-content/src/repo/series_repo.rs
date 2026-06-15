@@ -99,7 +99,7 @@ impl SeriesRepo {
         space_id: Uuid,
     ) -> Result<Vec<Series>, AppError> {
         let series = sqlx::query_as::<_, Series>(
-            "SELECT * FROM series WHERE space_id = $1 AND is_published = TRUE ORDER BY sort_order ASC, created_at DESC",
+            "SELECT id, space_id, author_id, title, description, cover_url, visibility, is_published, post_count, sort_order, created_at, updated_at FROM series WHERE space_id = $1 AND is_published = TRUE ORDER BY sort_order ASC, created_at DESC",
         )
         .bind(space_id)
         .fetch_all(&*self.pool)
@@ -108,7 +108,7 @@ impl SeriesRepo {
     }
 
     pub async fn get_series(&self, series_id: Uuid) -> Result<Series, AppError> {
-        sqlx::query_as::<_, Series>("SELECT * FROM series WHERE id = $1")
+        sqlx::query_as::<_, Series>("SELECT id, space_id, author_id, title, description, cover_url, visibility, is_published, post_count, sort_order, created_at, updated_at FROM series WHERE id = $1")
             .bind(series_id)
             .fetch_one(&*self.pool)
             .await

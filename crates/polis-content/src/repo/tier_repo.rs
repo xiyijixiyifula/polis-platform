@@ -15,7 +15,7 @@ impl TierRepo {
 
     pub async fn list_tiers(&self, space_id: Uuid) -> Result<Vec<SpaceTier>, AppError> {
         let tiers = sqlx::query_as::<_, SpaceTier>(
-            "SELECT * FROM space_tiers WHERE space_id = $1 AND is_active = TRUE ORDER BY sort_order",
+            "SELECT id, space_id, name, price_cents, currency, description, benefits, sort_order, is_active, created_at, updated_at FROM space_tiers WHERE space_id = $1 AND is_active = TRUE ORDER BY sort_order",
         )
         .bind(space_id)
         .fetch_all(&*self.pool)
@@ -24,7 +24,7 @@ impl TierRepo {
     }
 
     pub async fn get_tier(&self, tier_id: Uuid) -> Result<SpaceTier, AppError> {
-        let tier = sqlx::query_as::<_, SpaceTier>("SELECT * FROM space_tiers WHERE id = $1")
+        let tier = sqlx::query_as::<_, SpaceTier>("SELECT id, space_id, name, price_cents, currency, description, benefits, sort_order, is_active, created_at, updated_at FROM space_tiers WHERE id = $1")
             .bind(tier_id)
             .fetch_one(&*self.pool)
             .await?;
@@ -167,7 +167,7 @@ impl TierRepo {
         user_id: Uuid,
     ) -> Result<Option<Subscription>, AppError> {
         let sub = sqlx::query_as::<_, Subscription>(
-            "SELECT * FROM subscriptions WHERE space_id = $1 AND user_id = $2 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
+            "SELECT id, space_id, user_id, tier_id, status, started_at, expires_at, auto_renew, created_at, updated_at FROM subscriptions WHERE space_id = $1 AND user_id = $2 AND status = 'active' ORDER BY created_at DESC LIMIT 1",
         )
         .bind(space_id)
         .bind(user_id)

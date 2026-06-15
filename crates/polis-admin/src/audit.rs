@@ -12,6 +12,7 @@ impl AuditLogger {
     }
 
     /// 记录一条审计日志
+    #[allow(clippy::too_many_arguments)]
     pub async fn log(
         &self,
         actor_id: Uuid,

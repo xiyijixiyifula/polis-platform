@@ -46,7 +46,7 @@ impl TipRepo {
     ) -> Result<Vec<Tip>, AppError> {
         let offset = ((page - 1) * page_size) as i64;
         sqlx::query_as::<_, Tip>(
-            "SELECT * FROM tips WHERE receiver_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+            "SELECT id, sender_id, receiver_id, target_type, target_id, amount, message, is_anonymous, created_at FROM tips WHERE receiver_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(user_id)
         .bind(page_size as i64)

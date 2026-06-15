@@ -246,7 +246,7 @@ impl AgentHandler {
 
         let sa = sqlx::query_as::<_, SpaceAgent>(
             r#"INSERT INTO space_agents (space_id, agent_id, registered_by, trigger_words, auto_trigger)
-               VALUES ($1, $2, $3, $4, $5) RETURNING *"#,
+               VALUES ($1, $2, $3, $4, $5) RETURNING id, space_id, agent_id, registered_by, is_active, trigger_words, auto_trigger, created_at"#,
         )
         .bind(space_id)
         .bind(agent_id)

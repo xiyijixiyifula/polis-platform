@@ -62,7 +62,7 @@ impl SpaceHandler {
         let namespace = format!("{}/{}", username, req.slug);
 
         // 检查 namespace 唯一性
-        if let Some(_) = self.repo.find_by_namespace(&namespace).await? {
+        if self.repo.find_by_namespace(&namespace).await?.is_some() {
             return Err(AppError::conflict(format!(
                 "Space '{}' already exists",
                 namespace
@@ -562,10 +562,8 @@ impl SpaceHandler {
         let ids = self.repo.get_starred_spaces(user_id).await?;
         let mut spaces = Vec::new();
         for id in ids {
-            if let Ok(space) = self.repo.find_by_id(id).await {
-                if let Some(space) = space {
-                    spaces.push(self.space_to_public(space).await);
-                }
+            if let Ok(Some(space)) = self.repo.find_by_id(id).await {
+                spaces.push(self.space_to_public(space).await);
             }
         }
         Ok(spaces)

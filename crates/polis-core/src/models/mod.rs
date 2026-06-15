@@ -17,7 +17,6 @@ pub use payment::*;
 pub use series::*;
 pub use notification::*;
 pub use chat::*;
-pub use vote::*;
 pub use hashtag::*;
 pub use thread::*;
 

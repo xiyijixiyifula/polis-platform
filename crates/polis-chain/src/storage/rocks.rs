@@ -162,7 +162,7 @@ impl Storage {
         let key = block.header.number.to_be_bytes();
         self.put_serialized(CF_BLOCKS, key, block)?;
         // 更新最新区块高度
-        self.put(CF_META, b"latest_block_number", &key)?;
+        self.put(CF_META, b"latest_block_number", key)?;
         Ok(())
     }
 

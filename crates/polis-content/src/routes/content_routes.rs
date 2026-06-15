@@ -315,7 +315,7 @@ async fn block_private_space_public_listing(pool: &PgPool, space_id: Uuid, heade
         )
         .bind(space_id).bind(uid)
         .fetch_optional(pool).await
-        .map_err(|e| AppError::database(e))?
+        .map_err(AppError::database)?
         .is_some();
         if !is_member {
             return Err(AppError::forbidden("此空间为私有空间，仅成员可访问".to_string()));

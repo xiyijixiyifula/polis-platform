@@ -15,6 +15,12 @@ pub struct ChatHandler {
     pub rooms: Arc<RoomManager>,
 }
 
+impl Default for ChatHandler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChatHandler {
     pub fn new() -> Self {
         Self {

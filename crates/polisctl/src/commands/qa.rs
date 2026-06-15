@@ -12,13 +12,10 @@ const QA_SPACE_SLUG: &str = "PolisAi";
 async fn resolve_qa_namespace(config: &Config, client: &HttpClient) -> Result<String, anyhow::Error> {
     // Try to get current user's profile to build the namespace
     if let Ok(token) = config.require_auth() {
-        match client.get("/api/users/me", Some(&token)).await {
-            Ok(resp) => {
-                if let Some(username) = extract_data(&resp).get("username").and_then(|v| v.as_str()) {
-                    return Ok(format!("{}/{}", username, QA_SPACE_SLUG));
-                }
+        if let Ok(resp) = client.get("/api/users/me", Some(&token)).await {
+            if let Some(username) = extract_data(&resp).get("username").and_then(|v| v.as_str()) {
+                return Ok(format!("{}/{}", username, QA_SPACE_SLUG));
             }
-            _ => {}
         }
     }
     // Fallback: try saved username from config
@@ -38,22 +35,20 @@ pub async fn init(config: &Config, client: &HttpClient) -> Result<(), anyhow::Er
 
     // Check if space already exists
     let check_url = format!("/api/spaces/{}", urlencoding::encode(&namespace));
-    match client.get(&check_url, None).await {
-        Ok(resp) => {
-            if let Some(data) = resp.get("data") {
-                if !data.is_null() {
-                    print_success(&format!(
-                        "PolisAi community already exists: {}",
-                        data.get("namespace")
-                            .and_then(|n| n.as_str())
-                            .unwrap_or(&namespace)
-                    ));
-                    return Ok(());
-                }
+    if let Ok(resp) = client.get(&check_url, None).await {
+        if let Some(data) = resp.get("data") {
+            if !data.is_null() {
+                print_success(&format!(
+                    "PolisAi community already exists: {}",
+                    data.get("namespace")
+                        .and_then(|n| n.as_str())
+                        .unwrap_or(&namespace)
+                ));
+                return Ok(());
             }
         }
-        _ => {} // Space not found, proceed to create
     }
+    // Space not found, proceed to create
 
     // Create the PolisAi community
     let body = json!({

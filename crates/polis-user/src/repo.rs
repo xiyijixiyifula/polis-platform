@@ -19,7 +19,7 @@ impl UserRepo {
     /// 根据邮箱查找用户
     pub async fn find_by_email(&self, email: &str) -> Result<Option<User>, AppError> {
         let user = sqlx::query_as::<_, User>(
-            "SELECT * FROM users WHERE email = $1",
+            "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE email = $1",
         )
         .bind(email)
         .fetch_optional(&self.pool)
@@ -30,7 +30,7 @@ impl UserRepo {
     /// 根据用户名查找用户
     pub async fn find_by_username(&self, username: &str) -> Result<Option<User>, AppError> {
         let user = sqlx::query_as::<_, User>(
-            "SELECT * FROM users WHERE LOWER(username) = LOWER($1)",
+            "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE LOWER(username) = LOWER($1)",
         )
         .bind(username)
         .fetch_optional(&self.pool)
@@ -41,7 +41,7 @@ impl UserRepo {
     /// 根据 ID 查找用户
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, AppError> {
         let user = sqlx::query_as::<_, User>(
-            "SELECT * FROM users WHERE id = $1",
+            "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE id = $1",
         )
         .bind(id)
         .fetch_optional(&self.pool)
@@ -61,7 +61,7 @@ impl UserRepo {
             r#"
             INSERT INTO users (username, display_name, email, password_hash)
             VALUES ($1, $2, $3, $4)
-            RETURNING *
+            RETURNING id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at
             "#,
         )
         .bind(username)
@@ -91,7 +91,7 @@ impl UserRepo {
                 notification_prefs = COALESCE($5, notification_prefs),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING *
+            RETURNING id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at
             "#,
         )
         .bind(user_id)
@@ -110,7 +110,7 @@ impl UserRepo {
         // The % wildcards are prepended/appended around the parameterized value, not injected into SQL text.
         let pattern = format!("%{}%", query);
         let users = sqlx::query_as::<_, User>(
-            "SELECT * FROM users WHERE username ILIKE $1 OR display_name ILIKE $1 OR id::text = $2 ORDER BY created_at DESC LIMIT $3",
+            "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE username ILIKE $1 OR display_name ILIKE $1 OR id::text = $2 ORDER BY created_at DESC LIMIT $3",
         )
         .bind(&pattern)
         .bind(query)
@@ -182,7 +182,7 @@ impl UserRepo {
 
     pub async fn get_or_create_user_xp(&self, user_id: Uuid) -> Result<UserXp, AppError> {
         let xp = sqlx::query_as::<_, UserXp>(
-            "SELECT * FROM user_xp WHERE user_id = $1"
+            "SELECT user_id, total_xp, current_level, daily_xp, daily_xp_date, created_at, updated_at FROM user_xp WHERE user_id = $1"
         )
         .bind(user_id)
         .fetch_optional(&self.pool)
@@ -191,7 +191,7 @@ impl UserRepo {
             return Ok(xp);
         }
         sqlx::query_as::<_, UserXp>(
-            "INSERT INTO user_xp (user_id, total_xp, current_level) VALUES ($1, 0, 1) RETURNING *"
+            "INSERT INTO user_xp (user_id, total_xp, current_level) VALUES ($1, 0, 1) RETURNING user_id, total_xp, current_level, daily_xp, daily_xp_date, created_at, updated_at"
         )
         .bind(user_id)
         .fetch_one(&self.pool)
@@ -235,7 +235,7 @@ impl UserRepo {
 
     pub async fn get_user_xp_logs(&self, user_id: Uuid, limit: i64) -> Result<Vec<UserXpLog>, AppError> {
         sqlx::query_as::<_, UserXpLog>(
-            "SELECT * FROM user_xp_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2"
+            "SELECT user_id, total_xp, current_level, daily_xp, daily_xp_date, created_at, updated_at FROM user_xp_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2"
         )
         .bind(user_id).bind(limit)
         .fetch_all(&self.pool).await
@@ -244,7 +244,7 @@ impl UserRepo {
 
     pub async fn get_onboarding_quests(&self) -> Result<Vec<OnboardingQuest>, AppError> {
         sqlx::query_as::<_, OnboardingQuest>(
-            "SELECT * FROM onboarding_quests WHERE is_active = true ORDER BY sort_order"
+            "SELECT id, quest_key, title, description, icon, xp_reward, sort_order, is_active FROM onboarding_quests WHERE is_active = true ORDER BY sort_order"
         )
         .fetch_all(&self.pool).await
         .map_err(AppError::from)
@@ -252,7 +252,7 @@ impl UserRepo {
 
     pub async fn get_user_quests(&self, user_id: Uuid) -> Result<Vec<UserQuest>, AppError> {
         sqlx::query_as::<_, UserQuest>(
-            "SELECT * FROM user_quests WHERE user_id = $1"
+            "SELECT id, user_id, quest_key, is_completed, is_claimed, completed_at, claimed_at, created_at FROM user_quests WHERE user_id = $1"
         )
         .bind(user_id).fetch_all(&self.pool).await
         .map_err(AppError::from)
@@ -322,7 +322,7 @@ impl UserRepo {
 
     pub async fn get_user_badges(&self, user_id: Uuid) -> Result<Vec<UserBadge>, AppError> {
         sqlx::query_as::<_, UserBadge>(
-            "SELECT * FROM user_badges WHERE user_id = $1 ORDER BY awarded_at DESC"
+            "SELECT id, user_id, badge_key, badge_name, badge_icon, badge_description, awarded_at FROM user_badges WHERE user_id = $1 ORDER BY awarded_at DESC"
         )
         .bind(user_id).fetch_all(&self.pool).await
         .map_err(AppError::from)
@@ -333,7 +333,7 @@ impl UserRepo {
     pub async fn create_invite_code(&self, inviter_id: Uuid) -> Result<InviteCode, AppError> {
         let code = Uuid::new_v4().to_string().replace("-", "")[..8].to_string().to_uppercase();
         sqlx::query_as::<_, InviteCode>(
-            "INSERT INTO invite_codes (code, inviter_id, status) VALUES ($1, $2, 'active') RETURNING *"
+            "INSERT INTO invite_codes (code, inviter_id, status) VALUES ($1, $2, 'active') RETURNING id, code, inviter_id, invitee_id, status, created_at, redeemed_at"
         )
         .bind(&code).bind(inviter_id)
         .fetch_one(&self.pool).await
@@ -342,7 +342,7 @@ impl UserRepo {
 
     pub async fn get_user_invite_codes(&self, inviter_id: Uuid) -> Result<Vec<InviteCode>, AppError> {
         sqlx::query_as::<_, InviteCode>(
-            "SELECT * FROM invite_codes WHERE inviter_id = $1 ORDER BY created_at DESC"
+            "SELECT id, code, inviter_id, invitee_id, status, created_at, redeemed_at FROM invite_codes WHERE inviter_id = $1 ORDER BY created_at DESC"
         )
         .bind(inviter_id).fetch_all(&self.pool).await
         .map_err(AppError::from)
@@ -350,7 +350,7 @@ impl UserRepo {
 
     pub async fn get_invite_rewards(&self, inviter_id: Uuid) -> Result<Vec<InviteReward>, AppError> {
         sqlx::query_as::<_, InviteReward>(
-            "SELECT * FROM invite_rewards WHERE inviter_id = $1 ORDER BY created_at DESC"
+            "SELECT id, inviter_id, invitee_id, reward_type, xp_amount, created_at FROM invite_rewards WHERE inviter_id = $1 ORDER BY created_at DESC"
         )
         .bind(inviter_id).fetch_all(&self.pool).await
         .map_err(AppError::from)
@@ -363,7 +363,7 @@ impl UserRepo {
     }
 
     pub async fn find_invite_code(&self, code: &str) -> Result<Option<InviteCode>, AppError> {
-        sqlx::query_as::<_, InviteCode>("SELECT * FROM invite_codes WHERE code = $1")
+        sqlx::query_as::<_, InviteCode>("SELECT id, code, inviter_id, invitee_id, status, created_at, redeemed_at FROM invite_codes WHERE code = $1")
             .bind(code).fetch_optional(&self.pool).await
             .map_err(AppError::from)
     }
@@ -427,7 +427,7 @@ impl UserRepo {
 
     pub async fn find_by_chain_address(&self, address: &str) -> Result<Option<User>, AppError> {
         sqlx::query_as::<_, User>(
-            "SELECT * FROM users WHERE chain_address = $1"
+            "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE chain_address = $1"
         )
         .bind(address)
         .fetch_optional(&self.pool).await

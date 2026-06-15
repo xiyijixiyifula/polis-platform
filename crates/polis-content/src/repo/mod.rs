@@ -67,6 +67,7 @@ impl ContentRepo {
 
     // ===== 帖子 =====
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_post(
         &self,
         space_id: Uuid,
@@ -287,6 +288,7 @@ impl ContentRepo {
 
     // ===== 社区投票/问卷 =====
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_poll(
         &self,
         space_id: Uuid,
@@ -527,6 +529,7 @@ impl ContentRepo {
         self.tier.get_tier(tier_id).await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_tier(
         &self,
         space_id: Uuid,
@@ -542,6 +545,7 @@ impl ContentRepo {
             .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_tier(
         &self,
         tier_id: Uuid,
@@ -605,6 +609,7 @@ impl ContentRepo {
             .await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_series(
         &self,
         series_id: Uuid,
@@ -907,6 +912,7 @@ impl ContentRepo {
 
     // ===== 打赏 =====
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_tip(
         &self,
         sender_id: Uuid,
@@ -948,6 +954,7 @@ impl ContentRepo {
         self.post.get_active_editor_picks(pick_type).await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_editor_pick(
         &self,
         target_type: &str,
@@ -996,6 +1003,7 @@ impl ContentRepo {
         self.post.get_event_by_id(event_id).await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_event(
         &self,
         space_id: Uuid,
@@ -1038,6 +1046,7 @@ impl ContentRepo {
         self.post.get_weekly_topic_by_key(topic_key).await
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_weekly_topic(
         &self,
         topic_key: &str,

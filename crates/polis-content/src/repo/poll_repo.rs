@@ -12,6 +12,7 @@ impl PollRepo {
         Self { pool }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_poll(
         &self,
         space_id: Uuid,

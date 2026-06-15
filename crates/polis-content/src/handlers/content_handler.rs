@@ -497,8 +497,6 @@ impl ContentHandler {
     }
 
     /// 获取帖子公开信息（含作者详情）
-
-
     pub async fn get_post_public(&self, post_id: Uuid, current_user_id: Option<Uuid>) -> Result<PostPublic, AppError> {
         let post = self
             .repo
@@ -507,15 +505,19 @@ impl ContentHandler {
             .ok_or(AppError::not_found("Post not found".to_string()))?;
 
         // 检查隐藏时限是否到期，到期自动恢复
-        let effective_visibility = if post.visibility == "hidden" && post.hidden_until.is_some() {
-            let expired = post.hidden_until.unwrap() <= Utc::now();
-            if expired {
-                if let Err(e) = sqlx::query("UPDATE posts SET visibility = 'public', hidden_until = NULL WHERE id = $1")
-                    .bind(post_id).execute(&self.repo.pool).await
-                {
-                    tracing::warn!("Failed to auto-unhide post {}: {}", post_id, e);
+        let effective_visibility = if post.visibility == "hidden" {
+            if let Some(hidden_until) = post.hidden_until {
+                let expired = hidden_until <= Utc::now();
+                if expired {
+                    if let Err(e) = sqlx::query("UPDATE posts SET visibility = 'public', hidden_until = NULL WHERE id = $1")
+                        .bind(post_id).execute(&self.repo.pool).await
+                    {
+                        tracing::warn!("Failed to auto-unhide post {}: {}", post_id, e);
+                    }
+                    "public".to_string()
+                } else {
+                    "hidden".to_string()
                 }
-                "public".to_string()
             } else {
                 "hidden".to_string()
             }
@@ -561,7 +563,7 @@ impl ContentHandler {
 
         // 密码保护：非作者需解锁才能查看正文
         let has_password = post.password_hash.is_some();
-        let is_author = current_user_id.map_or(false, |uid| uid == post.author_id);
+        let is_author = current_user_id == Some(post.author_id);
         let visible_body = if has_password && !is_author {
             String::new() // 上锁：正文隐藏在密码后面
         } else {
@@ -1280,6 +1282,7 @@ impl ContentHandler {
 
     // ===== 投票/问卷 =====
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_poll(&self, space_id: Uuid, author_id: Uuid, title: &str, desc: &str,
         poll_type: &str, options: &[String], expires_at: Option<chrono::DateTime<chrono::Utc>>) -> Result<Uuid, AppError> {
         self.repo.create_poll(space_id, author_id, title, desc, poll_type, options, expires_at).await
@@ -1615,6 +1618,7 @@ impl ContentHandler {
 
     // ==================== Tips 打赏 ====================
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_tip(&self, sender_id: Uuid, receiver_id: Uuid, target_type: &str, target_id: Uuid, amount: i32, message: Option<&str>, is_anonymous: bool) -> Result<serde_json::Value, AppError> {
         if sender_id == receiver_id {
             return Err(AppError::validation("不能给自己打赏".to_string()));
@@ -1626,7 +1630,7 @@ impl ContentHandler {
         self.create_notification(receiver_id, "tip", Some(sender_id), Some(target_type), Some(target_id), &content).await;
         // XP: first tip
         self.xp.on_first_tip(sender_id).await;
-        Ok(serde_json::to_value(&tip).map_err(|e| AppError::internal(e.to_string()))?)
+        serde_json::to_value(&tip).map_err(|e| AppError::internal(e.to_string()))
     }
 
     pub async fn get_tips_received(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
@@ -1696,7 +1700,7 @@ impl ContentHandler {
             req.event_type.as_deref().unwrap_or("challenge"), req.start_at, req.end_at,
             req.rules.unwrap_or(serde_json::json!({})), req.prizes.unwrap_or(serde_json::json!([])),
         ).await?;
-        Ok(serde_json::to_value(&event).map_err(|e| AppError::internal(e.to_string()))?)
+        serde_json::to_value(&event).map_err(|e| AppError::internal(e.to_string()))
     }
 
     pub async fn join_event(&self, event_id: Uuid, user_id: Uuid) -> Result<bool, AppError> {
@@ -1715,7 +1719,7 @@ impl ContentHandler {
             &req.topic_key, &req.title, req.description.as_deref(), req.cover_url.as_deref(),
             req.topic_type.as_deref().unwrap_or("discussion"), req.end_at, created_by,
         ).await?;
-        Ok(serde_json::to_value(&topic).map_err(|e| AppError::internal(e.to_string()))?)
+        serde_json::to_value(&topic).map_err(|e| AppError::internal(e.to_string()))
     }
 
     // ==================== Recommendations ====================

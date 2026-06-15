@@ -3,8 +3,10 @@ use serde::{Deserialize, Serialize};
 /// 社区可见性
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "varchar")]
+#[derive(Default)]
 pub enum Visibility {
     #[serde(rename = "public")]
+    #[default]
     Public,
     #[serde(rename = "private")]
     Private,
@@ -14,11 +16,6 @@ pub enum Visibility {
     Hidden,
 }
 
-impl Default for Visibility {
-    fn default() -> Self {
-        Self::Public
-    }
-}
 
 impl std::fmt::Display for Visibility {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -34,8 +31,10 @@ impl std::fmt::Display for Visibility {
 /// 社区状态
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "varchar")]
+#[derive(Default)]
 pub enum SpaceStatus {
     #[serde(rename = "active")]
+    #[default]
     Active,
     #[serde(rename = "archived")]
     Archived,
@@ -43,15 +42,11 @@ pub enum SpaceStatus {
     Suspended,
 }
 
-impl Default for SpaceStatus {
-    fn default() -> Self {
-        Self::Active
-    }
-}
 
 /// 成员角色
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "varchar")]
+#[derive(Default)]
 pub enum MemberRole {
     #[serde(rename = "owner")]
     Owner,
@@ -60,22 +55,20 @@ pub enum MemberRole {
     #[serde(rename = "moderator")]
     Moderator,
     #[serde(rename = "member")]
+    #[default]
     Member,
     #[serde(rename = "banned")]
     Banned,
 }
 
-impl Default for MemberRole {
-    fn default() -> Self {
-        Self::Member
-    }
-}
 
 /// 模块类型
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "varchar")]
+#[derive(Default)]
 pub enum ModuleType {
     #[serde(rename = "forum")]
+    #[default]
     Forum,
     #[serde(rename = "article")]
     Article,
@@ -107,11 +100,6 @@ pub enum ModuleType {
     Share,
 }
 
-impl Default for ModuleType {
-    fn default() -> Self {
-        Self::Forum
-    }
-}
 
 impl std::fmt::Display for ModuleType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -138,8 +126,10 @@ impl std::fmt::Display for ModuleType {
 /// 内容类型
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "varchar")]
+#[derive(Default)]
 pub enum ContentType {
     #[serde(rename = "text")]
+    #[default]
     Text,
     #[serde(rename = "video")]
     Video,
@@ -151,11 +141,6 @@ pub enum ContentType {
     File,
 }
 
-impl Default for ContentType {
-    fn default() -> Self {
-        Self::Text
-    }
-}
 
 impl std::fmt::Display for ContentType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

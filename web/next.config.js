@@ -50,6 +50,9 @@ const nextConfig = {
       "img-src 'self' data: https:",
       "connect-src 'self' https:",
       "font-src 'self'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "base-uri 'self'",
     ].join('; ');
 
     return [

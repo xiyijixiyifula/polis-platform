@@ -22,7 +22,7 @@ impl NotificationRepo {
         content: &str,
     ) -> Result<DirectMessage, AppError> {
         let msg = sqlx::query_as::<_, DirectMessage>(
-            "INSERT INTO direct_messages (sender_id, receiver_id, content) VALUES ($1, $2, $3) RETURNING *",
+            "INSERT INTO direct_messages (sender_id, receiver_id, content) VALUES ($1, $2, $3) RETURNING id, sender_id, receiver_id, content, is_read, is_pinned, is_deleted, created_at",
         )
         .bind(sender_id)
         .bind(receiver_id)
@@ -98,7 +98,7 @@ impl NotificationRepo {
         offset: i64,
     ) -> Result<Vec<DirectMessage>, AppError> {
         let msgs = sqlx::query_as::<_, DirectMessage>(
-            "SELECT * FROM direct_messages WHERE ((sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)) AND is_deleted = FALSE ORDER BY created_at DESC LIMIT $3 OFFSET $4",
+            "SELECT id, sender_id, receiver_id, content, is_read, is_pinned, is_deleted, created_at FROM direct_messages WHERE ((sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1)) AND is_deleted = FALSE ORDER BY created_at DESC LIMIT $3 OFFSET $4",
         )
         .bind(user_id)
         .bind(other_user_id)
@@ -219,7 +219,7 @@ impl NotificationRepo {
         let pattern = format!("%{}%", q);
         let msgs = if let Some(ouid) = other_user_id {
             sqlx::query_as::<_, DirectMessage>(
-                "SELECT * FROM direct_messages WHERE is_deleted = FALSE AND content ILIKE $1 AND ((sender_id = $2 AND receiver_id = $3) OR (sender_id = $3 AND receiver_id = $2)) ORDER BY created_at DESC LIMIT $4",
+                "SELECT id, sender_id, receiver_id, content, is_read, is_pinned, is_deleted, created_at FROM direct_messages WHERE is_deleted = FALSE AND content ILIKE $1 AND ((sender_id = $2 AND receiver_id = $3) OR (sender_id = $3 AND receiver_id = $2)) ORDER BY created_at DESC LIMIT $4",
             )
             .bind(&pattern)
             .bind(user_id)
@@ -229,7 +229,7 @@ impl NotificationRepo {
             .await?
         } else {
             sqlx::query_as::<_, DirectMessage>(
-                "SELECT * FROM direct_messages WHERE is_deleted = FALSE AND content ILIKE $1 AND (sender_id = $2 OR receiver_id = $2) ORDER BY created_at DESC LIMIT $3",
+                "SELECT id, sender_id, receiver_id, content, is_read, is_pinned, is_deleted, created_at FROM direct_messages WHERE is_deleted = FALSE AND content ILIKE $1 AND (sender_id = $2 OR receiver_id = $2) ORDER BY created_at DESC LIMIT $3",
             )
             .bind(&pattern)
             .bind(user_id)

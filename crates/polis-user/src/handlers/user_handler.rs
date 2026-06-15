@@ -488,7 +488,7 @@ impl UserHandler {
     pub async fn get_user_xp(&self, user_id: Uuid) -> Result<serde_json::Value, AppError> {
         use polis_core::models::{UserLevel, UserXpPublic};
         let xp = self.repo.get_or_create_user_xp(user_id).await?;
-        let levels: Vec<UserLevel> = sqlx::query_as::<_, UserLevel>("SELECT * FROM user_levels ORDER BY level")
+        let levels: Vec<UserLevel> = sqlx::query_as::<_, UserLevel>("SELECT level, title, icon, required_xp, perks FROM user_levels ORDER BY level")
             .fetch_all(&self.repo.pool).await?;
         let current_level = levels.iter().find(|l| l.level == xp.current_level);
         let next_level = levels.iter().find(|l| l.level == xp.current_level + 1);

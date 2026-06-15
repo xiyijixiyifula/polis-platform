@@ -14,7 +14,7 @@ pub fn parse_mentions(text: &str) -> Vec<String> {
         .filter(|name| {
             // 过滤掉太短或过长的用户名
             let len = name.chars().count();
-            if len < 2 || len > 39 {
+            if !(2..=39).contains(&len) {
                 return false;
             }
             seen.insert(name.clone())

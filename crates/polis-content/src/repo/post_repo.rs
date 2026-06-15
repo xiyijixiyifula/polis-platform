@@ -34,7 +34,7 @@ impl PostRepo {
             r#"
             INSERT INTO posts (space_id, module_type, author_id, title, body, content_type, tags, visibility, password_hash)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING *
+            RETURNING id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at
             "#,
         )
         .bind(space_id)
@@ -53,7 +53,7 @@ impl PostRepo {
 
     pub async fn find_post_by_id(&self, id: Uuid) -> Result<Option<Post>, AppError> {
         let post = sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE id = $1 AND is_deleted = FALSE",
+            "SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE id = $1 AND is_deleted = FALSE",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
@@ -76,7 +76,7 @@ impl PostRepo {
         .fetch_one(&*self.pool)
         .await?;
         let posts = sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE author_id = $1 AND is_deleted = FALSE ORDER BY created_at DESC LIMIT $2 OFFSET $3",
+            "SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE author_id = $1 AND is_deleted = FALSE ORDER BY created_at DESC LIMIT $2 OFFSET $3",
         )
         .bind(author_id)
         .bind(limit)
@@ -111,42 +111,42 @@ impl PostRepo {
             (Some(mt), Some("views"), false) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
                     .bind(space_id).bind(mt).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $3 OFFSET $4")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $3 OFFSET $4")
                     .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (Some(mt), Some("likes"), false) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
                     .bind(space_id).bind(mt).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $3 OFFSET $4")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $3 OFFSET $4")
                     .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (Some(mt), _, false) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
                     .bind(space_id).bind(mt).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4")
                     .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (None, Some("views"), false) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
                     .bind(space_id).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $2 OFFSET $3")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $2 OFFSET $3")
                     .bind(space_id).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (None, Some("likes"), false) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
                     .bind(space_id).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $2 OFFSET $3")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $2 OFFSET $3")
                     .bind(space_id).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (None, _, false) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public'")
                     .bind(space_id).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND hidden_by_owner = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3")
                     .bind(space_id).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
@@ -154,42 +154,42 @@ impl PostRepo {
             (Some(mt), Some("views"), true) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public'")
                     .bind(space_id).bind(mt).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $3 OFFSET $4")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $3 OFFSET $4")
                     .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (Some(mt), Some("likes"), true) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public'")
                     .bind(space_id).bind(mt).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $3 OFFSET $4")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $3 OFFSET $4")
                     .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (Some(mt), _, true) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public'")
                     .bind(space_id).bind(mt).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND module_type = $2 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $3 OFFSET $4")
                     .bind(space_id).bind(mt).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (None, Some("views"), true) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public'")
                     .bind(space_id).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $2 OFFSET $3")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, view_count DESC, created_at DESC LIMIT $2 OFFSET $3")
                     .bind(space_id).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (None, Some("likes"), true) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public'")
                     .bind(space_id).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $2 OFFSET $3")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, like_count DESC, created_at DESC LIMIT $2 OFFSET $3")
                     .bind(space_id).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
             (None, _, true) => {
                 let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public'")
                     .bind(space_id).fetch_one(&*self.pool).await?;
-                let posts = sqlx::query_as::<_, Post>("SELECT * FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3")
+                let posts = sqlx::query_as::<_, Post>("SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND is_deleted = FALSE AND visibility = 'public' ORDER BY is_pinned DESC, created_at DESC LIMIT $2 OFFSET $3")
                     .bind(space_id).bind(limit).bind(offset).fetch_all(&*self.pool).await?;
                 (posts, total.0)
             },
@@ -226,7 +226,7 @@ impl PostRepo {
                 password_hash = COALESCE($6, password_hash),
                 updated_at = NOW()
             WHERE id = $1 AND is_deleted = FALSE
-            RETURNING *
+            RETURNING id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at
             "#,
         )
         .bind(id)
@@ -248,7 +248,7 @@ impl PostRepo {
     ) -> Result<Option<Post>, AppError> {
         use argon2::{password_hash::PasswordHash, Argon2, PasswordVerifier};
         let post = sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE id = $1 AND is_deleted = FALSE",
+            "SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE id = $1 AND is_deleted = FALSE",
         )
         .bind(post_id)
         .fetch_optional(&*self.pool)
@@ -336,7 +336,7 @@ impl PostRepo {
         limit: u32,
     ) -> Result<Vec<Post>, AppError> {
         let posts = sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE space_id = $1 AND is_featured = TRUE AND is_deleted = FALSE AND hidden_by_owner = FALSE ORDER BY created_at DESC LIMIT $2",
+            "SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE space_id = $1 AND is_featured = TRUE AND is_deleted = FALSE AND hidden_by_owner = FALSE ORDER BY created_at DESC LIMIT $2",
         )
         .bind(space_id)
         .bind(limit as i64)
@@ -356,7 +356,7 @@ impl PostRepo {
         if let Some(t) = tag {
             let tag_json = serde_json::json!([t]);
             let posts = sqlx::query_as::<_, Post>(
-                "SELECT * FROM posts WHERE is_deleted = FALSE AND visibility = 'public' AND tags @> $1::jsonb ORDER BY created_at DESC LIMIT $2",
+                "SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE is_deleted = FALSE AND visibility = 'public' AND tags @> $1::jsonb ORDER BY created_at DESC LIMIT $2",
             )
             .bind(&tag_json)
             .bind(limit as i64)
@@ -369,7 +369,7 @@ impl PostRepo {
         // The % wildcards are prepended/appended around the parameterized value, not injected into SQL text.
         let pattern = format!("%{}%", q);
         let posts = sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE is_deleted = FALSE AND visibility = 'public' AND (title ILIKE $1 OR body ILIKE $1) ORDER BY created_at DESC LIMIT $2",
+            "SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE is_deleted = FALSE AND visibility = 'public' AND (title ILIKE $1 OR body ILIKE $1) ORDER BY created_at DESC LIMIT $2",
         )
         .bind(&pattern)
         .bind(limit as i64)
@@ -852,7 +852,7 @@ impl PostRepo {
             return Ok(vec![]);
         }
         let posts = sqlx::query_as::<_, Post>(
-            "SELECT * FROM posts WHERE id = ANY($1) AND is_deleted = FALSE",
+            "SELECT id, space_id, module_type, author_id, title, body, content_type, media_urls, tags, visibility, is_pinned, is_featured, is_deleted, hidden_by_owner, view_count, like_count, comment_count, metadata, password_hash, hidden_until, created_at, updated_at FROM posts WHERE id = ANY($1) AND is_deleted = FALSE",
         )
         .bind(ids)
         .fetch_all(&*self.pool)
@@ -923,7 +923,7 @@ impl PostRepo {
         username: &str,
     ) -> Result<Option<polis_core::models::User>, AppError> {
         sqlx::query_as::<_, polis_core::models::User>(
-            "SELECT * FROM users WHERE LOWER(username) = LOWER($1)",
+            "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE LOWER(username) = LOWER($1)",
         )
         .bind(username)
         .fetch_optional(&*self.pool)
@@ -942,7 +942,7 @@ impl PostRepo {
     ) -> Result<PostReference, AppError> {
         let ref_row = sqlx::query_as::<_, PostReference>(
             "INSERT INTO post_references (post_id, space_id, module_type, status, submitted_by)
-             VALUES ($1, $2, $3, 'pending', $4) RETURNING *",
+             VALUES ($1, $2, $3, 'pending', $4) RETURNING id, post_id, space_id, module_type, status, submitted_by, reviewed_by, created_at, reviewed_at",
         )
         .bind(post_id)
         .bind(space_id)
@@ -959,7 +959,7 @@ impl PostRepo {
         space_id: Uuid,
     ) -> Result<Option<PostReference>, AppError> {
         let row = sqlx::query_as::<_, PostReference>(
-            "SELECT * FROM post_references WHERE post_id = $1 AND space_id = $2",
+            "SELECT id, post_id, space_id, module_type, status, submitted_by, reviewed_by, created_at, reviewed_at FROM post_references WHERE post_id = $1 AND space_id = $2",
         )
         .bind(post_id)
         .bind(space_id)
@@ -973,7 +973,7 @@ impl PostRepo {
         post_id: Uuid,
     ) -> Result<Vec<PostReference>, AppError> {
         let rows = sqlx::query_as::<_, PostReference>(
-            "SELECT * FROM post_references WHERE post_id = $1 ORDER BY created_at DESC",
+            "SELECT id, post_id, space_id, module_type, status, submitted_by, reviewed_by, created_at, reviewed_at FROM post_references WHERE post_id = $1 ORDER BY created_at DESC",
         )
         .bind(post_id)
         .fetch_all(&*self.pool)
@@ -986,7 +986,7 @@ impl PostRepo {
         space_id: Uuid,
     ) -> Result<Vec<PostReference>, AppError> {
         let rows = sqlx::query_as::<_, PostReference>(
-            "SELECT * FROM post_references WHERE space_id = $1 AND status = 'pending' ORDER BY created_at DESC",
+            "SELECT id, post_id, space_id, module_type, status, submitted_by, reviewed_by, created_at, reviewed_at FROM post_references WHERE space_id = $1 AND status = 'pending' ORDER BY created_at DESC",
         )
         .bind(space_id)
         .fetch_all(&*self.pool)
@@ -1002,7 +1002,7 @@ impl PostRepo {
     ) -> Result<PostReference, AppError> {
         let row = sqlx::query_as::<_, PostReference>(
             "UPDATE post_references SET status = $1, reviewed_by = $2, reviewed_at = NOW()
-             WHERE id = $3 AND status = 'pending' RETURNING *",
+             WHERE id = $3 AND status = 'pending' RETURNING id, post_id, space_id, module_type, status, submitted_by, reviewed_by, created_at, reviewed_at",
         )
         .bind(status)
         .bind(reviewed_by)
@@ -1140,7 +1140,7 @@ impl PostRepo {
         pick_type: &str,
     ) -> Result<Vec<EditorPick>, AppError> {
         sqlx::query_as::<_, EditorPick>(
-            "SELECT * FROM editor_picks WHERE is_active = true AND pick_type = $1 ORDER BY sort_order LIMIT 20",
+            "SELECT id, target_type, target_id, title_override, description_override, pick_type, sort_order, is_active, picked_by, picked_at, expires_at, created_at FROM editor_picks WHERE is_active = true AND pick_type = $1 ORDER BY sort_order LIMIT 20",
         )
         .bind(pick_type)
         .fetch_all(&*self.pool)
@@ -1256,7 +1256,7 @@ impl PostRepo {
     ) -> Result<Vec<CommunityEvent>, AppError> {
         if let Some(sid) = space_id {
             sqlx::query_as::<_, CommunityEvent>(
-                "SELECT * FROM community_events WHERE space_id = $1 AND status = 'active' ORDER BY start_at DESC",
+                "SELECT id, space_id, creator_id, title, description, cover_url, event_type, start_at, end_at, max_participants, rules, prizes, status, participant_count, submission_count, created_at, updated_at FROM community_events WHERE space_id = $1 AND status = 'active' ORDER BY start_at DESC",
             )
             .bind(sid)
             .fetch_all(&*self.pool)
@@ -1264,7 +1264,7 @@ impl PostRepo {
             .map_err(AppError::from)
         } else {
             sqlx::query_as::<_, CommunityEvent>(
-                "SELECT * FROM community_events WHERE status = 'active' ORDER BY start_at DESC LIMIT 50",
+                "SELECT id, space_id, creator_id, title, description, cover_url, event_type, start_at, end_at, max_participants, rules, prizes, status, participant_count, submission_count, created_at, updated_at FROM community_events WHERE status = 'active' ORDER BY start_at DESC LIMIT 50",
             )
             .fetch_all(&*self.pool)
             .await
@@ -1276,7 +1276,7 @@ impl PostRepo {
         &self,
         event_id: Uuid,
     ) -> Result<Option<CommunityEvent>, AppError> {
-        sqlx::query_as::<_, CommunityEvent>("SELECT * FROM community_events WHERE id = $1")
+        sqlx::query_as::<_, CommunityEvent>("SELECT id, space_id, creator_id, title, description, cover_url, event_type, start_at, end_at, max_participants, rules, prizes, status, participant_count, submission_count, created_at, updated_at FROM community_events WHERE id = $1")
             .bind(event_id)
             .fetch_optional(&*self.pool)
             .await
@@ -1297,7 +1297,7 @@ impl PostRepo {
         prizes: serde_json::Value,
     ) -> Result<CommunityEvent, AppError> {
         sqlx::query_as::<_, CommunityEvent>(
-            "INSERT INTO community_events (space_id, creator_id, title, description, cover_url, event_type, start_at, end_at, rules, prizes) VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, now()), $8, $9, $10) RETURNING *",
+            "INSERT INTO community_events (space_id, creator_id, title, description, cover_url, event_type, start_at, end_at, rules, prizes) VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, now()), $8, $9, $10) RETURNING id, space_id, creator_id, title, description, cover_url, event_type, start_at, end_at, max_participants, rules, prizes, status, participant_count, submission_count, created_at, updated_at",
         )
         .bind(space_id)
         .bind(creator_id)
@@ -1347,7 +1347,7 @@ impl PostRepo {
 
     pub async fn get_active_weekly_topic(&self) -> Result<Option<WeeklyTopic>, AppError> {
         sqlx::query_as::<_, WeeklyTopic>(
-            "SELECT * FROM weekly_topics WHERE is_active = true AND now() BETWEEN start_at AND end_at ORDER BY start_at DESC LIMIT 1",
+            "SELECT id, topic_key, title, description, cover_url, topic_type, start_at, end_at, is_active, created_by, created_at FROM weekly_topics WHERE is_active = true AND now() BETWEEN start_at AND end_at ORDER BY start_at DESC LIMIT 1",
         )
         .fetch_optional(&*self.pool)
         .await
@@ -1358,7 +1358,7 @@ impl PostRepo {
         &self,
         topic_key: &str,
     ) -> Result<Option<WeeklyTopic>, AppError> {
-        sqlx::query_as::<_, WeeklyTopic>("SELECT * FROM weekly_topics WHERE topic_key = $1")
+        sqlx::query_as::<_, WeeklyTopic>("SELECT id, topic_key, title, description, cover_url, topic_type, start_at, end_at, is_active, created_by, created_at FROM weekly_topics WHERE topic_key = $1")
             .bind(topic_key)
             .fetch_optional(&*self.pool)
             .await
@@ -1376,7 +1376,7 @@ impl PostRepo {
         created_by: Option<Uuid>,
     ) -> Result<WeeklyTopic, AppError> {
         sqlx::query_as::<_, WeeklyTopic>(
-            "INSERT INTO weekly_topics (topic_key, title, description, cover_url, topic_type, end_at, created_by) VALUES ($1, $2, $3, $4, $5, COALESCE($6, now() + INTERVAL '7 days'), $7) ON CONFLICT (topic_key) DO UPDATE SET title = $2, description = $3, cover_url = $4, topic_type = $5, end_at = COALESCE($6, now() + INTERVAL '7 days') RETURNING *",
+            "INSERT INTO weekly_topics (topic_key, title, description, cover_url, topic_type, end_at, created_by) VALUES ($1, $2, $3, $4, $5, COALESCE($6, now() + INTERVAL '7 days'), $7) ON CONFLICT (topic_key) DO UPDATE SET title = $2, description = $3, cover_url = $4, topic_type = $5, end_at = COALESCE($6, now() + INTERVAL '7 days') RETURNING id, topic_key, title, description, cover_url, topic_type, start_at, end_at, is_active, created_by, created_at",
         )
         .bind(topic_key)
         .bind(title)

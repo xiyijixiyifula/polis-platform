@@ -38,7 +38,7 @@ impl CreationHandler {
                 media_urls, tags, visibility, password_hash, status
             )
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'published')
-            RETURNING *
+            RETURNING id, creator_id, content_type, title, body, body_json, cover_url, media_urls, visibility, password_hash, view_count, like_count, comment_count, bookmark_count, share_count, tags, metadata, status, created_at, updated_at
             "#,
         )
         .bind(user_id)
@@ -69,7 +69,7 @@ impl CreationHandler {
 
         let creations = sqlx::query_as::<_, Creation>(
             r#"
-            SELECT * FROM creations
+            SELECT id, creator_id, content_type, title, body, body_json, cover_url, media_urls, visibility, password_hash, view_count, like_count, comment_count, bookmark_count, share_count, tags, metadata, status, created_at, updated_at FROM creations
             WHERE creator_id = $1
               AND ($2::text IS NULL OR content_type = $2)
               AND ($3::text IS NULL OR status = $3)
@@ -130,7 +130,7 @@ impl CreationHandler {
     ) -> Result<(Vec<CreationPublic>, Pagination), AppError> {
         // 先查用户
         let user: polis_core::models::User = sqlx::query_as(
-            "SELECT * FROM users WHERE username = $1",
+            "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE username = $1",
         )
         .bind(username)
         .fetch_optional(&self.pool)
@@ -144,7 +144,7 @@ impl CreationHandler {
 
         let creations = sqlx::query_as::<_, Creation>(
             r#"
-            SELECT * FROM creations
+            SELECT id, creator_id, content_type, title, body, body_json, cover_url, media_urls, visibility, password_hash, view_count, like_count, comment_count, bookmark_count, share_count, tags, metadata, status, created_at, updated_at FROM creations
             WHERE creator_id = $1
               AND visibility != 'private'
               AND ($2::text IS NULL OR content_type = $2)
@@ -201,7 +201,7 @@ impl CreationHandler {
         id: Uuid,
         current_user_id: Option<Uuid>,
     ) -> Result<CreationPublic, AppError> {
-        let creation = sqlx::query_as::<_, Creation>("SELECT * FROM creations WHERE id = $1")
+        let creation = sqlx::query_as::<_, Creation>("SELECT id, creator_id, content_type, title, body, body_json, cover_url, media_urls, visibility, password_hash, view_count, like_count, comment_count, bookmark_count, share_count, tags, metadata, status, created_at, updated_at FROM creations WHERE id = $1")
             .bind(id)
             .fetch_optional(&self.pool)
             .await
@@ -255,7 +255,7 @@ impl CreationHandler {
                 status = COALESCE($9, status),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING *
+            RETURNING id, creator_id, content_type, title, body, body_json, cover_url, media_urls, visibility, password_hash, view_count, like_count, comment_count, bookmark_count, share_count, tags, metadata, status, created_at, updated_at
             "#,
         )
         .bind(id)
@@ -301,7 +301,7 @@ impl CreationHandler {
     ) -> Result<CommunityModuleRef, AppError> {
         // 验证创作所有权
         let creation = sqlx::query_as::<_, Creation>(
-            "SELECT * FROM creations WHERE id = $1 AND creator_id = $2",
+            "SELECT id, creator_id, content_type, title, body, body_json, cover_url, media_urls, visibility, password_hash, view_count, like_count, comment_count, bookmark_count, share_count, tags, metadata, status, created_at, updated_at FROM creations WHERE id = $1 AND creator_id = $2",
         )
         .bind(creation_id)
         .bind(user_id)
@@ -386,7 +386,7 @@ impl CreationHandler {
                 creation_id, creator_id, space_id, module_type, display_status
             )
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING *
+            RETURNING id, creation_id, creator_id, space_id, module_type, display_status, is_pinned, pin_order, module_views, created_at
             "#,
         )
         .bind(creation_id)
@@ -553,7 +553,7 @@ impl CreationHandler {
 
         let refs = sqlx::query_as::<_, CommunityModuleRef>(
             r#"
-            SELECT * FROM community_module_refs
+            SELECT id, creation_id, creator_id, space_id, module_type, display_status, is_pinned, pin_order, module_views, created_at FROM community_module_refs
             WHERE space_id = $1
               AND module_type = $2
               AND ($3 = 'all' OR display_status = $3)
@@ -599,7 +599,7 @@ impl CreationHandler {
 
         let user_id = current_user_id.unwrap_or_default();
         let creation_ids: Vec<Uuid> = refs.iter().map(|r| r.creation_id).collect();
-        let creations: Vec<Creation> = sqlx::query_as("SELECT * FROM creations WHERE id = ANY($1)")
+        let creations: Vec<Creation> = sqlx::query_as("SELECT id, creator_id, content_type, title, body, body_json, cover_url, media_urls, visibility, password_hash, view_count, like_count, comment_count, bookmark_count, share_count, tags, metadata, status, created_at, updated_at FROM creations WHERE id = ANY($1)")
             .bind(&creation_ids)
             .fetch_all(&self.pool)
             .await
@@ -717,7 +717,7 @@ impl CreationHandler {
             "hide" | "reject" => {
                 let status = if req.action == "reject" { "rejected" } else { "hidden" };
                 sqlx::query_as::<_, CommunityModuleRef>(
-                    "UPDATE community_module_refs SET display_status = $2 WHERE id = $1 RETURNING *",
+                    "UPDATE community_module_refs SET display_status = $2 WHERE id = $1 RETURNING id, creation_id, creator_id, space_id, module_type, display_status, is_pinned, pin_order, module_views, created_at",
                 )
                 .bind(id)
                 .bind(status)
@@ -727,7 +727,7 @@ impl CreationHandler {
             }
             "show" | "approve" => {
                 sqlx::query_as::<_, CommunityModuleRef>(
-                    "UPDATE community_module_refs SET display_status = 'visible' WHERE id = $1 RETURNING *",
+                    "UPDATE community_module_refs SET display_status = 'visible' WHERE id = $1 RETURNING id, creation_id, creator_id, space_id, module_type, display_status, is_pinned, pin_order, module_views, created_at",
                 )
                 .bind(id)
                 .fetch_one(&self.pool)
@@ -736,7 +736,7 @@ impl CreationHandler {
             }
             "pin" => {
                 sqlx::query_as::<_, CommunityModuleRef>(
-                    "UPDATE community_module_refs SET is_pinned = TRUE, pin_order = 1 WHERE id = $1 RETURNING *",
+                    "UPDATE community_module_refs SET is_pinned = TRUE, pin_order = 1 WHERE id = $1 RETURNING id, creation_id, creator_id, space_id, module_type, display_status, is_pinned, pin_order, module_views, created_at",
                 )
                 .bind(id)
                 .fetch_one(&self.pool)
@@ -745,7 +745,7 @@ impl CreationHandler {
             }
             "unpin" => {
                 sqlx::query_as::<_, CommunityModuleRef>(
-                    "UPDATE community_module_refs SET is_pinned = FALSE, pin_order = 0 WHERE id = $1 RETURNING *",
+                    "UPDATE community_module_refs SET is_pinned = FALSE, pin_order = 0 WHERE id = $1 RETURNING id, creation_id, creator_id, space_id, module_type, display_status, is_pinned, pin_order, module_views, created_at",
                 )
                 .bind(id)
                 .fetch_one(&self.pool)
@@ -776,7 +776,7 @@ async fn creations_to_batch(
     let creator_ids: Vec<Uuid> = creations.iter().map(|c| c.creator_id).collect();
 
     let users: HashMap<Uuid, UserPublic> = sqlx::query_as::<_, polis_core::models::User>(
-        "SELECT * FROM users WHERE id = ANY($1)",
+        "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE id = ANY($1)",
     )
     .bind(&creator_ids)
     .fetch_all(pool)
@@ -916,7 +916,7 @@ async fn creation_to_public(
     current_user_id: Uuid,
 ) -> Result<CreationPublic, AppError> {
     let creator: UserPublic = sqlx::query_as::<_, polis_core::models::User>(
-        "SELECT * FROM users WHERE id = $1",
+        "SELECT id, username, display_name, email, password_hash, avatar_url, bio, verified, verified_type, notification_prefs, banned, banned_at, ban_reason, chain_address, chain_bound_at, created_at, updated_at FROM users WHERE id = $1",
     )
     .bind(creation.creator_id)
     .fetch_one(pool)

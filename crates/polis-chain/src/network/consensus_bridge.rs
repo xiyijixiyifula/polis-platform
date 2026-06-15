@@ -89,12 +89,11 @@ impl ConsensusBridge {
                         let mut engine = self.consensus.lock().await;
                         if let Some(ref sk) = self.signing_key {
                             let commit_seal = engine.create_seal(&block.hash, sk);
-                            if engine.add_commit(commit_seal, &block.hash).unwrap_or(false) {
-                                if engine.has_quorum_commits() {
+                            if engine.add_commit(commit_seal, &block.hash).unwrap_or(false)
+                                && engine.has_quorum_commits() {
                                     let finalized = engine.finalize_block(&self.storage)?;
                                     tracing::info!("区块已最终确定: height={}", finalized.header.number);
                                 }
-                            }
                         }
                     }
                 } else {

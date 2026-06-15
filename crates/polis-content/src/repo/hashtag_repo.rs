@@ -50,7 +50,7 @@ impl HashtagRepo {
 
     pub async fn get_trending_hashtags(&self, limit: i64) -> Result<Vec<Hashtag>, AppError> {
         sqlx::query_as::<_, Hashtag>(
-            "SELECT * FROM hashtags ORDER BY total_use_count DESC, last_used_at DESC LIMIT $1",
+            "SELECT id, tag, normalized_tag, post_count, creation_count, total_use_count, last_used_at, created_at FROM hashtags ORDER BY total_use_count DESC, last_used_at DESC LIMIT $1",
         )
         .bind(limit)
         .fetch_all(&*self.pool)

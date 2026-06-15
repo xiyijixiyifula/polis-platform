@@ -46,7 +46,7 @@ impl ChatHandler {
         content: &str,
     ) -> Result<ChatMessagePublic, AppError> {
         let msg = sqlx::query_as::<_, ChatMessage>(
-            "INSERT INTO chat_messages (space_id, user_id, content, message_type) VALUES ($1, $2, $3, 'text') RETURNING *"
+            "INSERT INTO chat_messages (space_id, user_id, content, message_type) VALUES ($1, $2, $3, 'text') RETURNING id, space_id, user_id, content, message_type, created_at"
         )
         .bind(space_id)
         .bind(user_id)
@@ -64,7 +64,7 @@ impl ChatHandler {
         limit: u32,
     ) -> Result<Vec<ChatMessagePublic>, AppError> {
         let msgs = sqlx::query_as::<_, ChatMessage>(
-            "SELECT * FROM chat_messages WHERE space_id = $1 ORDER BY created_at DESC LIMIT $2"
+            "SELECT id, space_id, user_id, content, message_type, created_at FROM chat_messages WHERE space_id = $1 ORDER BY created_at DESC LIMIT $2"
         )
         .bind(space_id)
         .bind(limit as i64)

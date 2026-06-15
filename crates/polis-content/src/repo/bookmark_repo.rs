@@ -27,7 +27,7 @@ impl BookmarkRepo {
         .fetch_optional(&*self.pool)
         .await?;
 
-        if let Some(_) = existing {
+        if existing.is_some() {
             sqlx::query(
                 "DELETE FROM bookmarks WHERE user_id = $1 AND target_type = $2 AND target_id = $3",
             )

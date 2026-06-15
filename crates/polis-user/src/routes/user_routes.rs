@@ -93,7 +93,7 @@ async fn change_password(State(h): State<Arc<UserHandler>>, axum::Extension(uid)
     Ok(Json(ApiResponse::success(())))
 }
 async fn forgot_password(State(h): State<Arc<UserHandler>>, Json(r): Json<ForgotPasswordRequest>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let token = h.generate_reset_token(&r.email).await?;
+    let _token = h.generate_reset_token(&r.email).await?;
     tracing::info!("Password reset token generated for {}", r.email);
     Ok(Json(ApiResponse::success(serde_json::json!({
         "message": "如果该邮箱已注册，密码重置链接已发送",

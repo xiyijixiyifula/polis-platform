@@ -1,10 +1,8 @@
 {
-  "name": "Polis - 未来社区平台",
+  "name": "Polis",
   "short_name": "Polis",
-  "description": "让创建社区像创建 GitHub 仓库一样简单",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
-  "icons": []
+  "theme_color": "#4F46E5",
+  "background_color": "#ffffff"
 }
