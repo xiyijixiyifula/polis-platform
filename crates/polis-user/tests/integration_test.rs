@@ -349,6 +349,11 @@ async fn test_logout_blacklist(handler: &UserHandler) {
 // ═══════════════════════════════════════════════════════════════════
 #[tokio::test]
 async fn polis_user_integration_tests() -> Result<(), Box<dyn std::error::Error>> {
+    // Skip integration tests if no Docker or DATABASE_URL is available
+    if std::env::var("CI").is_ok() && std::env::var("DATABASE_URL").is_err() {
+        eprintln!("Skipping integration tests: CI environment without DATABASE_URL");
+        return Ok(());
+    }
     // When Docker is unavailable (e.g. local dev without Docker Desktop),
     // skip the integration tests gracefully instead of failing.
     if !docker_available() {
