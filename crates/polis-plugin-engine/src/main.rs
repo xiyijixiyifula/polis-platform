@@ -20,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|_| "postgres://polis:polis_dev@localhost:5432/polis".to_string());
 
     let pool = PgPoolOptions::new()
-        .max_connections(10).acquire_timeout(std::time::Duration::from_secs(10))
+        .max_connections(5).acquire_timeout(std::time::Duration::from_secs(10))
         .connect(&database_url)
         .await?;
 

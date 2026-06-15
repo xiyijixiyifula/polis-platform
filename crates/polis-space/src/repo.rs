@@ -18,6 +18,7 @@ impl SpaceRepo {
     }
 
     /// 创建社区
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self,
         namespace: &str,
@@ -115,7 +116,7 @@ impl SpaceRepo {
         .bind(&req.description)
         .bind(&req.icon_url)
         .bind(&req.banner_url)
-        .bind(&req.visibility.as_ref().map(|v| v.to_string()))
+        .bind(req.visibility.as_ref().map(|v| v.to_string()))
         .bind(&req.custom_rules)
         .bind(&password_hash)
         .fetch_one(&self.pool)
@@ -472,7 +473,7 @@ impl SpaceRepo {
         let days_running = (chrono::Utc::now() - space.created_at).num_days().max(0) as i32;
         let base_xp = space.member_count as i32 * 10
             + space.post_count as i32 * 5
-            + days_running * 1;
+            + days_running;
 
         // 每日限制 200 XP
         let today_xp = base_xp.min(200);

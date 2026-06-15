@@ -62,12 +62,12 @@ impl UserHandler {
         }
 
         // 检查邮箱是否已注册
-        if let Some(_) = self.repo.find_by_email(&req.email).await? {
+        if self.repo.find_by_email(&req.email).await?.is_some() {
             return Err(AppError::conflict("Email already registered".to_string()));
         }
 
         // 检查用户名是否已存在
-        if let Some(_) = self.repo.find_by_username(&req.username).await? {
+        if self.repo.find_by_username(&req.username).await?.is_some() {
             return Err(AppError::conflict("Username already taken".to_string()));
         }
 
@@ -380,7 +380,7 @@ impl UserHandler {
             "SELECT id FROM follows WHERE follower_id = $1 AND followee_type = $2 AND followee_id = $3"
         ).bind(follower_id).bind(followee_type).bind(followee_id)
         .fetch_optional(&self.repo.pool).await?;
-        if let Some(_) = existing {
+        if existing.is_some() {
             sqlx::query("DELETE FROM follows WHERE follower_id = $1 AND followee_type = $2 AND followee_id = $3")
                 .bind(follower_id).bind(followee_type).bind(followee_id)
                 .execute(&self.repo.pool).await?;
@@ -503,7 +503,7 @@ impl UserHandler {
             daily_xp: xp.daily_xp,
             daily_xp_limit: 100,
         };
-        Ok(serde_json::to_value(public).map_err(|e| AppError::internal(e.to_string()))?)
+        serde_json::to_value(public).map_err(|e| AppError::internal(e.to_string()))
     }
 
     pub async fn get_xp_logs(&self, user_id: Uuid) -> Result<Vec<serde_json::Value>, AppError> {
@@ -534,7 +534,7 @@ impl UserHandler {
             total_xp: new_total,
             current_level: xp.current_level,
         };
-        Ok(serde_json::to_value(resp).map_err(|e| AppError::internal(e.to_string()))?)
+        serde_json::to_value(resp).map_err(|e| AppError::internal(e.to_string()))
     }
 
     pub async fn award_xp_bridge(&self, user_id: Uuid, action_type: &str, description: &str, target_type: Option<&str>, target_id: Option<Uuid>) -> Result<(), AppError> {

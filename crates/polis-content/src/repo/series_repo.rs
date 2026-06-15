@@ -13,6 +13,7 @@ impl SeriesRepo {
         Self { pool }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_series(
         &self,
         space_id: Uuid,
@@ -36,6 +37,7 @@ impl SeriesRepo {
         Ok(row.0)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_series(
         &self,
         series_id: Uuid,

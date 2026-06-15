@@ -14,6 +14,7 @@ impl VideoRepo {
     // ===== 视频 CRUD =====
 
     /// 创建视频（不绑定社区）
+    #[allow(clippy::too_many_arguments)]
     pub async fn create(
         &self, uploader_id: Uuid, title: &str, description: &str,
         original_url: &str, file_size: i64, duration_seconds: Option<i32>, visibility: &str,
@@ -84,7 +85,7 @@ impl VideoRepo {
             r#"SELECT sv.space_id, s.namespace, s.title, sv.review_status
                FROM space_videos sv JOIN spaces s ON sv.space_id=s.id
                WHERE sv.video_id=$1 ORDER BY sv.submitted_at DESC"#
-        ).bind(video_id).fetch_all(&self.pool).await.map_err(|e| AppError::database(e))
+        ).bind(video_id).fetch_all(&self.pool).await.map_err(AppError::database)
     }
 
     /// 获取视频在特定社区的审核状态
@@ -237,7 +238,7 @@ impl VideoRepo {
         let existing = sqlx::query_scalar::<_, Option<Uuid>>(
             "SELECT id FROM bookmarks WHERE user_id = $1 AND target_type = 'video' AND target_id = $2"
         ).bind(user_id).bind(video_id).fetch_optional(&self.pool).await?;
-        if let Some(_) = existing {
+        if existing.is_some() {
             sqlx::query("DELETE FROM bookmarks WHERE user_id = $1 AND target_type = 'video' AND target_id = $2")
                 .bind(user_id).bind(video_id).execute(&self.pool).await?;
             Ok(false)

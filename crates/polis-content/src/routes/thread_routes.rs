@@ -93,8 +93,12 @@ async fn get_thread(
 async fn get_messages(
     State(h): State<Arc<ContentHandler>>,
     Path(thread_id): Path<Uuid>,
+    headers: HeaderMap,
 ) -> Result<Json<JVal>, AppError> {
+    let uid = require_user(&headers)?;
     let handler = ThreadHandler::new(h.pool.clone());
+    // 验证线程所有权
+    let _thread = handler.get(thread_id, uid).await?;
     let msgs = handler.messages(thread_id).await?;
     Ok(ok(serde_json::to_value(msgs).unwrap_or_default()))
 }

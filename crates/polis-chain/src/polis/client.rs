@@ -32,7 +32,10 @@ impl ChainClient {
     /// site_id: 站点 SHA256(domain) 标识
     pub fn new(chain_api_url: String, site_id: String) -> Self {
         ChainClient {
-            client: Client::new(),
+            client: Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .build()
+                .expect("Failed to build ChainClient HTTP client"),
             chain_api_url,
             site_id,
         }

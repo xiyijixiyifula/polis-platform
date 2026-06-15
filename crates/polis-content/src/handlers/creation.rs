@@ -209,11 +209,10 @@ impl CreationHandler {
             .ok_or(AppError::not_found("创作不存在".to_string()))?;
 
         // 私有的只能作者自己看
-        if creation.visibility == "private" {
-            if current_user_id.map_or(true, |uid| uid != creation.creator_id) {
+        if creation.visibility == "private"
+            && current_user_id != Some(creation.creator_id) {
                 return Err(AppError::forbidden("无权查看此创作".to_string()));
             }
-        }
 
         let user_id = current_user_id.unwrap_or_default();
         let public = creation_to_public(&self.pool, creation, user_id).await?;
@@ -638,6 +637,7 @@ impl CreationHandler {
     }
 
     /// 引用地图：查看某个创作被哪些社区引用（公开接口）
+    #[allow(clippy::type_complexity)]
     pub async fn get_creation_refs(
         &self,
         creation_id: Uuid,
@@ -761,6 +761,7 @@ impl CreationHandler {
 
 // ==================== 辅助函数 ====================
 
+#[allow(clippy::type_complexity)]
 async fn creations_to_batch(
     pool: &PgPool,
     creations: &[Creation],
@@ -909,7 +910,7 @@ async fn creations_to_batch(
 
     Ok(result)
 }
-
+#[allow(clippy::type_complexity)]
 async fn creation_to_public(
     pool: &PgPool,
     creation: Creation,
@@ -921,7 +922,7 @@ async fn creation_to_public(
     .bind(creation.creator_id)
     .fetch_one(pool)
     .await
-    .map(|u| UserPublic::from(u))
+    .map(UserPublic::from)
     .map_err(|e| AppError::internal(e.to_string()))?;
 
     let is_liked: bool = sqlx::query_scalar(

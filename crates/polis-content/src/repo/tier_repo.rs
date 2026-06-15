@@ -31,6 +31,7 @@ impl TierRepo {
         Ok(tier)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_tier(
         &self,
         space_id: Uuid,
@@ -56,6 +57,7 @@ impl TierRepo {
         Ok(row.0)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_tier(
         &self,
         tier_id: Uuid,

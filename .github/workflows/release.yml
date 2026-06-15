@@ -33,7 +33,7 @@ jobs:
           cargo clippy --workspace -- -D warnings
 
       - name: Test Backend (workspace)
-        run: cargo test --workspace --release --no-fail-fast 2>&1 | tail -20
+        run: cargo test --workspace --release --no-fail-fast
 
       - name: Build Backend (native, no cross-compile)
         run: |

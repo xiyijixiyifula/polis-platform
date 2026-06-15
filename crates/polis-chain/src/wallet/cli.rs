@@ -190,7 +190,10 @@ impl CliWallet {
         let signed = crate::transaction::SignedTransaction::new(tx, wallet.address.clone(), signature);
 
         // 提交到节点
-        let client = reqwest::Client::new();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| ChainError::Serialization(e.to_string()))?;
         let tx_json = serde_json::to_value(&signed).map_err(|e| ChainError::Serialization(e.to_string()))?;
 
         let resp = client

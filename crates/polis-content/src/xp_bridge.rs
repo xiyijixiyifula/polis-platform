@@ -24,7 +24,10 @@ pub struct XpBridge {
 impl XpBridge {
     pub fn new(user_service_url: String) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(10))
+                .build()
+                .expect("Failed to build XpBridge HTTP client"),
             user_service_url,
             chain_api_url: None,
             site_id: None,

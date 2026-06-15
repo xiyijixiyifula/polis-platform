@@ -151,6 +151,7 @@ impl AgentHandler {
     }
 
     /// 获取 Agent 详情
+    #[allow(clippy::type_complexity)]
     pub async fn get(&self, agent_id: Uuid) -> Result<AgentPublic, AppError> {
         let row: Option<(Uuid, Uuid, String, String, String, serde_json::Value, bool, String, Option<chrono::DateTime<chrono::Utc>>, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
             r#"SELECT a.id, u.id, u.username, u.display_name, a.agent_type, a.capabilities,
@@ -183,6 +184,7 @@ impl AgentHandler {
     }
 
     /// 列出我的 Agent
+    #[allow(clippy::type_complexity)]
     pub async fn list_mine(&self, owner_user_id: Uuid) -> Result<Vec<AgentPublic>, AppError> {
         let rows: Vec<(Uuid, Uuid, String, String, String, serde_json::Value, bool, String, Option<chrono::DateTime<chrono::Utc>>, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
             r#"SELECT a.id, u.id, u.username, u.display_name, a.agent_type, a.capabilities,
@@ -261,6 +263,7 @@ impl AgentHandler {
     }
 
     /// 列出社区的 Agent
+    #[allow(clippy::type_complexity)]
     pub async fn list_space_agents(&self, space_id: Uuid) -> Result<Vec<SpaceAgentPublic>, AppError> {
         let rows: Vec<(Uuid, Uuid, serde_json::Value, serde_json::Value, chrono::DateTime<chrono::Utc>, Uuid, Uuid, String, String, String, serde_json::Value, bool, String)> = sqlx::query_as(
             r#"SELECT sa.id, sa.space_id, sa.trigger_words, sa.auto_trigger, sa.created_at,

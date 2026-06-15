@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     tracing_subscriber::fmt().with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into())).json().init();
     let config = NotifyConfig::from_env();
-    let pool = PgPoolOptions::new().max_connections(10).acquire_timeout(std::time::Duration::from_secs(10)).connect(&config.database_url).await?;
+    let pool = PgPoolOptions::new().max_connections(5).acquire_timeout(std::time::Duration::from_secs(10)).connect(&config.database_url).await?;
     let handler = Arc::new(NotifyHandler::new(pool));
 
     // Connect to NATS and subscribe to events for notification generation

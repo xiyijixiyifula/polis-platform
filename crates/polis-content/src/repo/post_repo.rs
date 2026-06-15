@@ -18,6 +18,7 @@ impl PostRepo {
 
     // ===== 帖子 CRUD =====
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_post(
         &self,
         space_id: Uuid,
@@ -401,7 +402,7 @@ impl PostRepo {
         .fetch_optional(&mut *tx)
         .await?;
 
-        let result = if let Some(_) = existing {
+        let result = if existing.is_some() {
             sqlx::query(
                 "DELETE FROM likes WHERE target_type = $1 AND target_id = $2 AND user_id = $3",
             )
@@ -1148,6 +1149,7 @@ impl PostRepo {
         .map_err(AppError::from)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_editor_pick(
         &self,
         target_type: &str,
@@ -1283,6 +1285,7 @@ impl PostRepo {
             .map_err(AppError::from)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_event(
         &self,
         space_id: Uuid,
@@ -1365,6 +1368,7 @@ impl PostRepo {
             .map_err(AppError::from)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_weekly_topic(
         &self,
         topic_key: &str,
@@ -1422,6 +1426,7 @@ impl PostRepo {
         Ok(rows)
     }
 
+    #[allow(clippy::too_many_arguments, clippy::type_complexity)]
     pub async fn get_recommended_users(
         &self,
         user_id: Uuid,

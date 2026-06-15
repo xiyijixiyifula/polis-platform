@@ -19,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
     let config = StoreServiceConfig::from_env();
 
     let pool = PgPoolOptions::new()
-        .max_connections(10).acquire_timeout(std::time::Duration::from_secs(10))
+        .max_connections(5).acquire_timeout(std::time::Duration::from_secs(10))
         .connect(&config.database_url)
         .await?;
 

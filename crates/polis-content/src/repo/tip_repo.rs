@@ -13,6 +13,7 @@ impl TipRepo {
         Self { pool }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_tip(
         &self,
         sender_id: Uuid,
