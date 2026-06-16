@@ -3,6 +3,11 @@ const nextConfig = {
   output: 'standalone',
   compress: true,
   transpilePackages: ['cherry-markdown'],
+  // Reduce JS chunk loading latency by increasing the minimum chunk size
+  // Fewer, larger chunks = fewer HTTP round trips over high-latency connections
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
   async redirects() {
     return [
       { source: '/create-center', destination: '/creations', permanent: true },
@@ -56,6 +61,13 @@ const nextConfig = {
     ].join('; ');
 
     return [
+      {
+        // Static assets can be cached aggressively (content-hash filenames)
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
       {
         source: '/(.*)',
         headers: [
