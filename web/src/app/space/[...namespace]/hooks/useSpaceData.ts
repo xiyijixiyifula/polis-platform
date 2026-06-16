@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { spaces as apiSpaces, tiers, subscribe, getToken } from '@/lib/api';
 import type { Space, Post, Series, SpaceTier, Subscription, SpaceModule } from '@/lib/api';
 
@@ -258,9 +258,13 @@ export function useSpaceData(rawNamespace: string | string[]): SpaceDataState {
 		} catch (e) { console.error('Failed to load space meta:', e); }
 	}, [space?.owner_id, space?.id, cleanNamespace]);
 
+		const fetchingRef = useRef(false);
+
 	// Fetch posts, featured, polls, videos, announcements
 	useEffect(() => {
 		if (!cleanNamespace) return;
+			if (fetchingRef.current) return;
+			fetchingRef.current = true;
 		setPostLoading(true);
 
 		const fetchers: Promise<any>[] = [
@@ -301,8 +305,11 @@ export function useSpaceData(rawNamespace: string | string[]): SpaceDataState {
 				} else { setOverviewVideos([]); }
 			})
 			.catch((e) => { console.error('[api] error:', e); })
-			.finally(() => setPostLoading(false));
-	}, [cleanNamespace, spaceModules, postSort, postPage, showHiddenPosts]);
+			.finally(() => {
+					setPostLoading(false);
+					fetchingRef.current = false;
+				});
+	}, [cleanNamespace, postSort, postPage, showHiddenPosts]);
 
 	// Fetch series list when series tab is active or module is enabled
 	useEffect(() => {
