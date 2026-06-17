@@ -129,6 +129,80 @@ export default function AdminSettingsPage() {
     }
   };
 
+  // SMTP 中继邮件配置
+  const [mailFrom, setMailFrom] = useState('');
+  const [mailFromName, setMailFromName] = useState('');
+  const [mailRelayHost, setMailRelayHost] = useState('');
+  const [mailRelayPort, setMailRelayPort] = useState('587');
+  const [mailRelayUser, setMailRelayUser] = useState('');
+  const [mailRelaySaving, setMailRelaySaving] = useState(false);
+  const [mailRelayMsg, setMailRelayMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    const token = getAdminToken();
+    fetch('/api/admin/settings/platform', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.code === 0 && data.data) {
+          if (data.data.max_upload_size_mb) {
+            const val = typeof data.data.max_upload_size_mb === 'number'
+              ? String(data.data.max_upload_size_mb)
+              : String(data.data.max_upload_size_mb);
+            setUploadSizeMb(val);
+          }
+          if (data.data.max_video_size_mb) {
+            const val = typeof data.data.max_video_size_mb === 'number'
+              ? String(data.data.max_video_size_mb)
+              : String(data.data.max_video_size_mb);
+            setVideoSizeMb(val);
+          }
+          if (data.data.mail_from) setMailFrom(data.data.mail_from);
+          if (data.data.mail_from_name) setMailFromName(data.data.mail_from_name);
+          if (data.data.mail_relay_host) setMailRelayHost(data.data.mail_relay_host);
+          if (data.data.mail_relay_port) setMailRelayPort(String(data.data.mail_relay_port));
+          if (data.data.mail_relay_user) setMailRelayUser(data.data.mail_relay_user);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setPlatformLoading(false));
+  }, []);
+
+  const saveMailRelay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMailRelayMsg(null);
+    setMailRelaySaving(true);
+    try {
+      const token = getAdminToken();
+      const settings: Record<string, any> = {
+        mail_from: mailFrom,
+        mail_from_name: mailFromName,
+      };
+      if (mailRelayHost) {
+        settings.mail_relay_host = mailRelayHost;
+        settings.mail_relay_port = parseInt(mailRelayPort, 10) || 587;
+        settings.mail_relay_user = mailRelayUser;
+        // 密码仅在填入时更新
+      }
+      const res = await fetch('/api/admin/settings/platform', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(settings),
+      });
+      const data = await res.json();
+      if (res.ok && data.code === 0) {
+        setMailRelayMsg({ type: 'success', text: '邮件配置已保存！请在服务器上运行 postfix reload 使配置生效。' });
+      } else {
+        setMailRelayMsg({ type: 'error', text: data.message || '保存失败' });
+      }
+    } catch {
+      setMailRelayMsg({ type: 'error', text: '网络错误' });
+    } finally {
+      setMailRelaySaving(false);
+    }
+  };
+
   const configItems = [
     { icon: Shield, label: '管理员邮箱', value: 'admin@polis.app', desc: '用于后台登录的管理员账号' },
     { icon: Key, label: '验证码状态', value: '已设置', desc: '可在下方修改管理验证码' },
@@ -239,7 +313,74 @@ export default function AdminSettingsPage() {
         )}
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+      {/* SMTP 中继邮件配置 */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">邮件中继服务配置</h2>
+        </div>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Polis 使用 Postfix + SMTP 中继方案发送邮件（密码重置等）。配置后重启 Postfix 生效: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">postfix reload</code>
+        </p>
+
+        {mailRelayMsg && (
+          <div className={`flex items-center gap-2 p-3 rounded-lg mb-4 text-sm ${
+            mailRelayMsg.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+          }`}>
+            {mailRelayMsg.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+            {mailRelayMsg.text}
+          </div>
+        )}
+
+        {platformLoading ? (
+          <div className="text-sm text-gray-400">加载中...</div>
+        ) : (
+          <form onSubmit={saveMailRelay} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">发件邮箱</label>
+                <input type="email" value={mailFrom} onChange={(e) => setMailFrom(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm" placeholder="polis@mzgw.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">发件人名称</label>
+                <input type="text" value={mailFromName} onChange={(e) => setMailFromName(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm" placeholder="Polis" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">中继服务器 (SMTP Relay)</label>
+                <input type="text" value={mailRelayHost} onChange={(e) => setMailRelayHost(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm" placeholder="smtp.gmail.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">端口</label>
+                <input type="number" value={mailRelayPort} onChange={(e) => setMailRelayPort(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm" placeholder="587" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">中继账号</label>
+              <input type="text" value={mailRelayUser} onChange={(e) => setMailRelayUser(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm" placeholder="your@gmail.com" />
+            </div>
+
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              凭证保存在服务器 <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">/etc/postfix/sasl_passwd</code>。配置格式: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">[smtp.host]:port username:password</code>。配置后运行 <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">postmap /etc/postfix/sasl_passwd && postfix reload</code>。
+            </p>
+
+            <button type="submit" disabled={mailRelaySaving}
+              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50">
+              {mailRelaySaving ? <>保存中...</> : <><Save className="h-4 w-4" /> 保存邮件配置</>}
+            </button>
+          </form>
+        )}
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mt-6">
         <div className="flex items-center gap-2 mb-4">
           <Key className="h-5 w-5 text-primary-600 dark:text-primary-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">修改管理验证码</h2>

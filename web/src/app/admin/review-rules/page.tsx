@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, Shield, ToggleLeft, ToggleRight, Edit3, X } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { toastError } from '@/stores/toastStore';
 
@@ -42,7 +43,7 @@ export default function AdminReviewRulesPage() {
   useEffect(() => { fetchRules(); }, []);
 
   const fetchRules = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     setLoading(true);
     try {
       const res = await fetch('/api/admin/review-rules', {
@@ -74,7 +75,7 @@ export default function AdminReviewRulesPage() {
   };
 
   const doSave = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     setFormError('');
 
     if (!formName.trim()) { setFormError('规则名称不能为空'); return; }
@@ -107,7 +108,7 @@ export default function AdminReviewRulesPage() {
   };
 
   const doToggle = async (ruleId: string, isActive: boolean) => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const res = await fetch(`/api/admin/review-rules/${ruleId}/toggle`, {
         method: 'POST',
@@ -122,7 +123,7 @@ export default function AdminReviewRulesPage() {
 
   const doDelete = async (ruleId: string) => {
     if (!confirm('确定删除此规则？')) return;
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const res = await fetch(`/api/admin/review-rules/${ruleId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();

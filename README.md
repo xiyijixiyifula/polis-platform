@@ -2230,9 +2230,68 @@ ADMIN_SERVICE_URL=http://localhost:3050
 DATABASE_URL=postgres://user:pass@localhost/polis_user
 JWT_SECRET=<random-secret>
 PORT=3001
+
+# ---- Mail Relay (SMTP) ----
+MAIL_FROM=polis@mzgw.com              # Sender address
+MAIL_FROM_NAME=Polis                  # Sender display name
+BASE_URL=https://www.mzgw.com         # Password reset link base URL
 ```
 
----
+### 12.3 Mail Relay Setup (SMTP Relay via Postfix)
+
+Polis uses a **Postfix + SMTP Relay** architecture for sending emails (password reset, notifications, etc.). Instead of direct MTA-to-MTA delivery (which requires port 25), we relay through an external SMTP provider on port 587/465.
+
+**Architecture:**
+```
+Rust (mail.rs) → sendmail → Postfix → [smtp.gmail.com]:587 → Recipient
+```
+
+**Quick Setup (Ubuntu/Debian):**
+
+```bash
+# 1. Install Postfix
+apt-get install -y postfix
+
+# 2. Configure relay credentials
+echo "[smtp.gmail.com]:587 your@gmail.com:YOUR_APP_PASSWORD" > /etc/postfix/sasl_passwd
+chmod 600 /etc/postfix/sasl_passwd
+postmap /etc/postfix/sasl_passwd
+
+# 3. Configure Postfix main.cf (add these lines)
+postconf -e "relayhost = [smtp.gmail.com]:587"
+postconf -e "smtp_use_tls = yes"
+postconf -e "smtp_sasl_auth_enable = yes"
+postconf -e "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd"
+postconf -e "smtp_sasl_security_options = noanonymous"
+
+# 4. Reload Postfix
+postfix reload
+
+# 5. Set environment variables
+export MAIL_FROM=your@domain.com
+export MAIL_FROM_NAME="Your Platform"
+export BASE_URL=https://your-domain.com
+
+# 6. Test
+echo "Test mail" | sendmail -f your@domain.com test@example.com
+```
+
+**Supported Relay Providers:**
+| Provider | Host | Port | Free Tier |
+|----------|------|------|-----------|
+| Gmail | smtp.gmail.com | 587 | 500/day (App Password required) |
+| SendGrid | smtp.sendgrid.net | 587 | 100/day |
+| Mailgun | smtp.mailgun.org | 587 | Flexible trial |
+
+**Admin Panel Config:** Settings → Email Relay (admin/settings page) allows configuring sender address, relay host, and credentials through the web UI, stored in the `platform_settings` table.
+
+**Why Relay Instead of Direct Delivery?**
+- Cloud VPS providers (Alibaba Cloud, AWS, GCP) block port 25 outbound by default to prevent spam
+- SMTP relay on port 587 uses TLS encryption (more secure than plain SMTP on port 25)
+- Relay providers handle DKIM/SPF/DMARC for better deliverability
+- No need to apply for port 25 unblocking
+
+```
 
 ## 13. FAQ & Troubleshooting
 

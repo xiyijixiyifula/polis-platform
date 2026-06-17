@@ -1,6 +1,6 @@
 use polis_core::error::AppError;
 use polis_core::models::{
-    InviteCode, InviteReward, OnboardingQuest, User, UserBadge, UserQuest, UserXp, UserXpLog,
+    CreatorScore, Follow, InviteCode, InviteReward, OnboardingQuest, User, UserBadge, UserQuest, UserXp, UserXpLog,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -431,6 +431,45 @@ impl UserRepo {
         )
         .bind(address)
         .fetch_optional(&self.pool).await
+        .map_err(AppError::from)
+    }
+
+    // ==================== Data Export (GDPR) ====================
+
+    pub async fn find_user_follows(&self, user_id: Uuid) -> Result<Vec<Follow>, AppError> {
+        let rows = sqlx::query_as::<_, (Uuid, Uuid, String, Uuid, chrono::DateTime<chrono::Utc>)>(
+            "SELECT id, follower_id, followee_type, followee_id, created_at FROM follows WHERE follower_id = $1 ORDER BY created_at DESC"
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(|r| Follow {
+            id: r.0,
+            follower_id: r.1,
+            followee_type: r.2,
+            followee_id: r.3,
+            created_at: r.4,
+        }).collect())
+    }
+
+    pub async fn find_user_xp_logs_all(&self, user_id: Uuid, limit: i64) -> Result<Vec<UserXpLog>, AppError> {
+        sqlx::query_as::<_, UserXpLog>(
+            "SELECT id, user_id, action_type, xp_gained, description, target_type, target_id, created_at FROM user_xp_log WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2"
+        )
+        .bind(user_id)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(AppError::from)
+    }
+
+    pub async fn find_creator_score(&self, user_id: Uuid) -> Result<Option<CreatorScore>, AppError> {
+        sqlx::query_as::<_, CreatorScore>(
+            "SELECT user_id, total_posts, total_likes_received, total_comments_received, total_views, total_tips_received, total_followers, weekly_score, monthly_score, all_time_score, weekly_rank, monthly_rank, all_time_rank, last_calculated_at, created_at, updated_at FROM creator_scores WHERE user_id = $1"
+        )
+        .bind(user_id)
+        .fetch_optional(&self.pool)
+        .await
         .map_err(AppError::from)
     }
 }

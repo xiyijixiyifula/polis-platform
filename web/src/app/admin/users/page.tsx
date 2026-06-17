@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Search, Shield, Ban, CheckCircle, XCircle, EyeOff, Building2, UserCheck } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { toastError } from '@/stores/toastStore';
 
@@ -32,7 +33,7 @@ export default function AdminUsersPage() {
   useEffect(() => { fetchUsers(); }, [page]);
 
   const fetchUsers = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const res = await fetch(`/api/admin/users?page=${page}&page_size=20`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -44,7 +45,7 @@ export default function AdminUsersPage() {
   };
 
   const doAction = async (userId: string, action: string, body?: object) => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     const endpoints: Record<string, string> = {
       ban: `/api/admin/users/${userId}/ban`,
       unban: `/api/admin/users/${userId}/unban`,

@@ -2,6 +2,7 @@ import 'cherry-markdown/dist/cherry-markdown.css';
 import type { Metadata } from 'next';
 import './globals.css';
 
+import Link from 'next/link';
 import { Header } from '@/components/Header';
 import { ClientLayoutWrapper } from '@/components/ClientLayoutWrapper';
 import { IntlClientProvider } from '@/components/IntlClientProvider';
@@ -136,6 +137,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ClientLayoutWrapper>
               {children}
             </ClientLayoutWrapper>
+            {/* 站点底部链接 */}
+            <footer className="border-t border-gray-100 dark:border-gray-800 mt-auto">
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 py-6 flex flex-wrap items-center justify-between gap-4 text-sm">
+                <div className="flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+                  <span className="h-5 w-5 rounded bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-[8px] font-bold">
+                    P
+                  </span>
+                  &copy; 2026 Polis
+                </div>
+                <div className="flex gap-6 text-gray-400">
+                  <Link href="/about" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">关于</Link>
+                  <Link href="/privacy" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">隐私</Link>
+                  <Link href="/terms" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">条款</Link>
+                  <Link href="/changelog" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">更新日志</Link>
+                </div>
+              </div>
+            </footer>
           </IntlClientProvider>
         </div>
         <ToastProvider />

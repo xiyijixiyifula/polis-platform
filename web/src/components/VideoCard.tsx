@@ -30,7 +30,7 @@ export function VideoCard({ video, namespace, size = 'sm' }: VideoCardProps) {
       <Link href={linkHref} className="group block">
         <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
           {video.thumbnail_url ? (
-            <Image src={video.thumbnail_url!} alt={video.title} fill
+            <Image src={video.thumbnail_url!} alt={video.title} fill sizes="(max-width: 768px) 50vw, 33vw"
               className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
@@ -66,7 +66,7 @@ export function VideoCard({ video, namespace, size = 'sm' }: VideoCardProps) {
     <Link href={linkHref} className="group card flex gap-3 hover:shadow-md transition-all">
       <div className="relative w-40 h-24 shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
         {video.thumbnail_url ? (
-          <Image src={video.thumbnail_url!} alt={video.title} fill
+          <Image src={video.thumbnail_url!} alt={video.title} fill sizes="160px"
             className="object-cover group-hover:scale-105 transition-transform" unoptimized />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

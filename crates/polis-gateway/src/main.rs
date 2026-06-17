@@ -22,11 +22,36 @@ use tracing_subscriber::EnvFilter;
 use crate::config::GatewayConfig;
 
 mod config;
+mod openapi;
 
 /// Global metrics counters (Prometheus-compatible)
 static CONNECTION_COUNT: AtomicU64 = AtomicU64::new(0);
 static REQUEST_COUNT: AtomicU64 = AtomicU64::new(0);
 static ERROR_COUNT: AtomicU64 = AtomicU64::new(0);
+
+/// Swagger UI page (CDN-based, loads OpenAPI spec from /api/docs/openapi.json)
+static SWAGGER_HTML: &str = r#"<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Polis Platform API Documentation</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js" crossorigin></script>
+    <script>
+        SwaggerUIBundle({
+            url: "/api/docs/openapi.json",
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+            layout: "StandaloneLayout",
+        });
+    </script>
+</body>
+</html>"#;
 
 /// 速率限制条目
 #[derive(Debug)]
@@ -198,6 +223,13 @@ async fn main() -> anyhow::Result<()> {
         .route("/api/health/video", get(proxy_health_video))
         // 健康检查 - 聚合
         .route("/api/health/all", get(health_check_all))
+        // API Documentation (OpenAPI JSON + Swagger UI via CDN)
+        .route("/api/docs/openapi.json", get(|| async {
+            Json(serde_json::from_str::<serde_json::Value>(crate::openapi::OPENAPI_JSON).unwrap_or_default())
+        }))
+        .route("/api/docs", get(|| async {
+            axum::response::Html(SWAGGER_HTML)
+        }))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             rate_limit_middleware,

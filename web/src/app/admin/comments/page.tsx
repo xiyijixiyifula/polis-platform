@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { MessageSquare, Trash2, Heart, AlertTriangle, Search, Eye } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { toastError } from '@/stores/toastStore';
 
@@ -27,7 +28,7 @@ export default function AdminCommentsPage() {
   useEffect(() => { fetchComments(); }, [page]);
 
   const fetchComments = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/comments?page=${page}&page_size=20`, {
@@ -46,7 +47,7 @@ export default function AdminCommentsPage() {
 
   const doDelete = async (commentId: string) => {
     if (!confirm('确定要删除这条评论吗？')) return;
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const res = await fetch(`/api/admin/comments/${commentId}`, {
         method: 'DELETE',

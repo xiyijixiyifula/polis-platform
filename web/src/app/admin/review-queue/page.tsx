@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CheckCircle, XCircle, EyeOff, Ban, Clock, AlertTriangle, Filter, ChevronDown } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { toastError } from '@/stores/toastStore';
 
@@ -42,7 +43,7 @@ export default function AdminReviewQueuePage() {
   useEffect(() => { fetchQueue(); }, [page, statusFilter, typeFilter]);
 
   const fetchQueue = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     setLoading(true);
     try {
       const status = statusFilter === 'all' ? '' : statusFilter;
@@ -68,7 +69,7 @@ export default function AdminReviewQueuePage() {
   };
 
   const doSingleAction = async (targetType: string, targetId: string, action: string, extra?: object) => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       let url = '';
       let body: object | undefined;
@@ -99,7 +100,7 @@ export default function AdminReviewQueuePage() {
 
   const doBatchAction = async () => {
     if (!batchAction || selected.size === 0) return;
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     const selectedItems = items.filter(i => selected.has(`${i.target_type}:${i.target_id}`));
     const batchItems = selectedItems.map(i => ({ target_type: i.target_type === 'ref' ? 'post' : i.extra?.target_type || 'post', target_id: i.target_type === 'ref' ? (i.extra?.creation_id || i.target_id) : (i.extra?.target_id || i.target_id) }));
     try {

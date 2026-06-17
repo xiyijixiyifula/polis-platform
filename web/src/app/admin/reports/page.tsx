@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle, XCircle, Clock, Filter, EyeOff, Ban } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { toastError } from '@/stores/toastStore';
 
@@ -41,7 +42,7 @@ export default function AdminReportsPage() {
   useEffect(() => { fetchReports(); }, [page, statusFilter]);
 
   const fetchReports = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     setLoading(true);
     try {
       const res = await fetch(`/api/admin/reports?page=${page}&page_size=20`, {
@@ -59,7 +60,7 @@ export default function AdminReportsPage() {
   };
 
   const doResolve = async (reportId: string, action: 'resolve' | 'dismiss', targetAction?: string) => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const body: Record<string, string> = { action };
       if (targetAction) {

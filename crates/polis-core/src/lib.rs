@@ -10,6 +10,7 @@ pub mod hashtag;
 pub mod token_blacklist;
 pub mod shutdown;
 pub mod nats_reconnect;
+pub mod mail;
 
 /// Serialize a value to JSON with error logging.
 /// Prefer this over `serde_json::to_value(x).unwrap_or_default()` which silently discards errors.

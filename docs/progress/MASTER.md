@@ -1,6 +1,6 @@
 # 当前任务进度
 
-> 最后更新: 2026-06-15
+> 最后更新: 2026-06-17
 
 ## 追踪模式
 
@@ -8,37 +8,56 @@ LOCAL_ONLY
 
 ## 当前状态
 
-**活跃任务**: 冲击 A- (8.0+) — 持续完善
+**活跃任务**: 生产就绪度冲刺 — Milestone 1+2+3 (绿色任务)
 
-### 本次会话完成 (2026-06-15)
+### 本次会话完成 (2026-06-17)
 
-- [x] 提交 S-grade sprint 改动 (52 files, commit a870a8b)
-- [x] T5: 健康检查 — 验证全部 5 个后端服务已有 `/health` + DB 检查
-- [x] T14: CI 流程完善 — 前端 vitest 步骤加入 release.yml
-- [x] ESLint 配置文件 `.eslintrc.json`（Next.js 格式，待解决 ESLint 10 兼容）
-- [x] T1-T2: 新增 3 个测试文件 — PostCard, SpaceCard, api-auth (共 46 tests)
-- [x] CI: GitHub Actions 现在会在部署前运行前端测试
+#### M1: 基础设施就绪
+- [x] **M1-2: DB 自动备份修复** — 密码 `polis2024` → `polis2024!Secure`，加 `set -o pipefail` + 大小验证 (20B → 60KB 真实备份)
+- [x] **M1-4: HTTPS 自动续期** — 验证 `certbot.timer` 已配置，无需改动
+- [x] **M1-5: 服务自愈** — 验证 `Restart=always` + 15分钟健康检查 cron 已配置
 
-### 测试统计
+#### M2: 运营能力补齐
+- [x] **M2-4: 前端性能优化**
+  - `turndown` 静态 import → 动态 `import()` (减少 ~80KB 首屏)
+  - 添加 `@next/bundle-analyzer` + `npm run analyze` 脚本
+  - `next.config.js`: `productionBrowserSourceMaps: false`, `poweredByHeader: false`, `generateEtags: true`
+  - 所有 `fill` 模式 `<Image>` 添加 `sizes` 属性 (VideoCard, NovelCard, TabRenderer)
+- [x] **M2-5: 管理后台完善**
+  - 修复 6 个 admin 页面 localStorage.getItem → getAdminToken() (16处)
+  - 创建 `web/src/app/admin/error.tsx` 错误边界
+  - 后端: 添加 `delete_user` GDPR 账号删除端点 (匿名化而非硬删除)
+  
+#### M3: 正式上线准备
+- [x] **M3-3: 合规文档**
+  - 重写 `privacy/page.tsx`: 隐私政策（10节，引用个保法/GDPR）
+  - 重写 `terms/page.tsx`: 服务条款（12节，含代币声明）
+  - 重写 `about/page.tsx`: 关于页面（6大特性卡片 + 技术架构）
+  - 修改 `LandingPage.tsx` 和 `layout.tsx` 添加全局页脚（关于/隐私/条款/更新日志）
+- [x] **M3-4: API 文档**
+  - 创建手写 OpenAPI 3.0 规范 (`crates/polis-gateway/src/openapi.rs`)
+  - 21 个端点文档，6 个标签分组
+  - Swagger UI 页面（CDN 加载），地址: `/api/docs`
+  - OpenAPI JSON 端点: `/api/docs/openapi.json`
+- [x] **M3-5: 数据导出 (GDPR)**
+  - 新建 `crates/polis-user/src/handlers/export_data.rs` — 导出端点
+  - 新建 repo 方法: `find_user_follows`, `find_user_xp_logs_all`, `find_creator_score`
+  - 路由: `GET /api/users/me/export` (JWT 认证)
+  - 前端: `export/page.tsx` 真实 API 调用 + JSON 文件下载
+  - 密码 hash 排除，Push 密钥脱敏
+  
+### 修改文件统计
 
-| 维度 | 文件数 | 测试数 |
-|------|--------|--------|
-| API library | 2 | 10 + 19 = 29 |
-| Components | 2 | 4 + 7 + 7 = 18 |
-| DOM/XSS | 1 | 5 |
-| **总计** | **6** | **46** |
-
-### 剩余可优化项
-
-- [ ] T6: 错误追踪 sentry-like 集成
-- [ ] T7: NATS 部署 + 事件系统验证
-- [ ] T8: 跨服务事件一致性测试
-- [ ] ESLint CI 集成 (需解决 ESLint 10 vs Next.js 14 兼容性)
-- [ ] ContentCard/Header/CreationEditor 组件测试
-- [ ] 前端 E2E 测试完善
+| 类别 | 文件数 | 说明 |
+|------|--------|------|
+| Rust (gateway) | 3 | main.rs, openapi.rs, Cargo.toml |
+| Rust (user) | 5 | export_data.rs, mod.rs, routes.rs, repo.rs, user_routes.rs |
+| Rust (admin) | 2 | admin_handler.rs, routes.rs |
+| 前端 | 13 | config + component + admin page fixes + export + compliance pages |
+| 服务器 | 1 | backup-db.sh |
 
 ## Next Steps
 
-1. `git push` 当前改动
-2. 部署到服务器验证线上状态
-3. 继续丰富测试覆盖
+1. 确认前端 `npm run build` 通过
+2. 部署到服务器验证
+3. 继续 Milestone 1-3 的黄色和红色任务（需要用户配置外部服务）

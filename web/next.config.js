@@ -1,10 +1,15 @@
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
   compress: true,
+  productionBrowserSourceMaps: false,
+  poweredByHeader: false,
+  generateEtags: true,
   transpilePackages: ['cherry-markdown'],
-  // Reduce JS chunk loading latency by increasing the minimum chunk size
-  // Fewer, larger chunks = fewer HTTP round trips over high-latency connections
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
@@ -83,4 +88,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);

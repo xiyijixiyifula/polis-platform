@@ -241,7 +241,7 @@ export default function TabRenderer(props: TabRendererProps) {
 										className="group block">
 										<div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800">
 											{v.thumbnail_url ? (
-												<Image src={v.thumbnail_url!} alt={v.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+												<Image src={v.thumbnail_url!} alt={v.title} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
 											) : (
 												<div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
 													<Video className="h-8 w-8 text-gray-400" />

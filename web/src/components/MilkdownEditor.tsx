@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Eye, Edit3, Upload, FileText, Loader2, Moon, Sun, Code2, Type } from 'lucide-react';
 import { marked } from 'marked';
-import TurndownService from 'turndown';
 import DOMPurify from 'dompurify';
 
 // ===== marked 配置 =====
@@ -12,18 +11,18 @@ marked.setOptions({
   gfm: true,
 });
 
-// ===== turndown 实例 (模块级单例) =====
-let _turndown: TurndownService | null = null;
-function getTurndown(): TurndownService {
-  if (!_turndown) {
-    _turndown = new TurndownService({
-      headingStyle: 'atx',
-      hr: '---',
-      bulletListMarker: '-',
-      codeBlockStyle: 'fenced',
-      emDelimiter: '*',
-    });
-  }
+// ===== turndown 实例 (模块级单例, 动态加载) =====
+let _turndown: any = null;
+async function getTurndown(): Promise<any> {
+  if (_turndown) return _turndown;
+  const TurndownService = (await import('turndown')).default;
+  _turndown = new TurndownService({
+    headingStyle: 'atx',
+    hr: '---',
+    bulletListMarker: '-',
+    codeBlockStyle: 'fenced',
+    emDelimiter: '*',
+  });
   return _turndown;
 }
 
@@ -39,9 +38,9 @@ function mdToHtml(md: string): string {
   }
 }
 
-function htmlToMd(html: string): string {
+async function htmlToMd(html: string): Promise<string> {
   try {
-    const td = getTurndown();
+    const td = await getTurndown();
     return td.turndown(html);
   } catch (e) {
     console.error('[MilkdownEditor] htmlToMd error:', e);
@@ -80,13 +79,11 @@ export function MilkdownEditor({
 
   // 初始化 turndown
   useEffect(() => {
-    try {
-      getTurndown(); // 测试初始化
-    } catch (e) {
+    getTurndown().catch((e: any) => {
       console.error('[MilkdownEditor] turndown init error:', e);
       setTurndownError(true);
       setError((e as Error).message || '富文本引擎加载失败');
-    }
+    });
   }, []);
 
   // 检测暗黑模式
@@ -113,13 +110,15 @@ export function MilkdownEditor({
       isInternalChange.current = false;
       return;
     }
-    // 获取当前编辑器内容对应的 markdown，避免不必要的 DOM 更新
-    const currentHtml = wysiwygRef.current.innerHTML;
-    const currentMd = htmlToMd(currentHtml).trim();
-    if (currentMd === value.trim()) return; // 内容相同，跳过
+    (async () => {
+      // 获取当前编辑器内容对应的 markdown，避免不必要的 DOM 更新
+      const currentHtml = wysiwygRef.current!.innerHTML;
+      const currentMd = (await htmlToMd(currentHtml)).trim();
+      if (currentMd === value.trim()) return; // 内容相同，跳过
 
-    const html = mdToHtml(value);
-    wysiwygRef.current.innerHTML = html;
+      const html = mdToHtml(value);
+      wysiwygRef.current!.innerHTML = html;
+    })();
   }, [value, mode]);
 
   // 自动调整 textarea 高度
@@ -133,7 +132,7 @@ export function MilkdownEditor({
   // ===== 事件处理 =====
 
   // WYSIWYG 输入
-  const handleWysiwygInput = useCallback(() => {
+  const handleWysiwygInput = useCallback(async () => {
     if (!wysiwygRef.current) return;
     const html = wysiwygRef.current.innerHTML;
 
@@ -144,7 +143,7 @@ export function MilkdownEditor({
       return;
     }
 
-    const md = htmlToMd(html);
+    const md = await htmlToMd(html);
     isInternalChange.current = true;
     onChange(md);
   }, [onChange]);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Search, Star, StarOff, Trash2, EyeOff, Eye, Clock } from 'lucide-react';
+import { getAdminToken } from '@/lib/api';
 import { formatDate, formatCount } from '@/lib/utils';
 import { toastError, toastSuccess } from '@/stores/toastStore';
 
@@ -33,7 +34,7 @@ export default function AdminPostsPage() {
   useEffect(() => { fetchPosts(); }, []);
 
   const fetchPosts = async () => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     try {
       const res = await fetch('/api/admin/posts?page=1&page_size=100', {
         headers: { Authorization: `Bearer ${token}` },
@@ -45,7 +46,7 @@ export default function AdminPostsPage() {
   };
 
   const doAction = async (postId: string, action: string, extra?: object) => {
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     const actions: Record<string, string> = {
       feature: 'feature', unfeature: 'unfeature', delete: 'delete',
       hide: 'hide', unhide: 'unhide',
@@ -65,7 +66,7 @@ export default function AdminPostsPage() {
 
   const doBatchHide = async () => {
     if (selected.size === 0) return;
-    const token = localStorage.getItem('polis_admin_token');
+    const token = getAdminToken();
     let count = 0;
     for (const id of Array.from(selected)) {
       try {

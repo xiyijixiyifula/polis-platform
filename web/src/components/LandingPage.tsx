@@ -131,6 +131,7 @@ export default function LandingPage() {
           <div className="flex gap-6 text-sm text-gray-400">
             <Link href="/about" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">关于</Link>
             <Link href="/privacy" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">隐私</Link>
+            <Link href="/terms" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">条款</Link>
             <Link href="/changelog" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">更新日志</Link>
             <Link href="/login" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">登录</Link>
           </div>

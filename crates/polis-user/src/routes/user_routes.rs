@@ -5,6 +5,7 @@ use uuid::Uuid;
 use polis_core::error::AppError;
 use polis_core::models::{ApiResponse, LoginRequest, LoginResponse, LogoutRequest, RefreshTokenRequest, RegisterRequest, UpdateUserRequest, UserPublic, PushSubscribeRequest, RedeemInviteRequest, CompleteQuestRequest};
 use crate::handlers::user_handler::UserHandler;
+use crate::handlers::export_data::export_my_data;
 use crate::middleware::auth::{auth_middleware, Jti};
 use crate::middleware::csrf;
 
@@ -43,6 +44,7 @@ pub fn user_routes(handler: Arc<UserHandler>) -> Router {
         .route("/api/users/me", get(get_my_profile).put(update_profile))
         .route("/api/users/me/password", put(change_password))
         .route("/api/users/me/settings", put(update_settings))
+        .route("/api/users/me/export", get(export_my_data))
         .route("/api/follow", post(toggle_follow))
         // RESTful 风格 API 别名 (v0.3.22)
         .route("/api/users/{username}/follow", post(follow_by_username).delete(unfollow_by_username))
@@ -95,7 +97,12 @@ async fn change_password(State(h): State<Arc<UserHandler>>, headers: HeaderMap, 
     Ok(Json(ApiResponse::success(())))
 }
 async fn forgot_password(State(h): State<Arc<UserHandler>>, Json(r): Json<ForgotPasswordRequest>) -> Result<Json<ApiResponse<serde_json::Value>>, AppError> {
-    let _token = h.generate_reset_token(&r.email).await?;
+    let token = h.generate_reset_token(&r.email).await?;
+    // 异步发送邮件 (不阻塞响应)
+    let email = r.email.clone();
+    tokio::task::spawn_blocking(move || {
+        polis_core::mail::send_password_reset(&email, &token);
+    });
     tracing::info!("Password reset token generated for {}", r.email);
     Ok(Json(ApiResponse::success(serde_json::json!({
         "message": "如果该邮箱已注册，密码重置链接已发送",
