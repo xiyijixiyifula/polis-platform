@@ -291,27 +291,34 @@ export default function ContentCard({
           </>
         )}
 
-        {/* 模块标签 */}
-        <span
-          onClick={(e) => {
-            e.preventDefault(); e.stopPropagation();
-            if (!spaceNs) return;
-            const targetUrl = moduleType
-              ? `/space/${encodeURIComponent(spaceNs)}/${moduleType}`
-              : `/space/${encodeURIComponent(spaceNs)}`;
-            router.push(targetUrl);
-          }}
-          className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
-        >
-          {moduleLabel}
-        </span>
+        {/* 模块标签 — 仅在作品被社区引用时显示，遵循 @创建者/社区/模块/作品 路径格式 */}
+        {spaceNs && (
+          <>
+            <span className="text-gray-300 dark:text-gray-600">/</span>
+            <span
+              onClick={(e) => {
+                e.preventDefault(); e.stopPropagation();
+                const targetUrl = moduleType
+                  ? `/space/${encodeURIComponent(spaceNs)}/${moduleType}`
+                  : `/space/${encodeURIComponent(spaceNs)}`;
+                router.push(targetUrl);
+              }}
+              className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0 hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer"
+            >
+              {moduleLabel}
+            </span>
+          </>
+        )}
 
         {/* 引用徽章：展示该作品被多少个社区引用 */}
         {submissionCount !== undefined && submissionCount > 1 && (
-          <span className="text-[10px] px-1.5 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full shrink-0 flex items-center gap-0.5">
-            <Repeat2 className="h-2.5 w-2.5" />
-            {submissionCount} 个社区
-          </span>
+          <>
+            <span className="text-gray-300 dark:text-gray-600">/</span>
+            <span className="text-[10px] px-1.5 py-0.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full shrink-0 flex items-center gap-0.5">
+              <Repeat2 className="h-2.5 w-2.5" />
+              {submissionCount} 个社区
+            </span>
+          </>
         )}
 
         <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
@@ -675,7 +682,7 @@ export function adaptFeedItem(item: any): ContentCardProps {
 export function adaptCreationItem(creation: any): ContentCardProps {
   const creator = creation.creator || {};
   const firstSub = creation.submissions?.[0];
-  const rawType = firstSub?.module_type || creation.content_type || '';
+  const rawType = firstSub?.module_type || '';
 
   return {
     id: creation.id,

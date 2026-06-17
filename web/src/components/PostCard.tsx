@@ -81,9 +81,9 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
 
         {/* Content area */}
         <div className="flex-1 min-w-0">
-          {/* Breadcrumb: @spaceOwner/spaceName/forum / title */}
+          {/* Breadcrumb: 遵循 Polis 引用路径格式 @社区创建者/社区名/模块名/作品名 */}
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-1 flex-wrap">
-            {post.space_ns && (
+            {post.space_ns ? (
               <>
                 <span className="font-semibold text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[130px]">
                   @{post.space_ns.split('/')[0]}
@@ -94,12 +94,19 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
                   {post.space_name || post.space_ns}
                 </Link>
                 <span className="text-gray-300 dark:text-gray-600">/</span>
+                <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0">
+                  {post.module_label || getModuleLabel(post.module_type)}
+                </span>
+                <span className="text-gray-300 dark:text-gray-600">/</span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-primary-600 dark:text-primary-400 truncate max-w-[130px]">
+                  @{post.author?.username || 'unknown'}
+                </span>
+                <span className="text-gray-300 dark:text-gray-600">/</span>
               </>
             )}
-            <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0">
-              {post.module_label || getModuleLabel(post.module_type)}
-            </span>
-            <span className="text-gray-300 dark:text-gray-600 mx-0.5">/</span>
             <Link href={postLink} className="text-gray-900 dark:text-white font-semibold truncate hover:text-primary-600 dark:hover:text-primary-400">
               {post.title || '无标题'}
             </Link>
