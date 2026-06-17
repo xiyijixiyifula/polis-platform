@@ -274,7 +274,7 @@ export default function ContentCard({
             >
               @{displaySpaceOwner}
             </span>
-            <span className="text-gray-300 dark:text-gray-600">/</span>
+            {spaceNs && <span className="text-gray-300 dark:text-gray-600">/</span>}
           </>
         )}
 
@@ -287,7 +287,6 @@ export default function ContentCard({
             >
               {displaySpaceName}
             </span>
-            <span className="text-gray-300 dark:text-gray-600">/</span>
           </>
         )}
 
