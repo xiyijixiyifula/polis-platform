@@ -131,6 +131,8 @@ enum Commands {
     },
     /// Health check: check gateway and all microservices
     Health,
+    /// Export all your personal data (GDPR compliance)
+    ExportData,
     /// Admin operations (requires admin login)
     Admin {
         #[command(subcommand)]
@@ -200,6 +202,18 @@ enum AuthAction {
     Logout,
     /// Show current access token
     Token,
+    /// Forgot password — send reset email
+    ForgotPassword {
+        /// Email address
+        email: String,
+    },
+    /// Reset password with token from email
+    ResetPassword {
+        /// Reset token from email
+        token: String,
+        /// New password
+        new_password: String,
+    },
 }
 
 // === Profile Subcommands ===
@@ -1111,6 +1125,8 @@ async fn main() -> Result<(), anyhow::Error> {
             AuthAction::Whoami => commands::auth::whoami(&config, &client).await,
             AuthAction::Logout => commands::auth::logout(&config).await,
             AuthAction::Token => commands::auth::show_token(&config).await,
+            AuthAction::ForgotPassword { email } => commands::auth::forgot_password(&config, &client, &email).await,
+            AuthAction::ResetPassword { token, new_password } => commands::auth::reset_password(&config, &client, &token, &new_password).await,
         },
 
         // === Profile ===
@@ -1312,6 +1328,9 @@ async fn main() -> Result<(), anyhow::Error> {
 
         // === Health ===
         Commands::Health => commands::health::check(&config, &client).await,
+
+        // === Export Data (GDPR) ===
+        Commands::ExportData => commands::auth::export_data(&config, &client).await,
 
         // === Announce ===
         Commands::Announce { namespace } => commands::notify::announce(&config, &client, &namespace).await,

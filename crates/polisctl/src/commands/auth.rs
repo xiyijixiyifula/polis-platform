@@ -76,3 +76,37 @@ pub async fn show_token(config: &Config) -> Result<(), anyhow::Error> {
     }
     Ok(())
 }
+
+pub async fn forgot_password(
+    config: &Config,
+    client: &HttpClient,
+    email: &str,
+) -> Result<(), anyhow::Error> {
+    let body = json!({"email": email});
+    let resp = client.post("/api/auth/forgot-password", None, &body).await?;
+    let data = extract_data(&resp);
+    print_output(data, config.format);
+    print_success("If the email is registered, a reset link has been sent");
+    Ok(())
+}
+
+pub async fn reset_password(
+    config: &Config,
+    client: &HttpClient,
+    token: &str,
+    new_password: &str,
+) -> Result<(), anyhow::Error> {
+    let body = json!({"token": token, "new_password": new_password});
+    let resp = client.post("/api/auth/reset-password", None, &body).await?;
+    let data = extract_data(&resp);
+    print_output(data, config.format);
+    print_success("Password reset successfully");
+    Ok(())
+}
+
+pub async fn export_data(config: &Config, client: &HttpClient) -> Result<(), anyhow::Error> {
+    let token = config.require_auth()?;
+    let resp = client.get("/api/users/me/export", Some(&token)).await?;
+    print_output(extract_data(&resp), config.format);
+    Ok(())
+}
