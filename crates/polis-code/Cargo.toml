@@ -17,4 +17,4 @@ anyhow = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 sqlx = { workspace = true }
-git2 = { workspace = true }
+git2 = "0.19"

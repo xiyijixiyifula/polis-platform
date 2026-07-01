@@ -17,5 +17,5 @@ anyhow = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
 sqlx = { workspace = true }
-wasmtime = { workspace = true }
+wasmtime = "24"
 base64 = "0.22"

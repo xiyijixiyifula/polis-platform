@@ -203,7 +203,9 @@ impl VideoHandler {
                 }
             }
         }
-        let _ = self.repo.increment_view(video.id).await;
+        if let Err(e) = self.repo.increment_view(video.id).await {
+            tracing::warn!(video_id = %video.id, error = %e, "Failed to increment view count");
+        }
         let liked = match user_id {
             Some(uid) => self.repo.has_liked(video.id, uid).await.unwrap_or(false),
             None => false,

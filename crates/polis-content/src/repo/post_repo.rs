@@ -799,6 +799,8 @@ impl PostRepo {
         }
         let users = self.find_users_batch(&user_ids).await?;
         let spaces = self.find_spaces_batch(&space_ids).await?;
+        // 批量查询 space_modules，用于 poll/announcement/video 的 module_name 解析
+        let space_modules = self.find_space_modules_batch(&space_ids).await?;
 
         // 组装结果
         let mut items: Vec<serde_json::Value> = Vec::new();
@@ -815,7 +817,9 @@ impl PostRepo {
                 serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url})
             });
             let space_info = spaces.get(space_id);
-            items.push(serde_json::json!({"id": id, "type": "poll", "module_type": "poll", "title": title, "preview": desc, "comment_count": 0, "like_count": 0, "view_count": 0, "created_at": created_at, "author": author, "space": space_info}));
+            // 查询该 space 是否真的有 polls 模块，有则返回模块名，无则不设置（前端检测缺失时跳过模块面包屑）
+            let poll_module_name = space_modules.get(&(*space_id, "polls".to_string())).cloned();
+            items.push(serde_json::json!({"id": id, "type": "poll", "module_type": "poll", "module_name": poll_module_name, "title": title, "preview": desc, "comment_count": 0, "like_count": 0, "view_count": 0, "created_at": created_at, "author": author, "space": space_info}));
         }
         for (id, space_id, author_id, title, body_preview, importance, created_at) in &announcements
         {
@@ -823,7 +827,8 @@ impl PostRepo {
                 serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url})
             });
             let space_info = spaces.get(space_id);
-            items.push(serde_json::json!({"id": id, "type": "announcement", "module_type": "announcement", "title": title, "preview": body_preview, "importance": importance, "comment_count": 0, "like_count": 0, "view_count": 0, "created_at": created_at, "author": author, "space": space_info}));
+            let ann_module_name = space_modules.get(&(*space_id, "announcements".to_string())).cloned();
+            items.push(serde_json::json!({"id": id, "type": "announcement", "module_type": "announcement", "module_name": ann_module_name, "title": title, "preview": body_preview, "importance": importance, "comment_count": 0, "like_count": 0, "view_count": 0, "created_at": created_at, "author": author, "space": space_info}));
         }
         for (id, space_id, author_id, title, desc, comment_count, like_count, view_count, thumbnail_url, duration_seconds, created_at) in &videos
         {
@@ -831,7 +836,8 @@ impl PostRepo {
                 serde_json::json!({"id": u.id, "username": u.username, "display_name": u.display_name, "avatar_url": u.avatar_url})
             });
             let space_info = spaces.get(space_id);
-            items.push(serde_json::json!({"id": id, "type": "video", "module_type": "video", "title": title, "preview": desc, "thumbnail_url": thumbnail_url, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "duration_seconds": duration_seconds, "author": author, "space": space_info}));
+            let video_module_name = space_modules.get(&(*space_id, "video".to_string())).cloned();
+            items.push(serde_json::json!({"id": id, "type": "video", "module_type": "video", "module_name": video_module_name, "title": title, "preview": desc, "thumbnail_url": thumbnail_url, "comment_count": comment_count, "like_count": like_count, "view_count": view_count, "created_at": created_at, "duration_seconds": duration_seconds, "author": author, "space": space_info}));
         }
 
         if !is_hot {
@@ -915,6 +921,28 @@ impl PostRepo {
                 id,
                 serde_json::json!({"id": id, "namespace": namespace, "title": title, "description": description}),
             );
+        }
+        Ok(map)
+    }
+
+    /// Batch lookup space_modules for feed item module_name resolution.
+    /// Returns a map keyed by (space_id, module_key) -> module_name.
+    pub async fn find_space_modules_batch(
+        &self,
+        space_ids: &[Uuid],
+    ) -> Result<HashMap<(Uuid, String), String>, AppError> {
+        if space_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let mut map = HashMap::new();
+        let rows = sqlx::query_as::<_, (Uuid, String, String)>(
+            "SELECT space_id, module_key, name FROM space_modules WHERE space_id = ANY($1) AND is_active = true",
+        )
+        .bind(space_ids.to_vec())
+        .fetch_all(&*self.pool)
+        .await?;
+        for (space_id, module_key, name) in rows {
+            map.insert((space_id, module_key), name);
         }
         Ok(map)
     }

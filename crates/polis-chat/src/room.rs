@@ -121,7 +121,9 @@ impl RoomManager {
     pub async fn broadcast(&self, space_id: &str, message: ChatMessage) {
         if let Some(room) = self.rooms.read().await.get(space_id) {
             room.touch();
-            let _ = room.tx.send(message);
+            if let Err(e) = room.tx.send(message) {
+                tracing::warn!(space_id = %space_id, error = %e, "Failed to broadcast chat message");
+            }
         }
     }
 }

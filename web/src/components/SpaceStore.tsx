@@ -62,8 +62,8 @@ export default function SpaceStore({ namespace, isOwner }: { namespace: string; 
       if (data.code === 0) {
         setOrders(Array.isArray(data.data) ? data.data : data.data?.items || []);
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.error('Failed to load store orders:', e);
     }
   }, [namespace]);
 

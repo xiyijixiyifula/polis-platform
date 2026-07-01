@@ -21,7 +21,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.3.0"
 edition = "2021"
 authors = ["Polis Team"]
 description = "Polis - Decentralized community platform"
@@ -80,11 +80,11 @@ redis = { version = "0.27", features = ["tokio-comp", "json"] }
 # Messaging (NATS)
 async-nats = "0.38"
 
-# WASM runtime
-wasmtime = "24"
+# WASM runtime — moved to polis-plugin-engine (skeleton)
+# wasmtime = "24"
 
-# Git
-git2 = "0.19"
+# Git — moved to polis-code (skeleton)
+# git2 = "0.19"
 
 # Regex
 regex = "1"

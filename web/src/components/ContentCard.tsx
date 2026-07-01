@@ -235,8 +235,9 @@ export default function ContentCard({
     onBookmark?.(id);
   };
 
-  // Auto-build links
-  const moduleLabel = moduleLabelOverride || getModuleLabel(moduleType);
+  // Auto-build links — 仅当 API 提供了 module_name（即空间确实启用了该模块）时才显示模块标签
+  const moduleLabel = moduleLabelOverride || '';
+  const hasModule = !!moduleLabelOverride;
   const typeEmoji = getTypeEmoji(contentType);
 
   const builtItemLink = itemLink || (() => {
@@ -290,8 +291,8 @@ export default function ContentCard({
           </>
         )}
 
-        {/* 模块标签 — 仅在作品被社区引用时显示，遵循 @创建者/社区/模块/作品 路径格式 */}
-        {spaceNs && (
+        {/* 模块标签 — 仅当 API 确认该模块在空间中存在时才显示 */}
+        {hasModule && spaceNs && (
           <>
             <span className="text-gray-300 dark:text-gray-600">/</span>
             <span

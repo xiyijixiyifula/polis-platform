@@ -286,7 +286,9 @@ async fn run_node() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("创世验证者节点 — 准备提议第一个区块");
         let first_proposer = consensus.lock().await.is_proposer();
         if first_proposer {
-            let _ = bridge.propose_new_block().await;
+            if let Err(e) = bridge.propose_new_block().await {
+                tracing::warn!(error = %e, "Failed to propose genesis block");
+            }
         }
     }
 
