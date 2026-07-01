@@ -72,10 +72,6 @@ pub enum ModuleType {
     Forum,
     #[serde(rename = "article")]
     Article,
-    #[serde(rename = "short_video")]
-    ShortVideo,
-    #[serde(rename = "long_video")]
-    LongVideo,
     #[serde(rename = "code_repo")]
     CodeRepo,
     #[serde(rename = "qa")]
@@ -94,8 +90,6 @@ pub enum ModuleType {
     MiniApp,
     #[serde(rename = "wiki")]
     Wiki,
-    #[serde(rename = "paid_content")]
-    PaidContent,
     #[serde(rename = "share")]
     Share,
 }
@@ -106,8 +100,6 @@ impl std::fmt::Display for ModuleType {
         match self {
             Self::Forum => write!(f, "forum"),
             Self::Article => write!(f, "article"),
-            Self::ShortVideo => write!(f, "short_video"),
-            Self::LongVideo => write!(f, "long_video"),
             Self::CodeRepo => write!(f, "code_repo"),
             Self::Qa => write!(f, "qa"),
             Self::Chat => write!(f, "chat"),
@@ -117,7 +109,6 @@ impl std::fmt::Display for ModuleType {
             Self::Game => write!(f, "game"),
             Self::MiniApp => write!(f, "mini_app"),
             Self::Wiki => write!(f, "wiki"),
-            Self::PaidContent => write!(f, "paid_content"),
             Self::Share => write!(f, "share"),
         }
     }

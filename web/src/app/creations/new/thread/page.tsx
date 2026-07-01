@@ -8,11 +8,6 @@ import {
   Globe, Lock, Link2, Plus, X, Tag,
 } from 'lucide-react';
 import { threads, getToken, type Thread, type ThreadMessage } from '@/lib/api';
-import { getModuleLabel } from '@/lib/module-config';
-
-const MODULE_OPTIONS = [
-  'forum', 'article', 'share', 'wiki', 'qa', 'novel', 'game', 'mini_app', 'code_repo', 'course', 'store',
-];
 
 const VISIBILITY_OPTIONS = [
   { value: 'public', label: '公开', icon: Globe, desc: '所有人可见' },
@@ -213,13 +208,9 @@ function ThreadPublishInner() {
 
             {/* Module */}
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">模块类型</label>
-              <select value={moduleType} onChange={(e) => setModuleType(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-                {MODULE_OPTIONS.map((m) => (
-                  <option key={m} value={m}>{getModuleLabel(m)}</option>
-                ))}
-              </select>
+              <label className="block text-xs font-medium text-gray-500 mb-1">模块类型（可选，默认 forum）</label>
+              <input type="text" value={moduleType} onChange={(e) => setModuleType(e.target.value)} placeholder="forum"
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm dark:bg-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
 
             {/* Visibility */}

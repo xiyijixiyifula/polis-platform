@@ -232,25 +232,14 @@ export default function MyCreationsPage() {
 
   const trendData = getTrendData();
 
-  const moduleLabels: Record<string, { label: string; color: string }> = {
-    forum: { label: '\u4ea4\u6d41', color: '#10b981' },
-    article: { label: '\u6587\u7ae0', color: '#3b82f6' },
-    share: { label: '\u5206\u4eab', color: '#f59e0b' },
-    wiki: { label: '\u77e5\u8bc6\u5e93', color: '#8b5cf6' },
-    video: { label: '\u89c6\u9891', color: '#ef4444' },
-    qa: { label: '\u95ee\u7b54', color: '#06b6d4' },
-    novel: { label: '\u5c0f\u8bf4', color: '#ec4899' },
-    game: { label: '\u6e38\u620f', color: '#f97316' },
-    mini_app: { label: '\u5c0f\u7a0b\u5e8f', color: '#84cc16' },
-    series: { label: '\u7cfb\u5217', color: '#a855f7' },
-    membership: { label: '\u4f1a\u5458', color: '#eab308' },
-    code_repo: { label: '\u4ee3\u7801\u4ed3\u5e93', color: '#64748b' },
-    polls: { label: '\u6295\u7968', color: '#f43f5e' },
-    announcements: { label: '\u516c\u544a', color: '#f97316' },
-    chat: { label: '\u804a\u5929', color: '#0ea5e9' },
-    store: { label: '\u5546\u57ce', color: '#14b8a6' },
-    course: { label: '\u8bfe\u7a0b', color: '#6366f1' },
-    other: { label: '\u5176\u4ed6', color: '#94a3b8' },
+  // \u6839\u636e\u6a21\u5757\u7c7b\u578b\u5b57\u7b26\u4e32\u751f\u6210\u4e00\u81f4\u7684\u989c\u8272\uff08\u7528\u4e8e\u4f5c\u54c1\u5206\u5e03\u56fe\u8868\uff09
+  const getModuleColor = (type: string): string => {
+    let hash = 0;
+    for (let i = 0; i < type.length; i++) {
+      hash = type.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash) % 360;
+    return `hsl(${h}, 60%, 45%)`;
   };
 
   return (
@@ -360,12 +349,11 @@ export default function MyCreationsPage() {
                 {Object.keys(moduleTypeStats).length > 0 ? (
                   <div className="space-y-3">
                     {Object.entries(moduleTypeStats).map(([type, count]) => {
-                      const info = moduleLabels[type] || moduleLabels.other;
                       return (
                         <div key={type} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: info.color }} />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{info.label}</span>
+                            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getModuleColor(type) }} />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{type}</span>
                           </div>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">{count}</span>
                         </div>

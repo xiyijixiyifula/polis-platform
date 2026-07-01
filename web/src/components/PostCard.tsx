@@ -6,7 +6,7 @@ import ContentCard, { adaptFeedItem } from '@/components/ContentCard';
 import { ShareButton } from './ShareButton';
 import { VoteButton } from './VoteButton';
 import HashtagLink from './HashtagLink';
-import { buildPostLink, getModuleLabel } from '@/lib/module-config';
+import { buildPostLink } from '@/lib/module-config';
 
 interface PostCardProps {
   post: {
@@ -93,11 +93,14 @@ export function PostCard({ post, canPin, onTogglePin, canHide, onToggleHide, can
                   className="text-primary-600 dark:text-primary-400 hover:underline truncate max-w-[140px]">
                   {post.space_name || post.space_ns}
                 </Link>
-                <span className="text-gray-300 dark:text-gray-600">/</span>
-                <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0">
-                  {post.module_label || getModuleLabel(post.module_type)}
-                </span>
-                <span className="text-gray-300 dark:text-gray-600">/</span>
+                {/* 仅当 API 返回 module_label（模块真实存在）时才显示模块面包屑 */}
+                {post.module_label && (
+                  <><span className="text-gray-300 dark:text-gray-600">/</span>
+                  <span className="bg-gray-100 dark:bg-gray-800 rounded px-1.5 py-0.5 font-medium text-gray-600 dark:text-gray-400 shrink-0">
+                    {post.module_label}
+                  </span>
+                  <span className="text-gray-300 dark:text-gray-600">/</span></>
+                )}
               </>
             ) : (
               <>

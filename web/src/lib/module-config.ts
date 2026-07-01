@@ -44,13 +44,3 @@ export function buildPostLink(postId: string, spaceNs?: string): string {
   if (spaceNs) return `${base}?space=${encodeURIComponent(spaceNs)}`;
   return base;
 }
-
-/**
- * 已知的模块键集合 — 保留用于向后兼容的过渡期
- * 所有模块键现在都来自 API，这些仅作为合理的默认值
- */
-export const KNOWN_MODULE_KEYS = [
-  'forum', 'share', 'wiki', 'series', 'membership',
-  'video', 'code_repo', 'qa', 'polls', 'announcements',
-  'chat', 'store', 'course', 'novel', 'game', 'mini_app',
-];

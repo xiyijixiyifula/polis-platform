@@ -131,7 +131,6 @@ fn test_display_visibility() {
 fn test_display_module_type() {
     assert_eq!(ModuleType::Forum.to_string(), "forum");
     assert_eq!(ModuleType::Article.to_string(), "article");
-    assert_eq!(ModuleType::ShortVideo.to_string(), "short_video");
     assert_eq!(ModuleType::CodeRepo.to_string(), "code_repo");
 }
 
