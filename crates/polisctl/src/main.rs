@@ -327,9 +327,6 @@ enum SpaceAction {
         /// Visibility (public/private/unlisted)
         #[arg(short, long, default_value = "public")]
         visibility: String,
-        /// Enabled modules (comma-separated, e.g. "forum,qa")
-        #[arg(long, default_value = "forum")]
-        modules: String,
     },
     /// Update space info
     Update {
@@ -1158,8 +1155,8 @@ async fn main() -> Result<(), anyhow::Error> {
             SpaceAction::Join { namespace } => commands::space::join(&config, &client, &namespace).await,
             SpaceAction::Leave { namespace } => commands::space::leave(&config, &client, &namespace).await,
             SpaceAction::Members { namespace } => commands::space::members(&config, &client, &namespace).await,
-            SpaceAction::Create { slug, title, description, visibility, modules } => {
-                commands::space::create(&config, &client, &slug, &title, description.as_deref(), Some(&visibility), Some(&modules)).await
+            SpaceAction::Create { slug, title, description, visibility } => {
+                commands::space::create(&config, &client, &slug, &title, description.as_deref(), Some(&visibility)).await
             }
             SpaceAction::Update { namespace, title, description } => {
                 commands::space::update(&config, &client, &namespace, title.as_deref(), description.as_deref()).await

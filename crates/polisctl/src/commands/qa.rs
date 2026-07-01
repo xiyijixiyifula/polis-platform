@@ -50,13 +50,12 @@ pub async fn init(config: &Config, client: &HttpClient) -> Result<(), anyhow::Er
     }
     // Space not found, proceed to create
 
-    // Create the PolisAi community
+    // Create the PolisAi community (模块由 space_modules 表管理，enabled_modules 已废弃)
     let body = json!({
         "slug": slug,
         "title": "PolisAi",
         "description": "Claude Agent 问答同步社区 — AI对话自动沉淀为问答内容",
         "visibility": "public",
-        "enabled_modules": ["qa"]
     });
 
     match client.post("/api/spaces", Some(&token), &body).await {
@@ -67,6 +66,19 @@ pub async fn init(config: &Config, client: &HttpClient) -> Result<(), anyhow::Er
                 .and_then(|n| n.as_str())
                 .unwrap_or(&namespace);
             print_success(&format!("PolisAi community created: {}", ns));
+
+            // 通过 modules API 添加 "qa" 模块（替代已废弃的 enabled_modules）
+            let add_module_body = json!({
+                "name": "问答",
+                "module_key": "qa",
+                "mode": "free",
+                "allowed_content_types": ["article"],
+                "icon": "❓"
+            });
+            let module_url = format!("/api/spaces/{}/modules", urlencoding::encode(ns));
+            if let Err(e) = client.post(&module_url, Some(&token), &add_module_body).await {
+                eprintln!("Warning: Failed to create QA module in {}: {}", ns, e);
+            }
 
             // Auto-join the community
             let join_url = format!("/api/spaces/{}/join", urlencoding::encode(ns));
