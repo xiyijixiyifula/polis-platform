@@ -294,8 +294,13 @@ export function useSpaceData(rawNamespace: string | string[]): SpaceDataState {
 					if (postsData.pagination) {
 						setPostTotalPages(postsData.pagination.total_pages);
 					}
-					const mtFilter = new Set<string>(spaceModules.map(m => m.module_key));
-					setPosts(allPosts.filter((p: any) => mtFilter.has(p.module_type || '')));
+					// 仅在模块列表已加载后才过滤，避免竞态条件导致所有帖子被错误过滤
+					if (spaceModules.length > 0) {
+						const mtFilter = new Set<string>(spaceModules.map(m => m.module_key));
+						setPosts(allPosts.filter((p: any) => mtFilter.has(p.module_type || '')));
+					} else {
+						setPosts(allPosts);
+					}
 				}
 				if (featuredData.code === 0) setFeatured(featuredData.data || []);
 				if (pollsIdx > 0 && results[pollsIdx]?.code === 0) setPolls(results[pollsIdx].data || []);
