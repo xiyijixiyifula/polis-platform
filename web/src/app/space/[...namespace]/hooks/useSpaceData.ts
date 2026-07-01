@@ -108,7 +108,11 @@ export function useSpaceData(rawNamespace: string | string[]): SpaceDataState {
 
 	const [spaceModules, setSpaceModules] = useState<SpaceModule[]>([]);
 
-	const SYSTEM_SUB_ROUTES = new Set(['overview', 'members', 'analytics']);
+	// 将常见模块 key 预设为系统子路由，防止 API 未响应时 namespace 解析错误导致 404
+	const SYSTEM_SUB_ROUTES = new Set(['overview', 'members', 'analytics',
+		'forum', 'polls', 'announcements', 'video', 'share', 'wiki', 'series',
+		'chat', 'store', 'course', 'novel', 'game', 'mini_app', 'code_repo', 'qa',
+	]);
 	const knownSubRoutes = useMemo(() => {
 		const routes = new Set(SYSTEM_SUB_ROUTES);
 		spaceModules.forEach(m => routes.add(m.module_key));

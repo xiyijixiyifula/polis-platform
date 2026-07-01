@@ -56,10 +56,10 @@ export default function SpaceHeader(props: SpaceHeaderProps) {
 					<SpaceParticles color="16, 185, 129" />
 					<div className="relative z-10 flex items-start gap-4">
 						<div className="h-16 w-16 shrink-0 rounded-2xl bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-2xl overflow-hidden">
-							{space.icon_url ? (
+							{space?.icon_url ? (
 								<img src={space.icon_url} className="h-full w-full object-cover" alt="" loading="lazy" />
 							) : (
-								space.title.charAt(0)
+								space?.title?.charAt(0) || '?'
 							)}
 						</div>
 						<div className="flex-1 min-w-0">
