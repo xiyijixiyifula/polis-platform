@@ -1,12 +1,46 @@
 # 当前任务进度
 
-> 最后更新: 2026-06-17
+> 最后更新: 2026-07-01
 
 ## 追踪模式
 
 LOCAL_ONLY
 
 ## 当前状态
+
+**活跃任务**: Bug 修复 + 功能测试 (2026-07-01)
+
+### 本次会话完成 (2026-07-01)
+
+#### Bug #1: Feed 面包屑显示不存在的模块 ✅
+- **症状**: 全部动态中 QA Space 789842 下出现 poll/share 模块链接，但这些模块不存在
+- **根因**: `get_feed` API (post_repo.rs:818-835) 对 poll/announcement/video 硬编码 `module_type`，未检查 `space_modules` 表
+- **修复**:
+  - 后端: 新增 `find_space_modules_batch` 批量查询，只有模块真实存在才返回 `module_name`
+  - 前端: `ContentCard.tsx` 面包屑仅当 API 提供 `module_name` 时才渲染模块链接
+- **部署**: v0.3.20260701-1104
+
+#### Bug #2: Space 页面竞态条件导致帖子被错误过滤 ✅
+- **症状**: Space 概览/交流 Tab 显示"还没有内容"但 API 实际返回了帖子
+- **根因**: `useSpaceData.ts:297` — posts useEffect 和 modules useEffect 同时触发，posts 过滤依赖未加载的 spaceModules，竞态导致 mtFilter 为空过滤所有帖子
+- **修复**: 当 `spaceModules.length === 0` 时跳过过滤，保留所有帖子
+- **部署**: v0.3.20260701-1110 (仅前端)
+
+### 测试覆盖
+- ✅ 首页 Feed (全部动态/关注的人/热门)
+- ✅ Space 页面 (概览/交流/成员 Tab)
+- ✅ 登录页面
+- ✅ CLI 页面
+- ✅ 探索页面
+- ✅ 搜索功能
+- ✅ 钱包页面
+- ✅ 8 个服务全部 active
+
+## Next Steps
+
+1. 继续全面测试其他功能（创作中心、付费内容、系列等）
+2. 检查搜索页面面包屑中的模块标签显示为原始 module_type 而非中文名称
+3. 继续 Milestone 任务中未完成的部分
 
 **活跃任务**: 生产就绪度冲刺 — Milestone 1+2+3 (绿色任务)
 
